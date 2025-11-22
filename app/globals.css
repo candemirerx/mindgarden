@@ -1,0 +1,226 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts - Inter & Merriweather */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap');
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #f4f1ea;
+  /* Kağıt/Toprak tonu */
+  color: #3e2723;
+  /* Koyu Kahve */
+}
+
+/* Modern scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #efebe9;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a1887f;
+  border-radius: 5px;
+  border: 2px solid #efebe9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8d6e63;
+}
+
+/* 
+   ==========================================================================
+   PREMIUM ORGANIC TREE STYLES
+   ==========================================================================
+*/
+
+.tree ul {
+  padding-top: 40px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  /* Dalların gölgelendirmesi - 3D Derinlik */
+  filter: drop-shadow(2px 4px 6px rgba(62, 39, 35, 0.15));
+}
+
+.tree li {
+  float: left;
+  text-align: center;
+  list-style-type: none;
+  position: relative;
+  padding: 40px 10px 0 10px;
+  transition: all 0.5s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 
+   BAĞLANTI ÇİZGİLERİ (CONNECTORS) 
+   --------------------------------------------------
+   Temel yapı: ::before (yukarı/sağ) ve ::after (yukarı/sol)
+*/
+
+/* Ortak Stil - Tüm seviyeler için temel */
+.tree li::before,
+.tree li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  border-top: 4px solid #5D4037;
+  /* Koyu Odun Rengi */
+  width: 50%;
+  height: 40px;
+  z-index: -1;
+  transition: all 0.3s ease;
+}
+
+.tree li::after {
+  right: auto;
+  left: 50%;
+  border-left: 4px solid #5D4037;
+}
+
+/* Tek çocuk varsa çizgi olmasın (Sadece yukarıdan gelen dikey çizgi kalsın) */
+.tree li:only-child::after,
+.tree li:only-child::before {
+  display: none;
+}
+
+.tree li:only-child {
+  padding-top: 0;
+}
+
+/* İlk ve Son Çocukların Köşeleri */
+.tree li:first-child::before,
+.tree li:last-child::after {
+  border: 0 none;
+}
+
+/* Köşe Kıvrımları - Organik Görünüm (25px Radius) */
+.tree li:last-child::before {
+  border-right: 4px solid #5D4037;
+  border-radius: 0 25px 0 0;
+}
+
+.tree li:first-child::after {
+  border-radius: 25px 0 0 0;
+}
+
+/* Dikey Çizgi (Ebeveynden aşağı inen) */
+.tree ul ul::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  border-left: 4px solid #5D4037;
+  width: 0;
+  height: 40px;
+  z-index: -1;
+}
+
+/* 
+   HİYERARŞİK KALINLIK (HIERARCHICAL THICKNESS)
+   --------------------------------------------------
+   Kökten çıkan dallar daha kalın, uçlara doğru incelir.
+*/
+
+/* Seviye 1 Bağlantıları (Kök -> İlk Dallar) - Kalın (6px) */
+.tree>ul>li>ul::before {
+  border-left-width: 6px;
+  height: 50px;
+  /* Biraz daha uzun gövde */
+}
+
+.tree>ul>li>ul>li::before {
+  border-top-width: 6px;
+  border-right-width: 6px;
+}
+
+.tree>ul>li>ul>li::after {
+  border-top-width: 6px;
+  border-left-width: 6px;
+}
+
+/* Kök Node'un kendi çizgilerini gizle */
+.tree>ul>li::before,
+.tree>ul>li::after {
+  display: none;
+}
+
+/* 
+   HOVER EFEKTLERİ
+   --------------------------------------------------
+   Dalların üzerinden geçince parlaması
+*/
+
+/* Ebeveyne hover yapınca altındaki yollar parlasın */
+.tree li:hover::before,
+.tree li:hover::after,
+.tree li:hover>ul::before {
+  border-color: #8D6E63;
+  /* Daha açık/canlı kahve */
+}
+
+/* Utility classes */
+@layer utilities {
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+
+  .tree-shadow {
+    box-shadow: 0 8px 32px rgba(62, 39, 35, 0.15);
+  }
+
+  .node-glow {
+    box-shadow: 0 0 30px rgba(102, 187, 106, 0.4);
+  }
+
+  .smooth-transition {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Component overrides */
+@layer components {
+  .btn-primary {
+    @apply bg-[#5D4037] hover:bg-[#4E342E] text-[#EFEBE9] font-semibold px-6 py-3 rounded-xl smooth-transition shadow-lg hover:shadow-xl active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-[#EFEBE9] text-[#5D4037] font-semibold px-6 py-3 rounded-xl smooth-transition shadow-md hover:shadow-lg border-2 border-[#D7CCC8];
+  }
+
+  .card {
+    @apply bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl smooth-transition hover:shadow-2xl border border-[#D7CCC8];
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-[#D7CCC8] focus:border-[#8D6E63] focus:ring-4 focus:ring-[#D7CCC8]/50 focus:outline-none smooth-transition bg-white/80;
+  }
+}
