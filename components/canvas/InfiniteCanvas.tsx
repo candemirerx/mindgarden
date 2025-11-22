@@ -196,7 +196,7 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
                             <div className="flex items-start gap-2">
                                 <Sparkles size={16} className="text-purple-500 mt-0.5 flex-shrink-0" />
                                 <p className="text-xs text-slate-600 leading-relaxed">
-                                    <strong className="text-purple-600">İpucu:</strong> Node'ları sürükleyerek taşıyabilir,
+                                    <strong className="text-purple-600">İpucu:</strong> Node&apos;ları sürükleyerek taşıyabilir,
                                     bağlantı noktalarından çizerek ilişkilendirebilirsiniz!
                                 </p>
                             </div>
