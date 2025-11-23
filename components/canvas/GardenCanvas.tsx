@@ -35,7 +35,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
     }, []);
 
     // İki parmak arası mesafeyi hesapla
-    const getTouchDistance = (touches: TouchList): number => {
+    const getTouchDistance = (touches: React.TouchList): number => {
         const touch1 = touches[0];
         const touch2 = touches[1];
         const dx = touch1.clientX - touch2.clientX;
@@ -44,7 +44,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
     };
 
     // İki parmağın merkez noktasını hesapla (Ekran koordinatlarında)
-    const getTouchCenter = (touches: TouchList): Point => {
+    const getTouchCenter = (touches: React.TouchList): Point => {
         const touch1 = touches[0];
         const touch2 = touches[1];
         return {
