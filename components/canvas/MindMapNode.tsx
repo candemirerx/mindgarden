@@ -29,7 +29,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     const [editedTitle, setEditedTitle] = useState(node.title);
     const [isMobile, setIsMobile] = useState(false);
 
-    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
     const titleInputRef = useRef<HTMLInputElement>(null);
 
     // Mobil cihaz tespiti
@@ -56,30 +55,21 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         setIsExpanded(!isExpanded);
     };
 
-    // Mobil için long press başlatma
-    const handleTouchStart = (e: React.TouchEvent) => {
-        if (!isMobile) return;
-
-        longPressTimer.current = setTimeout(() => {
-            setIsEditingTitle(true);
-            setShowMenuOnMobile(false);
-        }, 500); // 500ms basılı tutma
-    };
-
-    // Long press iptal
-    const handleTouchEnd = () => {
-        if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current);
-            longPressTimer.current = null;
-        }
-    };
-
-    // Mobil için tek tıklama - menüleri aç/kapat
-    const handleMobileClick = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!isMobile) return;
-
+    // Düğüm tıklama mantığı
+    const handleNodeClick = (e: React.MouseEvent | React.TouchEvent) => {
         e.stopPropagation();
-        setShowMenuOnMobile(!showMenuOnMobile);
+
+        if (isMobile) {
+            // Mobilde: Menü kapalıysa aç, açıksa başlığı düzenle
+            if (!showMenuOnMobile) {
+                setShowMenuOnMobile(true);
+            } else {
+                setIsEditingTitle(true);
+            }
+        } else {
+            // Masaüstünde: Doğrudan başlığı düzenle
+            setIsEditingTitle(true);
+        }
     };
 
     // Başlık düzenlemeyi kaydet
@@ -142,7 +132,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     className="relative flex flex-col items-center group"
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
-                    onClick={isMobile ? handleMobileClick : undefined}
+                    onClick={handleNodeClick}
                 >
                     <div className={`
                         absolute -top-16 left-1/2 transform -translate-x-1/2 
@@ -160,10 +150,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 
                     <div
                         className="relative flex flex-col items-center cursor-pointer transition-transform duration-300 hover:scale-105"
-                        onClick={!isMobile ? () => onEdit(node) : undefined}
-                        onTouchStart={handleTouchStart}
-                        onTouchEnd={handleTouchEnd}
-                        onTouchMove={handleTouchEnd}
                     >
                         <div className="
                             relative z-20 
@@ -193,11 +179,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                     {node.title}
                                 </h4>
                             )}
-                            {node.content && (
-                                <p className="text-sm opacity-95 font-medium leading-relaxed relative z-10">
-                                    {node.content}
-                                </p>
-                            )}
+
                         </div>
 
                         <div className="
@@ -272,7 +254,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                 className="relative inline-block group"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                onClick={isMobile ? handleMobileClick : undefined}
+                onClick={handleNodeClick}
             >
                 <div className={`
           absolute -top-10 md:-top-12 left-1/2 transform -translate-x-1/2 
@@ -306,10 +288,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                 </div>
 
                 <div
-                    onClick={!isMobile ? (() => node.children.length > 0 ? null : onEdit(node)) : undefined}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchMove={handleTouchEnd}
                     className={`
             node-content relative z-10 px-4 py-3 md:px-6 md:py-4 shadow-lg cursor-pointer 
             ${getNodeSize(depth)}
@@ -339,11 +317,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             {node.title}
                         </h4>
                     )}
-                    {node.content && depth > 0 && (
-                        <p className={`text-[10px] md:text-xs mt-1 line-clamp-3 opacity-90 ${getTextColor(depth)} relative z-10 font-sans`}>
-                            {node.content}
-                        </p>
-                    )}
+
 
                     {onAddSibling && (
                         <button
