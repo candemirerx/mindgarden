@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef } from 'react';
 import ReactFlow, {
     Background,
-    Controls,
     MiniMap,
     useNodesState,
     useEdgesState,
@@ -11,6 +10,7 @@ import ReactFlow, {
     Connection,
     ConnectionMode,
     Panel,
+    ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Plus, Sparkles } from 'lucide-react';
@@ -44,6 +44,14 @@ const COLOR_PALETTE = [
 export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteCanvasProps) {
     const { addNode } = useStore();
     const [isAddingNode, setIsAddingNode] = useState(false);
+
+    // ReactFlow instance'ı al
+    const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
+    const reactFlowWrapper = useRef<HTMLDivElement>(null);
+
+    // Touch event'leri için state
+    const lastTouchDistance = useRef<number | null>(null);
+    const isPinching = useRef<boolean>(false);
 
     // TreeNode'ları React Flow node'larına dönüştür
     const initialNodes: FlowNode[] = useMemo(() => {
@@ -109,6 +117,134 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
         []
     );
 
+    // İki parmak arasındaki mesafeyi hesapla
+    const getTouchDistance = (touch1: React.Touch, touch2: React.Touch): number => {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    // İki parmağın merkez noktasını hesapla
+    const getTouchCenter = (touch1: React.Touch, touch2: React.Touch): { x: number; y: number } => {
+        return {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2,
+        };
+    };
+
+    // Touch start event handler
+    const handleTouchStart = useCallback((event: React.TouchEvent) => {
+        if (event.touches.length === 2) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            isPinching.current = true;
+            const touch1 = event.touches[0];
+            const touch2 = event.touches[1];
+
+            lastTouchDistance.current = getTouchDistance(touch1, touch2);
+        }
+    }, []);
+
+    // Touch move event handler - zoom-to-touch-position için
+    const handleTouchMove = useCallback((event: React.TouchEvent) => {
+        if (event.touches.length === 2 && isPinching.current && reactFlowInstance.current && reactFlowWrapper.current) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const touch1 = event.touches[0];
+            const touch2 = event.touches[1];
+
+            const currentDistance = getTouchDistance(touch1, touch2);
+            const touchCenter = getTouchCenter(touch1, touch2);
+
+            if (lastTouchDistance.current !== null) {
+                const zoomRatio = currentDistance / lastTouchDistance.current;
+
+                if (Math.abs(zoomRatio - 1.0) < 0.01) return;
+
+                const currentViewport = reactFlowInstance.current.getViewport();
+                const oldZoom = currentViewport.zoom;
+                const newZoom = Math.max(0.1, Math.min(4, oldZoom * zoomRatio));
+
+                if (Math.abs(newZoom - oldZoom) < 0.001) return;
+
+                const canvasBounds = reactFlowWrapper.current.getBoundingClientRect();
+
+                const pointOnCanvas = {
+                    x: touchCenter.x - canvasBounds.left,
+                    y: touchCenter.y - canvasBounds.top,
+                };
+
+                const pointInFlowSpace = {
+                    x: (pointOnCanvas.x - currentViewport.x) / oldZoom,
+                    y: (pointOnCanvas.y - currentViewport.y) / oldZoom,
+                };
+
+                const newViewport = {
+                    x: pointOnCanvas.x - pointInFlowSpace.x * newZoom,
+                    y: pointOnCanvas.y - pointInFlowSpace.y * newZoom,
+                    zoom: newZoom,
+                };
+
+                reactFlowInstance.current.setViewport(newViewport, { duration: 0 });
+            }
+
+            lastTouchDistance.current = currentDistance;
+        }
+    }, []);
+
+    // Touch end event handler
+    const handleTouchEnd = useCallback((event: React.TouchEvent) => {
+        if (event.touches.length < 2) {
+            isPinching.current = false;
+            lastTouchDistance.current = null;
+        }
+    }, []);
+
+    // Wheel event handler - zoom-to-cursor (Masaüstü için)
+    const handleWheel = useCallback((event: React.WheelEvent) => {
+        if (reactFlowInstance.current && reactFlowWrapper.current) {
+            // Sayfa scroll'unu engelle
+            try {
+                event.preventDefault();
+            } catch (e) {
+                // ignore
+            }
+
+            const { clientX, clientY, deltaY } = event;
+            const viewport = reactFlowInstance.current.getViewport();
+            const oldZoom = viewport.zoom;
+
+            // Zoom hassasiyeti
+            const ZOOM_SPEED = 0.0015;
+            const zoomFactor = Math.exp(-deltaY * ZOOM_SPEED);
+            const newZoom = Math.max(0.1, Math.min(4, oldZoom * zoomFactor));
+
+            if (Math.abs(newZoom - oldZoom) < 0.001) return;
+
+            const bounds = reactFlowWrapper.current.getBoundingClientRect();
+
+            // Mouse'un canvas üzerindeki pozisyonu
+            const mouseX = clientX - bounds.left;
+            const mouseY = clientY - bounds.top;
+
+            // Flow space'deki nokta (zoom öncesi)
+            const flowX = (mouseX - viewport.x) / oldZoom;
+            const flowY = (mouseY - viewport.y) / oldZoom;
+
+            // Yeni pan değerleri (zoom sonrası aynı nokta mouse altında kalsın)
+            const newX = mouseX - flowX * newZoom;
+            const newY = mouseY - flowY * newZoom;
+
+            reactFlowInstance.current.setViewport({
+                x: newX,
+                y: newY,
+                zoom: newZoom,
+            }, { duration: 0 });
+        }
+    }, []);
+
     // Hızlı node ekleme
     const handleQuickAddNode = async () => {
         setIsAddingNode(true);
@@ -120,7 +256,16 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
     };
 
     return (
-        <div className="w-full h-full bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 relative">
+        <div
+            ref={reactFlowWrapper}
+            className="w-full h-full bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 relative"
+            style={{ touchAction: 'none' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            onWheel={handleWheel}
+        >
             {/* SVG Gradient tanımları */}
             <svg width="0" height="0">
                 <defs>
@@ -145,18 +290,21 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
                 maxZoom={4}
                 defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
                 className="touch-none"
+                onInit={(instance) => {
+                    reactFlowInstance.current = instance;
+                }}
+                zoomOnPinch={false}
+                zoomOnScroll={false}
+                panOnScroll={false}
+                zoomOnDoubleClick={false}
+                panOnDrag={true}
+                preventScrolling={false}
             >
                 {/* Arka plan pattern */}
                 <Background
                     color="#cbd5e1"
                     gap={20}
                     size={1.5}
-                />
-
-                {/* Kontroller */}
-                <Controls
-                    className="!bg-white/90 backdrop-blur-lg !rounded-2xl !shadow-2xl !border-2 !border-slate-200"
-                    showInteractive={false}
                 />
 
                 {/* Mini harita */}
@@ -229,6 +377,6 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
                     </Panel>
                 )}
             </ReactFlow>
-        </div >
+        </div>
     );
 }

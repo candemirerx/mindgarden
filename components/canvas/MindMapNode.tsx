@@ -231,7 +231,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             <button
                                 onClick={toggleExpand}
                                 className="
-                                    absolute -bottom-4 left-1/2 transform -translate-x-1/2 translate-x-16
+                                    absolute bottom-16 left-1/2 transform -translate-x-1/2 translate-x-24
                                     w-8 h-8 rounded-full flex items-center justify-center
                                     bg-amber-600 text-white border-2 border-white shadow-md
                                     hover:scale-110 active:scale-95 transition-all duration-300
@@ -403,7 +403,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         <button
                             onClick={toggleExpand}
                             className={`
-                                absolute -bottom-3 left-1/2 transform -translate-x-1/2 translate-x-12
+                                absolute -bottom-3 left-1/2 transform -translate-x-1/2 translate-x-8
                                 w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center
                                 border-2 shadow-md
                                 bg-amber-600 text-white border-amber-700

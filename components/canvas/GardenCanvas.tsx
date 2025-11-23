@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Maximize2 } from 'lucide-react';
 import { ViewState, Point } from '@/lib/types';
 
 interface GardenCanvasProps {
@@ -12,6 +11,15 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
     const [viewState, setViewState] = useState<ViewState>({ scale: 1, offset: { x: 0, y: 0 } });
     const [isDragging, setIsDragging] = useState(false);
     const [lastMousePos, setLastMousePos] = useState<Point>({ x: 0, y: 0 });
+    const [isPinching, setIsPinching] = useState(false);
+
+    // Gesture Başlangıç Referansları (Daha stabil bir deneyim için)
+    const gestureStartScale = useRef<number>(1);
+    const gestureStartOffset = useRef<Point>({ x: 0, y: 0 });
+    const gestureStartDistance = useRef<number>(0);
+    // Pinch başladığında parmakların altındaki dünya koordinatı (sabit kalmalı)
+    const gestureStartWorldPoint = useRef<Point>({ x: 0, y: 0 });
+
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -26,57 +34,141 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
         }
     }, []);
 
-    // Fit View - Tüm içeriği göster
-    const handleFitView = () => {
-        if (!containerRef.current || !contentRef.current) return;
+    // İki parmak arası mesafeyi hesapla
+    const getTouchDistance = (touches: TouchList): number => {
+        const touch1 = touches[0];
+        const touch2 = touches[1];
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    };
 
-        const container = containerRef.current.getBoundingClientRect();
-        const content = contentRef.current.getBoundingClientRect();
-
-        // İçeriğin gerçek boyutlarını al (scale olmadan)
-        const contentWidth = content.width / viewState.scale;
-        const contentHeight = content.height / viewState.scale;
-
-        // Padding ekle
-        const padding = 50;
-        const availableWidth = container.width - padding * 2;
-        const availableHeight = container.height - padding * 2;
-
-        // Ölçek hesapla
-        const scaleX = availableWidth / contentWidth;
-        const scaleY = availableHeight / contentHeight;
-        const newScale = Math.min(scaleX, scaleY, 1); // Max 1x zoom
-
-        // Merkezleme hesapla
-        const scaledWidth = contentWidth * newScale;
-        const scaledHeight = contentHeight * newScale;
-        const offsetX = (container.width - scaledWidth) / 2;
-        const offsetY = (container.height - scaledHeight) / 2;
-
-        setViewState({
-            scale: newScale,
-            offset: { x: offsetX, y: offsetY }
-        });
+    // İki parmağın merkez noktasını hesapla (Ekran koordinatlarında)
+    const getTouchCenter = (touches: TouchList): Point => {
+        const touch1 = touches[0];
+        const touch2 = touches[1];
+        return {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
     };
 
     // Mouse/Touch başlangıç
     const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.node-content')) return;
 
+        // Touch event ise
+        if ('touches' in e) {
+            // İki parmak - pinch başlat
+            if (e.touches.length === 2 && containerRef.current) {
+                setIsPinching(true);
+                setIsDragging(false);
+
+                const distance = getTouchDistance(e.touches);
+                const center = getTouchCenter(e.touches);
+                const containerBounds = containerRef.current.getBoundingClientRect();
+
+                // Container içindeki center
+                const centerX = center.x - containerBounds.left;
+                const centerY = center.y - containerBounds.top;
+
+                // Başlangıç değerlerini kaydet
+                gestureStartDistance.current = distance;
+                gestureStartScale.current = viewState.scale;
+                gestureStartOffset.current = { ...viewState.offset };
+
+                // Parmakların altındaki dünya noktasını hesapla
+                // World = (Screen - Offset) / Scale
+                gestureStartWorldPoint.current = {
+                    x: (centerX - viewState.offset.x) / viewState.scale,
+                    y: (centerY - viewState.offset.y) / viewState.scale
+                };
+                return;
+            }
+            // Tek parmak - sürükleme başlat
+            else if (e.touches.length === 1) {
+                setIsDragging(true);
+                setIsPinching(false);
+                setLastMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+                return;
+            }
+        }
+
+        // Mouse event
         setIsDragging(true);
+        setLastMousePos({ x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY });
+    };
 
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    // Gesture Logic (Start-based calculation)
+    const handleGesture = (currentCenter: Point, currentDistance: number) => {
+        if (!containerRef.current) return;
 
-        setLastMousePos({ x: clientX, y: clientY });
+        const containerBounds = containerRef.current.getBoundingClientRect();
+
+        // Container içindeki güncel center
+        const currentTouchX = currentCenter.x - containerBounds.left;
+        const currentTouchY = currentCenter.y - containerBounds.top;
+
+        // 1. Yeni Scale Hesabı
+        // newScale = startScale * (currentDist / startDist)
+        // Sıfıra bölme hatasını önle
+        const startDist = gestureStartDistance.current > 0 ? gestureStartDistance.current : 1;
+        const scaleRatio = currentDistance / startDist;
+        const newScale = Math.min(Math.max(0.1, gestureStartScale.current * scaleRatio), 4);
+
+        // 2. Yeni Offset Hesabı
+        // Mantık: Başlangıçtaki dünya noktası (gestureStartWorldPoint), 
+        // şu anki parmak merkezi (currentTouch) altında olmalı.
+        // currentTouch = newOffset + (worldPoint * newScale)
+        // newOffset = currentTouch - (worldPoint * newScale)
+
+        const newOffsetX = currentTouchX - (gestureStartWorldPoint.current.x * newScale);
+        const newOffsetY = currentTouchY - (gestureStartWorldPoint.current.y * newScale);
+
+        setViewState({
+            scale: newScale,
+            offset: { x: newOffsetX, y: newOffsetY }
+        });
     };
 
     // Mouse/Touch hareket
     const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
+        // Touch event ise
+        if ('touches' in e) {
+            // İki parmak - pinch zoom + pan
+            if (e.touches.length === 2 && isPinching) {
+                e.preventDefault();
+                const currentDistance = getTouchDistance(e.touches);
+                const currentCenter = getTouchCenter(e.touches);
+
+                handleGesture(currentCenter, currentDistance);
+                return;
+            }
+            // Tek parmak - sürükleme
+            else if (e.touches.length === 1 && isDragging && !isPinching) {
+                const clientX = e.touches[0].clientX;
+                const clientY = e.touches[0].clientY;
+
+                const deltaX = clientX - lastMousePos.x;
+                const deltaY = clientY - lastMousePos.y;
+
+                setViewState(prev => ({
+                    ...prev,
+                    offset: {
+                        x: prev.offset.x + deltaX,
+                        y: prev.offset.y + deltaY
+                    }
+                }));
+                setLastMousePos({ x: clientX, y: clientY });
+                return;
+            }
+        }
+
+        // Mouse event - sürükleme
         if (!isDragging) return;
 
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        const clientX = 'clientX' in e ? (e as React.MouseEvent).clientX : 0;
+        const clientY = 'clientY' in e ? (e as React.MouseEvent).clientY : 0;
 
         const deltaX = clientX - lastMousePos.x;
         const deltaY = clientY - lastMousePos.y;
@@ -94,22 +186,46 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
     // Mouse/Touch bitiş
     const handlePointerUp = () => {
         setIsDragging(false);
+        setIsPinching(false);
     };
 
-    // Zoom (mouse wheel) - useEffect ile native listener kullanıyoruz
+    // Zoom (mouse wheel) - Zoom to Cursor
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-            const zoomSensitivity = 0.001;
-            const newScale = Math.min(Math.max(0.2, viewState.scale - e.deltaY * zoomSensitivity), 3);
 
-            setViewState(prev => ({
-                ...prev,
-                scale: newScale
-            }));
+            const { clientX, clientY, deltaY } = e;
+            const containerBounds = container.getBoundingClientRect();
+
+            // Mouse'un container içindeki pozisyonu
+            const mouseX = clientX - containerBounds.left;
+            const mouseY = clientY - containerBounds.top;
+
+            // Mevcut scale ve offset
+            const oldScale = viewState.scale;
+            const oldOffsetX = viewState.offset.x;
+            const oldOffsetY = viewState.offset.y;
+
+            // Mouse'un dünya koordinatlarındaki (scale edilmemiş) pozisyonu
+            const worldX = (mouseX - oldOffsetX) / oldScale;
+            const worldY = (mouseY - oldOffsetY) / oldScale;
+
+            // Yeni scale hesapla
+            const zoomSensitivity = 0.001;
+            const newScale = Math.min(Math.max(0.1, oldScale - deltaY * zoomSensitivity), 4);
+
+            // Yeni offset hesapla (mouse noktası sabit kalmalı)
+            // mouseX = newOffsetX + worldX * newScale
+            const newOffsetX = mouseX - worldX * newScale;
+            const newOffsetY = mouseY - worldY * newScale;
+
+            setViewState({
+                scale: newScale,
+                offset: { x: newOffsetX, y: newOffsetY }
+            });
         };
 
         // passive: false ile ekliyoruz ki preventDefault çalışsın
@@ -118,7 +234,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
         return () => {
             container.removeEventListener('wheel', handleWheel);
         };
-    }, [viewState.scale]);
+    }, [viewState]);
 
     return (
         <div
@@ -151,51 +267,6 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
                 }}
             >
                 {children}
-            </div>
-
-            {/* Zoom Controls - Mobil Responsive - Ağaç Teması */}
-            <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8 flex flex-col gap-2 bg-[#fffbf7]/90 backdrop-blur-lg p-2 rounded-xl shadow-xl border border-[#d7ccc8]">
-                {/* Fit View Button */}
-                <button
-                    onClick={handleFitView}
-                    className="p-2 md:p-2.5 hover:bg-[#E8F5E9] rounded-lg text-[#2E7D32] transition-colors group"
-                    title="Tümünü Göster"
-                >
-                    <Maximize2 size={18} className="md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
-                </button>
-
-                <div className="w-full h-px bg-[#d7ccc8]" />
-
-                {/* Zoom In */}
-                <button
-                    onClick={() => setViewState(p => ({ ...p, scale: Math.min(p.scale + 0.2, 3) }))}
-                    className="p-2 md:p-2.5 hover:bg-[#efebe9] rounded-lg text-[#5D4037] transition-colors"
-                    title="Yakınlaştır"
-                >
-                    <Plus size={18} className="md:w-5 md:h-5" />
-                </button>
-
-                {/* Scale Indicator */}
-                <div className="text-center text-[10px] md:text-xs text-[#8D6E63] font-mono py-1 font-bold">
-                    {Math.round(viewState.scale * 100)}%
-                </div>
-
-                {/* Zoom Out */}
-                <button
-                    onClick={() => setViewState(p => ({ ...p, scale: Math.max(p.scale - 0.2, 0.2) }))}
-                    className="p-2 md:p-2.5 hover:bg-[#efebe9] rounded-lg text-[#5D4037] transition-colors"
-                    title="Uzaklaştır"
-                >
-                    <div className="w-4 h-0.5 md:w-5 bg-current mx-auto"></div>
-                </button>
-            </div>
-
-            {/* Mobile Hint */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 md:hidden bg-[#fffbf7]/90 backdrop-blur-lg px-4 py-2 rounded-full shadow-lg border border-[#d7ccc8] text-xs text-[#5D4037] pointer-events-none">
-                <span className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-[#66BB6A] rounded-full animate-pulse"></span>
-                    Parmağınla sürükle ve yakınlaştır
-                </span>
             </div>
         </div>
     );
