@@ -149,7 +149,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         transition-all duration-200 z-40
                         ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                     `}>
-                        <button onClick={() => onEdit(node)} className="p-2 text-green-700 hover:bg-green-50 rounded-xl transition-colors" title="Düzenle">
+                        <button onClick={(e) => { e.stopPropagation(); onEdit(node); }} className="p-2 text-green-700 hover:bg-green-50 rounded-xl transition-colors" title="Düzenle">
                             <FileEdit size={18} />
                         </button>
                         <button onClick={handleCopy} className="p-2 text-green-700 hover:bg-green-50 rounded-xl transition-colors" title="Kopyala">
@@ -272,7 +272,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
           ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
         `}>
                     <button
-                        onClick={() => onEdit(node)}
+                        onClick={(e) => { e.stopPropagation(); onEdit(node); }}
                         className="p-1.5 md:p-2 text-[#5D4037] hover:text-[#3E2723] hover:bg-[#efebe9] rounded-full transition-colors touch-manipulation"
                         title="Düzenle"
                     >
