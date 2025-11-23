@@ -285,7 +285,7 @@ export default function GardenPage() {
                                     node={root}
                                     onAddChild={handleAddChild}
                                     onDelete={handleDeleteNode}
-                                    onEdit={setEditingNode}
+                                    onEdit={(node) => router.push(`/bahce/${gardenId}/editor/${node.id}`)}
                                     depth={0}
                                 />
                             ))}

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Copy, FileEdit, Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { MindNode } from '@/lib/types';
+import { useStore } from '@/lib/store/useStore';
 
 interface MindMapNodeProps {
     node: MindNode;
@@ -39,13 +40,15 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 
         checkMobile();
         window.addEventListener('resize', checkMobile);
-
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     const handleCopy = (e: React.MouseEvent) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(`${node.title}\n\n${node.content}`);
+        // Sadece içeriği kopyala (başlık hariç - ilk satırdan sonraki kısım)
+        const lines = node.content.split('\n');
+        const contentOnly = lines.slice(1).join('\n').trim();
+        navigator.clipboard.writeText(contentOnly);
         setShowCopied(true);
         setTimeout(() => setShowCopied(false), 2000);
     };
@@ -72,10 +75,16 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         }
     };
 
+    const { updateNode } = useStore();
+
     // Başlık düzenlemeyi kaydet
-    const handleSaveTitle = () => {
+    const handleSaveTitle = async () => {
         if (editedTitle.trim() && editedTitle !== node.title) {
-            onEdit({ ...node, title: editedTitle.trim() });
+            // Başlığı içeriğin ilk satırı olarak güncelle
+            const lines = node.content.split('\n');
+            lines[0] = editedTitle.trim();
+            const newContent = lines.join('\n');
+            await updateNode(node.id, newContent);
         }
         setIsEditingTitle(false);
     };
