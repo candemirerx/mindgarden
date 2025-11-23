@@ -71,18 +71,11 @@ export default function GardenPage() {
 
     // Yeni root node (ağaç) oluştur
     const handleCreateRoot = async () => {
-        const newNode = await addNode(gardenId, 'Yeni Ağaç', null, { x: 0, y: 0 });
-        if (newNode) {
-            // Supabase'e kaydedildi, useEffect otomatik olarak state'i güncelleyecek
-            // Düzenleme modunu aç
-            setEditingNode({
-                id: newNode.id,
-                title: 'Yeni Ağaç',
-                content: 'Bu senin yeni ağacın. Büyütmek için tıkla.',
-                children: [],
-                isExpanded: true
-            });
-        }
+        const title = prompt('Ağaç ismi giriniz:');
+        if (!title || !title.trim()) return;
+
+        const newNode = await addNode(gardenId, title.trim(), null, { x: 0, y: 0 });
+        // Supabase'e kaydedildi, useEffect otomatik olarak state'i güncelleyecek
     };
 
     // Recursive node bulma
@@ -128,8 +121,11 @@ export default function GardenPage() {
     const handleAddChild = async (parentId: string) => {
         if (mindRoots.length === 0) return;
 
+        const title = prompt('Dal ismi giriniz:');
+        if (!title || !title.trim()) return;
+
         // Supabase'e kaydet ve gerçek node'u al
-        const newNode = await addNode(gardenId, 'Yeni Fikir', parentId, { x: 0, y: 0 });
+        const newNode = await addNode(gardenId, title.trim(), parentId, { x: 0, y: 0 });
 
         if (newNode) {
             const newMindNode: MindNode = {
@@ -152,9 +148,6 @@ export default function GardenPage() {
                 const newRoots = [...mindRoots];
                 newRoots[treeIndex] = newTree;
                 setMindRoots(newRoots);
-
-                // Düzenleme modunu aç
-                setEditingNode(newMindNode);
             }
         }
     };
