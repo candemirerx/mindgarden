@@ -118,7 +118,7 @@ export default function GardenPage() {
     };
 
     // Alt node ekle
-    const handleAddChild = async (parentId: string) => {
+    const handleAddChild = async (parentId: string, direction: 'left' | 'right' = 'right') => {
         if (mindRoots.length === 0) return;
 
         const title = prompt('Dal ismi giriniz:');
@@ -140,10 +140,12 @@ export default function GardenPage() {
             if (result) {
                 const { tree, treeIndex } = result;
                 // UI'da ekle
-                const newTree = modifyNode(tree, parentId, (node) => ({
-                    ...node,
-                    children: [...node.children, newMindNode]
-                }));
+                const newTree = modifyNode(tree, parentId, (node) => {
+                    const newChildren = direction === 'left'
+                        ? [newMindNode, ...node.children]
+                        : [...node.children, newMindNode];
+                    return { ...node, children: newChildren };
+                });
 
                 const newRoots = [...mindRoots];
                 newRoots[treeIndex] = newTree;

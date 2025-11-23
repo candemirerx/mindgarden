@@ -7,8 +7,8 @@ import { useStore } from '@/lib/store/useStore';
 
 interface MindMapNodeProps {
     node: MindNode;
-    onAddChild: (parentId: string) => void;
-    onAddSibling?: (siblingId: string) => void;
+    onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
+    onAddSibling?: (siblingId: string, direction: 'left' | 'right') => void;
     onDelete: (nodeId: string) => void;
     onEdit: (node: MindNode) => void;
     depth: number;
@@ -204,7 +204,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         <div className="absolute -bottom-2 w-24 h-4 bg-[#3E2723]/10 blur-md rounded-full z-0" />
 
                         <button
-                            onClick={(e) => { e.stopPropagation(); onAddChild(node.id); }}
+                            onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
                             className="
                                 absolute -bottom-4 left-1/2 transform -translate-x-1/2
                                 w-10 h-10 rounded-full flex items-center justify-center
@@ -244,7 +244,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                 key={child.id}
                                 node={child}
                                 onAddChild={onAddChild}
-                                onAddSibling={(siblingId) => onAddChild(node.id)}
+                                onAddSibling={(siblingId, direction) => onAddChild(node.id, direction)}
                                 onDelete={onDelete}
                                 onEdit={onEdit}
                                 depth={depth + 1}
@@ -330,14 +330,14 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 
                     {onAddSibling && (
                         <button
-                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id); }}
+                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'left'); }}
                             className={`
                                 absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2
                                 w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center
                                 border-2 shadow-md
                                 ${getIconColor(depth)}
                                 hover:scale-110 active:scale-95 transition-all duration-300
-                                opacity-0 group-hover:opacity-100
+                                ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                                 touch-manipulation
                                 z-20
                             `}
@@ -349,14 +349,14 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 
                     {onAddSibling && (
                         <button
-                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id); }}
+                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'right'); }}
                             className={`
                                 absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2
                                 w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center
                                 border-2 shadow-md
                                 ${getIconColor(depth)}
                                 hover:scale-110 active:scale-95 transition-all duration-300
-                                opacity-0 group-hover:opacity-100
+                                ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                                 touch-manipulation
                                 z-20
                             `}
@@ -367,14 +367,14 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     )}
 
                     <button
-                        onClick={(e) => { e.stopPropagation(); onAddChild(node.id); }}
+                        onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
                         className={`
               absolute -bottom-3 left-1/2 transform -translate-x-1/2
               w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center
               border-2 shadow-md
               ${getIconColor(depth)}
               hover:scale-110 active:scale-95 transition-all duration-300
-              opacity-0 group-hover:opacity-100
+              ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
               touch-manipulation
             `}
                         title="Filizlendir"
@@ -391,7 +391,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                 border-2 shadow-md
                                 bg-amber-600 text-white border-amber-700
                                 hover:scale-110 active:scale-95 transition-all duration-300
-                                opacity-0 group-hover:opacity-100
+                                ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                                 touch-manipulation
                             `}
                             title={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
