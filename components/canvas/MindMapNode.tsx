@@ -171,16 +171,31 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     onClick={handleNodeClick}
                 >
                     <div className={`
-                        absolute -top-16 left-1/2 transform -translate-x-1/2 
-                        flex items-center gap-1 bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-green-100
+                        absolute -top-12 left-1/2 transform -translate-x-1/2 
+                        flex items-center gap-1 bg-[#fffbf7] backdrop-blur-lg p-1.5 rounded-full shadow-xl border border-[#d7ccc8]
                         transition-all duration-200 z-40
                         ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                     `}>
-                        <button onClick={(e) => { e.stopPropagation(); onEdit(node); }} className="p-2 text-green-700 hover:bg-green-50 rounded-xl transition-colors" title="Metin Editörü">
-                            <Pencil size={18} />
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onEdit(node); }}
+                            className="p-2 text-[#5D4037] hover:text-[#3E2723] hover:bg-[#efebe9] rounded-full transition-colors touch-manipulation"
+                            title="Metin Editörü"
+                        >
+                            <Pencil size={16} />
                         </button>
-                        <button onClick={handleCopy} className="p-2 text-amber-700 hover:bg-amber-50 rounded-xl transition-colors" title="Notu Kopyala">
-                            <FileText size={18} />
+                        <button
+                            onClick={handleCopy}
+                            className="p-2 text-[#5D4037] hover:text-[#F57C00] hover:bg-[#FFF3E0] rounded-full transition-colors touch-manipulation"
+                            title={showCopied ? "Not Kopyalandı!" : "Notu Kopyala"}
+                        >
+                            <FileText size={16} />
+                        </button>
+                        <button
+                            onClick={handleCopyTitle}
+                            className="p-2 text-[#5D4037] hover:text-[#2E7D32] hover:bg-[#E8F5E9] rounded-full transition-colors touch-manipulation"
+                            title={showTitleCopied ? "Başlık Kopyalandı!" : "Başlığı Kopyala"}
+                        >
+                            <Copy size={16} />
                         </button>
                     </div>
 
@@ -236,14 +251,14 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 
                         <button
                             onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                            className="
+                            className={`
                                 absolute -bottom-4 left-1/2 transform -translate-x-1/2
                                 w-10 h-10 rounded-full flex items-center justify-center
                                 bg-[#2E7D32] text-white border-3 border-white shadow-lg
                                 hover:scale-110 hover:bg-[#1B5E20] active:scale-95 transition-all duration-300
-                                opacity-0 group-hover:opacity-100
+                                ${isExpanded ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'}
                                 z-30
-                            "
+                            `}
                             title="Yeni Dal Ekle"
                         >
                             <Plus size={20} />
@@ -409,7 +424,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
               border-2 shadow-md
               ${getIconColor(depth)}
               hover:scale-110 active:scale-95 transition-all duration-300
-              ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+              ${isExpanded ? ((isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none') : 'opacity-0 pointer-events-none'}
               touch-manipulation
             `}
                         title="Filizlendir"

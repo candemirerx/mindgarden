@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Sprout } from 'lucide-react';
+import { ArrowLeft, Sprout, Settings } from 'lucide-react';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
+import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
 import { Modal } from '@/components/editor/Modal';
 import { MindTextEditor } from '@/components/editor/MindTextEditor';
 import { MindNode } from '@/lib/types';
@@ -20,6 +21,7 @@ export default function GardenPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const currentGarden = gardens.find((g: any) => g.id === gardenId);
 
@@ -212,6 +214,30 @@ export default function GardenPage() {
         }
     };
 
+    // Ağaç yeniden adlandırma
+    const handleRenameTree = async (treeId: string, newName: string) => {
+        const tree = mindRoots.find(t => t.id === treeId);
+        if (!tree) return;
+
+        // İçeriğin ilk satırını (başlığı) güncelle
+        const lines = tree.content.split('\n');
+        lines[0] = newName;
+        const newContent = lines.join('\n');
+
+        await updateNode(treeId, newContent);
+
+        // UI'da güncelle
+        setMindRoots(prev => prev.map(t =>
+            t.id === treeId ? { ...t, title: newName, content: newContent } : t
+        ));
+    };
+
+    // Ağaç silme
+    const handleDeleteTree = async (treeId: string) => {
+        await deleteNodeFromStore(treeId);
+        setMindRoots(prev => prev.filter(t => t.id !== treeId));
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50/30 to-stone-50">
@@ -257,6 +283,14 @@ export default function GardenPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Ayarlar Butonu */}
+                    <button
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="p-2 hover:bg-stone-100 rounded-full text-stone-500 transition-colors flex-shrink-0"
+                        title="Ayarlar"
+                    >
+                        <Settings size={18} className="md:w-5 md:h-5" />
+                    </button>
                     {/* Ağaç Ekle Butonu */}
                     <button
                         onClick={handleCreateRoot}
@@ -319,6 +353,15 @@ export default function GardenPage() {
                     />
                 )}
             </Modal>
+
+            {/* Tree Management Modal */}
+            <TreeManagementModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                trees={mindRoots}
+                onRenameTree={handleRenameTree}
+                onDeleteTree={handleDeleteTree}
+            />
         </div>
     );
 }
