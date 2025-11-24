@@ -2,6 +2,7 @@
 create table gardens (
   id uuid default gen_random_uuid() primary key,
   name text not null,
+  view_state jsonb default '{"x": 0, "y": 0, "zoom": 1}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -30,6 +31,7 @@ create table nodes (
   content text not null,
   position_x real default 0 not null,
   position_y real default 0 not null,
+  is_expanded boolean default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

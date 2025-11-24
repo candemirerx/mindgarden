@@ -2,16 +2,24 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ViewState, Point } from '@/lib/types';
+import { useStore } from '@/lib/store/useStore';
 
 interface GardenCanvasProps {
     children: React.ReactNode;
+    gardenId?: string;
+    initialViewState?: { x: number; y: number; zoom: number };
 }
 
-export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
-    const [viewState, setViewState] = useState<ViewState>({ scale: 1, offset: { x: 0, y: 0 } });
+export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, initialViewState }) => {
+    const { setSelectedNode, updateGardenViewState } = useStore();
+    const [viewState, setViewState] = useState<ViewState>({
+        scale: initialViewState?.zoom || 1,
+        offset: { x: initialViewState?.x || 0, y: initialViewState?.y || 0 }
+    });
     const [isDragging, setIsDragging] = useState(false);
     const [lastMousePos, setLastMousePos] = useState<Point>({ x: 0, y: 0 });
     const [isPinching, setIsPinching] = useState(false);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Gesture Başlangıç Referansları (Daha stabil bir deneyim için)
     const gestureStartScale = useRef<number>(1);
@@ -23,16 +31,39 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
-    // Canvas'ı başlangıçta ortala
+    // Canvas'ı başlangıçta ortala (Eğer kayıtlı veri yoksa)
     useEffect(() => {
-        if (containerRef.current) {
+        if (!initialViewState && containerRef.current) {
             const { width, height } = containerRef.current.getBoundingClientRect();
             setViewState(prev => ({
                 ...prev,
                 offset: { x: width / 2 - 100, y: height / 4 }
             }));
         }
-    }, []);
+    }, [initialViewState]);
+
+    // ViewState değişimlerini kaydet (Debounce ile)
+    useEffect(() => {
+        if (!gardenId) return;
+
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
+        saveTimeoutRef.current = setTimeout(() => {
+            updateGardenViewState(gardenId, {
+                x: viewState.offset.x,
+                y: viewState.offset.y,
+                zoom: viewState.scale
+            });
+        }, 1000);
+
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [viewState, gardenId, updateGardenViewState]);
 
     // İki parmak arası mesafeyi hesapla
     const getTouchDistance = (touches: React.TouchList): number => {
@@ -56,6 +87,9 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children }) => {
     // Mouse/Touch başlangıç
     const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.node-content')) return;
+
+        // Arka plana tıklandığında seçimi kaldır
+        setSelectedNode(null);
 
         // Touch event ise
         if ('touches' in e) {

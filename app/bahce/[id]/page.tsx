@@ -43,7 +43,7 @@ export default function GardenPage() {
                 title: node.content.split('\n')[0] || 'Başlıksız',
                 content: node.content,
                 children,
-                isExpanded: true
+                isExpanded: node.is_expanded ?? true
             };
         };
 
@@ -271,7 +271,7 @@ export default function GardenPage() {
 
             {/* Canvas */}
             <div className="flex-1 relative overflow-hidden">
-                <GardenCanvas>
+                <GardenCanvas gardenId={gardenId} initialViewState={currentGarden.view_state}>
                     {mindRoots.length > 0 ? (
                         <ul className="flex gap-20">
                             {mindRoots.map((root) => (

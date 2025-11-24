@@ -7,11 +7,13 @@ export const useStore = create<StoreState>((set, get) => ({
     gardens: [],
     currentGardenId: null,
     nodes: [],
+    selectedNodeId: null,
 
     // Garden actions
     setGardens: (gardens: Garden[]) => set({ gardens }),
 
     setCurrentGarden: (id: string | null) => set({ currentGardenId: id }),
+    setSelectedNode: (id: string | null) => set({ selectedNodeId: id }),
 
     addGarden: async (name: string) => {
         try {
@@ -86,6 +88,7 @@ export const useStore = create<StoreState>((set, get) => ({
                         content,
                         position_x: position.x,
                         position_y: position.y,
+                        is_expanded: true,
                     },
                 ])
                 .select()
@@ -178,6 +181,46 @@ export const useStore = create<StoreState>((set, get) => ({
             set({ nodes: (data as TreeNode[]) || [] });
         } catch (error) {
             console.error('Node\'lar yüklenirken hata:', error);
+        }
+    },
+
+    updateGardenViewState: async (id: string, viewState: { x: number; y: number; zoom: number }) => {
+        try {
+            // Optimistic update
+            set((state) => ({
+                gardens: state.gardens.map((g) =>
+                    g.id === id ? { ...g, view_state: viewState } : g
+                ),
+            }));
+
+            const { error } = await supabase
+                .from('gardens')
+                .update({ view_state: viewState })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Bahçe görünümü güncellenirken hata:', JSON.stringify(error, null, 2));
+        }
+    },
+
+    toggleNodeExpansion: async (id: string, isExpanded: boolean) => {
+        try {
+            // Optimistic update
+            set((state) => ({
+                nodes: state.nodes.map((n) =>
+                    n.id === id ? { ...n, is_expanded: isExpanded } : n
+                ),
+            }));
+
+            const { error } = await supabase
+                .from('nodes')
+                .update({ is_expanded: isExpanded })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Node genişletme durumu güncellenirken hata:', JSON.stringify(error, null, 2));
         }
     },
 }));

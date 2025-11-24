@@ -4,6 +4,11 @@ export interface Garden {
     name: string;
     created_at: string;
     user_id?: string;
+    view_state?: {
+        x: number;
+        y: number;
+        zoom: number;
+    };
 }
 
 export interface TreeNode {
@@ -15,6 +20,7 @@ export interface TreeNode {
     position_y: number;
     created_at: string;
     updated_at?: string;
+    is_expanded?: boolean;
 }
 
 // Store State Tipi
@@ -22,8 +28,10 @@ export interface StoreState {
     gardens: Garden[];
     currentGardenId: string | null;
     nodes: TreeNode[];
+    selectedNodeId: string | null;
     setGardens: (gardens: Garden[]) => void;
     setCurrentGarden: (id: string | null) => void;
+    setSelectedNode: (id: string | null) => void;
     addGarden: (name: string) => Promise<void>;
     deleteGarden: (id: string) => Promise<void>;
     fetchGardens: () => Promise<void>;
@@ -33,6 +41,8 @@ export interface StoreState {
     updateNodePosition: (id: string, x: number, y: number) => Promise<void>;
     deleteNode: (id: string) => Promise<void>;
     fetchNodes: (gardenId: string) => Promise<void>;
+    updateGardenViewState: (id: string, viewState: { x: number; y: number; zoom: number }) => Promise<void>;
+    toggleNodeExpansion: (id: string, isExpanded: boolean) => Promise<void>;
 }
 
 // Yeni MindMap yapısı için tipler

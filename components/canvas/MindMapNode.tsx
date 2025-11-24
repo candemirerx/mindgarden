@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, FileEdit, Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, FileText } from 'lucide-react';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 
@@ -24,11 +24,12 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [showCopied, setShowCopied] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(node.isExpanded ?? true);
     const [showMenuOnMobile, setShowMenuOnMobile] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(node.title);
     const [isMobile, setIsMobile] = useState(false);
+    const [showTitleCopied, setShowTitleCopied] = useState(false);
 
     const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,9 +54,22 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         setTimeout(() => setShowCopied(false), 2000);
     };
 
+    const handleCopyTitle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(node.title);
+        setShowTitleCopied(true);
+        setTimeout(() => setShowTitleCopied(false), 2000);
+    };
+
+
+
+    const { updateNode, selectedNodeId, setSelectedNode, toggleNodeExpansion } = useStore();
+
     const toggleExpand = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setIsExpanded(!isExpanded);
+        const newState = !isExpanded;
+        setIsExpanded(newState);
+        toggleNodeExpansion(node.id, newState);
     };
 
     // Düğüm tıklama mantığı
@@ -70,12 +84,25 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                 setIsEditingTitle(true);
             }
         } else {
-            // Masaüstünde: Doğrudan başlığı düzenle
-            setIsEditingTitle(true);
+            // Masaüstünde: Seçili değilse seç, seçiliyse bir şey yapma (başlığa tıklanmasını bekle)
+            if (selectedNodeId !== node.id) {
+                setSelectedNode(node.id);
+            }
         }
     };
 
-    const { updateNode } = useStore();
+    const handleTitleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isMobile) {
+            if (selectedNodeId === node.id) {
+                setIsEditingTitle(true);
+            } else {
+                setSelectedNode(node.id);
+            }
+        }
+    };
+
+
 
     // Başlık düzenlemeyi kaydet
     const handleSaveTitle = async () => {
@@ -149,11 +176,11 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         transition-all duration-200 z-40
                         ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                     `}>
-                        <button onClick={(e) => { e.stopPropagation(); onEdit(node); }} className="p-2 text-green-700 hover:bg-green-50 rounded-xl transition-colors" title="Düzenle">
-                            <FileEdit size={18} />
+                        <button onClick={(e) => { e.stopPropagation(); onEdit(node); }} className="p-2 text-green-700 hover:bg-green-50 rounded-xl transition-colors" title="Metin Editörü">
+                            <Pencil size={18} />
                         </button>
-                        <button onClick={handleCopy} className="p-2 text-green-700 hover:bg-green-50 rounded-xl transition-colors" title="Kopyala">
-                            <Copy size={18} />
+                        <button onClick={handleCopy} className="p-2 text-amber-700 hover:bg-amber-50 rounded-xl transition-colors" title="Notu Kopyala">
+                            <FileText size={18} />
                         </button>
                     </div>
 
@@ -184,7 +211,11 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             ) : (
-                                <h4 className="font-bold text-xl mb-2 relative z-10 font-serif tracking-wide drop-shadow-sm">
+
+                                <h4
+                                    className="font-bold text-xl mb-2 relative z-10 font-serif tracking-wide drop-shadow-sm cursor-text"
+                                    onClick={handleTitleClick}
+                                >
                                     {node.title}
                                 </h4>
                             )}
@@ -237,22 +268,24 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     </div>
                 </div>
 
-                {hasChildren && isExpanded && (
-                    <ul>
-                        {node.children.map(child => (
-                            <MindMapNode
-                                key={child.id}
-                                node={child}
-                                onAddChild={onAddChild}
-                                onAddSibling={(siblingId, direction) => onAddChild(node.id, direction)}
-                                onDelete={onDelete}
-                                onEdit={onEdit}
-                                depth={depth + 1}
-                            />
-                        ))}
-                    </ul>
-                )}
-            </li>
+                {
+                    hasChildren && isExpanded && (
+                        <ul>
+                            {node.children.map(child => (
+                                <MindMapNode
+                                    key={child.id}
+                                    node={child}
+                                    onAddChild={onAddChild}
+                                    onAddSibling={(siblingId, direction) => onAddChild(node.id, direction)}
+                                    onDelete={onDelete}
+                                    onEdit={onEdit}
+                                    depth={depth + 1}
+                                />
+                            ))}
+                        </ul>
+                    )
+                }
+            </li >
         );
     }
 
@@ -274,26 +307,24 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(node); }}
                         className="p-1.5 md:p-2 text-[#5D4037] hover:text-[#3E2723] hover:bg-[#efebe9] rounded-full transition-colors touch-manipulation"
-                        title="Düzenle"
+                        title="Metin Editörü"
                     >
-                        <FileEdit size={14} className="md:w-4 md:h-4" />
+                        <Pencil size={14} className="md:w-4 md:h-4" />
                     </button>
                     <button
                         onClick={handleCopy}
+                        className="p-1.5 md:p-2 text-[#5D4037] hover:text-[#F57C00] hover:bg-[#FFF3E0] rounded-full transition-colors touch-manipulation"
+                        title={showCopied ? "Not Kopyalandı!" : "Notu Kopyala"}
+                    >
+                        <FileText size={14} className="md:w-4 md:h-4" />
+                    </button>
+                    <button
+                        onClick={handleCopyTitle}
                         className="p-1.5 md:p-2 text-[#5D4037] hover:text-[#2E7D32] hover:bg-[#E8F5E9] rounded-full transition-colors touch-manipulation"
-                        title={showCopied ? "Kopyalandı!" : "Kopyala"}
+                        title={showTitleCopied ? "Başlık Kopyalandı!" : "Başlığı Kopyala"}
                     >
                         <Copy size={14} className="md:w-4 md:h-4" />
                     </button>
-                    {depth > 0 && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
-                            className="p-1.5 md:p-2 text-[#5D4037] hover:text-[#c62828] hover:bg-[#ffebee] rounded-full transition-colors touch-manipulation"
-                            title="Sil"
-                        >
-                            <Trash2 size={14} className="md:w-4 md:h-4" />
-                        </button>
-                    )}
                 </div>
 
                 <div
@@ -322,7 +353,11 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <h4 className={`font-bold text-sm md:text-base truncate ${getTextColor(depth)} relative z-10`}>
+
+                        <h4
+                            className={`font-bold text-sm md:text-base truncate ${getTextColor(depth)} relative z-10 cursor-text`}
+                            onClick={handleTitleClick}
+                        >
                             {node.title}
                         </h4>
                     )}
@@ -382,6 +417,24 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         <Plus size={16} className="md:w-4 md:h-4" />
                     </button>
 
+                    {depth > 0 && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
+                            className={`
+                                absolute -bottom-4 left-[15%]
+                                w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center
+                                bg-red-100 text-red-600 border border-red-200 shadow-sm
+                                hover:bg-red-600 hover:text-white hover:border-red-700 hover:scale-110 
+                                active:scale-95 transition-all duration-300
+                                ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                                z-30
+                            `}
+                            title="Dalı Sil"
+                        >
+                            <X size={12} className="md:w-3.5 md:h-3.5" />
+                        </button>
+                    )}
+
                     {hasChildren && (
                         <button
                             onClick={toggleExpand}
@@ -402,21 +455,23 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                 </div>
             </div>
 
-            {hasChildren && isExpanded && (
-                <ul>
-                    {node.children.map(child => (
-                        <MindMapNode
-                            key={child.id}
-                            node={child}
-                            onAddChild={onAddChild}
-                            onAddSibling={(siblingId) => onAddChild(node.id)}
-                            onDelete={onDelete}
-                            onEdit={onEdit}
-                            depth={depth + 1}
-                        />
-                    ))}
-                </ul>
-            )}
-        </li>
+            {
+                hasChildren && isExpanded && (
+                    <ul>
+                        {node.children.map(child => (
+                            <MindMapNode
+                                key={child.id}
+                                node={child}
+                                onAddChild={onAddChild}
+                                onAddSibling={(siblingId) => onAddChild(node.id)}
+                                onDelete={onDelete}
+                                onEdit={onEdit}
+                                depth={depth + 1}
+                            />
+                        ))}
+                    </ul>
+                )
+            }
+        </li >
     );
 };
