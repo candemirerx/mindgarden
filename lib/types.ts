@@ -29,9 +29,12 @@ export interface StoreState {
     currentGardenId: string | null;
     nodes: TreeNode[];
     selectedNodeId: string | null;
+    isSidebarOpen: boolean;
     setGardens: (gardens: Garden[]) => void;
     setCurrentGarden: (id: string | null) => void;
     setSelectedNode: (id: string | null) => void;
+    toggleSidebar: () => void;
+    setSidebarOpen: (open: boolean) => void;
     addGarden: (name: string) => Promise<void>;
     deleteGarden: (id: string) => Promise<void>;
     fetchGardens: () => Promise<void>;

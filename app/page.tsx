@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { Plus, Trash2, TreePine, Sparkles, Calendar } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
+import Sidebar from '@/components/layout/Sidebar';
 
 export default function HomePage() {
     const router = useRouter();
-    const { gardens, fetchGardens, deleteGarden } = useStore();
+    const { gardens, fetchGardens, deleteGarden, toggleSidebar } = useStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -48,14 +49,18 @@ export default function HomePage() {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-4 mb-2">
-                            <div className="relative">
-                                <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-emerald-700 to-green-800 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-900/20 border-2 border-emerald-600/20">
+                            <button
+                                onClick={toggleSidebar}
+                                className="relative group"
+                                title="Menü"
+                            >
+                                <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-emerald-700 to-green-800 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-900/20 border-2 border-emerald-600/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl group-active:scale-95">
                                     <TreePine className="text-emerald-50" size={32} />
                                 </div>
                                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-full border-2 border-[#f4f1ea] flex items-center justify-center">
                                     <Sparkles size={10} className="text-white" />
                                 </div>
-                            </div>
+                            </button>
                             <div>
                                 <h1 className="text-3xl md:text-4xl font-bold text-stone-800 tracking-tight font-serif">
                                     Not Bahçesi
@@ -189,6 +194,9 @@ export default function HomePage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
             />
+
+            {/* Sidebar */}
+            <Sidebar />
         </div>
     );
 }

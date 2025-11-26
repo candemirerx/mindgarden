@@ -3,12 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Sprout, Settings } from 'lucide-react';
+import { ArrowLeft, Sprout, Settings, TreePine } from 'lucide-react';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
 import { Modal } from '@/components/editor/Modal';
 import { MindTextEditor } from '@/components/editor/MindTextEditor';
+import Sidebar from '@/components/layout/Sidebar';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -17,7 +18,7 @@ export default function GardenPage() {
     const router = useRouter();
     const gardenId = params.id as string;
 
-    const { gardens, nodes, fetchNodes, setCurrentGarden, addNode, updateNode, deleteNode: deleteNodeFromStore } = useStore();
+    const { gardens, nodes, fetchNodes, setCurrentGarden, addNode, updateNode, deleteNode: deleteNodeFromStore, toggleSidebar } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
@@ -271,6 +272,14 @@ export default function GardenPage() {
             {/* Header - Mobil Responsive */}
             <header className="h-14 md:h-16 bg-white/80 backdrop-blur-md border-b border-stone-200 flex items-center justify-between px-3 md:px-6 z-40 relative shadow-sm">
                 <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+                    {/* Sidebar Toggle */}
+                    <button
+                        onClick={toggleSidebar}
+                        className="p-2 hover:bg-emerald-100 rounded-full text-emerald-700 transition-colors flex-shrink-0 touch-manipulation"
+                        title="Menü"
+                    >
+                        <TreePine size={20} className="md:w-5 md:h-5" />
+                    </button>
                     <button
                         onClick={() => router.push('/')}
                         className="p-2 hover:bg-stone-100 rounded-full text-stone-500 transition-colors flex-shrink-0 touch-manipulation"
@@ -362,6 +371,9 @@ export default function GardenPage() {
                 onRenameTree={handleRenameTree}
                 onDeleteTree={handleDeleteTree}
             />
+
+            {/* Sidebar */}
+            <Sidebar />
         </div>
     );
 }

@@ -8,12 +8,17 @@ export const useStore = create<StoreState>((set, get) => ({
     currentGardenId: null,
     nodes: [],
     selectedNodeId: null,
+    isSidebarOpen: false,
 
     // Garden actions
     setGardens: (gardens: Garden[]) => set({ gardens }),
 
     setCurrentGarden: (id: string | null) => set({ currentGardenId: id }),
     setSelectedNode: (id: string | null) => set({ selectedNodeId: id }),
+    
+    // Sidebar actions
+    toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+    setSidebarOpen: (open: boolean) => set({ isSidebarOpen: open }),
 
     addGarden: async (name: string) => {
         try {
