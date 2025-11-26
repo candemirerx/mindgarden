@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Save, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X } from 'lucide-react';
 
 export default function EditorPage() {
     const params = useParams();
@@ -17,6 +17,9 @@ export default function EditorPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const [showCopied, setShowCopied] = useState(false);
+    const [isSpellChecking, setIsSpellChecking] = useState(false);
+    const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const currentNode = nodes.find(n => n.id === nodeId);
 
@@ -57,12 +60,76 @@ export default function EditorPage() {
         setHasChanges(true);
     };
 
+    // İmla düzeltme fonksiyonu
+    const handleSpellCheck = async () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const selectionStart = textarea.selectionStart;
+        const selectionEnd = textarea.selectionEnd;
+        const hasSelection = selectionStart !== selectionEnd;
+
+        const textToCheck = hasSelection
+            ? content.substring(selectionStart, selectionEnd)
+            : content;
+
+        if (!textToCheck.trim()) return;
+
+        setIsSpellChecking(true);
+
+        try {
+            const response = await fetch('/api/spellcheck', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: textToCheck })
+            });
+
+            if (!response.ok) throw new Error('API hatası');
+
+            const data = await response.json();
+            const correctedText = data.correctedText;
+
+            // Orijinali sakla ve düzeltilmişi göster
+            setPendingSpellCheck({ original: content, corrected: '' });
+
+            if (hasSelection) {
+                const newContent = 
+                    content.substring(0, selectionStart) + 
+                    correctedText + 
+                    content.substring(selectionEnd);
+                setPendingSpellCheck({ original: content, corrected: newContent });
+                setContent(newContent);
+            } else {
+                setPendingSpellCheck({ original: content, corrected: correctedText });
+                setContent(correctedText);
+            }
+        } catch (error) {
+            console.error('Spellcheck error:', error);
+            alert('İmla düzeltme sırasında bir hata oluştu.');
+        } finally {
+            setIsSpellChecking(false);
+        }
+    };
+
+    // İmla düzeltmeyi onayla
+    const handleAcceptSpellCheck = () => {
+        setHasChanges(true);
+        setPendingSpellCheck(null);
+    };
+
+    // İmla düzeltmeyi iptal et
+    const handleRejectSpellCheck = () => {
+        if (pendingSpellCheck) {
+            setContent(pendingSpellCheck.original);
+        }
+        setPendingSpellCheck(null);
+    };
+
     return (
         <div className="min-h-screen bg-[#f0f0f0] flex flex-col">
-            {/* Minimal Header - Word tarzı */}
+            {/* Header */}
             <header className="bg-white border-b border-stone-300">
                 <div className="flex items-center justify-between px-6 py-3">
-                    {/* Sol: Geri ve Başlık */}
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                         <button
                             onClick={handleClose}
@@ -78,7 +145,6 @@ export default function EditorPage() {
                         </div>
                     </div>
 
-                    {/* Sağ: Butonlar */}
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleCopy}
@@ -101,15 +167,59 @@ export default function EditorPage() {
                         </button>
                     </div>
                 </div>
+
+                {/* AI Toolbar */}
+                <div className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 border-t border-stone-200">
+                    <span className="text-xs font-medium text-indigo-600 mr-2">Yapay Zeka</span>
+                    
+                    {pendingSpellCheck ? (
+                        // Onay/İptal butonları
+                        <div className="flex items-center gap-1">
+                            <span className="text-xs text-stone-500 mr-2">Değişiklikleri onayla:</span>
+                            <button
+                                onClick={handleAcceptSpellCheck}
+                                className="p-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all"
+                                title="Değişiklikleri Onayla"
+                            >
+                                <Check size={16} />
+                            </button>
+                            <button
+                                onClick={handleRejectSpellCheck}
+                                className="p-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all"
+                                title="Eski Haline Dön"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleSpellCheck}
+                            disabled={isSpellChecking || !content.trim()}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                                isSpellChecking || !content.trim()
+                                    ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow'
+                            }`}
+                            title="Seçili metni veya tüm içeriği imla kurallarına uygun hale getir"
+                        >
+                            {isSpellChecking ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <PenLine size={16} />
+                            )}
+                            <span>{isSpellChecking ? 'Düzeltiliyor...' : 'İmla Düzelt'}</span>
+                        </button>
+                    )}
+                </div>
             </header>
 
-            {/* Editor Area - Word tarzı beyaz sayfa */}
-            <main className="flex-1 overflow-auto py-12">
+
+            {/* Editor Area */}
+            <main className="flex-1 overflow-auto py-6">
                 <div className="max-w-4xl mx-auto">
-                    {/* Beyaz Sayfa */}
                     <div className="bg-white shadow-lg min-h-[842px]">
                         {/* Başlık */}
-                        <div className="border-b border-stone-200 px-16 pt-16 pb-6">
+                        <div className="border-b border-stone-200 px-12 pt-6 pb-4">
                             <input
                                 type="text"
                                 value={title}
@@ -118,13 +228,14 @@ export default function EditorPage() {
                                     setHasChanges(true);
                                 }}
                                 placeholder="Başlık"
-                                className="w-full text-3xl font-bold text-stone-800 outline-none placeholder:text-stone-300"
+                                className="w-full text-xl font-semibold text-stone-800 outline-none placeholder:text-stone-300"
                             />
                         </div>
 
                         {/* İçerik */}
-                        <div className="px-16 py-8">
+                        <div className="px-12 py-6">
                             <textarea
+                                ref={textareaRef}
                                 value={content}
                                 onChange={handleContentChange}
                                 placeholder="İçeriğinizi buraya yazın..."
@@ -136,7 +247,7 @@ export default function EditorPage() {
                 </div>
             </main>
 
-            {/* Footer - Durum Çubuğu */}
+            {/* Footer */}
             <footer className="bg-white border-t border-stone-300 px-6 py-2">
                 <div className="flex items-center justify-between text-xs text-stone-500">
                     <span>{hasChanges ? '● Kaydedilmemiş değişiklikler' : 'Tüm değişiklikler kaydedildi'}</span>
