@@ -1,6 +1,7 @@
 -- Gardens (Bahçeler) Tablosu
 create table gardens (
   id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade,
   name text not null,
   view_state jsonb default '{"x": 0, "y": 0, "zoom": 1}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
@@ -10,18 +11,18 @@ create table gardens (
 -- Enable Row Level Security
 alter table gardens enable row level security;
 
--- Policies (Şimdilik herkese açık, ileride authentication eklenebilir)
-create policy "Enable read access for all users" on gardens
-  for select using (true);
+-- Kullanıcı bazlı RLS politikaları
+create policy "Users can view own gardens" on gardens
+  for select using (auth.uid() = user_id);
 
-create policy "Enable insert for all users" on gardens
-  for insert with check (true);
+create policy "Users can create own gardens" on gardens
+  for insert with check (auth.uid() = user_id);
 
-create policy "Enable update for all users" on gardens
-  for update using (true);
+create policy "Users can update own gardens" on gardens
+  for update using (auth.uid() = user_id);
 
-create policy "Enable delete for all users" on gardens
-  for delete using (true);
+create policy "Users can delete own gardens" on gardens
+  for delete using (auth.uid() = user_id);
 
 -- Nodes (Ağaç Dalları) Tablosu
 create table nodes (
@@ -43,18 +44,26 @@ create index nodes_parent_id_idx on nodes(parent_id);
 -- Enable Row Level Security
 alter table nodes enable row level security;
 
--- Policies
-create policy "Enable read access for all users" on nodes
-  for select using (true);
+-- Nodes için kullanıcı bazlı RLS politikaları (garden üzerinden kontrol)
+create policy "Users can view own nodes" on nodes
+  for select using (
+    exists (select 1 from gardens where gardens.id = nodes.garden_id and gardens.user_id = auth.uid())
+  );
 
-create policy "Enable insert for all users" on nodes
-  for insert with check (true);
+create policy "Users can create own nodes" on nodes
+  for insert with check (
+    exists (select 1 from gardens where gardens.id = nodes.garden_id and gardens.user_id = auth.uid())
+  );
 
-create policy "Enable update for all users" on nodes
-  for update using (true);
+create policy "Users can update own nodes" on nodes
+  for update using (
+    exists (select 1 from gardens where gardens.id = nodes.garden_id and gardens.user_id = auth.uid())
+  );
 
-create policy "Enable delete for all users" on nodes
-  for delete using (true);
+create policy "Users can delete own nodes" on nodes
+  for delete using (
+    exists (select 1 from gardens where gardens.id = nodes.garden_id and gardens.user_id = auth.uid())
+  );
 
 -- Updated_at otomatik güncelleme için trigger
 create or replace function update_updated_at_column()

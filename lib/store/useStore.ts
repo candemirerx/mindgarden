@@ -22,9 +22,16 @@ export const useStore = create<StoreState>((set, get) => ({
 
     addGarden: async (name: string) => {
         try {
+            // Mevcut kullanıcıyı al
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                console.error('Bahçe oluşturmak için giriş yapmalısınız');
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('gardens')
-                .insert([{ name }])
+                .insert([{ name, user_id: user.id }])
                 .select()
                 .single();
 

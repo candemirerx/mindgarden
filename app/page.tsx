@@ -3,22 +3,44 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { Plus, Trash2, TreePine, Sparkles, Calendar } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
+import { Plus, Trash2, TreePine, Sparkles, Calendar, LogIn } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
 import Sidebar from '@/components/layout/Sidebar';
+import type { User } from '@supabase/supabase-js';
 
 export default function HomePage() {
     const router = useRouter();
     const { gardens, fetchGardens, deleteGarden, toggleSidebar } = useStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
-        const loadGardens = async () => {
-            await fetchGardens();
+        // Auth durumunu kontrol et
+        const checkAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
+            
+            if (session?.user) {
+                await fetchGardens();
+            }
             setIsLoading(false);
         };
-        loadGardens();
+        checkAuth();
+
+        // Auth değişikliklerini dinle
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                await fetchGardens();
+            } else {
+                // Çıkış yapıldığında bahçeleri temizle
+                useStore.getState().setGardens([]);
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, [fetchGardens]);
 
     const handleGardenClick = (gardenId: string) => {
@@ -72,14 +94,16 @@ export default function HomePage() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="w-full md:w-auto group relative bg-[#5D4037] hover:bg-[#4E342E] text-amber-50 px-6 md:px-8 py-3 md:py-4 rounded-xl font-semibold shadow-lg shadow-stone-900/10 transition-all duration-300 hover:translate-y-[-2px] flex items-center justify-center gap-3 overflow-hidden"
-                    >
-                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-                        <span className="text-base md:text-lg">Yeni Tohum Ek</span>
-                    </button>
+                    {user && (
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="w-full md:w-auto group relative bg-[#5D4037] hover:bg-[#4E342E] text-amber-50 px-6 md:px-8 py-3 md:py-4 rounded-xl font-semibold shadow-lg shadow-stone-900/10 transition-all duration-300 hover:translate-y-[-2px] flex items-center justify-center gap-3 overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+                            <span className="text-base md:text-lg">Yeni Tohum Ek</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -93,6 +117,28 @@ export default function HomePage() {
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <TreePine className="text-emerald-500" size={24} />
                                 </div>
+                            </div>
+                        </div>
+                    ) : !user ? (
+                        /* Giriş Yapılmamış - Hoş Geldin Ekranı */
+                        <div className="text-center py-20">
+                            <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-12 max-w-md mx-auto border-2 border-dashed border-emerald-300">
+                                <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full mx-auto mb-6 flex items-center justify-center shadow-2xl shadow-emerald-500/50">
+                                    <TreePine size={48} className="text-white" />
+                                </div>
+                                <h2 className="text-3xl font-bold text-slate-800 mb-3 font-serif">
+                                    Hoş Geldiniz!
+                                </h2>
+                                <p className="text-slate-600 mb-8 text-lg">
+                                    Notlarınızı kaydetmek ve bahçenizi oluşturmak için giriş yapın.
+                                </p>
+                                <button
+                                    onClick={toggleSidebar}
+                                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-4 rounded-xl font-semibold hover:shadow-2xl hover:shadow-emerald-500/50 hover:scale-105 transition-all duration-300 inline-flex items-center gap-3"
+                                >
+                                    <LogIn size={24} />
+                                    <span className="text-lg">Giriş Yap</span>
+                                </button>
                             </div>
                         </div>
                     ) : gardens.length === 0 ? (
