@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
 
 export default function EditorPage() {
     const params = useParams();
@@ -19,7 +19,9 @@ export default function EditorPage() {
     const [showCopied, setShowCopied] = useState(false);
     const [isSpellChecking, setIsSpellChecking] = useState(false);
     const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
+    const [showExportMenu, setShowExportMenu] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const exportMenuRef = useRef<HTMLDivElement>(null);
 
     const currentNode = nodes.find(n => n.id === nodeId);
 
@@ -125,6 +127,72 @@ export default function EditorPage() {
         setPendingSpellCheck(null);
     };
 
+    // Export menüsünü dışarı tıklayınca kapat
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+                setShowExportMenu(false);
+            }
+        };
+        if (showExportMenu) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showExportMenu]);
+
+    // PDF olarak indir
+    const handleExportPDF = async () => {
+        setShowExportMenu(false);
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF();
+        
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        const maxWidth = pageWidth - margin * 2;
+        
+        // Başlık
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text(title || 'Başlıksız Not', margin, 25);
+        
+        // İçerik
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        const lines = doc.splitTextToSize(content, maxWidth);
+        doc.text(lines, margin, 40);
+        
+        doc.save(`${title || 'not'}.pdf`);
+    };
+
+    // Word olarak indir
+    const handleExportWord = async () => {
+        setShowExportMenu(false);
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
+        
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new Paragraph({
+                        text: title || 'Başlıksız Not',
+                        heading: HeadingLevel.HEADING_1,
+                    }),
+                    ...content.split('\n').map(line => 
+                        new Paragraph({
+                            children: [new TextRun(line)],
+                        })
+                    ),
+                ],
+            }],
+        });
+        
+        const blob = await Packer.toBlob(doc);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${title || 'not'}.docx`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="min-h-screen bg-[#f0f0f0] flex flex-col">
             {/* Header */}
@@ -165,6 +233,34 @@ export default function EditorPage() {
                             <Save size={18} />
                             <span>{isSaving ? 'Kaydediliyor...' : 'Kaydet'}</span>
                         </button>
+                        
+                        {/* Export Butonu */}
+                        <div className="relative" ref={exportMenuRef}>
+                            <button
+                                onClick={() => setShowExportMenu(!showExportMenu)}
+                                className="p-2 text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                                title="Dışa Aktar"
+                            >
+                                <Download size={18} />
+                            </button>
+                            
+                            {showExportMenu && (
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-lg shadow-lg py-1 min-w-[140px] z-50">
+                                    <button
+                                        onClick={handleExportPDF}
+                                        className="w-full px-4 py-2 text-left text-sm text-stone-700 hover:bg-stone-100 transition-colors"
+                                    >
+                                        PDF olarak indir
+                                    </button>
+                                    <button
+                                        onClick={handleExportWord}
+                                        className="w-full px-4 py-2 text-left text-sm text-stone-700 hover:bg-stone-100 transition-colors"
+                                    >
+                                        Word olarak indir
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
