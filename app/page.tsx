@@ -101,7 +101,7 @@ export default function HomePage() {
                         >
                             <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-                            <span className="text-base md:text-lg">Yeni Tohum Ek</span>
+                            <span className="text-base md:text-lg">Yeni Bahçe Ekle</span>
                         </button>
                     )}
                 </div>
