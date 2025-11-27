@@ -31,9 +31,12 @@ export default function Sidebar() {
     }, []);
 
     const handleGoogleSignIn = async () => {
+        // Production'da Vercel URL'ini, development'ta localhost'u kullan
+        const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+        
         await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: window.location.origin }
+            options: { redirectTo: redirectUrl }
         });
     };
 
