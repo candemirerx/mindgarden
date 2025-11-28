@@ -47,6 +47,26 @@ export const useStore = create<StoreState>((set, get) => ({
         }
     },
 
+    updateGardenName: async (id: string, name: string) => {
+        try {
+            // Optimistic update
+            set((state) => ({
+                gardens: state.gardens.map((g) =>
+                    g.id === id ? { ...g, name } : g
+                ),
+            }));
+
+            const { error } = await supabase
+                .from('gardens')
+                .update({ name })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Bahçe adı güncellenirken hata:', error);
+        }
+    },
+
     deleteGarden: async (id: string) => {
         try {
             // Önce bu bahçeye ait tüm node'ları sil

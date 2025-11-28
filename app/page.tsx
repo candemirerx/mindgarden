@@ -4,14 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
-import { Plus, Trash2, TreePine, Sparkles, Calendar, LogIn } from 'lucide-react';
+import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
 import Sidebar from '@/components/layout/Sidebar';
 import type { User } from '@supabase/supabase-js';
 
 export default function HomePage() {
     const router = useRouter();
-    const { gardens, fetchGardens, deleteGarden, toggleSidebar } = useStore();
+    const { gardens, fetchGardens, deleteGarden, updateGardenName, toggleSidebar } = useStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
@@ -43,8 +43,14 @@ export default function HomePage() {
         return () => subscription.unsubscribe();
     }, [fetchGardens]);
 
-    const handleGardenClick = (gardenId: string) => {
+    const handleOpenCanvas = (e: React.MouseEvent, gardenId: string) => {
+        e.stopPropagation();
         router.push(`/bahce/${gardenId}`);
+    };
+
+    const handleOpenProjects = (e: React.MouseEvent, gardenId: string) => {
+        e.stopPropagation();
+        router.push(`/bahce/${gardenId}/projeler`);
     };
 
     const handleDeleteGarden = async (e: React.MouseEvent, gardenId: string) => {
@@ -54,15 +60,42 @@ export default function HomePage() {
         }
     };
 
-    // Renk paleti - Ağaç ve Doğa tonları
-    const colorPalette = [
-        { gradient: 'from-amber-700 to-orange-800', shadow: 'shadow-amber-900/20', hover: 'hover:shadow-amber-900/40', icon: 'text-amber-100', name: 'Meşe' },
-        { gradient: 'from-emerald-600 to-green-700', shadow: 'shadow-emerald-900/20', hover: 'hover:shadow-emerald-900/40', icon: 'text-emerald-100', name: 'Çam' },
-        { gradient: 'from-lime-600 to-green-700', shadow: 'shadow-lime-900/20', hover: 'hover:shadow-lime-900/40', icon: 'text-lime-100', name: 'Söğüt' },
-        { gradient: 'from-stone-600 to-stone-700', shadow: 'shadow-stone-900/20', hover: 'hover:shadow-stone-900/40', icon: 'text-stone-100', name: 'Ceviz' },
-        { gradient: 'from-teal-600 to-cyan-700', shadow: 'shadow-teal-900/20', hover: 'hover:shadow-teal-900/40', icon: 'text-teal-100', name: 'Ladin' },
-        { gradient: 'from-yellow-600 to-amber-700', shadow: 'shadow-yellow-900/20', hover: 'hover:shadow-yellow-900/40', icon: 'text-yellow-100', name: 'Çınar' },
-    ];
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [editingGardenId, setEditingGardenId] = useState<string | null>(null);
+    const [editingName, setEditingName] = useState('');
+
+    // Çift tıklama ile düzenleme
+    const handleDoubleClick = (gardenId: string, currentName: string) => {
+        setEditingGardenId(gardenId);
+        setEditingName(currentName);
+    };
+
+    const handleSaveName = async (gardenId: string) => {
+        if (editingName.trim() && editingName !== gardens.find(g => g.id === gardenId)?.name) {
+            await updateGardenName(gardenId, editingName.trim());
+        }
+        setEditingGardenId(null);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent, gardenId: string) => {
+        if (e.key === 'Enter') {
+            handleSaveName(gardenId);
+        } else if (e.key === 'Escape') {
+            setEditingGardenId(null);
+        }
+    };
+
+    // Tarih formatlama
+    const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('tr-TR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
 
     return (
         <div className="min-h-screen bg-[#f4f1ea] p-4 md:p-8 font-sans selection:bg-emerald-200">
@@ -163,73 +196,100 @@ export default function HomePage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {gardens.map((garden, index) => {
-                                const colors = colorPalette[index % colorPalette.length];
-
-                                return (
-                                    <div
-                                        key={garden.id}
-                                        onClick={() => handleGardenClick(garden.id)}
-                                        className={`group relative cursor-pointer transition-all duration-300 hover:scale-105`}
-                                    >
-                                        {/* Kart */}
-                                        <div className={`relative overflow-hidden rounded-3xl bg-white/90 backdrop-blur-lg shadow-xl ${colors.shadow} ${colors.hover} border-2 border-slate-200/50 p-6`}>
-                                            {/* Gradient Header */}
-                                            <div className={`absolute top-0 left-0 right-0 h-32 bg-gradient-to-br ${colors.gradient} opacity-90`}>
-                                                <div className="absolute inset-0 bg-white/20 backdrop-blur-sm" />
-                                            </div>
-
-                                            {/* Dekoratif Pattern */}
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
-                                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/5 rounded-full translate-y-12 -translate-x-12" />
-
-                                            {/* İçerik */}
-                                            <div className="relative">
-                                                {/* Üst Kısım */}
-                                                <div className="flex items-start justify-between mb-16">
-                                                    <div className={`w-14 h-14 bg-white/30 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white/50`}>
-                                                        <TreePine className="text-white drop-shadow-lg" size={28} />
-                                                    </div>
-
-                                                    <button
-                                                        onClick={(e) => handleDeleteGarden(e, garden.id)}
-                                                        className="opacity-0 group-hover:opacity-100 transition-all duration-300 p-2.5 bg-red-500 hover:bg-red-600 rounded-xl text-white shadow-lg hover:scale-110"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                            {gardens.map((garden) => (
+                                <div
+                                    key={garden.id}
+                                    className="group relative bg-gradient-to-br from-[#f8f6f3] to-[#f0ebe4] rounded-2xl border border-stone-200/60 hover:border-emerald-300/60 hover:shadow-lg transition-all duration-300 overflow-hidden"
+                                >
+                                    {/* Dekoratif arka plan */}
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/30 rounded-full -translate-y-12 translate-x-12" />
+                                    <div className="absolute bottom-0 left-0 w-16 h-16 bg-amber-100/30 rounded-full translate-y-8 -translate-x-8" />
+                                    
+                                    {/* İçerik */}
+                                    <div className="relative p-5">
+                                        {/* Üst kısım: Başlık ve Menü */}
+                                        <div className="flex items-start justify-between gap-3 mb-4">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-green-700 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                                                    <TreePine className="text-white" size={20} />
                                                 </div>
-
-                                                {/* Bahçe Bilgileri */}
-                                                <div>
-                                                    <h3 className="text-2xl font-bold text-slate-800 mb-3 line-clamp-2">
+                                                {editingGardenId === garden.id ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editingName}
+                                                        onChange={(e) => setEditingName(e.target.value)}
+                                                        onBlur={() => handleSaveName(garden.id)}
+                                                        onKeyDown={(e) => handleKeyDown(e, garden.id)}
+                                                        className="font-bold text-stone-800 text-lg bg-white/80 px-2 py-1 rounded-lg border border-emerald-300 outline-none w-full"
+                                                        autoFocus
+                                                    />
+                                                ) : (
+                                                    <h3 
+                                                        className="font-bold text-stone-800 truncate text-lg cursor-pointer hover:text-emerald-700 transition-colors"
+                                                        onDoubleClick={() => handleDoubleClick(garden.id, garden.name)}
+                                                        title="Çift tıklayarak düzenle"
+                                                    >
                                                         {garden.name}
                                                     </h3>
-
-                                                    <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100/80 backdrop-blur-sm px-3 py-2 rounded-lg">
-                                                        <Calendar size={16} className="text-slate-500" />
-                                                        <span>
-                                                            {new Date(garden.created_at).toLocaleDateString('tr-TR', {
-                                                                day: 'numeric',
-                                                                month: 'long',
-                                                                year: 'numeric'
-                                                            })}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                )}
                                             </div>
-
-                                            {/* Hover Badge */}
-                                            <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 shadow-lg">
-                                                Aç →
+                                            
+                                            {/* Menü */}
+                                            <div className="relative flex-shrink-0">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenMenuId(openMenuId === garden.id ? null : garden.id);
+                                                    }}
+                                                    className="p-1.5 hover:bg-white/60 rounded-lg text-stone-400 hover:text-stone-600 transition-colors"
+                                                >
+                                                    <MoreHorizontal size={18} />
+                                                </button>
+                                                
+                                                {openMenuId === garden.id && (
+                                                    <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl py-1 z-10 min-w-[130px]">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                handleDeleteGarden(e, garden.id);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                        >
+                                                            <Trash2 size={15} />
+                                                            <span>Bahçeyi Sil</span>
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Glow Effect */}
-                                        <div className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${colors.gradient} blur-xl opacity-0 group-hover:opacity-20 transition-opacity -z-10`} />
+                                        {/* Tarih */}
+                                        <div className="flex items-center gap-2 text-stone-500 text-sm mb-5">
+                                            <Clock size={14} />
+                                            <span>{formatDate(garden.created_at)}</span>
+                                        </div>
+
+                                        {/* Butonlar */}
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={(e) => handleOpenProjects(e, garden.id)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white/70 hover:bg-amber-100 text-stone-700 hover:text-amber-800 rounded-xl text-sm font-medium transition-all border border-stone-200/50 hover:border-amber-200"
+                                            >
+                                                <FolderTree size={16} />
+                                                <span>Projeler</span>
+                                            </button>
+                                            <button
+                                                onClick={(e) => handleOpenCanvas(e, garden.id)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm hover:shadow-md"
+                                            >
+                                                <Layout size={16} />
+                                                <span>Canvas</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                );
-                            })}
+                                </div>
+                            ))}
                         </div>
                     )
                 }
