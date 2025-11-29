@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Sprout, Settings, TreePine } from 'lucide-react';
+import { ArrowLeft, Sprout, Settings, TreePine, List } from 'lucide-react';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
@@ -291,7 +291,15 @@ export default function GardenPage() {
                         <p className="text-[10px] md:text-xs text-stone-400 hidden sm:block">Infinite Garden Canvas</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
+                    {/* Projeler Butonu */}
+                    <button
+                        onClick={() => router.push(`/bahce/${gardenId}/projeler`)}
+                        className="p-2 hover:bg-amber-100 rounded-full text-amber-600 transition-colors flex-shrink-0"
+                        title="Projeler (Liste Görünümü)"
+                    >
+                        <List size={18} className="md:w-5 md:h-5" />
+                    </button>
                     {/* Ayarlar Butonu */}
                     <button
                         onClick={() => setIsSettingsOpen(true)}
