@@ -31,12 +31,17 @@ export default function Sidebar() {
     }, []);
 
     const handleGoogleSignIn = async () => {
-        // Her zaman mevcut origin'i kullan (localhost veya production)
-        const redirectUrl = window.location.origin;
+        // Her zaman mevcut origin'i kullan (localhost, LAN IP veya production)
+        const currentOrigin = window.location.origin;
+        const callbackUrl = `${currentOrigin}/auth/callback`;
+        
+        console.log('Redirect URL:', callbackUrl); // Debug için
         
         await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: redirectUrl }
+            options: { 
+                redirectTo: callbackUrl
+            }
         });
     };
 
