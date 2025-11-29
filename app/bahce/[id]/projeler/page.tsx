@@ -241,10 +241,10 @@ export default function ProjectsPage() {
                                         handleCopy(item.title, item.id, 'title');
                                     }}
                                     className={`
-                                        p-1 rounded transition-all shrink-0
+                                        w-7 h-7 flex items-center justify-center rounded-lg transition-all shrink-0 border
                                         ${copiedId === `title-${item.id}` 
-                                            ? 'bg-emerald-100 text-emerald-600' 
-                                            : 'text-stone-300 hover:bg-stone-100 hover:text-stone-500'
+                                            ? 'bg-emerald-500 text-white border-emerald-500 scale-110' 
+                                            : 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100 hover:border-amber-300 hover:scale-105 active:scale-95'
                                         }
                                     `}
                                     title="Başlığı kopyala"
@@ -260,10 +260,10 @@ export default function ProjectsPage() {
                                         handleCopy(contentOnly || item.title, item.id, 'content');
                                     }}
                                     className={`
-                                        p-1 rounded transition-all shrink-0
+                                        w-7 h-7 flex items-center justify-center rounded-lg transition-all shrink-0 border
                                         ${copiedId === `content-${item.id}` 
-                                            ? 'bg-blue-100 text-blue-600' 
-                                            : 'text-stone-300 hover:bg-stone-100 hover:text-stone-500'
+                                            ? 'bg-blue-500 text-white border-blue-500 scale-110' 
+                                            : 'bg-sky-50 text-sky-600 border-sky-200 hover:bg-sky-100 hover:border-sky-300 hover:scale-105 active:scale-95'
                                         }
                                     `}
                                     title="İçeriği kopyala"
