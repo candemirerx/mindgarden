@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
-import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock } from 'lucide-react';
+import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock, Pencil } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
 import Sidebar from '@/components/layout/Sidebar';
 import type { User } from '@supabase/supabase-js';
@@ -43,14 +43,27 @@ export default function HomePage() {
         return () => subscription.unsubscribe();
     }, [fetchGardens]);
 
+    // Son görünüm tercihini kaydet ve yönlendir
     const handleOpenCanvas = (e: React.MouseEvent, gardenId: string) => {
         e.stopPropagation();
+        localStorage.setItem(`garden-view-${gardenId}`, 'canvas');
         router.push(`/bahce/${gardenId}`);
     };
 
     const handleOpenProjects = (e: React.MouseEvent, gardenId: string) => {
         e.stopPropagation();
+        localStorage.setItem(`garden-view-${gardenId}`, 'projects');
         router.push(`/bahce/${gardenId}/projeler`);
+    };
+
+    // Bahçe kartına tıklayınca son görünüme git
+    const handleOpenGarden = (gardenId: string) => {
+        const lastView = localStorage.getItem(`garden-view-${gardenId}`);
+        if (lastView === 'projects') {
+            router.push(`/bahce/${gardenId}/projeler`);
+        } else {
+            router.push(`/bahce/${gardenId}`);
+        }
     };
 
     const handleDeleteGarden = async (e: React.MouseEvent, gardenId: string) => {
@@ -200,7 +213,8 @@ export default function HomePage() {
                             {gardens.map((garden) => (
                                 <div
                                     key={garden.id}
-                                    className="group relative bg-gradient-to-br from-[#f8f6f3] to-[#f0ebe4] rounded-2xl border border-stone-200/60 hover:border-emerald-300/60 hover:shadow-lg transition-all duration-300 overflow-hidden"
+                                    onClick={() => handleOpenGarden(garden.id)}
+                                    className="group relative bg-gradient-to-br from-[#f8f6f3] to-[#f0ebe4] rounded-2xl border border-stone-200/60 hover:border-emerald-300/60 hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer"
                                 >
                                     {/* Dekoratif arka plan */}
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/30 rounded-full -translate-y-12 translate-x-12" />
@@ -248,7 +262,20 @@ export default function HomePage() {
                                                 </button>
                                                 
                                                 {openMenuId === garden.id && (
-                                                    <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl py-1 z-10 min-w-[130px]">
+                                                    <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl py-1 z-10 min-w-[160px]">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingGardenId(garden.id);
+                                                                setEditingName(garden.name);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                                                        >
+                                                            <Pencil size={15} className="text-amber-500" />
+                                                            <span>Yeniden Adlandır</span>
+                                                        </button>
+                                                        <hr className="my-1 border-stone-100" />
                                                         <button
                                                             onClick={(e) => {
                                                                 handleDeleteGarden(e, garden.id);
