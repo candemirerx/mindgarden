@@ -34,9 +34,9 @@ export default function ProjectsPage() {
 
     const currentGarden = gardens.find(g => g.id === gardenId);
 
-    const handleCopy = (text: string, id: string) => {
+    const handleCopy = (text: string, id: string, type: 'title' | 'content') => {
         navigator.clipboard.writeText(text);
-        setCopiedId(id);
+        setCopiedId(`${type}-${id}`);
         setTimeout(() => setCopiedId(null), 1500);
     };
 
@@ -203,56 +203,79 @@ export default function ProjectsPage() {
                         )}
                     </div>
 
-                    {/* Başlık */}
-                    {editingNodeId === item.id ? (
-                        <input
-                            type="text"
-                            value={editingTitle}
-                            onChange={(e) => setEditingTitle(e.target.value)}
-                            onBlur={() => handleSaveTitle(item.id, item.content)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveTitle(item.id, item.content);
-                                if (e.key === 'Escape') setEditingNodeId(null);
-                            }}
-                            className="flex-1 px-3 py-1 bg-emerald-50 rounded-lg border-2 border-emerald-400 outline-none text-stone-800"
-                            autoFocus
-                        />
-                    ) : (
-                        <button
-                            onClick={() => handleEdit(item.id)}
-                            className={`
-                                flex-1 text-left truncate transition-colors
-                                ${isRoot 
-                                    ? 'text-stone-800 font-semibold hover:text-emerald-700' 
-                                    : 'text-stone-600 hover:text-emerald-600'
-                                }
-                            `}
-                        >
-                            {item.title}
-                        </button>
-                    )}
+                    {/* Başlık ve Kopyalama Butonları */}
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        {editingNodeId === item.id ? (
+                            <input
+                                type="text"
+                                value={editingTitle}
+                                onChange={(e) => setEditingTitle(e.target.value)}
+                                onBlur={() => handleSaveTitle(item.id, item.content)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveTitle(item.id, item.content);
+                                    if (e.key === 'Escape') setEditingNodeId(null);
+                                }}
+                                className="flex-1 px-3 py-1 bg-emerald-50 rounded-lg border-2 border-emerald-400 outline-none text-stone-800"
+                                autoFocus
+                            />
+                        ) : (
+                            <>
+                                <button
+                                    onClick={() => handleEdit(item.id)}
+                                    className={`
+                                        text-left transition-colors shrink-0 max-w-full
+                                        ${isRoot 
+                                            ? 'text-stone-800 font-semibold hover:text-emerald-700' 
+                                            : 'text-stone-600 hover:text-emerald-600'
+                                        }
+                                    `}
+                                    style={{ wordBreak: 'break-word' }}
+                                >
+                                    {item.title}
+                                </button>
+                                
+                                {/* Başlık Kopyala */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopy(item.title, item.id, 'title');
+                                    }}
+                                    className={`
+                                        p-1 rounded transition-all shrink-0
+                                        ${copiedId === `title-${item.id}` 
+                                            ? 'bg-emerald-100 text-emerald-600' 
+                                            : 'text-stone-300 hover:bg-stone-100 hover:text-stone-500'
+                                        }
+                                    `}
+                                    title="Başlığı kopyala"
+                                >
+                                    {copiedId === `title-${item.id}` ? <Check size={14} /> : <Copy size={14} />}
+                                </button>
 
-                    {/* Sağ taraf - Kopyala, Badge ve Menü */}
-                    <div className="flex items-center gap-1.5">
-                        {/* Kopyala butonu */}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                const contentOnly = item.content.split('\n').slice(1).join('\n').trim();
-                                handleCopy(contentOnly || item.title, item.id);
-                            }}
-                            className={`
-                                p-1.5 rounded-lg transition-all
-                                ${copiedId === item.id 
-                                    ? 'bg-emerald-100 text-emerald-600' 
-                                    : 'text-stone-400 hover:bg-stone-100 hover:text-stone-600 opacity-0 group-hover:opacity-100'
-                                }
-                            `}
-                            title="İçeriği kopyala"
-                        >
-                            {copiedId === item.id ? <Check size={16} /> : <Copy size={16} />}
-                        </button>
+                                {/* İçerik Kopyala */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const contentOnly = item.content.split('\n').slice(1).join('\n').trim();
+                                        handleCopy(contentOnly || item.title, item.id, 'content');
+                                    }}
+                                    className={`
+                                        p-1 rounded transition-all shrink-0
+                                        ${copiedId === `content-${item.id}` 
+                                            ? 'bg-blue-100 text-blue-600' 
+                                            : 'text-stone-300 hover:bg-stone-100 hover:text-stone-500'
+                                        }
+                                    `}
+                                    title="İçeriği kopyala"
+                                >
+                                    {copiedId === `content-${item.id}` ? <Check size={14} /> : <FileText size={14} />}
+                                </button>
+                            </>
+                        )}
+                    </div>
 
+                    {/* Sağ taraf - Badge ve Menü */}
+                    <div className="flex items-center gap-1.5 shrink-0">
                         {hasChildren && (
                             <span className={`
                                 px-2 py-0.5 text-xs font-medium rounded-full
