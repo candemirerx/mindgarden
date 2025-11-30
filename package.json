@@ -12,6 +12,7 @@
     "@capacitor/android": "^7.4.4",
     "@capacitor/app": "^7.1.0",
     "@capacitor/assets": "^3.0.5",
+    "@capacitor/browser": "^7.0.2",
     "@capacitor/cli": "^6.2.1",
     "@capacitor/core": "^7.4.4",
     "@supabase/supabase-js": "^2.39.0",

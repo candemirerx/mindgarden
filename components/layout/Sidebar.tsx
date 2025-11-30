@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 
 export default function Sidebar() {
     const { isSidebarOpen, setSidebarOpen, gardens, fetchGardens } = useStore();
@@ -35,11 +36,23 @@ export default function Sidebar() {
             appUrlListener = App.addListener('appUrlOpen', async ({ url }) => {
                 console.log('Deep link received:', url);
                 
+                // Browser'ı kapat
+                try {
+                    await Browser.close();
+                } catch (e) {
+                    // Browser zaten kapalı olabilir
+                }
+                
                 // Handle OAuth callback URL
                 if (url.includes('auth/callback') || url.includes('access_token') || url.includes('code=')) {
                     try {
                         // URL'den token bilgilerini çıkar
-                        const urlObj = new URL(url.replace('notbahcesi://', 'https://'));
+                        let urlToParse = url;
+                        if (url.startsWith('notbahcesi://')) {
+                            urlToParse = url.replace('notbahcesi://', 'https://dummy.com/');
+                        }
+                        
+                        const urlObj = new URL(urlToParse);
                         const hashParams = new URLSearchParams(urlObj.hash.substring(1));
                         const queryParams = urlObj.searchParams;
                         
@@ -78,13 +91,33 @@ export default function Sidebar() {
         
         console.log('Redirect URL:', callbackUrl, 'isNative:', isNative);
         
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { 
-                redirectTo: callbackUrl,
-                skipBrowserRedirect: false
+        if (isNative) {
+            // Native: In-App Browser kullan
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { 
+                    redirectTo: callbackUrl,
+                    skipBrowserRedirect: true // URL'i manuel açacağız
+                }
+            });
+            
+            if (data?.url) {
+                // In-App Browser ile aç
+                await Browser.open({ 
+                    url: data.url,
+                    presentationStyle: 'popover'
+                });
             }
-        });
+        } else {
+            // Web: Normal OAuth flow
+            await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { 
+                    redirectTo: callbackUrl,
+                    skipBrowserRedirect: false
+                }
+            });
+        }
     };
 
     const handleSignOut = async () => {
