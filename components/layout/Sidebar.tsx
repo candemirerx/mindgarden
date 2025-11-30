@@ -84,20 +84,18 @@ export default function Sidebar() {
         // Capacitor native platform kontrolü
         const isNative = Capacitor.isNativePlatform();
         
-        // Native için custom scheme, web için normal URL
-        const callbackUrl = isNative 
-            ? 'notbahcesi://auth/callback'
-            : `${window.location.origin}/auth/callback`;
+        // Her zaman Vercel callback URL'ini kullan - oradan uygulamaya yönlendirilecek
+        const callbackUrl = 'https://mindgarden-neon.vercel.app/auth/callback';
         
         console.log('Redirect URL:', callbackUrl, 'isNative:', isNative);
         
         if (isNative) {
             // Native: In-App Browser kullan
-            const { data, error } = await supabase.auth.signInWithOAuth({
+            const { data } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: { 
                     redirectTo: callbackUrl,
-                    skipBrowserRedirect: true // URL'i manuel açacağız
+                    skipBrowserRedirect: true
                 }
             });
             
