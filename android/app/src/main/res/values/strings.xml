@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Not Bahcesi</string>
+    <string name="title_activity_main">Not Bahcesi</string>
+    <string name="package_name">com.notbahcesi.app</string>
+    <string name="custom_url_scheme">com.notbahcesi.app</string>
+</resources>

@@ -9,6 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^7.4.4",
     "@supabase/supabase-js": "^2.39.0",
     "@tiptap/react": "^2.1.13",
     "@tiptap/starter-kit": "^2.1.13",
