@@ -10,6 +10,11 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: true
+  },
+  plugins: {
+    App: {
+      appUrlScheme: 'notbahcesi'
+    }
   }
 };
 
