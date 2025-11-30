@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2 } from 'lucide-react';
+import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff } from 'lucide-react';
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -17,6 +17,15 @@ export default function Sidebar() {
     const [isExporting, setIsExporting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // E-posta giriş state'leri
+    const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [authError, setAuthError] = useState('');
+    const [authLoading, setAuthLoading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     useEffect(() => {
         const getSession = async () => {
@@ -121,6 +130,78 @@ export default function Sidebar() {
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         setSidebarOpen(false);
+    };
+
+    // E-posta ile giriş
+    const handleEmailSignIn = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAuthError('');
+        setSuccessMessage('');
+        setAuthLoading(true);
+
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
+                if (error.message.includes('Invalid login credentials')) {
+                    setAuthError('E-posta veya şifre hatalı');
+                } else if (error.message.includes('Email not confirmed')) {
+                    setAuthError('Lütfen e-postanızı doğrulayın');
+                } else {
+                    setAuthError(error.message);
+                }
+            } else {
+                setEmail('');
+                setPassword('');
+            }
+        } catch {
+            setAuthError('Bir hata oluştu');
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    // E-posta ile kayıt
+    const handleEmailSignUp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAuthError('');
+        setSuccessMessage('');
+        setAuthLoading(true);
+
+        if (password.length < 6) {
+            setAuthError('Şifre en az 6 karakter olmalı');
+            setAuthLoading(false);
+            return;
+        }
+
+        try {
+            const { error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    emailRedirectTo: `${window.location.origin}/auth/callback`
+                }
+            });
+
+            if (error) {
+                if (error.message.includes('already registered')) {
+                    setAuthError('Bu e-posta zaten kayıtlı');
+                } else {
+                    setAuthError(error.message);
+                }
+            } else {
+                setSuccessMessage('Kayıt başarılı! E-postanızı kontrol edin.');
+                setEmail('');
+                setPassword('');
+            }
+        } catch {
+            setAuthError('Bir hata oluştu');
+        } finally {
+            setAuthLoading(false);
+        }
     };
 
     // Tüm verileri JSON olarak dışa aktar
