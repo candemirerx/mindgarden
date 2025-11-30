@@ -134,58 +134,51 @@ export default function Sidebar() {
                 }
             }
 
-            // Node'ları ekle (parent_id ilişkilerini koruyarak)
+            // Node'ları seviye seviye ekle (BFS yaklaşımı - daha güvenli)
             const nodeIdMap: Record<string, string> = {};
             
-            // Önce root node'ları ekle
-            const rootNodes = data.nodes.filter((n: any) => !n.parent_id);
-            for (const node of rootNodes) {
+            // Tüm node'ları seviyelerine göre grupla
+            const getNodeLevel = (nodeId: string, nodes: any[]): number => {
+                const node = nodes.find((n: any) => n.id === nodeId);
+                if (!node || !node.parent_id) return 0;
+                return 1 + getNodeLevel(node.parent_id, nodes);
+            };
+
+            // Node'ları seviyelerine göre sırala
+            const sortedNodes = [...data.nodes].sort((a: any, b: any) => {
+                const levelA = getNodeLevel(a.id, data.nodes);
+                const levelB = getNodeLevel(b.id, data.nodes);
+                return levelA - levelB;
+            });
+
+            // Sırayla ekle (önce parent'lar, sonra child'lar)
+            for (const node of sortedNodes) {
+                const newGardenId = gardenIdMap[node.garden_id];
+                if (!newGardenId) continue; // Bahçe bulunamadıysa atla
+
+                const newParentId = node.parent_id ? nodeIdMap[node.parent_id] : null;
+                
                 const { data: newNode, error } = await supabase
                     .from('nodes')
                     .insert({
-                        garden_id: gardenIdMap[node.garden_id],
-                        parent_id: null,
+                        garden_id: newGardenId,
+                        parent_id: newParentId,
                         content: node.content,
                         position_x: node.position_x,
                         position_y: node.position_y,
-                        is_expanded: node.is_expanded
+                        is_expanded: node.is_expanded ?? true
                     })
                     .select()
                     .single();
 
-                if (error) throw error;
+                if (error) {
+                    console.error('Node insert error:', error, node);
+                    continue; // Hata olursa diğer node'lara devam et
+                }
+                
                 if (newNode) {
                     nodeIdMap[node.id] = newNode.id;
                 }
-            }
-
-            // Sonra child node'ları ekle (recursive)
-            const addChildNodes = async (parentOldId: string) => {
-                const children = data.nodes.filter((n: any) => n.parent_id === parentOldId);
-                for (const node of children) {
-                    const { data: newNode, error } = await supabase
-                        .from('nodes')
-                        .insert({
-                            garden_id: gardenIdMap[node.garden_id],
-                            parent_id: nodeIdMap[node.parent_id],
-                            content: node.content,
-                            position_x: node.position_x,
-                            position_y: node.position_y,
-                            is_expanded: node.is_expanded
-                        })
-                        .select()
-                        .single();
-
-                    if (error) throw error;
-                    if (newNode) {
-                        nodeIdMap[node.id] = newNode.id;
-                        await addChildNodes(node.id);
-                    }
-                }
-            };
-
-            for (const rootNode of rootNodes) {
-                await addChildNodes(rootNode.id);
             }
 
             alert('Veriler başarıyla içe aktarıldı!');
