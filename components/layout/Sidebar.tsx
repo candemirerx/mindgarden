@@ -6,6 +6,8 @@ import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2 } 
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 export default function Sidebar() {
     const { isSidebarOpen, setSidebarOpen, gardens, fetchGardens } = useStore();
@@ -27,20 +29,60 @@ export default function Sidebar() {
             setUser(session?.user ?? null);
         });
 
-        return () => subscription.unsubscribe();
+        // Capacitor deep link listener for OAuth callback
+        let appUrlListener: any = null;
+        if (Capacitor.isNativePlatform()) {
+            appUrlListener = App.addListener('appUrlOpen', async ({ url }) => {
+                console.log('Deep link received:', url);
+                
+                // Handle OAuth callback URL
+                if (url.includes('auth/callback') || url.includes('access_token') || url.includes('code=')) {
+                    try {
+                        // URL'den token bilgilerini çıkar
+                        const urlObj = new URL(url.replace('notbahcesi://', 'https://'));
+                        const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+                        const queryParams = urlObj.searchParams;
+                        
+                        const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+                        const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+                        
+                        if (accessToken && refreshToken) {
+                            await supabase.auth.setSession({
+                                access_token: accessToken,
+                                refresh_token: refreshToken
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Deep link auth error:', error);
+                    }
+                }
+            });
+        }
+
+        return () => {
+            subscription.unsubscribe();
+            if (appUrlListener) {
+                appUrlListener.remove();
+            }
+        };
     }, []);
 
     const handleGoogleSignIn = async () => {
-        // Her zaman mevcut origin'i kullan (localhost, LAN IP veya production)
-        const currentOrigin = window.location.origin;
-        const callbackUrl = `${currentOrigin}/auth/callback`;
+        // Capacitor native platform kontrolü
+        const isNative = Capacitor.isNativePlatform();
         
-        console.log('Redirect URL:', callbackUrl); // Debug için
+        // Native için custom scheme, web için normal URL
+        const callbackUrl = isNative 
+            ? 'notbahcesi://auth/callback'
+            : `${window.location.origin}/auth/callback`;
+        
+        console.log('Redirect URL:', callbackUrl, 'isNative:', isNative);
         
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: { 
-                redirectTo: callbackUrl
+                redirectTo: callbackUrl,
+                skipBrowserRedirect: false
             }
         });
     };
