@@ -57,85 +57,31 @@ export default function Sidebar() {
     }, []);
 
     const handleGoogleSignIn = async () => {
-        const isNative = Capacitor.isNativePlatform();
         setAuthLoading(true);
         setAuthError('');
         
         try {
-            if (isNative) {
-                // Native: Önce native Google Auth dene, başarısız olursa web OAuth kullan
-                console.log('Starting native Google sign in...');
-                
-                try {
-                    // Önce refresh dene (önceki oturum varsa)
-                    try {
-                        await GoogleAuth.refresh();
-                    } catch {
-                        // Refresh başarısız olabilir, devam et
-                    }
-                    
-                    const googleUser = await GoogleAuth.signIn();
-                    console.log('Google user received:', JSON.stringify(googleUser));
-                    
-                    const idToken = googleUser.authentication?.idToken;
-                    
-                    if (!idToken) {
-                        throw new Error('No idToken received');
-                    }
-                    
-                    // Supabase'e Google ID token ile giriş yap
-                    const { data, error } = await supabase.auth.signInWithIdToken({
-                        provider: 'google',
-                        token: idToken,
-                    });
-                    
-                    if (error) {
-                        console.error('Supabase auth error:', error);
-                        setAuthError('Supabase giriş hatası: ' + error.message);
-                    } else if (data.session) {
-                        console.log('Login successful');
-                        setUser(data.session.user);
-                        await fetchGardens();
-                        setSidebarOpen(false);
-                    }
-                } catch (nativeError) {
-                    // Native auth başarısız oldu
-                    console.error('Native Google Auth failed:', nativeError);
-                    const errorMsg = nativeError instanceof Error ? nativeError.message : String(nativeError);
-                    
-                    // Kullanıcıya bilgi ver
-                    setAuthError('Google ile giriş yapılamadı. Lütfen e-posta ile giriş yapın veya web tarayıcısından deneyin.');
-                    
-                    // NOT: Capacitor WebView'da OAuth redirect düzgün çalışmıyor
-                    // Deep link setup gerekiyor. Şimdilik e-posta girişi öneriyoruz.
-                    console.log('Native auth error details:', errorMsg);
+            // Hem web hem mobil için aynı OAuth flow kullan
+            // Mobilde harici tarayıcı açılacak, kullanıcı giriş yapacak ve geri dönecek
+            const callbackUrl = 'https://mindgarden-neon.vercel.app/auth/callback';
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { 
+                    redirectTo: callbackUrl,
+                    skipBrowserRedirect: false
                 }
-            } else {
-                // Web: Normal OAuth flow
-                const callbackUrl = window.location.origin + '/auth/callback';
-                const { error } = await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: { 
-                        redirectTo: callbackUrl,
-                        skipBrowserRedirect: false
-                    }
-                });
-                
-                if (error) {
-                    console.error('OAuth error:', error);
-                    setAuthError('Google ile giriş başarısız: ' + error.message);
-                }
+            });
+            
+            if (error) {
+                console.error('OAuth error:', error);
+                setAuthError('Google ile giriş başarısız: ' + error.message);
             }
+            // Not: OAuth başarılı olursa sayfa yönlendirilecek, 
+            // bu yüzden burada başka bir şey yapmamıza gerek yok
         } catch (error: unknown) {
             console.error('Google sign in error:', error);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            
-            // Kullanıcı iptal ettiyse farklı mesaj göster
-            if (errorMessage.includes('cancel') || errorMessage.includes('popup_closed')) {
-                setAuthError('Giriş iptal edildi');
-            } else {
-                setAuthError('Google ile giriş başarısız: ' + errorMessage);
-            }
+            setAuthError('Google ile giriş başarısız: ' + errorMessage);
         } finally {
             setAuthLoading(false);
         }
