@@ -99,20 +99,16 @@ export default function Sidebar() {
                         setSidebarOpen(false);
                     }
                 } catch (nativeError) {
-                    // Native auth başarısız - web OAuth'a fallback
-                    console.log('Native auth failed, falling back to web OAuth:', nativeError);
-                    const callbackUrl = 'https://mindgarden-neon.vercel.app/auth/callback';
-                    const { error } = await supabase.auth.signInWithOAuth({
-                        provider: 'google',
-                        options: { 
-                            redirectTo: callbackUrl,
-                            skipBrowserRedirect: false
-                        }
-                    });
+                    // Native auth başarısız oldu
+                    console.error('Native Google Auth failed:', nativeError);
+                    const errorMsg = nativeError instanceof Error ? nativeError.message : String(nativeError);
                     
-                    if (error) {
-                        throw error;
-                    }
+                    // Kullanıcıya bilgi ver
+                    setAuthError('Google ile giriş yapılamadı. Lütfen e-posta ile giriş yapın veya web tarayıcısından deneyin.');
+                    
+                    // NOT: Capacitor WebView'da OAuth redirect düzgün çalışmıyor
+                    // Deep link setup gerekiyor. Şimdilik e-posta girişi öneriyoruz.
+                    console.log('Native auth error details:', errorMsg);
                 }
             } else {
                 // Web: Normal OAuth flow
