@@ -32,7 +32,7 @@ export default function Sidebar() {
             if (Capacitor.isNativePlatform()) {
                 try {
                     await GoogleAuth.initialize({
-                        clientId: '745502376472-duv48qhsemumn2amc95pvvuop5lallm9.apps.googleusercontent.com',
+                        clientId: '745502376472-dqf1pus06s224bakb2i3sls86flgfjm5.apps.googleusercontent.com',
                         scopes: ['profile', 'email'],
                         grantOfflineAccess: true
                     });
