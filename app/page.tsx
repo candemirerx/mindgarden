@@ -19,21 +19,52 @@ export default function HomePage() {
     useEffect(() => {
         // Auth durumunu kontrol et
         const checkAuth = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setUser(session?.user ?? null);
-            
-            if (session?.user) {
-                await fetchGardens();
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    console.error('Session error:', error);
+                    setIsLoading(false);
+                    return;
+                }
+                
+                setUser(session?.user ?? null);
+                
+                if (session?.user) {
+                    // fetchGardens'ı timeout ile çağır - takılmayı önle
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout')), 10000)
+                    );
+                    
+                    try {
+                        await Promise.race([fetchGardens(), timeoutPromise]);
+                    } catch (e) {
+                        console.error('fetchGardens error or timeout:', e);
+                    }
+                }
+            } catch (e) {
+                console.error('Auth check error:', e);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
         checkAuth();
 
         // Auth değişikliklerini dinle
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth state changed:', event, session?.user?.email);
             setUser(session?.user ?? null);
+            
             if (session?.user) {
-                await fetchGardens();
+                // Loading'i göster ve bahçeleri yükle
+                setIsLoading(true);
+                try {
+                    await fetchGardens();
+                } catch (e) {
+                    console.error('fetchGardens error:', e);
+                } finally {
+                    setIsLoading(false);
+                }
             } else {
                 // Çıkış yapıldığında bahçeleri temizle
                 useStore.getState().setGardens([]);
