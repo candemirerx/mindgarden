@@ -24,10 +24,28 @@ export const useStore = create<StoreState>((set, get) => ({
         try {
             console.log('addGarden called with name:', name);
             
-            // Önce session'ı kontrol et (getUser yerine getSession daha güvenilir)
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            // Timeout wrapper
+            const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
+                return Promise.race([
+                    promise,
+                    new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error('İstek zaman aşımına uğradı (' + ms/1000 + 's)')), ms)
+                    )
+                ]);
+            };
             
-            console.log('Session check:', { hasSession: !!session, hasUser: !!session?.user, sessionError });
+            // Session kontrolü - timeout ile
+            const { data: { session }, error: sessionError } = await withTimeout(
+                supabase.auth.getSession(),
+                5000
+            );
+            
+            console.log('Session check:', { 
+                hasSession: !!session, 
+                hasUser: !!session?.user,
+                userId: session?.user?.id,
+                sessionError 
+            });
             
             if (sessionError) {
                 console.error('Session error:', sessionError);
@@ -41,18 +59,17 @@ export const useStore = create<StoreState>((set, get) => ({
 
             console.log('Inserting garden for user:', session.user.id);
             
-            // Timeout ile Supabase isteği
-            const timeoutPromise = new Promise<never>((_, reject) => 
-                setTimeout(() => reject(new Error('İstek zaman aşımına uğradı')), 15000)
-            );
+            // Insert işlemi - timeout ile
+            const insertPromise = new Promise<{ data: Garden | null; error: { message: string } | null }>((resolve) => {
+                supabase
+                    .from('gardens')
+                    .insert([{ name, user_id: session.user.id }])
+                    .select()
+                    .single()
+                    .then(res => resolve(res as { data: Garden | null; error: { message: string } | null }));
+            });
             
-            const insertPromise = supabase
-                .from('gardens')
-                .insert([{ name, user_id: session.user.id }])
-                .select()
-                .single();
-            
-            const { data, error } = await Promise.race([insertPromise, timeoutPromise]);
+            const { data, error } = await withTimeout(insertPromise, 10000);
 
             console.log('Insert result:', { data, error });
 
