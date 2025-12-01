@@ -29,12 +29,14 @@ export default function EditorPageClient({ nodeId }: Props) {
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentNode = nodes.find(n => n.id === nodeId);
+  const initialLoadRef = useRef(false);
 
   useEffect(() => {
-    if (currentNode) {
+    if (currentNode && !initialLoadRef.current) {
       const lines = currentNode.content.split('\n');
       setTitle(lines[0] || '');
       setContent(lines.slice(1).join('\n').trim());
+      initialLoadRef.current = true;
     }
   }, [currentNode]);
 
