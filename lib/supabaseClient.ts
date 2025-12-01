@@ -4,8 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
-// Supabase client oluştur
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Supabase client oluştur - Capacitor WebView için optimize edilmiş ayarlar
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: true,
+        detectSessionInUrl: true,
+        autoRefreshToken: true,
+        storageKey: 'notbahcesi-auth',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    }
+});
 
 // Hata kontrolü için yardımcı fonksiyon
 export const checkSupabaseConnection = () => {

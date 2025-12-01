@@ -20,30 +20,38 @@ export const useStore = create<StoreState>((set, get) => ({
     toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
     setSidebarOpen: (open: boolean) => set({ isSidebarOpen: open }),
 
-    addGarden: async (name: string) => {
+    addGarden: async (name: string): Promise<{ success: boolean; error?: string }> => {
         try {
-            // Mevcut kullanıcıyı al
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
+            // Önce session'ı kontrol et (getUser yerine getSession daha güvenilir)
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session?.user) {
                 console.error('Bahçe oluşturmak için giriş yapmalısınız');
-                return;
+                return { success: false, error: 'Oturum bulunamadı. Lütfen tekrar giriş yapın.' };
             }
 
             const { data, error } = await supabase
                 .from('gardens')
-                .insert([{ name, user_id: user.id }])
+                .insert([{ name, user_id: session.user.id }])
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error:', error);
+                return { success: false, error: error.message };
+            }
 
             if (data) {
                 set((state) => ({
                     gardens: [...state.gardens, data as Garden],
                 }));
+                return { success: true };
             }
+            
+            return { success: false, error: 'Beklenmeyen bir hata oluştu' };
         } catch (error) {
             console.error('Bahçe eklenirken hata:', error);
+            return { success: false, error: 'Bağlantı hatası. İnternet bağlantınızı kontrol edin.' };
         }
     },
 

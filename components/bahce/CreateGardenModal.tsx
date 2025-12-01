@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store/useStore';
-import { X } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 
 interface CreateGardenModalProps {
     isOpen: boolean;
@@ -12,17 +12,29 @@ interface CreateGardenModalProps {
 export default function CreateGardenModal({ isOpen, onClose }: CreateGardenModalProps) {
     const [gardenName, setGardenName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const { addGarden } = useStore();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
 
         if (!gardenName.trim()) return;
 
         setIsLoading(true);
-        await addGarden(gardenName.trim());
+        const result = await addGarden(gardenName.trim());
         setIsLoading(false);
 
+        if (result.success) {
+            setGardenName('');
+            onClose();
+        } else {
+            setError(result.error || 'Bahçe oluşturulamadı');
+        }
+    };
+
+    const handleClose = () => {
+        setError(null);
         setGardenName('');
         onClose();
     };
@@ -36,12 +48,20 @@ export default function CreateGardenModal({ isOpen, onClose }: CreateGardenModal
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-branch-800">Yeni Bahçe Oluştur</h2>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="p-2 hover:bg-gray-100 rounded-full smooth-transition"
                     >
                         <X size={24} className="text-branch-600" />
                     </button>
                 </div>
+
+                {/* Error Message */}
+                {error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+                        <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-600">{error}</p>
+                    </div>
+                )}
 
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
@@ -64,7 +84,7 @@ export default function CreateGardenModal({ isOpen, onClose }: CreateGardenModal
                     <div className="flex gap-3">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="btn-secondary flex-1"
                             disabled={isLoading}
                         >
