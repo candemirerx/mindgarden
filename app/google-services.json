@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "745502376472",
+    "project_id": "mindgarden-5ae73",
+    "storage_bucket": "mindgarden-5ae73.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:745502376472:android:e2d76bd792810b220bb96d",
+        "android_client_info": {
+          "package_name": "com.notbahcesi.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "745502376472-dqf1pus06s224bakb2i3sls86flgfjm5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5IzGG9kqqa0cLcTg82ZnqZEIWJrsR5VI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "745502376472-dqf1pus06s224bakb2i3sls86flgfjm5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
