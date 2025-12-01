@@ -17,10 +17,21 @@ export default function HomePage() {
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
+        // Mobil için daha kısa timeout (5sn), masaüstü için 10sn
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        const TIMEOUT_MS = isMobile ? 5000 : 10000;
+        
         // Auth durumunu kontrol et
         const checkAuth = async () => {
             try {
-                const { data: { session }, error } = await supabase.auth.getSession();
+                // Session kontrolü için de timeout ekle
+                const sessionPromise = supabase.auth.getSession();
+                const sessionTimeout = new Promise<never>((_, reject) => 
+                    setTimeout(() => reject(new Error('Session timeout')), TIMEOUT_MS)
+                );
+                
+                const { data: { session }, error } = await Promise.race([sessionPromise, sessionTimeout])
+                    .catch(() => ({ data: { session: null }, error: new Error('Timeout') }));
                 
                 if (error) {
                     console.error('Session error:', error);
@@ -32,8 +43,8 @@ export default function HomePage() {
                 
                 if (session?.user) {
                     // fetchGardens'ı timeout ile çağır - takılmayı önle
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout')), 10000)
+                    const timeoutPromise = new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout')), TIMEOUT_MS)
                     );
                     
                     try {
@@ -59,7 +70,10 @@ export default function HomePage() {
                 // Loading'i göster ve bahçeleri yükle
                 setIsLoading(true);
                 try {
-                    await fetchGardens();
+                    const timeoutPromise = new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout')), TIMEOUT_MS)
+                    );
+                    await Promise.race([fetchGardens(), timeoutPromise]);
                 } catch (e) {
                     console.error('fetchGardens error:', e);
                 } finally {

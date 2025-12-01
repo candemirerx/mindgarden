@@ -121,16 +121,29 @@ export const useStore = create<StoreState>((set, get) => ({
 
     fetchGardens: async () => {
         try {
+            // AbortController ile timeout kontrolü
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
             const { data, error } = await supabase
                 .from('gardens')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .abortSignal(controller.signal);
 
+            clearTimeout(timeoutId);
+            
             if (error) throw error;
 
             set({ gardens: (data as Garden[]) || [] });
         } catch (error) {
-            console.error('Bahçeler yüklenirken hata:', error);
+            if (error instanceof Error && error.name === 'AbortError') {
+                console.error('Bahçeler yüklenirken timeout:', error);
+            } else {
+                console.error('Bahçeler yüklenirken hata:', error);
+            }
+            // Hata durumunda boş array set et - UI'ın takılmasını önle
+            set({ gardens: [] });
         }
     },
 
@@ -235,17 +248,30 @@ export const useStore = create<StoreState>((set, get) => ({
 
     fetchNodes: async (gardenId: string) => {
         try {
+            // AbortController ile timeout kontrolü
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
             const { data, error } = await supabase
                 .from('nodes')
                 .select('*')
                 .eq('garden_id', gardenId)
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: true })
+                .abortSignal(controller.signal);
 
+            clearTimeout(timeoutId);
+            
             if (error) throw error;
 
             set({ nodes: (data as TreeNode[]) || [] });
         } catch (error) {
-            console.error('Node\'lar yüklenirken hata:', error);
+            if (error instanceof Error && error.name === 'AbortError') {
+                console.error('Node\'lar yüklenirken timeout:', error);
+            } else {
+                console.error('Node\'lar yüklenirken hata:', error);
+            }
+            // Hata durumunda boş array set et
+            set({ nodes: [] });
         }
     },
 
