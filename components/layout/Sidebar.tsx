@@ -7,8 +7,7 @@ import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
-import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 export default function Sidebar() {
     const { isSidebarOpen, setSidebarOpen, gardens, fetchGardens } = useStore();
@@ -28,139 +27,92 @@ export default function Sidebar() {
     const [successMessage, setSuccessMessage] = useState('');
 
     useEffect(() => {
-        const getSession = async () => {
+        const initAuth = async () => {
+            // Native platformda Google Auth'u initialize et
+            if (Capacitor.isNativePlatform()) {
+                try {
+                    await GoogleAuth.initialize({
+                        clientId: '745502376472-duv48qhsemumn2amc95pvvuop5lallm9.apps.googleusercontent.com',
+                        scopes: ['profile', 'email'],
+                        grantOfflineAccess: true
+                    });
+                } catch (e) {
+                    console.log('GoogleAuth already initialized or error:', e);
+                }
+            }
+            
             const { data: { session } } = await supabase.auth.getSession();
             setUser(session?.user ?? null);
             setIsLoading(false);
         };
-        getSession();
+        initAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
         });
 
-        // Capacitor deep link listener for OAuth callback
-        let appUrlListener: any = null;
-        if (Capacitor.isNativePlatform()) {
-            appUrlListener = App.addListener('appUrlOpen', async ({ url }) => {
-                console.log('Deep link received:', url);
-                
-                // Browser'ı kapat
-                try {
-                    await Browser.close();
-                } catch (e) {
-                    // Browser zaten kapalı olabilir
-                }
-                
-                // Handle OAuth callback URL
-                if (url.includes('auth/callback') || url.includes('access_token') || url.includes('code=')) {
-                    try {
-                        // URL'den token bilgilerini çıkar
-                        let urlToParse = url;
-                        if (url.startsWith('notbahcesi://')) {
-                            urlToParse = url.replace('notbahcesi://', 'https://dummy.com/');
-                        }
-                        
-                        const urlObj = new URL(urlToParse);
-                        const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-                        const queryParams = urlObj.searchParams;
-                        
-                        const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
-                        const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
-                        
-                        if (accessToken && refreshToken) {
-                            console.log('Setting session with tokens...');
-                            const { data, error } = await supabase.auth.setSession({
-                                access_token: accessToken,
-                                refresh_token: refreshToken
-                            });
-                            
-                            if (error) {
-                                console.error('Session set error:', error);
-                            } else if (data.session) {
-                                console.log('Session set successfully, fetching gardens...');
-                                setUser(data.session.user);
-                                // Bahçeleri fetch et
-                                await fetchGardens();
-                                // Sidebar'ı kapat
-                                setSidebarOpen(false);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Deep link auth error:', error);
-                    }
-                }
-            });
-        }
-
         return () => {
             subscription.unsubscribe();
-            if (appUrlListener) {
-                appUrlListener.remove();
-            }
         };
     }, []);
 
     const handleGoogleSignIn = async () => {
-        // Capacitor native platform kontrolü
         const isNative = Capacitor.isNativePlatform();
+        setAuthLoading(true);
+        setAuthError('');
         
-        // Her zaman Vercel callback URL'ini kullan
-        const callbackUrl = 'https://mindgarden-neon.vercel.app/auth/callback';
-        
-        console.log('Redirect URL:', callbackUrl, 'isNative:', isNative);
-        
-        if (isNative) {
-            // Native: In-App Browser kullan
-            const { data } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { 
-                    redirectTo: callbackUrl,
-                    skipBrowserRedirect: true
-                }
-            });
-            
-            if (data?.url) {
-                // In-App Browser ile aç
-                await Browser.open({ 
-                    url: data.url,
-                    presentationStyle: 'popover'
-                });
+        try {
+            if (isNative) {
+                // Native: Google Auth eklentisi kullan
+                const googleUser = await GoogleAuth.signIn();
+                console.log('Google user:', googleUser);
                 
-                // Browser kapandığında session'ı kontrol et
-                Browser.addListener('browserFinished', async () => {
-                    console.log('Browser finished, checking session...');
-                    // Kısa bir bekleme
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                if (googleUser.authentication.idToken) {
+                    // Supabase'e Google ID token ile giriş yap
+                    const { data, error } = await supabase.auth.signInWithIdToken({
+                        provider: 'google',
+                        token: googleUser.authentication.idToken,
+                    });
                     
-                    // Session'ı kontrol et
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (session) {
-                        console.log('Session found after browser close');
-                        setUser(session.user);
+                    if (error) {
+                        console.error('Supabase auth error:', error);
+                        setAuthError('Giriş hatası: ' + error.message);
+                    } else if (data.session) {
+                        console.log('Login successful');
+                        setUser(data.session.user);
                         await fetchGardens();
                         setSidebarOpen(false);
-                    } else {
-                        // Session yoksa sayfayı yenile
-                        console.log('No session, reloading page...');
-                        window.location.reload();
+                    }
+                }
+            } else {
+                // Web: Normal OAuth flow
+                const callbackUrl = window.location.origin + '/auth/callback';
+                await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { 
+                        redirectTo: callbackUrl,
+                        skipBrowserRedirect: false
                     }
                 });
             }
-        } else {
-            // Web: Normal OAuth flow
-            await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { 
-                    redirectTo: callbackUrl,
-                    skipBrowserRedirect: false
-                }
-            });
+        } catch (error) {
+            console.error('Google sign in error:', error);
+            setAuthError('Google ile giriş başarısız oldu');
+        } finally {
+            setAuthLoading(false);
         }
     };
 
     const handleSignOut = async () => {
         try {
+            // Native platformda Google'dan da çıkış yap
+            if (Capacitor.isNativePlatform()) {
+                try {
+                    await GoogleAuth.signOut();
+                } catch (e) {
+                    console.log('Google sign out error:', e);
+                }
+            }
             await supabase.auth.signOut({ scope: 'local' });
         } catch (error) {
             console.error('Sign out error:', error);

@@ -4,4 +4,5 @@
     <string name="title_activity_main">Not Bahcesi</string>
     <string name="package_name">com.notbahcesi.app</string>
     <string name="custom_url_scheme">com.notbahcesi.app</string>
+    <string name="server_client_id">745502376472-duv48qhsemumn2amc95pvvuop5lallm9.apps.googleusercontent.com</string>
 </resources>
