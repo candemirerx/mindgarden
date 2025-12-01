@@ -24,21 +24,10 @@ export const useStore = create<StoreState>((set, get) => ({
         try {
             console.log('addGarden called with name:', name);
             
-            // Timeout wrapper
-            const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
-                return Promise.race([
-                    promise,
-                    new Promise<never>((_, reject) => 
-                        setTimeout(() => reject(new Error('İstek zaman aşımına uğradı (' + ms/1000 + 's)')), ms)
-                    )
-                ]);
-            };
-            
-            // Session kontrolü - timeout ile
-            const { data: { session }, error: sessionError } = await withTimeout(
-                supabase.auth.getSession(),
-                5000
-            );
+            // Session kontrolü
+            const sessionResult = await supabase.auth.getSession();
+            const session = sessionResult.data.session;
+            const sessionError = sessionResult.error;
             
             console.log('Session check:', { 
                 hasSession: !!session, 
@@ -59,18 +48,15 @@ export const useStore = create<StoreState>((set, get) => ({
 
             console.log('Inserting garden for user:', session.user.id);
             
-            // Insert işlemi - timeout ile
-            const insertPromise = new Promise<{ data: Garden | null; error: { message: string } | null }>((resolve) => {
-                supabase
-                    .from('gardens')
-                    .insert([{ name, user_id: session.user.id }])
-                    .select()
-                    .single()
-                    .then(res => resolve(res as { data: Garden | null; error: { message: string } | null }));
-            });
-            
-            const { data, error } = await withTimeout(insertPromise, 10000);
+            // Insert işlemi - basit async/await
+            const result = await supabase
+                .from('gardens')
+                .insert([{ name, user_id: session.user.id }])
+                .select()
+                .single();
 
+            const { data, error } = result;
+            
             console.log('Insert result:', { data, error });
 
             if (error) {
