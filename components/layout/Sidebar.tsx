@@ -69,10 +69,22 @@ export default function Sidebar() {
                         const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
                         
                         if (accessToken && refreshToken) {
-                            await supabase.auth.setSession({
+                            console.log('Setting session with tokens...');
+                            const { data, error } = await supabase.auth.setSession({
                                 access_token: accessToken,
                                 refresh_token: refreshToken
                             });
+                            
+                            if (error) {
+                                console.error('Session set error:', error);
+                            } else if (data.session) {
+                                console.log('Session set successfully, fetching gardens...');
+                                setUser(data.session.user);
+                                // Bahçeleri fetch et
+                                await fetchGardens();
+                                // Sidebar'ı kapat
+                                setSidebarOpen(false);
+                            }
                         }
                     } catch (error) {
                         console.error('Deep link auth error:', error);

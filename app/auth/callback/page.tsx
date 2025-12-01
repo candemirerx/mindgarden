@@ -21,47 +21,51 @@ export default function AuthCallback() {
 
                 if (accessToken && refreshToken) {
                     // Token'lar hash'te var - direkt session ayarla
-                    await supabase.auth.setSession({
+                    const { error } = await supabase.auth.setSession({
                         access_token: accessToken,
                         refresh_token: refreshToken
                     });
-                    setStatus('Giriş başarılı! Yönlendiriliyorsunuz...');
                     
-                    // Mobil uygulama için deep link dene
-                    const isMobile = /android|iphone|ipad|mobile/i.test(navigator.userAgent);
-                    if (isMobile) {
-                        // Uygulamaya yönlendir
-                        window.location.href = `notbahcesi://auth/callback#access_token=${accessToken}&refresh_token=${refreshToken}`;
-                        
-                        // 2 saniye sonra hala buradaysak web'e yönlendir
+                    if (error) {
+                        console.error('Session set error:', error);
+                        setStatus('Giriş hatası: ' + error.message);
                         setTimeout(() => {
                             window.location.href = '/';
                         }, 2000);
-                    } else {
-                        window.location.href = '/';
+                        return;
                     }
+                    
+                    setStatus('Giriş başarılı! Yönlendiriliyorsunuz...');
+                    // Direkt ana sayfaya yönlendir - WebView aynı session'ı kullanacak
+                    window.location.href = '/';
                 } else if (code) {
                     // Code var - exchange yap
                     const { error } = await supabase.auth.exchangeCodeForSession(code);
-                    if (error) throw error;
-                    
-                    setStatus('Giriş başarılı! Yönlendiriliyorsunuz...');
-                    
-                    // Session'ı al ve mobil için deep link gönder
-                    const { data: { session } } = await supabase.auth.getSession();
-                    const isMobile = /android|iphone|ipad|mobile/i.test(navigator.userAgent);
-                    
-                    if (isMobile && session) {
-                        window.location.href = `notbahcesi://auth/callback#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+                    if (error) {
+                        console.error('Code exchange error:', error);
+                        setStatus('Giriş hatası: ' + error.message);
                         setTimeout(() => {
                             window.location.href = '/';
                         }, 2000);
-                    } else {
-                        window.location.href = '/';
+                        return;
                     }
+                    
+                    setStatus('Giriş başarılı! Yönlendiriliyorsunuz...');
+                    // Direkt ana sayfaya yönlendir
+                    window.location.href = '/';
                 } else {
-                    // Parametre yok - ana sayfaya git
-                    setStatus('Yönlendiriliyorsunuz...');
+                    // Parametre yok - Supabase'in otomatik session detection'ını dene
+                    setStatus('Oturum kontrol ediliyor...');
+                    
+                    // Kısa bir bekleme sonrası session'ı kontrol et
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        setStatus('Giriş başarılı! Yönlendiriliyorsunuz...');
+                    } else {
+                        setStatus('Yönlendiriliyorsunuz...');
+                    }
                     window.location.href = '/';
                 }
             } catch (error) {
