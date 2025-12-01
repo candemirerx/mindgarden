@@ -29,16 +29,20 @@ export default function EditorPageClient({ nodeId }: Props) {
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentNode = nodes.find(n => n.id === nodeId);
-  const initialLoadRef = useRef(false);
+  const initializedNodeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (currentNode && !initialLoadRef.current) {
+    // Sadece farklı bir node'a geçildiğinde içeriği yükle
+    // Aynı node için tekrar yükleme yapma (kayıt sonrası store güncellemelerinde)
+    if (currentNode && initializedNodeIdRef.current !== nodeId) {
       const lines = currentNode.content.split('\n');
       setTitle(lines[0] || '');
-      setContent(lines.slice(1).join('\n').trim());
-      initialLoadRef.current = true;
+      // İlk satır başlık, geri kalanı içerik - sadece başındaki boşlukları temizle, sonundakileri koru
+      const bodyContent = lines.slice(1).join('\n');
+      setContent(bodyContent.replace(/^\s+/, '')); // Sadece baştaki boşlukları sil
+      initializedNodeIdRef.current = nodeId;
     }
-  }, [currentNode]);
+  }, [currentNode, nodeId]);
 
   const saveContent = useCallback(async () => {
     if (!hasChanges) return;
