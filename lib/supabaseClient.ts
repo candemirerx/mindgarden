@@ -8,9 +8,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         persistSession: true,
-        // detectSessionInUrl: false yaparak manuel kontrol sağlıyoruz
-        // Bu bazı tarayıcılarda (Chrome, Edge) oluşan race condition'ı önler
-        detectSessionInUrl: false,
+        // detectSessionInUrl: true - Supabase URL'deki token'ları otomatik algılasın
+        detectSessionInUrl: true,
         autoRefreshToken: true,
         storageKey: 'notbahcesi-auth',
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,

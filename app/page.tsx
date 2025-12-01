@@ -152,17 +152,10 @@ export default function HomePage() {
         
         const checkAuth = async () => {
             try {
-                const sessionPromise = supabase.auth.getSession();
-                const sessionTimeout = new Promise<never>((_, reject) => 
-                    setTimeout(() => reject(new Error('Timeout')), TIMEOUT_MS)
-                );
-                
-                const result = await Promise.race([sessionPromise, sessionTimeout])
-                    .catch(() => ({ data: { session: null }, error: new Error('Timeout') }));
+                // Önce mevcut session'ı kontrol et
+                const { data: { session }, error } = await supabase.auth.getSession();
                 
                 if (!mounted) return;
-                
-                const { data: { session }, error } = result;
                 
                 if (error) {
                     console.error('Session error:', error);
@@ -170,6 +163,7 @@ export default function HomePage() {
                     return;
                 }
                 
+                console.log('Initial session check:', !!session);
                 setUser(session?.user ?? null);
                 
                 if (session?.user) {
@@ -193,9 +187,11 @@ export default function HomePage() {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
+            
+            console.log('Auth state changed:', event, !!session);
             setUser(session?.user ?? null);
             
-            if (session?.user) {
+            if (event === 'SIGNED_IN' && session?.user) {
                 setIsLoading(true);
                 try {
                     await Promise.race([
@@ -207,8 +203,19 @@ export default function HomePage() {
                 } finally {
                     if (mounted) setIsLoading(false);
                 }
-            } else {
+            } else if (event === 'SIGNED_OUT') {
                 useStore.getState().setGardens([]);
+                setIsLoading(false);
+            } else if (session?.user && !isLoading) {
+                // Token refresh gibi durumlarda
+                setIsLoading(true);
+                try {
+                    await fetchGardens();
+                } catch (e) {
+                    console.error('fetchGardens error:', e);
+                } finally {
+                    if (mounted) setIsLoading(false);
+                }
             }
         });
 

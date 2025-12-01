@@ -1,17 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function AuthCallback() {
     const [status, setStatus] = useState('Giriş yapılıyor...');
     const router = useRouter();
+    const processedRef = useRef(false);
 
     useEffect(() => {
+        // Çift çalışmayı önle
+        if (processedRef.current) return;
+        processedRef.current = true;
+
         const handleCallback = async () => {
             try {
-                // URL'den hash ve query parametrelerini al
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
                 const queryParams = new URLSearchParams(window.location.search);
                 
@@ -22,24 +26,20 @@ export default function AuthCallback() {
                 const errorDescription = queryParams.get('error_description');
 
                 console.log('Callback params:', { 
-                    accessToken: !!accessToken, 
-                    refreshToken: !!refreshToken, 
-                    code: !!code,
-                    error,
-                    hash: window.location.hash.substring(0, 50),
-                    search: window.location.search.substring(0, 50)
+                    hasAccessToken: !!accessToken, 
+                    hasRefreshToken: !!refreshToken, 
+                    hasCode: !!code,
+                    error
                 });
 
-                // Hata varsa göster
                 if (error) {
                     console.error('OAuth error:', error, errorDescription);
                     setStatus(`Giriş hatası: ${errorDescription || error}`);
-                    setTimeout(() => router.push('/'), 3000);
+                    setTimeout(() => window.location.href = '/', 2000);
                     return;
                 }
 
                 if (accessToken && refreshToken) {
-                    // Token'lar hash'te var - direkt session ayarla
                     setStatus('Oturum oluşturuluyor...');
                     const { error: sessionError } = await supabase.auth.setSession({
                         access_token: accessToken,
@@ -49,55 +49,57 @@ export default function AuthCallback() {
                     if (sessionError) {
                         console.error('Session set error:', sessionError);
                         setStatus('Giriş hatası: ' + sessionError.message);
-                        setTimeout(() => router.push('/'), 2000);
+                        setTimeout(() => window.location.href = '/', 2000);
                         return;
                     }
                     
-                    setStatus('Giriş başarılı! Yönlendiriliyorsunuz...');
-                    // Router kullan - daha güvenilir
-                    setTimeout(() => router.push('/'), 500);
+                    setStatus('Giriş başarılı!');
+                    // Hard redirect - router yerine window.location kullan
+                    window.location.href = '/';
                     
                 } else if (code) {
-                    // Code var - exchange yap
                     setStatus('Kod doğrulanıyor...');
-                    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
                     
                     if (exchangeError) {
                         console.error('Code exchange error:', exchangeError);
                         setStatus('Giriş hatası: ' + exchangeError.message);
-                        setTimeout(() => router.push('/'), 2000);
+                        setTimeout(() => window.location.href = '/', 2000);
                         return;
                     }
                     
-                    setStatus('Giriş başarılı! Yönlendiriliyorsunuz...');
-                    setTimeout(() => router.push('/'), 500);
+                    console.log('Exchange successful, session:', !!data.session);
+                    setStatus('Giriş başarılı!');
+                    
+                    // Session'ın localStorage'a yazılmasını bekle
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // Hard redirect - bu kritik!
+                    window.location.href = '/';
                     
                 } else {
-                    // Parametre yok - Supabase'in otomatik session detection'ını dene
+                    // Parametre yok - mevcut session'ı kontrol et
                     setStatus('Oturum kontrol ediliyor...');
-                    
-                    // Supabase client'ın URL'yi işlemesini bekle
-                    await new Promise(resolve => setTimeout(resolve, 1000));
                     
                     const { data: { session } } = await supabase.auth.getSession();
                     
                     if (session) {
-                        setStatus('Giriş başarılı! Yönlendiriliyorsunuz...');
+                        setStatus('Giriş başarılı!');
                     } else {
-                        setStatus('Oturum bulunamadı. Yönlendiriliyorsunuz...');
+                        setStatus('Oturum bulunamadı.');
                     }
                     
-                    setTimeout(() => router.push('/'), 500);
+                    window.location.href = '/';
                 }
             } catch (error) {
                 console.error('Auth callback error:', error);
-                setStatus('Giriş sırasında hata oluştu. Ana sayfaya yönlendiriliyorsunuz...');
-                setTimeout(() => router.push('/'), 2000);
+                setStatus('Giriş sırasında hata oluştu.');
+                setTimeout(() => window.location.href = '/', 2000);
             }
         };
 
-        // Küçük bir gecikme ile başla - bazı tarayıcılarda hash geç yükleniyor
-        const timer = setTimeout(handleCallback, 100);
+        // Küçük gecikme - hash'in yüklenmesini bekle
+        const timer = setTimeout(handleCallback, 150);
         return () => clearTimeout(timer);
     }, [router]);
 
