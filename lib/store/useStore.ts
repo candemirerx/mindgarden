@@ -22,22 +22,42 @@ export const useStore = create<StoreState>((set, get) => ({
 
     addGarden: async (name: string): Promise<{ success: boolean; error?: string }> => {
         try {
+            console.log('addGarden called with name:', name);
+            
             // Önce session'ı kontrol et (getUser yerine getSession daha güvenilir)
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            console.log('Session check:', { hasSession: !!session, hasUser: !!session?.user, sessionError });
+            
+            if (sessionError) {
+                console.error('Session error:', sessionError);
+                return { success: false, error: 'Oturum hatası: ' + sessionError.message };
+            }
             
             if (!session?.user) {
-                console.error('Bahçe oluşturmak için giriş yapmalısınız');
+                console.error('No session or user found');
                 return { success: false, error: 'Oturum bulunamadı. Lütfen tekrar giriş yapın.' };
             }
 
-            const { data, error } = await supabase
+            console.log('Inserting garden for user:', session.user.id);
+            
+            // Timeout ile Supabase isteği
+            const timeoutPromise = new Promise<never>((_, reject) => 
+                setTimeout(() => reject(new Error('İstek zaman aşımına uğradı')), 15000)
+            );
+            
+            const insertPromise = supabase
                 .from('gardens')
                 .insert([{ name, user_id: session.user.id }])
                 .select()
                 .single();
+            
+            const { data, error } = await Promise.race([insertPromise, timeoutPromise]);
+
+            console.log('Insert result:', { data, error });
 
             if (error) {
-                console.error('Supabase error:', error);
+                console.error('Supabase insert error:', error);
                 return { success: false, error: error.message };
             }
 
@@ -45,13 +65,15 @@ export const useStore = create<StoreState>((set, get) => ({
                 set((state) => ({
                     gardens: [...state.gardens, data as Garden],
                 }));
+                console.log('Garden created successfully');
                 return { success: true };
             }
             
             return { success: false, error: 'Beklenmeyen bir hata oluştu' };
         } catch (error) {
             console.error('Bahçe eklenirken hata:', error);
-            return { success: false, error: 'Bağlantı hatası. İnternet bağlantınızı kontrol edin.' };
+            const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+            return { success: false, error: errorMessage };
         }
     },
 
