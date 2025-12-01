@@ -105,7 +105,7 @@ export default function Sidebar() {
         // Capacitor native platform kontrolü
         const isNative = Capacitor.isNativePlatform();
         
-        // Her zaman Vercel callback URL'ini kullan - oradan uygulamaya yönlendirilecek
+        // Her zaman Vercel callback URL'ini kullan
         const callbackUrl = 'https://mindgarden-neon.vercel.app/auth/callback';
         
         console.log('Redirect URL:', callbackUrl, 'isNative:', isNative);
@@ -125,6 +125,26 @@ export default function Sidebar() {
                 await Browser.open({ 
                     url: data.url,
                     presentationStyle: 'popover'
+                });
+                
+                // Browser kapandığında session'ı kontrol et
+                Browser.addListener('browserFinished', async () => {
+                    console.log('Browser finished, checking session...');
+                    // Kısa bir bekleme
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Session'ı kontrol et
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        console.log('Session found after browser close');
+                        setUser(session.user);
+                        await fetchGardens();
+                        setSidebarOpen(false);
+                    } else {
+                        // Session yoksa sayfayı yenile
+                        console.log('No session, reloading page...');
+                        window.location.reload();
+                    }
                 });
             }
         } else {
