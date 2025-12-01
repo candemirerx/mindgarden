@@ -61,23 +61,27 @@ export default function Sidebar() {
         setAuthError('');
         
         try {
-            // Hem web hem mobil için aynı OAuth flow kullan
-            // Mobilde harici tarayıcı açılacak, kullanıcı giriş yapacak ve geri dönecek
+            // OAuth URL'ini al ve manuel yönlendir
+            // Bu sayede WebView içinde kalır, harici tarayıcı açılmaz
             const callbackUrl = 'https://mindgarden-neon.vercel.app/auth/callback';
-            const { error } = await supabase.auth.signInWithOAuth({
+            const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: { 
                     redirectTo: callbackUrl,
-                    skipBrowserRedirect: false
+                    skipBrowserRedirect: true // URL'i al, otomatik yönlendirme yapma
                 }
             });
             
             if (error) {
                 console.error('OAuth error:', error);
                 setAuthError('Google ile giriş başarısız: ' + error.message);
+                return;
             }
-            // Not: OAuth başarılı olursa sayfa yönlendirilecek, 
-            // bu yüzden burada başka bir şey yapmamıza gerek yok
+            
+            if (data?.url) {
+                // WebView içinde yönlendir - harici tarayıcı açılmaz
+                window.location.href = data.url;
+            }
         } catch (error: unknown) {
             console.error('Google sign in error:', error);
             const errorMessage = error instanceof Error ? error.message : String(error);
