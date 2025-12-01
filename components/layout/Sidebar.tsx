@@ -63,41 +63,83 @@ export default function Sidebar() {
         
         try {
             if (isNative) {
-                // Native: Google Auth eklentisi kullan
-                const googleUser = await GoogleAuth.signIn();
-                console.log('Google user:', googleUser);
+                // Native: Önce native Google Auth dene, başarısız olursa web OAuth kullan
+                console.log('Starting native Google sign in...');
                 
-                if (googleUser.authentication.idToken) {
+                try {
+                    // Önce refresh dene (önceki oturum varsa)
+                    try {
+                        await GoogleAuth.refresh();
+                    } catch {
+                        // Refresh başarısız olabilir, devam et
+                    }
+                    
+                    const googleUser = await GoogleAuth.signIn();
+                    console.log('Google user received:', JSON.stringify(googleUser));
+                    
+                    const idToken = googleUser.authentication?.idToken;
+                    
+                    if (!idToken) {
+                        throw new Error('No idToken received');
+                    }
+                    
                     // Supabase'e Google ID token ile giriş yap
                     const { data, error } = await supabase.auth.signInWithIdToken({
                         provider: 'google',
-                        token: googleUser.authentication.idToken,
+                        token: idToken,
                     });
                     
                     if (error) {
                         console.error('Supabase auth error:', error);
-                        setAuthError('Giriş hatası: ' + error.message);
+                        setAuthError('Supabase giriş hatası: ' + error.message);
                     } else if (data.session) {
                         console.log('Login successful');
                         setUser(data.session.user);
                         await fetchGardens();
                         setSidebarOpen(false);
                     }
+                } catch (nativeError) {
+                    // Native auth başarısız - web OAuth'a fallback
+                    console.log('Native auth failed, falling back to web OAuth:', nativeError);
+                    const callbackUrl = 'https://mindgarden-neon.vercel.app/auth/callback';
+                    const { error } = await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: { 
+                            redirectTo: callbackUrl,
+                            skipBrowserRedirect: false
+                        }
+                    });
+                    
+                    if (error) {
+                        throw error;
+                    }
                 }
             } else {
                 // Web: Normal OAuth flow
                 const callbackUrl = window.location.origin + '/auth/callback';
-                await supabase.auth.signInWithOAuth({
+                const { error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: { 
                         redirectTo: callbackUrl,
                         skipBrowserRedirect: false
                     }
                 });
+                
+                if (error) {
+                    console.error('OAuth error:', error);
+                    setAuthError('Google ile giriş başarısız: ' + error.message);
+                }
             }
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Google sign in error:', error);
-            setAuthError('Google ile giriş başarısız oldu');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // Kullanıcı iptal ettiyse farklı mesaj göster
+            if (errorMessage.includes('cancel') || errorMessage.includes('popup_closed')) {
+                setAuthError('Giriş iptal edildi');
+            } else {
+                setAuthError('Google ile giriş başarısız: ' + errorMessage);
+            }
         } finally {
             setAuthLoading(false);
         }
