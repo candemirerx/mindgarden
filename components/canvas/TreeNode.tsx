@@ -19,10 +19,10 @@ interface TreeNodeProps {
             dot: string;
         };
     };
+    selected?: boolean;
 }
 
-export default function TreeNodeComponent({ data }: TreeNodeProps) {
-    const [isHovered, setIsHovered] = useState(false);
+export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(data.label);
@@ -30,6 +30,9 @@ export default function TreeNodeComponent({ data }: TreeNodeProps) {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const { addNode, updateNode } = useStore();
+    
+    // Toolbar görünürlüğü: seçili olduğunda veya başlık düzenlenirken
+    const showToolbar = selected || isEditingTitle;
 
     // Renk şeması - varsayılan yeşil
     const colors = data.colorScheme || {
@@ -102,13 +105,9 @@ export default function TreeNodeComponent({ data }: TreeNodeProps) {
 
     return (
         <>
-            <div
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                className="relative group"
-            >
-                {/* Floating Toolbar - Her zaman görünür ama hover'da daha belirgin */}
-                <div className={`absolute -top-14 left-1/2 -translate-x-1/2 transition-all duration-300 z-50 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+            <div className="relative group">
+                {/* Floating Toolbar - Seçili olduğunda görünür */}
+                <div className={`absolute -top-14 left-1/2 -translate-x-1/2 transition-all duration-300 z-50 ${showToolbar ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
                     }`}>
                     <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border-2 border-slate-200 p-2 flex items-center gap-1">
                         <button
@@ -167,7 +166,7 @@ export default function TreeNodeComponent({ data }: TreeNodeProps) {
                     min-w-[220px] max-w-[320px]
                     border-3 ${colors.border}
                     transition-all duration-300
-                    ${isHovered ? 'shadow-2xl scale-105 -translate-y-1' : 'shadow-lg'}
+                    ${selected ? 'shadow-2xl scale-105 -translate-y-1 ring-4 ring-blue-400/50' : 'shadow-lg hover:shadow-xl'}
                 `}>
                     {/* Gradient Arka Plan */}
                     <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} opacity-90`} />
@@ -232,10 +231,10 @@ export default function TreeNodeComponent({ data }: TreeNodeProps) {
                             </div>
                         )}
 
-                        {/* Hover Badge */}
-                        {isHovered && (
-                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold text-slate-600 shadow-lg animate-pulse">
-                                Düzenle
+                        {/* Selected Badge */}
+                        {selected && (
+                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold text-slate-600 shadow-lg">
+                                Seçili
                             </div>
                         )}
                     </div>

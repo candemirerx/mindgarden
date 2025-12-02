@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useRef } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import ReactFlow, {
     Background,
     MiniMap,
@@ -11,6 +11,7 @@ import ReactFlow, {
     ConnectionMode,
     Panel,
     ReactFlowInstance,
+    Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Plus, Sparkles } from 'lucide-react';
@@ -44,6 +45,7 @@ const COLOR_PALETTE = [
 export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteCanvasProps) {
     const { addNode } = useStore();
     const [isAddingNode, setIsAddingNode] = useState(false);
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
     // ReactFlow instance'ı al
     const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
@@ -71,6 +73,7 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
                     gardenId: node.garden_id,
                     colorScheme,
                 },
+                selected: false,
             };
         });
     }, [treeNodes]);
@@ -99,6 +102,16 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+    // Seçili node değiştiğinde nodes state'ini güncelle
+    useEffect(() => {
+        setNodes((nds) =>
+            nds.map((node) => ({
+                ...node,
+                selected: node.id === selectedNodeId,
+            }))
+        );
+    }, [selectedNodeId, setNodes]);
+
     const onConnect = useCallback(
         (params: Connection) => setEdges((eds) => addEdge({
             ...params,
@@ -118,6 +131,19 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
         },
         []
     );
+
+    // Node'a tıklandığında seç
+    const handleNodeClick = useCallback(
+        (_event: React.MouseEvent, node: Node) => {
+            setSelectedNodeId(node.id);
+        },
+        []
+    );
+
+    // Boş alana tıklandığında seçimi kaldır
+    const handlePaneClick = useCallback(() => {
+        setSelectedNodeId(null);
+    }, []);
 
     // İki parmak arasındaki mesafeyi hesapla
     const getTouchDistance = (touch1: React.Touch, touch2: React.Touch): number => {
@@ -285,6 +311,8 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onNodeDragStop={handleNodeDragStop}
+                onNodeClick={handleNodeClick}
+                onPaneClick={handlePaneClick}
                 nodeTypes={nodeTypes}
                 connectionMode={ConnectionMode.Loose}
                 fitView
