@@ -21,6 +21,7 @@ export default function EditorPageClient({ nodeId }: Props) {
   const [showCopied, setShowCopied] = useState(false);
   const [isSpellChecking, setIsSpellChecking] = useState(false);
   const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
+  const [autoApproveAI, setAutoApproveAI] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [autoSave, setAutoSave] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -95,9 +96,27 @@ export default function EditorPageClient({ nodeId }: Props) {
       if (!response.ok) throw new Error('API hatası');
       const data = await response.json();
       const correctedText = data.correctedText;
-      setPendingSpellCheck({ original: content, corrected: '' });
-      if (hasSelection) { const newContent = content.substring(0, selectionStart) + correctedText + content.substring(selectionEnd); setPendingSpellCheck({ original: content, corrected: newContent }); setContent(newContent); }
-      else { setPendingSpellCheck({ original: content, corrected: correctedText }); setContent(correctedText); }
+      
+      if (autoApproveAI) {
+        // Otomatik onay açıksa direkt uygula
+        if (hasSelection) {
+          const newContent = content.substring(0, selectionStart) + correctedText + content.substring(selectionEnd);
+          setContent(newContent);
+        } else {
+          setContent(correctedText);
+        }
+        setHasChanges(true);
+      } else {
+        // Otomatik onay kapalıysa onay bekle
+        if (hasSelection) {
+          const newContent = content.substring(0, selectionStart) + correctedText + content.substring(selectionEnd);
+          setPendingSpellCheck({ original: content, corrected: newContent });
+          setContent(newContent);
+        } else {
+          setPendingSpellCheck({ original: content, corrected: correctedText });
+          setContent(correctedText);
+        }
+      }
     } catch (error) { console.error('Spellcheck error:', error); alert('İmla düzeltme sırasında bir hata oluştu.'); }
     finally { setIsSpellChecking(false); }
   };
@@ -158,6 +177,10 @@ export default function EditorPageClient({ nodeId }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 border-t border-stone-200">
+          <label className="flex items-center gap-1 cursor-pointer mr-2" title="Otomatik Onayla">
+            <input type="checkbox" checked={autoApproveAI} onChange={(e) => setAutoApproveAI(e.target.checked)} className="w-3.5 h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer" />
+            <span className="text-[10px] text-indigo-600 font-medium">Oto</span>
+          </label>
           <span className="text-xs font-medium text-indigo-600 mr-2">AI</span>
           {pendingSpellCheck ? (<div className="flex items-center gap-1"><span className="text-xs text-stone-500 mr-2">Onayla:</span><button onClick={handleAcceptSpellCheck} className="p-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all" title="Onayla"><Check size={16} /></button><button onClick={handleRejectSpellCheck} className="p-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all" title="İptal"><X size={16} /></button></div>) : (<button onClick={handleSpellCheck} disabled={isSpellChecking || !content.trim()} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isSpellChecking || !content.trim() ? 'bg-stone-200 text-stone-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow'}`} title="İmla Düzelt">{isSpellChecking ? <Loader2 size={16} className="animate-spin" /> : <PenLine size={16} />}<span className="hidden sm:inline">{isSpellChecking ? 'Düzeltiliyor...' : 'İmla Düzelt'}</span></button>)}
         </div>
