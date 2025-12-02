@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType } from 'lucide-react';
-import { jsPDF } from 'jspdf';
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -355,74 +354,156 @@ export default function Sidebar() {
         setExportData(null);
     };
 
-    // PDF olarak dışa aktar
+    // PDF olarak dışa aktar (tarayıcı print ile - Türkçe karakter desteği)
     const handleExportPDF = () => {
         if (!exportData) return;
 
-        const doc = new jsPDF();
-        let y = 20;
-        const pageHeight = doc.internal.pageSize.height;
-        const margin = 20;
-        const lineHeight = 7;
-
-        const addText = (text: string, x: number, fontSize: number, isBold: boolean = false) => {
-            doc.setFontSize(fontSize);
-            doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-            const lines = doc.splitTextToSize(text, 170 - x + margin);
-            lines.forEach((line: string) => {
-                if (y > pageHeight - margin) {
-                    doc.addPage();
-                    y = margin;
-                }
-                doc.text(line, x, y);
-                y += lineHeight;
-            });
+        const escapeHtml = (text: string) => {
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         };
 
-        // Başlık
-        doc.setTextColor(22, 101, 52);
-        addText('Not Bahçesi', margin, 24, true);
-        doc.setTextColor(120, 113, 108);
-        addText(`Dışa aktarım: ${new Date().toLocaleDateString('tr-TR')}`, margin, 10);
-        y += 10;
+        const buildTreeHTML = (nodes: any[], parentId: string | null = null, depth: number = 0): string => {
+            const children = nodes.filter(n => n.parent_id === parentId);
+            if (children.length === 0) return '';
 
-        exportData.gardens.forEach(garden => {
-            if (y > pageHeight - 40) {
-                doc.addPage();
-                y = margin;
-            }
+            return children.map(node => {
+                const title = node.content.split('\n')[0] || 'Başlıksız';
+                const content = node.content.split('\n').slice(1).join('\n').trim();
+                const childrenHTML = buildTreeHTML(nodes, node.id, depth + 1);
+                const isRoot = depth === 0;
+                
+                return `
+                <div class="node ${isRoot ? 'root' : 'child'}" style="margin-left: ${depth * 20}px;">
+                    <div class="node-title">
+                        <span class="bullet">${isRoot ? '●' : '○'}</span>
+                        <span class="title-text">${escapeHtml(title)}</span>
+                    </div>
+                    ${content ? `<div class="node-content">${escapeHtml(content)}</div>` : ''}
+                    ${childrenHTML}
+                </div>`;
+            }).join('');
+        };
 
-            doc.setTextColor(22, 101, 52);
-            addText(`🏡 ${garden.name}`, margin, 16, true);
-            y += 5;
-
+        const gardensHTML = exportData.gardens.map(garden => {
             const gardenNodes = exportData.nodes.filter(n => n.garden_id === garden.id);
-            
-            const printNode = (nodeId: string | null, depth: number) => {
-                const children = gardenNodes.filter(n => n.parent_id === nodeId);
-                children.forEach(node => {
-                    const title = node.content.split('\n')[0] || 'Başlıksız';
-                    const content = node.content.split('\n').slice(1).join('\n').trim();
-                    const indent = margin + (depth * 10);
+            const treesHTML = buildTreeHTML(gardenNodes, null, 0);
+            return `
+            <div class="garden">
+                <h2>${escapeHtml(garden.name)}</h2>
+                ${treesHTML || '<p class="empty">Bu bahçede henüz not yok.</p>'}
+            </div>`;
+        }).join('');
 
-                    doc.setTextColor(28, 25, 23);
-                    addText(`${depth === 0 ? '🌳' : '  🌿'} ${title}`, indent, 12, true);
-                    
-                    if (content) {
-                        doc.setTextColor(87, 83, 78);
-                        addText(content, indent + 8, 10);
-                    }
-                    y += 3;
+        const printHTML = `<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Not Bahçesi</title>
+    <style>
+        @page { margin: 2cm; size: A4; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color: #1c1917; 
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            padding-bottom: 20px; 
+            border-bottom: 2px solid #16a34a;
+        }
+        .header h1 { 
+            color: #16a34a; 
+            font-size: 24pt; 
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .header .date { 
+            color: #78716c; 
+            font-size: 10pt; 
+        }
+        .garden { 
+            margin-bottom: 25px; 
+            page-break-inside: avoid;
+        }
+        .garden h2 { 
+            color: #16a34a; 
+            font-size: 14pt; 
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            border-radius: 0 8px 8px 0;
+        }
+        .node { 
+            margin-bottom: 8px;
+            page-break-inside: avoid;
+        }
+        .node.root { 
+            margin-top: 12px;
+        }
+        .node-title { 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 8px;
+        }
+        .bullet { 
+            color: #16a34a; 
+            font-size: 8pt;
+            margin-top: 4px;
+        }
+        .node.root .bullet { font-size: 10pt; }
+        .title-text { 
+            font-weight: 600; 
+            color: #1c1917;
+        }
+        .node.root .title-text { 
+            font-size: 12pt;
+            color: #166534;
+        }
+        .node-content { 
+            margin-left: 18px; 
+            margin-top: 4px;
+            padding: 8px 12px;
+            background: #fafaf9;
+            border-radius: 6px;
+            color: #57534e;
+            font-size: 10pt;
+            white-space: pre-wrap;
+            border-left: 2px solid #e7e5e4;
+        }
+        .empty { 
+            color: #a8a29e; 
+            font-style: italic; 
+            padding: 10px;
+        }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌱 Not Bahçesi</h1>
+        <p class="date">${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+    </div>
+    ${gardensHTML}
+</body>
+</html>`;
 
-                    printNode(node.id, depth + 1);
-                });
+        // Yeni pencere aç ve yazdır
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(printHTML);
+            printWindow.document.close();
+            printWindow.onload = () => {
+                printWindow.print();
+                printWindow.onafterprint = () => printWindow.close();
             };
+        }
 
-            printNode(null, 0);
-            y += 10;
-        });
-
-        doc.save(`not-bahcesi-${new Date().toISOString().split('T')[0]}.pdf`);
         setShowExportModal(false);
         setExportData(null);
     };
