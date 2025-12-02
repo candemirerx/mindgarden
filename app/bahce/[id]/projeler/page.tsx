@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
     ChevronDown, Plus, Trash2, Pencil, Layout, Search, 
-    MoreHorizontal, X, TreePine, FileText, Home, Copy, Check, Leaf
+    MoreHorizontal, X, TreePine, FileText, Copy, Check, Leaf, ArrowLeft
 } from 'lucide-react';
 
 interface TreeItem {
@@ -339,26 +339,21 @@ export default function ProjectsPage() {
             <header className="bg-white/80 backdrop-blur-xl border-b border-stone-200/50 sticky top-0 z-40">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="h-16 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             <button
                                 onClick={() => router.push('/')}
-                                className="p-2.5 hover:bg-stone-100 rounded-xl transition-colors"
+                                className="p-2 hover:bg-stone-100 rounded-xl transition-colors"
+                                title="Ana Sayfa"
                             >
-                                <Home size={22} className="text-stone-500" />
+                                <ArrowLeft size={22} className="text-stone-600" />
                             </button>
-                            <div className="h-6 w-px bg-stone-200" />
-                            <div className="flex items-center gap-3">
-                                <div className="w-11 h-11 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                                    <TreePine size={22} className="text-white" />
-                                </div>
-                                <div>
-                                    <h1 className="text-lg font-bold text-stone-800">
-                                        {currentGarden?.name || 'Bahçe'}
-                                    </h1>
-                                    <p className="text-sm text-stone-500">
-                                        {trees.length} ağaç · {countAllNodes(trees)} not
-                                    </p>
-                                </div>
+                            <div>
+                                <h1 className="text-lg font-bold text-stone-800">
+                                    {currentGarden?.name || 'Bahçe'}
+                                </h1>
+                                <p className="text-xs text-stone-500">
+                                    {trees.length} ağaç · {countAllNodes(trees)} not
+                                </p>
                             </div>
                         </div>
 
