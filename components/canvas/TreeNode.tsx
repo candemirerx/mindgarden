@@ -23,6 +23,7 @@ interface TreeNodeProps {
 }
 
 export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
+    const [isHovered, setIsHovered] = useState(false);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(data.label);
@@ -31,8 +32,8 @@ export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
 
     const { addNode, updateNode } = useStore();
     
-    // Toolbar görünürlüğü: seçili olduğunda veya başlık düzenlenirken
-    const showToolbar = selected || isEditingTitle;
+    // Toolbar görünürlüğü: hover, seçili veya başlık düzenlenirken
+    const showToolbar = isHovered || selected || isEditingTitle;
 
     // Renk şeması - varsayılan yeşil
     const colors = data.colorScheme || {
@@ -105,7 +106,11 @@ export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
 
     return (
         <>
-            <div className="relative group">
+            <div 
+                className="relative group"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+            >
                 {/* Floating Toolbar - Seçili olduğunda görünür */}
                 <div className={`absolute -top-14 left-1/2 -translate-x-1/2 transition-all duration-300 z-50 ${showToolbar ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
                     }`}>
@@ -166,7 +171,8 @@ export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
                     min-w-[220px] max-w-[320px]
                     border-3 ${colors.border}
                     transition-all duration-300
-                    ${selected ? 'shadow-2xl scale-105 -translate-y-1 ring-4 ring-blue-400/50' : 'shadow-lg hover:shadow-xl'}
+                    ${isHovered || selected ? 'shadow-2xl scale-105 -translate-y-1' : 'shadow-lg'}
+                    ${selected ? 'ring-4 ring-blue-400/50' : ''}
                 `}>
                     {/* Gradient Arka Plan */}
                     <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} opacity-90`} />
@@ -231,10 +237,10 @@ export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
                             </div>
                         )}
 
-                        {/* Selected Badge */}
-                        {selected && (
-                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold text-slate-600 shadow-lg">
-                                Seçili
+                        {/* Hover/Selected Badge */}
+                        {(isHovered || selected) && (
+                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold text-slate-600 shadow-lg animate-pulse">
+                                Düzenle
                             </div>
                         )}
                     </div>

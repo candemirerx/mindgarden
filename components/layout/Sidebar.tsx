@@ -25,6 +25,10 @@ export default function Sidebar() {
     const [authError, setAuthError] = useState('');
     const [authLoading, setAuthLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    
+    // İçe aktarma modal state'leri
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importData, setImportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
 
     useEffect(() => {
         const initAuth = async () => {
@@ -221,12 +225,10 @@ export default function Sidebar() {
         }
     };
 
-    // JSON dosyasından içe aktar
-    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // JSON dosyasından içe aktar - dosya seçildiğinde modal aç
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !user) return;
-
-        setIsImporting(true);
 
         try {
             const text = await file.text();
@@ -236,108 +238,231 @@ export default function Sidebar() {
                 throw new Error('Geçersiz dosya formatı');
             }
 
-            // Onay al
-            const gardenCount = data.gardens.length;
-            const nodeCount = data.nodes.length;
-            if (!confirm(`${gardenCount} bahçe ve ${nodeCount} not içe aktarılacak. Devam etmek istiyor musunuz?`)) {
-                setIsImporting(false);
-                return;
-            }
-
-            // ID eşleştirme için map
-            const gardenIdMap: Record<string, string> = {};
-
-            // Bahçeleri ekle
-            for (const garden of data.gardens) {
-                const { data: newGarden, error } = await supabase
-                    .from('gardens')
-                    .insert({
-                        name: garden.name,
-                        user_id: user.id,
-                        view_state: garden.view_state
-                    })
-                    .select()
-                    .single();
-
-                if (error) throw error;
-                if (newGarden) {
-                    gardenIdMap[garden.id] = newGarden.id;
-                }
-            }
-
-            // Node'ları seviye seviye ekle (BFS yaklaşımı - daha güvenli)
-            const nodeIdMap: Record<string, string> = {};
-            
-            // Tüm node'ları seviyelerine göre grupla
-            const getNodeLevel = (nodeId: string, nodes: any[]): number => {
-                const node = nodes.find((n: any) => n.id === nodeId);
-                if (!node || !node.parent_id) return 0;
-                return 1 + getNodeLevel(node.parent_id, nodes);
-            };
-
-            // Node'ları seviyelerine göre sırala
-            const sortedNodes = [...data.nodes].sort((a: any, b: any) => {
-                const levelA = getNodeLevel(a.id, data.nodes);
-                const levelB = getNodeLevel(b.id, data.nodes);
-                return levelA - levelB;
-            });
-
-            // Sırayla ekle (önce parent'lar, sonra child'lar)
-            for (const node of sortedNodes) {
-                const newGardenId = gardenIdMap[node.garden_id];
-                if (!newGardenId) continue; // Bahçe bulunamadıysa atla
-
-                const newParentId = node.parent_id ? nodeIdMap[node.parent_id] : null;
-                
-                const { data: newNode, error } = await supabase
-                    .from('nodes')
-                    .insert({
-                        garden_id: newGardenId,
-                        parent_id: newParentId,
-                        content: node.content,
-                        position_x: node.position_x,
-                        position_y: node.position_y,
-                        is_expanded: node.is_expanded ?? true
-                    })
-                    .select()
-                    .single();
-
-                if (error) {
-                    console.error('Node insert error:', error, node);
-                    continue; // Hata olursa diğer node'lara devam et
-                }
-                
-                if (newNode) {
-                    nodeIdMap[node.id] = newNode.id;
-                }
-            }
-
-            alert('Veriler başarıyla içe aktarıldı!');
-            await fetchGardens();
+            setImportData(data);
+            setShowImportModal(true);
         } catch (error) {
-            console.error('Import error:', error);
-            alert('İçe aktarma sırasında hata oluştu. Dosya formatını kontrol edin.');
+            console.error('File read error:', error);
+            alert('Dosya okunamadı. Geçerli bir JSON dosyası seçtiğinizden emin olun.');
         } finally {
-            setIsImporting(false);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
         }
     };
 
+    // Verileri değiştir (mevcut verileri sil, yenilerini ekle)
+    const handleImportReplace = async () => {
+        if (!importData || !user) return;
+        setShowImportModal(false);
+        setIsImporting(true);
+
+        try {
+            // Mevcut bahçeleri al
+            const { data: existingGardens } = await supabase
+                .from('gardens')
+                .select('id')
+                .eq('user_id', user.id);
+
+            // Mevcut bahçelere ait node'ları sil
+            if (existingGardens && existingGardens.length > 0) {
+                const gardenIds = existingGardens.map(g => g.id);
+                await supabase.from('nodes').delete().in('garden_id', gardenIds);
+                await supabase.from('gardens').delete().eq('user_id', user.id);
+            }
+
+            // Yeni verileri ekle
+            await importGardenData(importData);
+
+            alert('Veriler başarıyla değiştirildi!');
+            await fetchGardens();
+        } catch (error) {
+            console.error('Import replace error:', error);
+            alert('İçe aktarma sırasında hata oluştu.');
+        } finally {
+            setIsImporting(false);
+            setImportData(null);
+        }
+    };
+
+    // Verileri mevcut verilere ekle
+    const handleImportAppend = async () => {
+        if (!importData || !user) return;
+        setShowImportModal(false);
+        setIsImporting(true);
+
+        try {
+            await importGardenData(importData);
+
+            alert('Veriler başarıyla eklendi!');
+            await fetchGardens();
+        } catch (error) {
+            console.error('Import append error:', error);
+            alert('İçe aktarma sırasında hata oluştu.');
+        } finally {
+            setIsImporting(false);
+            setImportData(null);
+        }
+    };
+
+    // Ortak içe aktarma fonksiyonu
+    const importGardenData = async (data: { gardens: any[]; nodes: any[] }) => {
+        if (!user) return;
+
+        // ID eşleştirme için map
+        const gardenIdMap: Record<string, string> = {};
+
+        // Bahçeleri ekle
+        for (const garden of data.gardens) {
+            const { data: newGarden, error } = await supabase
+                .from('gardens')
+                .insert({
+                    name: garden.name,
+                    user_id: user.id,
+                    view_state: garden.view_state
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            if (newGarden) {
+                gardenIdMap[garden.id] = newGarden.id;
+            }
+        }
+
+        // Node'ları seviye seviye ekle (BFS yaklaşımı)
+        const nodeIdMap: Record<string, string> = {};
+        
+        const getNodeLevel = (nodeId: string, nodes: any[]): number => {
+            const node = nodes.find((n: any) => n.id === nodeId);
+            if (!node || !node.parent_id) return 0;
+            return 1 + getNodeLevel(node.parent_id, nodes);
+        };
+
+        const sortedNodes = [...data.nodes].sort((a: any, b: any) => {
+            const levelA = getNodeLevel(a.id, data.nodes);
+            const levelB = getNodeLevel(b.id, data.nodes);
+            return levelA - levelB;
+        });
+
+        for (const node of sortedNodes) {
+            const newGardenId = gardenIdMap[node.garden_id];
+            if (!newGardenId) continue;
+
+            const newParentId = node.parent_id ? nodeIdMap[node.parent_id] : null;
+            
+            const { data: newNode, error } = await supabase
+                .from('nodes')
+                .insert({
+                    garden_id: newGardenId,
+                    parent_id: newParentId,
+                    content: node.content,
+                    position_x: node.position_x,
+                    position_y: node.position_y,
+                    is_expanded: node.is_expanded ?? true
+                })
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Node insert error:', error, node);
+                continue;
+            }
+            
+            if (newNode) {
+                nodeIdMap[node.id] = newNode.id;
+            }
+        }
+    };
+
+    // Modal'ı kapat
+    const handleImportCancel = () => {
+        setShowImportModal(false);
+        setImportData(null);
+    };
+
 
     return (
-        <AnimatePresence>
-            {isSidebarOpen && (
-                <>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
-                        onClick={() => setSidebarOpen(false)}
-                    />
+        <>
+            {/* İçe Aktarma Modal */}
+            <AnimatePresence>
+                {showImportModal && importData && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+                            onClick={handleImportCancel}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-2xl shadow-2xl z-[60] p-6"
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                                    <Upload className="text-white" size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-stone-800 font-serif">İçe Aktar</h3>
+                                    <p className="text-xs text-stone-500">
+                                        {importData.gardens.length} bahçe, {importData.nodes.length} not
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p className="text-sm text-stone-600 mb-5">
+                                Verileri nasıl içe aktarmak istiyorsunuz?
+                            </p>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={handleImportReplace}
+                                    className="w-full flex items-center gap-3 px-4 py-3 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all text-left"
+                                >
+                                    <Database size={18} className="text-red-600" />
+                                    <div>
+                                        <p className="font-medium text-red-700">Verileri Değiştir</p>
+                                        <p className="text-xs text-red-500">Mevcut tüm veriler silinir, yenileri eklenir</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={handleImportAppend}
+                                    className="w-full flex items-center gap-3 px-4 py-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all text-left"
+                                >
+                                    <Upload size={18} className="text-emerald-600" />
+                                    <div>
+                                        <p className="font-medium text-emerald-700">Var Olan Verilere Ekle</p>
+                                        <p className="text-xs text-emerald-500">Mevcut veriler korunur, yenileri eklenir</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={handleImportCancel}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl transition-all"
+                                >
+                                    <X size={18} className="text-stone-600" />
+                                    <span className="font-medium text-stone-600">İptal</span>
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {isSidebarOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+                            onClick={() => setSidebarOpen(false)}
+                        />
 
                     <motion.aside
                         initial={{ x: '-100%' }}
@@ -432,7 +557,7 @@ export default function Sidebar() {
                                                     ref={fileInputRef}
                                                     type="file"
                                                     accept=".json"
-                                                    onChange={handleImport}
+                                                    onChange={handleFileSelect}
                                                     className="hidden"
                                                 />
                                                 <button
@@ -579,6 +704,7 @@ export default function Sidebar() {
                     </motion.aside>
                 </>
             )}
-        </AnimatePresence>
+            </AnimatePresence>
+        </>
     );
 }
