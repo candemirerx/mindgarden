@@ -33,6 +33,8 @@ export default function Sidebar() {
     // Dışa aktarma modal state'leri
     const [showExportModal, setShowExportModal] = useState(false);
     const [exportData, setExportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
+    const [exportStep, setExportStep] = useState<'select' | 'format'>('select');
+    const [selectedGardenIds, setSelectedGardenIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         const initAuth = async () => {
@@ -216,6 +218,8 @@ export default function Sidebar() {
             }
 
             setExportData({ gardens: gardensData || [], nodes: nodesData });
+            setSelectedGardenIds(new Set(gardenIds)); // Varsayılan: tümü seçili
+            setExportStep('select');
             setShowExportModal(true);
         } catch (error) {
             console.error('Export error:', error);
@@ -225,14 +229,41 @@ export default function Sidebar() {
         }
     };
 
+    // Bahçe seçimini toggle et
+    const toggleGardenSelection = (gardenId: string) => {
+        const newSet = new Set(selectedGardenIds);
+        if (newSet.has(gardenId)) {
+            newSet.delete(gardenId);
+        } else {
+            newSet.add(gardenId);
+        }
+        setSelectedGardenIds(newSet);
+    };
+
+    // Tümünü seç
+    const selectAllGardens = () => {
+        if (exportData) {
+            setSelectedGardenIds(new Set(exportData.gardens.map(g => g.id)));
+        }
+    };
+
+    // Seçili verileri filtrele
+    const getFilteredExportData = () => {
+        if (!exportData) return null;
+        const filteredGardens = exportData.gardens.filter(g => selectedGardenIds.has(g.id));
+        const filteredNodes = exportData.nodes.filter(n => selectedGardenIds.has(n.garden_id));
+        return { gardens: filteredGardens, nodes: filteredNodes };
+    };
+
     // JSON olarak dışa aktar
     const handleExportJSON = () => {
-        if (!exportData) return;
+        const filtered = getFilteredExportData();
+        if (!filtered) return;
         const data = {
             version: '1.0',
             exportedAt: new Date().toISOString(),
-            gardens: exportData.gardens,
-            nodes: exportData.nodes
+            gardens: filtered.gardens,
+            nodes: filtered.nodes
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         downloadFile(blob, `not-bahcesi-backup-${new Date().toISOString().split('T')[0]}.json`);
@@ -242,7 +273,8 @@ export default function Sidebar() {
 
     // HTML olarak dışa aktar (ağaç yapısında, içerikler gizli)
     const handleExportHTML = () => {
-        if (!exportData) return;
+        const filtered = getFilteredExportData();
+        if (!filtered) return;
 
         const escapeHtml = (text: string) => {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -277,8 +309,8 @@ export default function Sidebar() {
             }).join('');
         };
 
-        const gardensHTML = exportData.gardens.map(garden => {
-            const gardenNodes = exportData.nodes.filter(n => n.garden_id === garden.id);
+        const gardensHTML = filtered.gardens.map(garden => {
+            const gardenNodes = filtered.nodes.filter(n => n.garden_id === garden.id);
             const treesHTML = buildTreeHTML(gardenNodes, null, 0);
             return `
             <div class="garden">
@@ -356,7 +388,8 @@ export default function Sidebar() {
 
     // PDF olarak dışa aktar (tarayıcı print ile - Türkçe karakter desteği)
     const handleExportPDF = () => {
-        if (!exportData) return;
+        const filtered = getFilteredExportData();
+        if (!filtered) return;
 
         const escapeHtml = (text: string) => {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -384,8 +417,8 @@ export default function Sidebar() {
             }).join('');
         };
 
-        const gardensHTML = exportData.gardens.map(garden => {
-            const gardenNodes = exportData.nodes.filter(n => n.garden_id === garden.id);
+        const gardensHTML = filtered.gardens.map(garden => {
+            const gardenNodes = filtered.nodes.filter(n => n.garden_id === garden.id);
             const treesHTML = buildTreeHTML(gardenNodes, null, 0);
             return `
             <div class="garden">
@@ -697,7 +730,7 @@ export default function Sidebar() {
                             initial={{ opacity: 0, scale: 0.95, y: -20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                            className="fixed left-1/2 top-[15%] -translate-x-1/2 w-[90%] max-w-md bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-2xl shadow-2xl z-[60] p-6 max-h-[80vh] overflow-y-auto"
+                            className="fixed left-1/2 top-[15%] -translate-x-1/2 w-[90%] max-w-md bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-2xl shadow-2xl z-[60] p-5 max-h-[80vh] overflow-y-auto"
                         >
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center">
@@ -706,57 +739,141 @@ export default function Sidebar() {
                                 <div>
                                     <h3 className="font-bold text-stone-800 font-serif">Dışa Aktar</h3>
                                     <p className="text-xs text-stone-500">
-                                        {exportData.gardens.length} bahçe, {exportData.nodes.length} not
+                                        {selectedGardenIds.size} / {exportData.gardens.length} bahçe seçili
                                     </p>
                                 </div>
                             </div>
 
-                            <p className="text-sm text-stone-600 mb-4">
-                                Hangi formatta dışa aktarmak istiyorsunuz?
-                            </p>
+                            {exportStep === 'select' ? (
+                                <>
+                                    <p className="text-sm text-stone-600 mb-3">
+                                        Hangi bahçeleri dışa aktarmak istiyorsunuz?
+                                    </p>
 
-                            <div className="space-y-2">
-                                <button
-                                    onClick={handleExportJSON}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all text-left"
-                                >
-                                    <FileJson size={18} className="text-amber-600" />
-                                    <div>
-                                        <p className="font-medium text-amber-700 text-sm">JSON</p>
-                                        <p className="text-xs text-amber-500">Yedekleme ve geri yükleme için</p>
+                                    <div className="space-y-2 mb-4">
+                                        <button
+                                            onClick={() => { selectAllGardens(); setExportStep('format'); }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all text-left"
+                                        >
+                                            <TreePine size={18} className="text-emerald-600" />
+                                            <div>
+                                                <p className="font-medium text-emerald-700 text-sm">Tümünü Seç</p>
+                                                <p className="text-xs text-emerald-500">{exportData.gardens.length} bahçe, {exportData.nodes.length} not</p>
+                                            </div>
+                                        </button>
+
+                                        <div className="relative py-2">
+                                            <div className="absolute inset-0 flex items-center">
+                                                <div className="w-full border-t border-stone-200"></div>
+                                            </div>
+                                            <div className="relative flex justify-center">
+                                                <span className="px-2 bg-[#f0ece5] text-xs text-stone-500">veya bahçe seç</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                                            {exportData.gardens.map(garden => {
+                                                const nodeCount = exportData.nodes.filter(n => n.garden_id === garden.id).length;
+                                                const isSelected = selectedGardenIds.has(garden.id);
+                                                return (
+                                                    <button
+                                                        key={garden.id}
+                                                        onClick={() => toggleGardenSelection(garden.id)}
+                                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left ${
+                                                            isSelected 
+                                                                ? 'bg-emerald-100 border-2 border-emerald-400' 
+                                                                : 'bg-white/60 border border-stone-200 hover:border-emerald-300'
+                                                        }`}
+                                                    >
+                                                        <div className={`w-5 h-5 rounded-md flex items-center justify-center ${
+                                                            isSelected ? 'bg-emerald-500' : 'bg-stone-200'
+                                                        }`}>
+                                                            {isSelected && <span className="text-white text-xs">✓</span>}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium text-stone-700 text-sm truncate">{garden.name}</p>
+                                                            <p className="text-xs text-stone-400">{nodeCount} not</p>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </button>
 
-                                <button
-                                    onClick={handleExportHTML}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-all text-left"
-                                >
-                                    <FileText size={18} className="text-sky-600" />
-                                    <div>
-                                        <p className="font-medium text-sky-700 text-sm">HTML</p>
-                                        <p className="text-xs text-sky-500">Ağaç yapısında, kopyalama butonlu</p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleExportCancel}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl transition-all"
+                                        >
+                                            <span className="font-medium text-stone-600 text-sm">İptal</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setExportStep('format')}
+                                            disabled={selectedGardenIds.size === 0}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <span className="font-medium text-sm">Devam</span>
+                                        </button>
                                     </div>
-                                </button>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-stone-600 mb-3">
+                                        Hangi formatta dışa aktarmak istiyorsunuz?
+                                    </p>
 
-                                <button
-                                    onClick={handleExportPDF}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all text-left"
-                                >
-                                    <FileType size={18} className="text-rose-600" />
-                                    <div>
-                                        <p className="font-medium text-rose-700 text-sm">PDF</p>
-                                        <p className="text-xs text-rose-500">Düzenli belge formatında</p>
+                                    <div className="space-y-2">
+                                        <button
+                                            onClick={handleExportJSON}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all text-left"
+                                        >
+                                            <FileJson size={18} className="text-amber-600" />
+                                            <div>
+                                                <p className="font-medium text-amber-700 text-sm">JSON</p>
+                                                <p className="text-xs text-amber-500">Yedekleme ve geri yükleme için</p>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={handleExportHTML}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-all text-left"
+                                        >
+                                            <FileText size={18} className="text-sky-600" />
+                                            <div>
+                                                <p className="font-medium text-sky-700 text-sm">HTML</p>
+                                                <p className="text-xs text-sky-500">Ağaç yapısında, kopyalama butonlu</p>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={handleExportPDF}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all text-left"
+                                        >
+                                            <FileType size={18} className="text-rose-600" />
+                                            <div>
+                                                <p className="font-medium text-rose-700 text-sm">PDF</p>
+                                                <p className="text-xs text-rose-500">Düzenli belge formatında</p>
+                                            </div>
+                                        </button>
+
+                                        <div className="flex gap-2 mt-3">
+                                            <button
+                                                onClick={() => setExportStep('select')}
+                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl transition-all"
+                                            >
+                                                <span className="font-medium text-stone-600 text-sm">Geri</span>
+                                            </button>
+                                            <button
+                                                onClick={handleExportCancel}
+                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl transition-all"
+                                            >
+                                                <X size={16} className="text-stone-600" />
+                                                <span className="font-medium text-stone-600 text-sm">İptal</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </button>
-
-                                <button
-                                    onClick={handleExportCancel}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl transition-all mt-2"
-                                >
-                                    <X size={16} className="text-stone-600" />
-                                    <span className="font-medium text-stone-600 text-sm">İptal</span>
-                                </button>
-                            </div>
+                                </>
+                            )}
                         </motion.div>
                     </>
                 )}
