@@ -192,23 +192,41 @@ export default function Sidebar() {
 
         try {
             // Tüm bahçeleri al
-            const { data: gardensData } = await supabase
+            const { data: gardensData, error: gardensError } = await supabase
                 .from('gardens')
                 .select('*')
                 .eq('user_id', user.id);
 
-            // Tüm node'ları al
-            const { data: nodesData } = await supabase
-                .from('nodes')
-                .select('*')
-                .in('garden_id', gardensData?.map(g => g.id) || []);
+            if (gardensError) {
+                console.error('Gardens fetch error:', gardensError);
+                throw gardensError;
+            }
+
+            // Node'ları al (bahçe varsa)
+            let nodesData: any[] = [];
+            const gardenIds = gardensData?.map(g => g.id) || [];
+            
+            if (gardenIds.length > 0) {
+                const { data: fetchedNodes, error: nodesError } = await supabase
+                    .from('nodes')
+                    .select('*')
+                    .in('garden_id', gardenIds);
+
+                if (nodesError) {
+                    console.error('Nodes fetch error:', nodesError);
+                    throw nodesError;
+                }
+                nodesData = fetchedNodes || [];
+            }
 
             const exportData = {
                 version: '1.0',
                 exportedAt: new Date().toISOString(),
                 gardens: gardensData || [],
-                nodes: nodesData || []
+                nodes: nodesData
             };
+
+            console.log('Export data:', exportData);
 
             const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
