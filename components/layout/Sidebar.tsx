@@ -37,6 +37,11 @@ export default function Sidebar() {
     const [selectedGardenIds, setSelectedGardenIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
+        // Sidebar kapalıyken auth kontrolü yapma
+        if (!isSidebarOpen) return;
+        
+        let mounted = true;
+        
         const initAuth = async () => {
             // Native platformda Google Auth'u initialize et
             if (Capacitor.isNativePlatform()) {
@@ -52,19 +57,22 @@ export default function Sidebar() {
             }
             
             const { data: { session } } = await supabase.auth.getSession();
-            setUser(session?.user ?? null);
-            setIsLoading(false);
+            if (mounted) {
+                setUser(session?.user ?? null);
+                setIsLoading(false);
+            }
         };
         initAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
+            if (mounted) setUser(session?.user ?? null);
         });
 
         return () => {
+            mounted = false;
             subscription.unsubscribe();
         };
-    }, []);
+    }, [isSidebarOpen]);
 
     const handleGoogleSignIn = async () => {
         setAuthLoading(true);
@@ -176,6 +184,8 @@ export default function Sidebar() {
             if (error) {
                 if (error.message.includes('already registered')) {
                     setAuthError('Bu e-posta zaten kayıtlı');
+                } else if (error.message.includes('Signups not allowed') || error.message.includes('signups are disabled')) {
+                    setAuthError('E-posta ile kayıt şu an kapalı. Lütfen Google ile giriş yapın.');
                 } else {
                     setAuthError(error.message);
                 }

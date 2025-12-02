@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, memo, lazy, Suspense } from 'react';
+import { useEffect, useState, useCallback, memo, lazy, Suspense, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
@@ -143,16 +143,16 @@ export default function HomePage() {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [editingGardenId, setEditingGardenId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
-
-    // Mobil için daha kısa timeout
-    const TIMEOUT_MS = typeof window !== 'undefined' && window.innerWidth < 768 ? 5000 : 10000;
+    const initialCheckDone = useRef(false);
 
     useEffect(() => {
         let mounted = true;
         
         const checkAuth = async () => {
+            if (initialCheckDone.current) return;
+            initialCheckDone.current = true;
+            
             try {
-                // Önce mevcut session'ı kontrol et
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
                 if (!mounted) return;
@@ -163,15 +163,11 @@ export default function HomePage() {
                     return;
                 }
                 
-                console.log('Initial session check:', !!session);
                 setUser(session?.user ?? null);
                 
                 if (session?.user) {
                     try {
-                        await Promise.race([
-                            fetchGardens(),
-                            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), TIMEOUT_MS))
-                        ]);
+                        await fetchGardens();
                     } catch (e) {
                         console.error('fetchGardens error:', e);
                     }
@@ -188,26 +184,12 @@ export default function HomePage() {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
             
-            console.log('Auth state changed:', event, !!session);
+            // INITIAL_SESSION'ı ignore et - checkAuth zaten hallediyor
+            if (event === 'INITIAL_SESSION') return;
+            
             setUser(session?.user ?? null);
             
             if (event === 'SIGNED_IN' && session?.user) {
-                setIsLoading(true);
-                try {
-                    await Promise.race([
-                        fetchGardens(),
-                        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), TIMEOUT_MS))
-                    ]);
-                } catch (e) {
-                    console.error('fetchGardens error:', e);
-                } finally {
-                    if (mounted) setIsLoading(false);
-                }
-            } else if (event === 'SIGNED_OUT') {
-                useStore.getState().setGardens([]);
-                setIsLoading(false);
-            } else if (session?.user && !isLoading) {
-                // Token refresh gibi durumlarda
                 setIsLoading(true);
                 try {
                     await fetchGardens();
@@ -216,6 +198,9 @@ export default function HomePage() {
                 } finally {
                     if (mounted) setIsLoading(false);
                 }
+            } else if (event === 'SIGNED_OUT') {
+                useStore.getState().setGardens([]);
+                setIsLoading(false);
             }
         });
 
@@ -223,7 +208,7 @@ export default function HomePage() {
             mounted = false;
             subscription.unsubscribe();
         };
-    }, [fetchGardens, TIMEOUT_MS]);
+    }, [fetchGardens]);
 
     // Memoized callbacks
     const formatDate = useCallback((dateStr: string) => {
