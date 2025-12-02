@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Auto-Update Documentation",
+  "description": "Watches TypeScript/TSX source files, components, and lib files for changes and prompts the agent to update relevant documentation in README.md or the docs folder.",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file has been modified. Please review the changes and determine if the documentation needs to be updated. If the change affects functionality, APIs, components, or project structure, update the relevant documentation in either README.md or the docs/ folder (e.g., docs/PRD.md). Focus on keeping documentation in sync with the actual code behavior and features."
+  }
+}

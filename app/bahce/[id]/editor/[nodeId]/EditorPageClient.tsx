@@ -30,16 +30,21 @@ export default function EditorPageClient({ nodeId }: Props) {
 
   const currentNode = nodes.find(n => n.id === nodeId);
   const initializedNodeIdRef = useRef<string | null>(null);
+  const isLocalEditRef = useRef(false); // Kullanıcı düzenleme yapıyor mu?
 
   useEffect(() => {
+    // Kullanıcı aktif olarak düzenleme yapıyorsa store güncellemelerini yok say
+    if (isLocalEditRef.current) return;
+    
     // Sadece farklı bir node'a geçildiğinde içeriği yükle
     // Aynı node için tekrar yükleme yapma (kayıt sonrası store güncellemelerinde)
     if (currentNode && initializedNodeIdRef.current !== nodeId) {
       const lines = currentNode.content.split('\n');
       setTitle(lines[0] || '');
-      // İlk satır başlık, geri kalanı içerik - sadece başındaki boşlukları temizle, sonundakileri koru
+      // İlk satır başlık, geri kalanı içerik - boşlukları olduğu gibi koru
       const bodyContent = lines.slice(1).join('\n');
-      setContent(bodyContent.replace(/^\s+/, '')); // Sadece baştaki boşlukları sil
+      // Sadece en baştaki newline'ları temizle, diğer boşlukları koru
+      setContent(bodyContent.replace(/^\n+/, ''));
       initializedNodeIdRef.current = nodeId;
     }
   }, [currentNode, nodeId]);
@@ -65,8 +70,16 @@ export default function EditorPageClient({ nodeId }: Props) {
   const handleSave = async () => { await saveContent(); };
   const handleCopy = () => { navigator.clipboard.writeText(content); setShowCopied(true); setTimeout(() => setShowCopied(false), 2000); };
   const handleClose = () => { if (hasChanges && !autoSave) { if (confirm('Kaydedilmemiş değişiklikler var. Çıkmak istediğinize emin misiniz?')) router.back(); } else router.back(); };
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { setContent(e.target.value); setHasChanges(true); };
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => { setTitle(e.target.value); setHasChanges(true); };
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { 
+    isLocalEditRef.current = true; // Kullanıcı düzenleme yapıyor
+    setContent(e.target.value); 
+    setHasChanges(true); 
+  };
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => { 
+    isLocalEditRef.current = true; // Kullanıcı düzenleme yapıyor
+    setTitle(e.target.value); 
+    setHasChanges(true); 
+  };
 
   const handleSpellCheck = async () => {
     const textarea = textareaRef.current;
