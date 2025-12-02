@@ -50,25 +50,26 @@ export default function EditorPageClient({ nodeId }: Props) {
     }
   }, [currentNode, nodeId]);
 
-  const saveContent = useCallback(async () => {
+  const saveContent = useCallback(async (isAutoSave = false) => {
     if (!hasChanges) return;
-    setIsSaving(true);
+    // Otomatik kayıtta isSaving state'ini değiştirme - dikte programını kesmesin
+    if (!isAutoSave) setIsSaving(true);
     const fullContent = `${title}\n${content}`;
     await updateNode(nodeId, fullContent);
     setHasChanges(false);
     setLastSaved(new Date());
-    setIsSaving(false);
+    if (!isAutoSave) setIsSaving(false);
   }, [title, content, nodeId, updateNode, hasChanges]);
 
   useEffect(() => {
     if (autoSave && hasChanges) {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-      autoSaveTimeoutRef.current = setTimeout(() => saveContent(), 1500);
+      autoSaveTimeoutRef.current = setTimeout(() => saveContent(true), 1500);
     }
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
   }, [autoSave, hasChanges, title, content, saveContent]);
 
-  const handleSave = async () => { await saveContent(); };
+  const handleSave = async () => { await saveContent(false); };
   const handleCopy = () => { navigator.clipboard.writeText(content); setShowCopied(true); setTimeout(() => setShowCopied(false), 2000); };
   const handleClose = () => { if (hasChanges && !autoSave) { if (confirm('Kaydedilmemiş değişiklikler var. Çıkmak istediğinize emin misiniz?')) router.back(); } else router.back(); };
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { 
