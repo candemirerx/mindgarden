@@ -434,15 +434,6 @@ export default function ProjectsPage() {
                 )}
             </main>
 
-            {/* Mobil FAB */}
-            {trees.length > 0 && (
-                <button
-                    onClick={handleAddRoot}
-                    className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-2xl shadow-2xl shadow-emerald-500/40 flex items-center justify-center z-50 active:scale-95 transition-transform"
-                >
-                    <Plus size={28} />
-                </button>
-            )}
         </div>
     );
 }
