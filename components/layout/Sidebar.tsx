@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -29,6 +30,10 @@ export default function Sidebar() {
     // İçe aktarma modal state'leri
     const [showImportModal, setShowImportModal] = useState(false);
     const [importData, setImportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
+    
+    // Dışa aktarma modal state'leri
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportData, setExportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
 
     useEffect(() => {
         const initAuth = async () => {
@@ -185,24 +190,19 @@ export default function Sidebar() {
         }
     };
 
-    // Tüm verileri JSON olarak dışa aktar
-    const handleExport = async () => {
+    // Dışa aktarma modal'ını aç - verileri çek ve modal göster
+    const handleExportClick = async () => {
         if (!user) return;
         setIsExporting(true);
 
         try {
-            // Tüm bahçeleri al
             const { data: gardensData, error: gardensError } = await supabase
                 .from('gardens')
                 .select('*')
                 .eq('user_id', user.id);
 
-            if (gardensError) {
-                console.error('Gardens fetch error:', gardensError);
-                throw gardensError;
-            }
+            if (gardensError) throw gardensError;
 
-            // Node'ları al (bahçe varsa)
             let nodesData: any[] = [];
             const gardenIds = gardensData?.map(g => g.id) || [];
             
@@ -212,35 +212,235 @@ export default function Sidebar() {
                     .select('*')
                     .in('garden_id', gardenIds);
 
-                if (nodesError) {
-                    console.error('Nodes fetch error:', nodesError);
-                    throw nodesError;
-                }
+                if (nodesError) throw nodesError;
                 nodesData = fetchedNodes || [];
             }
 
-            const exportData = {
-                version: '1.0',
-                exportedAt: new Date().toISOString(),
-                gardens: gardensData || [],
-                nodes: nodesData
-            };
-
-            console.log('Export data:', exportData);
-
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `not-bahcesi-backup-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+            setExportData({ gardens: gardensData || [], nodes: nodesData });
+            setShowExportModal(true);
         } catch (error) {
             console.error('Export error:', error);
-            alert('Dışa aktarma sırasında hata oluştu.');
+            alert('Veriler alınırken hata oluştu.');
         } finally {
             setIsExporting(false);
         }
+    };
+
+    // JSON olarak dışa aktar
+    const handleExportJSON = () => {
+        if (!exportData) return;
+        const data = {
+            version: '1.0',
+            exportedAt: new Date().toISOString(),
+            gardens: exportData.gardens,
+            nodes: exportData.nodes
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        downloadFile(blob, `not-bahcesi-backup-${new Date().toISOString().split('T')[0]}.json`);
+        setShowExportModal(false);
+        setExportData(null);
+    };
+
+    // HTML olarak dışa aktar (ağaç yapısında, içerikler gizli)
+    const handleExportHTML = () => {
+        if (!exportData) return;
+
+        const escapeHtml = (text: string) => {
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        };
+
+        const escapeJs = (text: string) => {
+            return text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+        };
+
+        const buildTreeHTML = (nodes: any[], parentId: string | null = null, depth: number = 0): string => {
+            const children = nodes.filter(n => n.parent_id === parentId);
+            if (children.length === 0) return '';
+
+            return children.map(node => {
+                const title = node.content.split('\n')[0] || 'Başlıksız';
+                const content = node.content.split('\n').slice(1).join('\n').trim();
+                const childrenHTML = buildTreeHTML(nodes, node.id, depth + 1);
+                const nodeId = node.id.replace(/-/g, '');
+                
+                return `
+                <div class="node" style="margin-left: ${depth * 24}px; margin-bottom: 16px;">
+                    <div class="node-header">
+                        <span class="icon">${depth === 0 ? '🌳' : '🌿'}</span>
+                        <strong class="title">${escapeHtml(title)}</strong>
+                        <button onclick="copyText(\`${escapeJs(title)}\`, this)" class="copy-btn copy-title">📋</button>
+                        ${content ? `<button onclick="copyText(\`${escapeJs(content)}\`, this)" class="copy-btn copy-content">📄</button>` : ''}
+                        ${content ? `<button onclick="toggleContent('${nodeId}')" class="toggle-btn" id="toggle-${nodeId}">▶ Detaylar</button>` : ''}
+                    </div>
+                    ${content ? `<div class="content hidden" id="content-${nodeId}">${escapeHtml(content)}</div>` : ''}
+                    ${childrenHTML ? `<div class="children">${childrenHTML}</div>` : ''}
+                </div>`;
+            }).join('');
+        };
+
+        const gardensHTML = exportData.gardens.map(garden => {
+            const gardenNodes = exportData.nodes.filter(n => n.garden_id === garden.id);
+            const treesHTML = buildTreeHTML(gardenNodes, null, 0);
+            return `
+            <div class="garden">
+                <h2>🏡 ${escapeHtml(garden.name)}</h2>
+                ${treesHTML || '<p class="empty">Bu bahçede henüz not yok.</p>'}
+            </div>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Not Bahçesi - Dışa Aktarım</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px; background: #fafaf9; color: #1c1917; line-height: 1.5; }
+        h1 { color: #166534; text-align: center; margin-bottom: 8px; font-size: 28px; }
+        .subtitle { text-align: center; color: #78716c; margin-bottom: 32px; font-size: 14px; }
+        .garden { margin-bottom: 32px; padding: 20px; background: #f5f5f4; border-radius: 16px; border: 1px solid #e7e5e4; }
+        .garden h2 { color: #166534; margin-bottom: 16px; font-size: 20px; }
+        .empty { color: #a8a29e; font-style: italic; }
+        .node-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .icon { font-size: 16px; }
+        .title { color: #166534; font-size: 15px; }
+        .copy-btn { padding: 4px 8px; font-size: 11px; background: #ecfccb; border: 1px solid #bef264; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        .copy-btn:hover { background: #d9f99d; }
+        .copy-btn.copied { background: #22c55e; color: white; border-color: #22c55e; }
+        .toggle-btn { padding: 4px 10px; font-size: 11px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 6px; cursor: pointer; transition: all 0.2s; color: #0369a1; }
+        .toggle-btn:hover { background: #bae6fd; }
+        .toggle-btn.open { background: #0ea5e9; color: white; border-color: #0ea5e9; }
+        .content { margin-left: 28px; margin-top: 8px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e7e5e4; color: #57534e; white-space: pre-wrap; font-size: 14px; }
+        .content.hidden { display: none; }
+        .children { margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🌱 Not Bahçesi</h1>
+    <p class="subtitle">Dışa aktarım tarihi: ${new Date().toLocaleDateString('tr-TR')}</p>
+    ${gardensHTML}
+    <script>
+        function copyText(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const original = btn.textContent;
+                btn.classList.add('copied');
+                btn.textContent = '✓';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.textContent = original;
+                }, 1500);
+            });
+        }
+        function toggleContent(id) {
+            const content = document.getElementById('content-' + id);
+            const btn = document.getElementById('toggle-' + id);
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                btn.classList.add('open');
+                btn.textContent = '▼ Gizle';
+            } else {
+                content.classList.add('hidden');
+                btn.classList.remove('open');
+                btn.textContent = '▶ Detaylar';
+            }
+        }
+    </script>
+</body>
+</html>`;
+
+        const blob = new Blob([html], { type: 'text/html' });
+        downloadFile(blob, `not-bahcesi-${new Date().toISOString().split('T')[0]}.html`);
+        setShowExportModal(false);
+        setExportData(null);
+    };
+
+    // PDF olarak dışa aktar
+    const handleExportPDF = () => {
+        if (!exportData) return;
+
+        const doc = new jsPDF();
+        let y = 20;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 20;
+        const lineHeight = 7;
+
+        const addText = (text: string, x: number, fontSize: number, isBold: boolean = false) => {
+            doc.setFontSize(fontSize);
+            doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+            const lines = doc.splitTextToSize(text, 170 - x + margin);
+            lines.forEach((line: string) => {
+                if (y > pageHeight - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
+                doc.text(line, x, y);
+                y += lineHeight;
+            });
+        };
+
+        // Başlık
+        doc.setTextColor(22, 101, 52);
+        addText('Not Bahçesi', margin, 24, true);
+        doc.setTextColor(120, 113, 108);
+        addText(`Dışa aktarım: ${new Date().toLocaleDateString('tr-TR')}`, margin, 10);
+        y += 10;
+
+        exportData.gardens.forEach(garden => {
+            if (y > pageHeight - 40) {
+                doc.addPage();
+                y = margin;
+            }
+
+            doc.setTextColor(22, 101, 52);
+            addText(`🏡 ${garden.name}`, margin, 16, true);
+            y += 5;
+
+            const gardenNodes = exportData.nodes.filter(n => n.garden_id === garden.id);
+            
+            const printNode = (nodeId: string | null, depth: number) => {
+                const children = gardenNodes.filter(n => n.parent_id === nodeId);
+                children.forEach(node => {
+                    const title = node.content.split('\n')[0] || 'Başlıksız';
+                    const content = node.content.split('\n').slice(1).join('\n').trim();
+                    const indent = margin + (depth * 10);
+
+                    doc.setTextColor(28, 25, 23);
+                    addText(`${depth === 0 ? '🌳' : '  🌿'} ${title}`, indent, 12, true);
+                    
+                    if (content) {
+                        doc.setTextColor(87, 83, 78);
+                        addText(content, indent + 8, 10);
+                    }
+                    y += 3;
+
+                    printNode(node.id, depth + 1);
+                });
+            };
+
+            printNode(null, 0);
+            y += 10;
+        });
+
+        doc.save(`not-bahcesi-${new Date().toISOString().split('T')[0]}.pdf`);
+        setShowExportModal(false);
+        setExportData(null);
+    };
+
+    // Dosya indirme yardımcı fonksiyonu
+    const downloadFile = (blob: Blob, filename: string) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Export modal'ı kapat
+    const handleExportCancel = () => {
+        setShowExportModal(false);
+        setExportData(null);
     };
 
     // JSON dosyasından içe aktar - dosya seçildiğinde modal aç
@@ -401,6 +601,86 @@ export default function Sidebar() {
 
     return (
         <>
+            {/* Dışa Aktarma Modal */}
+            <AnimatePresence>
+                {showExportModal && exportData && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+                            onClick={handleExportCancel}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                            className="fixed left-1/2 top-[15%] -translate-x-1/2 w-[90%] max-w-md bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-2xl shadow-2xl z-[60] p-6 max-h-[80vh] overflow-y-auto"
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center">
+                                    <Download className="text-white" size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-stone-800 font-serif">Dışa Aktar</h3>
+                                    <p className="text-xs text-stone-500">
+                                        {exportData.gardens.length} bahçe, {exportData.nodes.length} not
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p className="text-sm text-stone-600 mb-4">
+                                Hangi formatta dışa aktarmak istiyorsunuz?
+                            </p>
+
+                            <div className="space-y-2">
+                                <button
+                                    onClick={handleExportJSON}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all text-left"
+                                >
+                                    <FileJson size={18} className="text-amber-600" />
+                                    <div>
+                                        <p className="font-medium text-amber-700 text-sm">JSON</p>
+                                        <p className="text-xs text-amber-500">Yedekleme ve geri yükleme için</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={handleExportHTML}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-all text-left"
+                                >
+                                    <FileText size={18} className="text-sky-600" />
+                                    <div>
+                                        <p className="font-medium text-sky-700 text-sm">HTML</p>
+                                        <p className="text-xs text-sky-500">Ağaç yapısında, kopyalama butonlu</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={handleExportPDF}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all text-left"
+                                >
+                                    <FileType size={18} className="text-rose-600" />
+                                    <div>
+                                        <p className="font-medium text-rose-700 text-sm">PDF</p>
+                                        <p className="text-xs text-rose-500">Düzenli belge formatında</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={handleExportCancel}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl transition-all mt-2"
+                                >
+                                    <X size={16} className="text-stone-600" />
+                                    <span className="font-medium text-stone-600 text-sm">İptal</span>
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* İçe Aktarma Modal */}
             <AnimatePresence>
                 {showImportModal && importData && (
@@ -413,10 +693,10 @@ export default function Sidebar() {
                             onClick={handleImportCancel}
                         />
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-2xl shadow-2xl z-[60] p-6"
+                            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                            className="fixed left-1/2 top-[15%] -translate-x-1/2 w-[90%] max-w-md bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-2xl shadow-2xl z-[60] p-6 max-h-[80vh] overflow-y-auto"
                         >
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
@@ -555,7 +835,7 @@ export default function Sidebar() {
                                             <div className="space-y-3">
                                                 {/* Export */}
                                                 <button
-                                                    onClick={handleExport}
+                                                    onClick={handleExportClick}
                                                     disabled={isExporting || gardens.length === 0}
                                                     className="w-full flex items-center gap-3 px-4 py-3 bg-white/80 hover:bg-white border border-stone-200 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
@@ -566,7 +846,7 @@ export default function Sidebar() {
                                                     )}
                                                     <div className="text-left">
                                                         <p className="font-medium text-stone-700">Dışa Aktar</p>
-                                                        <p className="text-xs text-stone-500">Tüm notlarını JSON olarak indir</p>
+                                                        <p className="text-xs text-stone-500">JSON, HTML veya PDF olarak indir</p>
                                                     </div>
                                                 </button>
 
