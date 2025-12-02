@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Sprout, Settings, TreePine, List } from 'lucide-react';
+import { ArrowLeft, Sprout, Settings, List } from 'lucide-react';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
@@ -18,7 +18,7 @@ export default function GardenPage() {
     const router = useRouter();
     const gardenId = params.id as string;
 
-    const { gardens, nodes, fetchNodes, setCurrentGarden, addNode, updateNode, deleteNode: deleteNodeFromStore, toggleSidebar } = useStore();
+    const { gardens, nodes, fetchNodes, setCurrentGarden, addNode, updateNode, deleteNode: deleteNodeFromStore } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
@@ -271,24 +271,17 @@ export default function GardenPage() {
         <div className="h-screen flex flex-col">
             {/* Header - Mobil Responsive */}
             <header className="h-14 md:h-16 bg-white/80 backdrop-blur-md border-b border-stone-200 flex items-center justify-between px-3 md:px-6 z-40 relative shadow-sm">
-                <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
-                    {/* Sidebar Toggle */}
-                    <button
-                        onClick={toggleSidebar}
-                        className="p-2 hover:bg-emerald-100 rounded-full text-emerald-700 transition-colors flex-shrink-0 touch-manipulation"
-                        title="Menü"
-                    >
-                        <TreePine size={20} className="md:w-5 md:h-5" />
-                    </button>
+                <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                     <button
                         onClick={() => router.push('/')}
-                        className="p-2 hover:bg-stone-100 rounded-full text-stone-500 transition-colors flex-shrink-0 touch-manipulation"
+                        className="p-2 hover:bg-stone-100 rounded-full text-stone-600 transition-colors flex-shrink-0 touch-manipulation"
+                        title="Ana Sayfa"
                     >
-                        <ArrowLeft size={18} className="md:w-5 md:h-5" />
+                        <ArrowLeft size={20} className="md:w-5 md:h-5" />
                     </button>
                     <div className="min-w-0 flex-1">
                         <h1 className="text-base md:text-xl font-bold text-amber-900 font-serif truncate">{currentGarden.name}</h1>
-                        <p className="text-[10px] md:text-xs text-stone-400 hidden sm:block">Infinite Garden Canvas</p>
+                        <p className="text-[10px] md:text-xs text-stone-400 hidden sm:block">{mindRoots.length} ağaç</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
