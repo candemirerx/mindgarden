@@ -32,6 +32,16 @@ export default function EditorPageClient({ nodeId }: Props) {
   const currentNode = nodes.find(n => n.id === nodeId);
   const initializedNodeIdRef = useRef<string | null>(null);
   const isLocalEditRef = useRef(false); // Kullanıcı düzenleme yapıyor mu?
+  
+  // Otomatik kayıt için ref'ler - state değişikliği tetiklememek için
+  const contentRef = useRef(content);
+  const titleRef = useRef(title);
+  const hasChangesRef = useRef(hasChanges);
+  
+  // Ref'leri güncel tut
+  useEffect(() => { contentRef.current = content; }, [content]);
+  useEffect(() => { titleRef.current = title; }, [title]);
+  useEffect(() => { hasChangesRef.current = hasChanges; }, [hasChanges]);
 
   useEffect(() => {
     // Kullanıcı aktif olarak düzenleme yapıyorsa store güncellemelerini yok say
@@ -50,26 +60,37 @@ export default function EditorPageClient({ nodeId }: Props) {
     }
   }, [currentNode, nodeId]);
 
-  const saveContent = useCallback(async (isAutoSave = false) => {
+  // Manuel kayıt fonksiyonu
+  const saveContent = useCallback(async () => {
     if (!hasChanges) return;
-    // Otomatik kayıtta isSaving state'ini değiştirme - dikte programını kesmesin
-    if (!isAutoSave) setIsSaving(true);
+    setIsSaving(true);
     const fullContent = `${title}\n${content}`;
     await updateNode(nodeId, fullContent);
     setHasChanges(false);
     setLastSaved(new Date());
-    if (!isAutoSave) setIsSaving(false);
+    setIsSaving(false);
   }, [title, content, nodeId, updateNode, hasChanges]);
+
+  // Otomatik kayıt - hiçbir state değişikliği tetiklemez
+  const autoSaveContent = useCallback(async () => {
+    if (!hasChangesRef.current) return;
+    const fullContent = `${titleRef.current}\n${contentRef.current}`;
+    await updateNode(nodeId, fullContent);
+    // State güncellemelerini sessizce yap - re-render tetiklemesin
+    hasChangesRef.current = false;
+    setHasChanges(false);
+    setLastSaved(new Date());
+  }, [nodeId, updateNode]);
 
   useEffect(() => {
     if (autoSave && hasChanges) {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-      autoSaveTimeoutRef.current = setTimeout(() => saveContent(true), 1500);
+      autoSaveTimeoutRef.current = setTimeout(() => autoSaveContent(), 1500);
     }
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
-  }, [autoSave, hasChanges, title, content, saveContent]);
+  }, [autoSave, hasChanges, autoSaveContent]);
 
-  const handleSave = async () => { await saveContent(false); };
+  const handleSave = async () => { await saveContent(); };
   const handleCopy = () => { navigator.clipboard.writeText(content); setShowCopied(true); setTimeout(() => setShowCopied(false), 2000); };
   const handleClose = () => { if (hasChanges && !autoSave) { if (confirm('Kaydedilmemiş değişiklikler var. Çıkmak istediğinize emin misiniz?')) router.back(); } else router.back(); };
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { 
