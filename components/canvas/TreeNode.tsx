@@ -66,7 +66,11 @@ export default function TreeNodeComponent({ data }: TreeNodeProps) {
 
     const handleSaveTitle = async () => {
         if (editedTitle.trim() && editedTitle !== data.label) {
-            await updateNode(data.nodeId, editedTitle.trim());
+            // Mevcut içeriğin gövdesini koru, sadece başlığı değiştir
+            const lines = data.content.split('\n');
+            const bodyContent = lines.slice(1).join('\n');
+            const newContent = bodyContent ? `${editedTitle.trim()}\n${bodyContent}` : editedTitle.trim();
+            await updateNode(data.nodeId, newContent);
         }
         setIsEditingTitle(false);
     };

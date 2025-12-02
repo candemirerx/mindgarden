@@ -57,12 +57,14 @@ export default function InfiniteCanvas({ gardenId, nodes: treeNodes }: InfiniteC
     const initialNodes: FlowNode[] = useMemo(() => {
         return treeNodes.map((node, index) => {
             const colorScheme = COLOR_PALETTE[index % COLOR_PALETTE.length];
+            // İçeriğin ilk satırını başlık olarak al (editör ile tutarlı)
+            const firstLine = node.content.split('\n')[0] || node.content;
             return {
                 id: node.id,
                 type: 'treeNode',
                 position: { x: node.position_x, y: node.position_y },
                 data: {
-                    label: node.content,
+                    label: firstLine,
                     content: node.content,
                     nodeId: node.id,
                     parentId: node.parent_id,
