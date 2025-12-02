@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Handle, Position } from 'reactflow';
 import { Copy, Edit, Plus, GitBranch, Check, X, Trash2, Sparkles } from 'lucide-react';
 import TextEditorModal from '../editor/TextEditorModal';
@@ -24,16 +24,46 @@ interface TreeNodeProps {
 
 export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
     const [isHovered, setIsHovered] = useState(false);
+    const [isTouched, setIsTouched] = useState(false);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(data.label);
     const [showCopied, setShowCopied] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const nodeRef = useRef<HTMLDivElement>(null);
 
     const { addNode, updateNode } = useStore();
     
-    // Toolbar görünürlüğü: hover, seçili veya başlık düzenlenirken
-    const showToolbar = isHovered || selected || isEditingTitle;
+    // Toolbar görünürlüğü: hover, seçili, dokunulmuş veya başlık düzenlenirken
+    const showToolbar = isHovered || selected || isTouched || isEditingTitle;
+
+    // Mobil dokunma desteği - node dışına tıklandığında toolbar'ı kapat
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+            if (nodeRef.current && !nodeRef.current.contains(event.target as Node)) {
+                setIsTouched(false);
+            }
+        };
+
+        if (isTouched) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('touchstart', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [isTouched]);
+
+    // Mobil dokunma handler
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        // Toolbar zaten açıksa ve bir butona dokunulduysa, event'i engelleme
+        if (showToolbar) return;
+        
+        // Toolbar'ı aç
+        setIsTouched(true);
+    }, [showToolbar]);
 
     // Renk şeması - varsayılan yeşil
     const colors = data.colorScheme || {
@@ -107,9 +137,11 @@ export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
     return (
         <>
             <div 
+                ref={nodeRef}
                 className="relative group"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
+                onTouchStart={handleTouchStart}
             >
                 {/* Floating Toolbar - Seçili olduğunda görünür */}
                 <div className={`absolute -top-14 left-1/2 -translate-x-1/2 transition-all duration-300 z-50 ${showToolbar ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
