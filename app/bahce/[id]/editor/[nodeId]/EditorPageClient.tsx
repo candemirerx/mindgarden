@@ -23,7 +23,14 @@ export default function EditorPageClient({ nodeId }: Props) {
   const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
   const [autoApproveAI, setAutoApproveAI] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [autoSave, setAutoSave] = useState(true);
+  const [autoSave, setAutoSave] = useState(() => {
+    // localStorage'dan kullanıcı tercihini oku, yoksa true (varsayılan)
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('notbahcesi_autosave');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -193,7 +200,7 @@ export default function EditorPageClient({ nodeId }: Props) {
             </div>
             <div className="h-6 w-px bg-stone-200 mx-1" />
             <div className="flex flex-col items-center gap-0.5">
-              <label className="flex items-center gap-1 cursor-pointer" title="Otomatik Kaydet"><input type="checkbox" checked={autoSave} onChange={(e) => setAutoSave(e.target.checked)} className="w-3.5 h-3.5 rounded border-stone-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer" /><span className="text-[10px] text-stone-500">Oto</span></label>
+              <label className="flex items-center gap-1 cursor-pointer" title="Otomatik Kaydet"><input type="checkbox" checked={autoSave} onChange={(e) => { setAutoSave(e.target.checked); localStorage.setItem('notbahcesi_autosave', String(e.target.checked)); }} className="w-3.5 h-3.5 rounded border-stone-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer" /><span className="text-[10px] text-stone-500">Oto</span></label>
               <button onClick={handleSave} disabled={!hasChanges || isSaving || autoSave} className={`p-2 rounded-lg transition-all ${isSaving ? 'bg-blue-100 text-blue-600' : hasChanges && !autoSave ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`} title={autoSave ? 'Otomatik kaydetme açık' : 'Kaydet'}>{isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}</button>
             </div>
           </div>
