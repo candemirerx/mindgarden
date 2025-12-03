@@ -146,60 +146,51 @@ export default function HomePage() {
 
     useEffect(() => {
         let mounted = true;
-        let gardensFetched = false;
 
-        const loadGardens = async (userId: string) => {
-            if (gardensFetched) return;
-            gardensFetched = true;
-            
+        // İlk yükleme
+        const init = async () => {
             try {
-                await fetchGardens();
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!mounted) return;
+                
+                setUser(session?.user ?? null);
+                
+                if (session?.user) {
+                    await fetchGardens();
+                }
             } catch (e) {
-                console.error('fetchGardens error:', e);
+                console.error('Init error:', e);
             } finally {
                 if (mounted) setIsLoading(false);
             }
         };
 
+        init();
+
         // Auth state değişikliklerini dinle
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
             
-            console.log('Auth event:', event, !!session?.user);
+            // INITIAL_SESSION zaten init() tarafından handle ediliyor
+            if (event === 'INITIAL_SESSION') return;
             
+            console.log('Auth event:', event);
             setUser(session?.user ?? null);
             
-            if (session?.user) {
-                // Session varsa bahçeleri yükle
-                await loadGardens(session.user.id);
+            if (event === 'SIGNED_IN' && session?.user) {
+                setIsLoading(true);
+                try {
+                    await fetchGardens();
+                } catch (e) {
+                    console.error('fetchGardens error:', e);
+                } finally {
+                    if (mounted) setIsLoading(false);
+                }
             } else if (event === 'SIGNED_OUT') {
                 useStore.getState().setGardens([]);
-                gardensFetched = false;
-                setIsLoading(false);
-            } else {
-                // Session yok ve sign out değil - loading'i kapat
-                setIsLoading(false);
             }
         });
-
-        // İlk session kontrolü - onAuthStateChange INITIAL_SESSION'dan önce çalışabilir
-        const checkInitialSession = async () => {
-            // Kısa bir bekleme - Supabase'in URL'deki code'u işlemesi için
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (!mounted) return;
-            
-            if (session?.user) {
-                setUser(session.user);
-                await loadGardens(session.user.id);
-            } else {
-                setIsLoading(false);
-            }
-        };
-        
-        checkInitialSession();
 
         return () => {
             mounted = false;
