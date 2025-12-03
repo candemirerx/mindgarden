@@ -8,12 +8,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         persistSession: true,
-        // detectSessionInUrl: true - Supabase URL'deki token'ları otomatik algılasın
         detectSessionInUrl: true,
         autoRefreshToken: true,
-        storageKey: 'notbahcesi-auth',
+        // Storage key'i varsayılan bırak - PKCE code_verifier ile uyumlu olsun
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-        // Flow type'ı PKCE olarak ayarla - daha güvenli
         flowType: 'pkce',
     }
 });
