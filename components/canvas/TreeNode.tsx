@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Handle, Position } from 'reactflow';
-import { Copy, Edit, Plus, GitBranch, Check, X, Trash2, Sparkles } from 'lucide-react';
+import { Copy, Edit, Plus, GitBranch, Check, X, Trash2, Sparkles, ExternalLink } from 'lucide-react';
 import TextEditorModal from '../editor/TextEditorModal';
 import { useStore } from '@/lib/store/useStore';
 
@@ -21,6 +21,21 @@ interface TreeNodeProps {
     };
     selected?: boolean;
 }
+
+// Web sitesi kontrolü - .com ile biten ve gmail.com olmayan
+const isWebsiteLink = (label: string): boolean => {
+    const trimmed = label.trim().toLowerCase();
+    return trimmed.endsWith('.com') && !trimmed.endsWith('gmail.com');
+};
+
+// URL'yi düzgün formata çevir
+const formatUrl = (label: string): string => {
+    const trimmed = label.trim().toLowerCase();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        return trimmed;
+    }
+    return `https://${trimmed}`;
+};
 
 export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
     const [isHovered, setIsHovered] = useState(false);
@@ -251,12 +266,23 @@ export default function TreeNodeComponent({ data, selected }: TreeNodeProps) {
                                     </button>
                                 </div>
                             ) : (
-                                <h3
-                                    className="flex-1 font-bold text-white text-sm leading-tight drop-shadow-lg cursor-pointer hover:underline"
-                                    onClick={handleTitleEdit}
-                                >
-                                    {data.label}
-                                </h3>
+                                <div className="flex-1 flex items-center gap-2">
+                                    <h3
+                                        className={`flex-1 font-bold text-white text-sm leading-tight drop-shadow-lg cursor-pointer hover:underline ${isWebsiteLink(data.label) ? 'text-blue-100' : ''}`}
+                                        onClick={() => {
+                                            if (isWebsiteLink(data.label)) {
+                                                window.open(formatUrl(data.label), '_blank', 'noopener,noreferrer');
+                                            } else {
+                                                handleTitleEdit();
+                                            }
+                                        }}
+                                    >
+                                        {data.label}
+                                    </h3>
+                                    {isWebsiteLink(data.label) && (
+                                        <ExternalLink size={14} className="text-white/80 flex-shrink-0" />
+                                    )}
+                                </div>
                             )}
                         </div>
 

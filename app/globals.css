@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Google Fonts - Inter & Merriweather */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap');
-
 /* Base styles */
 * {
   margin: 0;
@@ -16,7 +12,7 @@
 html,
 body {
   height: 100%;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

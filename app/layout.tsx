@@ -1,8 +1,19 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Merriweather } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+    subsets: ['latin'],
+    variable: '--font-inter',
+    display: 'swap',
+});
+
+const merriweather = Merriweather({ 
+    subsets: ['latin'],
+    weight: ['300', '400', '700', '900'],
+    variable: '--font-merriweather',
+    display: 'swap',
+});
 
 export const metadata: Metadata = {
     title: 'Not Bahçesi - Ağaç Temalı Not Tutma',
@@ -15,7 +26,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="tr">
+        <html lang="tr" className={`${inter.variable} ${merriweather.variable}`}>
             <body className={inter.className}>{children}</body>
         </html>
     );
