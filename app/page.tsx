@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, memo, lazy, Suspense, useRef } from 'react';
+import { useEffect, useState, useCallback, memo, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
@@ -143,66 +143,63 @@ export default function HomePage() {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [editingGardenId, setEditingGardenId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
-    const initialCheckDone = useRef(false);
 
     useEffect(() => {
         let mounted = true;
-        
-        const checkAuth = async () => {
-            if (initialCheckDone.current) return;
-            initialCheckDone.current = true;
+        let gardensFetched = false;
+
+        const loadGardens = async (userId: string) => {
+            if (gardensFetched) return;
+            gardensFetched = true;
             
             try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                
-                if (!mounted) return;
-                
-                if (error) {
-                    console.error('Session error:', error);
-                    setIsLoading(false);
-                    return;
-                }
-                
-                setUser(session?.user ?? null);
-                
-                if (session?.user) {
-                    try {
-                        await fetchGardens();
-                    } catch (e) {
-                        console.error('fetchGardens error:', e);
-                    }
-                }
+                await fetchGardens();
             } catch (e) {
-                console.error('Auth check error:', e);
+                console.error('fetchGardens error:', e);
             } finally {
                 if (mounted) setIsLoading(false);
             }
         };
-        
-        checkAuth();
 
+        // Auth state değişikliklerini dinle
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
             
-            // INITIAL_SESSION'ı ignore et - checkAuth zaten hallediyor
-            if (event === 'INITIAL_SESSION') return;
+            console.log('Auth event:', event, !!session?.user);
             
             setUser(session?.user ?? null);
             
-            if (event === 'SIGNED_IN' && session?.user) {
-                setIsLoading(true);
-                try {
-                    await fetchGardens();
-                } catch (e) {
-                    console.error('fetchGardens error:', e);
-                } finally {
-                    if (mounted) setIsLoading(false);
-                }
+            if (session?.user) {
+                // Session varsa bahçeleri yükle
+                await loadGardens(session.user.id);
             } else if (event === 'SIGNED_OUT') {
                 useStore.getState().setGardens([]);
+                gardensFetched = false;
+                setIsLoading(false);
+            } else {
+                // Session yok ve sign out değil - loading'i kapat
                 setIsLoading(false);
             }
         });
+
+        // İlk session kontrolü - onAuthStateChange INITIAL_SESSION'dan önce çalışabilir
+        const checkInitialSession = async () => {
+            // Kısa bir bekleme - Supabase'in URL'deki code'u işlemesi için
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!mounted) return;
+            
+            if (session?.user) {
+                setUser(session.user);
+                await loadGardens(session.user.id);
+            } else {
+                setIsLoading(false);
+            }
+        };
+        
+        checkInitialSession();
 
         return () => {
             mounted = false;
