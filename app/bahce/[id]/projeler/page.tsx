@@ -188,45 +188,45 @@ export default function ProjectsPage() {
         return items.reduce((acc, item) => acc + 1 + countAllNodes(item.children), 0);
     };
 
-    // Node tipine göre ikon döndür
+    // Node tipine göre ikon döndür - küçültülmüş boyutlar
     const getNodeIcon = (item: TreeItem, isRoot: boolean, isExpanded: boolean) => {
         if (isRoot) {
-            // Kök node - ağaç ikonu, tıklanınca dallanma gösterir
+            // Kök node - ağaç ikonu (küçültüldü: 8x8 = 32px)
             if (item.children.length > 0 && isExpanded) {
                 return (
-                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30 cursor-pointer hover:scale-105 transition-transform">
-                        <BranchOpenIcon size={22} className="text-white" />
-                    </div>
-                );
-            }
-            return (
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-green-700 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 cursor-pointer hover:scale-105 transition-transform">
-                    <TreePine size={20} className="text-white" />
-                </div>
-            );
-        }
-
-        // Alt node
-        if (item.children.length > 0) {
-            // Dal - çocukları var
-            if (isExpanded) {
-                return (
-                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
                         <BranchOpenIcon size={18} className="text-white" />
                     </div>
                 );
             }
             return (
-                <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 rounded-lg flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
-                    <BranchIcon size={18} className="text-white" />
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-600 to-green-700 rounded-lg flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <TreePine size={16} className="text-white" />
+                </div>
+            );
+        }
+
+        // Alt node (küçültüldü: 6x6 = 24px)
+        if (item.children.length > 0) {
+            // Dal - çocukları var
+            if (isExpanded) {
+                return (
+                    <div className="w-6 h-6 bg-gradient-to-br from-amber-500 to-orange-500 rounded-md flex items-center justify-center shadow-sm cursor-pointer hover:scale-105 transition-transform">
+                        <BranchOpenIcon size={14} className="text-white" />
+                    </div>
+                );
+            }
+            return (
+                <div className="w-6 h-6 bg-gradient-to-br from-amber-400 to-amber-500 rounded-md flex items-center justify-center shadow-sm cursor-pointer hover:scale-105 transition-transform">
+                    <BranchIcon size={14} className="text-white" />
                 </div>
             );
         }
 
         // Yaprak - çocuğu yok
         return (
-            <div className="w-8 h-8 bg-gradient-to-br from-lime-400 to-green-500 rounded-lg flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
-                <Leaf size={16} className="text-white" />
+            <div className="w-6 h-6 bg-gradient-to-br from-lime-400 to-green-500 rounded-md flex items-center justify-center shadow-sm cursor-pointer hover:scale-105 transition-transform">
+                <Leaf size={12} className="text-white" />
             </div>
         );
     };
@@ -237,28 +237,22 @@ export default function ProjectsPage() {
         const isRoot = depth === 0;
 
         return (
-            <div key={item.id} className="animate-fadeIn">
-                <div
-                    className={`
-                        group relative
-                        ${isRoot
-                            ? 'bg-gradient-to-br from-white via-white to-emerald-50/30 rounded-2xl shadow-sm hover:shadow-lg border border-stone-200/60 hover:border-emerald-300/60 transition-all duration-300'
-                            : `ml-${Math.min(depth * 4, 16)} py-1`
-                        }
-                    `}
-                >
-                    <div className={`${isRoot ? 'p-4' : 'py-2 px-1'}`}>
-                        <div className="flex items-center gap-3">
-                            {/* Sol: İkon - tıklanınca açılıp kapanır */}
+            <div key={item.id}>
+                {/* Kök node - kart görünümü */}
+                {isRoot ? (
+                    <div className="bg-gradient-to-br from-white via-white to-emerald-50/30 rounded-xl shadow-sm hover:shadow-md border border-stone-200/60 hover:border-emerald-300/60 transition-all duration-200 p-3">
+                        <div className="flex items-center gap-2">
+                            {/* Ağaç İkonu */}
                             <div
                                 onClick={() => hasChildren ? toggleExpand(item.id) : handleEdit(item.id)}
+                                className="cursor-pointer flex-shrink-0"
                                 title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                             >
-                                {getNodeIcon(item, isRoot, isExpanded)}
+                                {getNodeIcon(item, true, isExpanded)}
                             </div>
 
-                            {/* Orta: Başlık */}
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {/* Başlık */}
+                            <div className="flex-1 min-w-0">
                                 {editingNodeId === item.id ? (
                                     <input
                                         type="text"
@@ -269,93 +263,167 @@ export default function ProjectsPage() {
                                             if (e.key === 'Enter') handleSaveTitle(item.id, item.content);
                                             if (e.key === 'Escape') setEditingNodeId(null);
                                         }}
-                                        className="flex-1 px-3 py-1.5 bg-emerald-50 rounded-lg border-2 border-emerald-400 outline-none text-stone-800 font-medium"
+                                        className="w-full px-2 py-1 bg-emerald-50 rounded border-2 border-emerald-400 outline-none text-stone-800 font-medium text-sm"
                                         autoFocus
                                     />
                                 ) : (
-                                    <>
-                                        <button
-                                            onClick={() => handleEdit(item.id)}
-                                            className={`text-left transition-all hover:text-emerald-600 truncate ${isRoot ? 'text-lg font-bold text-stone-800' : 'text-base font-medium text-stone-700'}`}
-                                        >
-                                            {item.title}
-                                        </button>
-
-                                        {/* Kopyalama Butonları - hover'da görünür */}
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleCopy(item.title, item.id, 'title'); }}
-                                                className={`w-6 h-6 flex items-center justify-center rounded transition-all ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-500 hover:bg-amber-100 hover:text-amber-600'}`}
-                                                title="Başlığı kopyala"
-                                            >
-                                                {copiedId === `title-${item.id}` ? <Check size={12} /> : <Copy size={12} />}
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); const c = item.content.split('\n').slice(1).join('\n').trim(); handleCopy(c || item.title, item.id, 'content'); }}
-                                                className={`w-6 h-6 flex items-center justify-center rounded transition-all ${copiedId === `content-${item.id}` ? 'bg-sky-500 text-white' : 'bg-stone-100 text-stone-500 hover:bg-sky-100 hover:text-sky-600'}`}
-                                                title="İçeriği kopyala"
-                                            >
-                                                {copiedId === `content-${item.id}` ? <Check size={12} /> : <FileText size={12} />}
-                                            </button>
-                                        </div>
-                                    </>
+                                    <button
+                                        onClick={() => handleEdit(item.id)}
+                                        className="text-left text-base font-bold text-stone-800 hover:text-emerald-600 truncate transition-colors block w-full"
+                                    >
+                                        {item.title}
+                                    </button>
                                 )}
                             </div>
 
-                            {/* Sağ: Menü */}
-                            <div className="flex items-center gap-2 shrink-0">
-                                <div className="relative">
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === item.id ? null : item.id); }}
-                                        className={`p-1.5 rounded-lg transition-all text-stone-400 hover:text-stone-600 hover:bg-stone-100 ${isRoot ? '' : 'opacity-0 group-hover:opacity-100'}`}
-                                    >
-                                        <MoreHorizontal size={18} />
-                                    </button>
+                            {/* Kopyala butonları - her zaman görünür, renkli */}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleCopy(item.title, item.id, 'title'); }}
+                                    className={`w-5 h-5 flex items-center justify-center rounded transition-all ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
+                                    title="Başlığı kopyala"
+                                >
+                                    {copiedId === `title-${item.id}` ? <Check size={10} /> : <Copy size={10} />}
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); const c = item.content.split('\n').slice(1).join('\n').trim(); handleCopy(c || item.title, item.id, 'content'); }}
+                                    className={`w-5 h-5 flex items-center justify-center rounded transition-all ${copiedId === `content-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-sky-100 text-sky-600 hover:bg-sky-200'}`}
+                                    title="İçeriği kopyala"
+                                >
+                                    {copiedId === `content-${item.id}` ? <Check size={10} /> : <FileText size={10} />}
+                                </button>
+                            </div>
 
-                                    {activeMenu === item.id && (
-                                        <>
-                                            <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
-                                            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-stone-200 py-1.5 z-50 min-w-[180px]">
-                                                <button onClick={() => { handleEdit(item.id); setActiveMenu(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
-                                                    <Pencil size={14} className="text-emerald-500" /> Düzenle
-                                                </button>
-                                                <button onClick={() => { setEditingNodeId(item.id); setEditingTitle(item.title); setActiveMenu(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
-                                                    <FileText size={14} className="text-amber-500" /> Yeniden Adlandır
-                                                </button>
-                                                <hr className="my-1 border-stone-100" />
-                                                <button onClick={() => handleAddChild(item.id, hasChildren)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
-                                                    {hasChildren ? (
-                                                        <>
-                                                            <BranchIcon size={14} className="text-amber-500" /> Yeni Dal Ekle
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Leaf size={14} className="text-lime-500" /> Yeni Yaprak Ekle
-                                                        </>
-                                                    )}
-                                                </button>
-                                                <hr className="my-1 border-stone-100" />
-                                                <button onClick={() => handleDelete(item.id)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                                                    <Trash2 size={14} /> Sil
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                            {/* Menü */}
+                            <div className="relative flex-shrink-0">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === item.id ? null : item.id); }}
+                                    className="p-1 rounded text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-all"
+                                >
+                                    <MoreHorizontal size={16} />
+                                </button>
+                                {activeMenu === item.id && renderMenu(item, hasChildren)}
                             </div>
                         </div>
 
-                        {/* Alt elemanlar - dallar açıldığında görünür */}
+                        {/* Alt dallar - kompakt spacing */}
                         {hasChildren && isExpanded && (
-                            <div className="mt-3 ml-5 pl-4 border-l-2 border-emerald-200/50 space-y-1">
+                            <div className="mt-2 space-y-0.5">
                                 {item.children.map((child) => renderTreeItem(child, depth + 1))}
                             </div>
                         )}
                     </div>
-                </div>
+                ) : (
+                    /* Alt node - dal veya yaprak - kompakt tasarım */
+                    <div 
+                        className="flex items-center gap-1.5 py-1 group" 
+                        style={{ marginLeft: `${Math.min(depth - 1, 4) * 16}px` }}
+                    >
+                        {/* Dal/Yaprak İkonu */}
+                        <div
+                            onClick={() => hasChildren ? toggleExpand(item.id) : handleEdit(item.id)}
+                            className="cursor-pointer flex-shrink-0"
+                            title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
+                        >
+                            {getNodeIcon(item, false, isExpanded)}
+                        </div>
+
+                        {/* Başlık */}
+                        <div className="flex-1 min-w-0">
+                            {editingNodeId === item.id ? (
+                                <input
+                                    type="text"
+                                    value={editingTitle}
+                                    onChange={(e) => setEditingTitle(e.target.value)}
+                                    onBlur={() => handleSaveTitle(item.id, item.content)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveTitle(item.id, item.content);
+                                        if (e.key === 'Escape') setEditingNodeId(null);
+                                    }}
+                                    className="w-full px-2 py-0.5 bg-emerald-50 rounded border-2 border-emerald-400 outline-none text-stone-800 text-sm"
+                                    autoFocus
+                                />
+                            ) : (
+                                <button
+                                    onClick={() => handleEdit(item.id)}
+                                    className="text-left text-sm font-medium text-stone-700 hover:text-emerald-600 truncate transition-colors block w-full"
+                                >
+                                    {item.title}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Kopyala butonları - her zaman görünür, renkli */}
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleCopy(item.title, item.id, 'title'); }}
+                                className={`w-5 h-5 flex items-center justify-center rounded transition-all ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
+                                title="Başlığı kopyala"
+                            >
+                                {copiedId === `title-${item.id}` ? <Check size={10} /> : <Copy size={10} />}
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); const c = item.content.split('\n').slice(1).join('\n').trim(); handleCopy(c || item.title, item.id, 'content'); }}
+                                className={`w-5 h-5 flex items-center justify-center rounded transition-all ${copiedId === `content-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-sky-100 text-sky-600 hover:bg-sky-200'}`}
+                                title="İçeriği kopyala"
+                            >
+                                {copiedId === `content-${item.id}` ? <Check size={10} /> : <FileText size={10} />}
+                            </button>
+                        </div>
+
+                        {/* Menü - hover'da görünür */}
+                        <div className="relative flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === item.id ? null : item.id); }}
+                                className="p-0.5 rounded text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-all"
+                            >
+                                <MoreHorizontal size={14} />
+                            </button>
+                            {activeMenu === item.id && renderMenu(item, hasChildren)}
+                        </div>
+                    </div>
+                )}
+
+                {/* Alt dallar - kök değilse burada render et */}
+                {!isRoot && hasChildren && isExpanded && (
+                    <div className="space-y-0.5">
+                        {item.children.map((child) => renderTreeItem(child, depth + 1))}
+                    </div>
+                )}
             </div>
         );
     };
+
+    // Menü component'i - tekrarı önlemek için
+    const renderMenu = (item: TreeItem, hasChildren: boolean) => (
+        <>
+            <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-stone-200 py-1.5 z-50 min-w-[180px]">
+                <button onClick={() => { handleEdit(item.id); setActiveMenu(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
+                    <Pencil size={14} className="text-emerald-500" /> Düzenle
+                </button>
+                <button onClick={() => { setEditingNodeId(item.id); setEditingTitle(item.title); setActiveMenu(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
+                    <FileText size={14} className="text-amber-500" /> Yeniden Adlandır
+                </button>
+                <hr className="my-1 border-stone-100" />
+                <button onClick={() => handleAddChild(item.id, hasChildren)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
+                    {hasChildren ? (
+                        <>
+                            <BranchIcon size={14} className="text-amber-500" /> Yeni Dal Ekle
+                        </>
+                    ) : (
+                        <>
+                            <Leaf size={14} className="text-lime-500" /> Yeni Yaprak Ekle
+                        </>
+                    )}
+                </button>
+                <hr className="my-1 border-stone-100" />
+                <button onClick={() => handleDelete(item.id)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <Trash2 size={14} /> Sil
+                </button>
+            </div>
+        </>
+    );
 
     if (isLoading) {
         return (
@@ -474,21 +542,13 @@ export default function ProjectsPage() {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
                         {displayedTrees.map((tree) => renderTreeItem(tree, 0))}
                     </div>
                 )}
             </main>
 
-            <style jsx>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(-4px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .animate-fadeIn {
-                    animation: fadeIn 0.2s ease-out;
-                }
-            `}</style>
+
         </div>
     );
 }
