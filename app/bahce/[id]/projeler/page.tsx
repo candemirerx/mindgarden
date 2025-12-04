@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
-    ChevronDown, Plus, Trash2, Pencil, Layout, Search, 
+    Plus, Trash2, Pencil, Layout, Search,
     MoreHorizontal, X, TreePine, FileText, Copy, Check, Leaf, ArrowLeft
 } from 'lucide-react';
 
@@ -15,6 +15,30 @@ interface TreeItem {
     children: TreeItem[];
     isExpanded: boolean;
 }
+
+// Dal ikonu - dallanma görünümü için özel SVG
+const BranchIcon = ({ size = 20, className = '' }: { size?: number; className?: string }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+        <path d="M12 3v6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M12 9c0 3-3 3-3 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M12 9c0 3 3 3 3 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="9" cy="17" r="2" fill="currentColor" />
+        <circle cx="15" cy="17" r="2" fill="currentColor" />
+    </svg>
+);
+
+// Dallanmış ağaç ikonu - açık durum için
+const BranchOpenIcon = ({ size = 20, className = '' }: { size?: number; className?: string }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+        <path d="M12 2v4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M12 6c0 2-4 3-4 6v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M12 6c0 2 4 3 4 6v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M12 6v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="8" cy="16" r="2.5" fill="currentColor" />
+        <circle cx="16" cy="16" r="2.5" fill="currentColor" />
+        <circle cx="12" cy="16" r="2.5" fill="currentColor" />
+    </svg>
+);
 
 export default function ProjectsPage() {
     const params = useParams();
@@ -124,11 +148,20 @@ export default function ProjectsPage() {
         await addNode(gardenId, title.trim(), null, { x: 0, y: 0 });
     };
 
-    const handleAddChild = async (parentId: string) => {
-        const title = prompt('Yeni dal adı:');
+    const handleAddChild = async (parentId: string, hasChildren: boolean) => {
+        const label = hasChildren ? 'Yeni dal adı:' : 'Yeni yaprak adı:';
+        const title = prompt(label);
         if (!title?.trim()) return;
         await addNode(gardenId, title.trim(), parentId, { x: 0, y: 0 });
         setActiveMenu(null);
+        
+        // Yeni eklenen dalı görmek için parent'ı aç
+        if (!expandedNodes.has(parentId)) {
+            const newExpanded = new Set(expandedNodes);
+            newExpanded.add(parentId);
+            setExpandedNodes(newExpanded);
+            await toggleNodeExpansion(parentId, true);
+        }
     };
 
     const handleDelete = async (nodeId: string) => {
@@ -155,67 +188,76 @@ export default function ProjectsPage() {
         return items.reduce((acc, item) => acc + 1 + countAllNodes(item.children), 0);
     };
 
+    // Node tipine göre ikon döndür
+    const getNodeIcon = (item: TreeItem, isRoot: boolean, isExpanded: boolean) => {
+        if (isRoot) {
+            // Kök node - ağaç ikonu, tıklanınca dallanma gösterir
+            if (item.children.length > 0 && isExpanded) {
+                return (
+                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30 cursor-pointer hover:scale-105 transition-transform">
+                        <BranchOpenIcon size={22} className="text-white" />
+                    </div>
+                );
+            }
+            return (
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-green-700 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 cursor-pointer hover:scale-105 transition-transform">
+                    <TreePine size={20} className="text-white" />
+                </div>
+            );
+        }
+
+        // Alt node
+        if (item.children.length > 0) {
+            // Dal - çocukları var
+            if (isExpanded) {
+                return (
+                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
+                        <BranchOpenIcon size={18} className="text-white" />
+                    </div>
+                );
+            }
+            return (
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 rounded-lg flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <BranchIcon size={18} className="text-white" />
+                </div>
+            );
+        }
+
+        // Yaprak - çocuğu yok
+        return (
+            <div className="w-8 h-8 bg-gradient-to-br from-lime-400 to-green-500 rounded-lg flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform">
+                <Leaf size={16} className="text-white" />
+            </div>
+        );
+    };
+
     const renderTreeItem = (item: TreeItem, depth: number = 0) => {
         const hasChildren = item.children.length > 0;
         const isExpanded = searchQuery ? true : expandedNodes.has(item.id);
         const isRoot = depth === 0;
 
         return (
-            <div key={item.id} className={isRoot ? '' : 'relative'}>
-                {/* Bağlantı çizgisi - sadece alt elemanlar için */}
-                {!isRoot && (
-                    <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-emerald-300 to-emerald-100" />
-                )}
-
+            <div key={item.id} className="animate-fadeIn">
                 <div
                     className={`
                         group relative
                         ${isRoot
-                            ? 'bg-gradient-to-br from-white via-white to-emerald-50/30 rounded-2xl shadow-sm hover:shadow-xl border-2 border-stone-100 hover:border-emerald-300 transition-all duration-300'
-                            : 'ml-6 pl-4'
+                            ? 'bg-gradient-to-br from-white via-white to-emerald-50/30 rounded-2xl shadow-sm hover:shadow-lg border border-stone-200/60 hover:border-emerald-300/60 transition-all duration-300'
+                            : `ml-${Math.min(depth * 4, 16)} py-1`
                         }
                     `}
                 >
-                    {/* İçerik - Tek satır tasarım */}
-                    <div className={`${isRoot ? 'p-4' : 'py-3'}`}>
+                    <div className={`${isRoot ? 'p-4' : 'py-2 px-1'}`}>
                         <div className="flex items-center gap-3">
-                            {/* Sol: İkon + Expand */}
-                            {isRoot ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
-                                        <TreePine size={20} className="text-white" />
-                                    </div>
-                                    {hasChildren && (
-                                        <button
-                                            onClick={() => toggleExpand(item.id)}
-                                            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all shrink-0 ${isExpanded ? 'bg-emerald-100 text-emerald-600' : 'bg-stone-100 text-stone-400 hover:bg-emerald-50 hover:text-emerald-500'}`}
-                                        >
-                                            <ChevronDown size={16} className={isExpanded ? '' : '-rotate-90'} />
-                                        </button>
-                                    )}
-                                </div>
-                            ) : (
-                                <>
-                                    {hasChildren ? (
-                                        <button
-                                            onClick={() => toggleExpand(item.id)}
-                                            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all shrink-0 ${isExpanded ? 'bg-emerald-100 text-emerald-600' : 'bg-stone-100 text-stone-400 hover:bg-emerald-50 hover:text-emerald-500'}`}
-                                        >
-                                            <ChevronDown size={16} className={isExpanded ? '' : '-rotate-90'} />
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleEdit(item.id)}
-                                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 shrink-0 shadow-md shadow-emerald-500/20 hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
-                                            title="Düzenle"
-                                        >
-                                            <Leaf size={14} className="text-white" />
-                                        </button>
-                                    )}
-                                </>
-                            )}
+                            {/* Sol: İkon - tıklanınca açılıp kapanır */}
+                            <div
+                                onClick={() => hasChildren ? toggleExpand(item.id) : handleEdit(item.id)}
+                                title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
+                            >
+                                {getNodeIcon(item, isRoot, isExpanded)}
+                            </div>
 
-                            {/* Orta: Başlık + Kopyalama Butonları */}
+                            {/* Orta: Başlık */}
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                 {editingNodeId === item.id ? (
                                     <input
@@ -239,38 +281,33 @@ export default function ProjectsPage() {
                                             {item.title}
                                         </button>
 
-                                        {/* Kopyalama Butonları */}
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleCopy(item.title, item.id, 'title'); }}
-                                            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all border shrink-0 ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100 hover:border-amber-400'}`}
-                                            title="Başlığı kopyala"
-                                        >
-                                            {copiedId === `title-${item.id}` ? <Check size={12} /> : <Copy size={12} />}
-                                        </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); const c = item.content.split('\n').slice(1).join('\n').trim(); handleCopy(c || item.title, item.id, 'content'); }}
-                                            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all border shrink-0 ${copiedId === `content-${item.id}` ? 'bg-sky-500 text-white border-sky-500' : 'bg-sky-50 text-sky-600 border-sky-200 hover:bg-sky-100 hover:border-sky-400'}`}
-                                            title="İçeriği kopyala"
-                                        >
-                                            {copiedId === `content-${item.id}` ? <Check size={12} /> : <FileText size={12} />}
-                                        </button>
+                                        {/* Kopyalama Butonları - hover'da görünür */}
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleCopy(item.title, item.id, 'title'); }}
+                                                className={`w-6 h-6 flex items-center justify-center rounded transition-all ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-500 hover:bg-amber-100 hover:text-amber-600'}`}
+                                                title="Başlığı kopyala"
+                                            >
+                                                {copiedId === `title-${item.id}` ? <Check size={12} /> : <Copy size={12} />}
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); const c = item.content.split('\n').slice(1).join('\n').trim(); handleCopy(c || item.title, item.id, 'content'); }}
+                                                className={`w-6 h-6 flex items-center justify-center rounded transition-all ${copiedId === `content-${item.id}` ? 'bg-sky-500 text-white' : 'bg-stone-100 text-stone-500 hover:bg-sky-100 hover:text-sky-600'}`}
+                                                title="İçeriği kopyala"
+                                            >
+                                                {copiedId === `content-${item.id}` ? <Check size={12} /> : <FileText size={12} />}
+                                            </button>
+                                        </div>
                                     </>
                                 )}
                             </div>
 
-                            {/* Sağ: Dal sayısı + Menü */}
+                            {/* Sağ: Menü */}
                             <div className="flex items-center gap-2 shrink-0">
-                                {hasChildren && (
-                                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">
-                                        {item.children.length} dal
-                                    </span>
-                                )}
-
-                                {/* Menü */}
                                 <div className="relative">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === item.id ? null : item.id); }}
-                                        className={`p-1.5 rounded-lg transition-all ${isRoot ? 'text-stone-400 hover:text-stone-600 hover:bg-stone-100' : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100 opacity-0 group-hover:opacity-100'}`}
+                                        className={`p-1.5 rounded-lg transition-all text-stone-400 hover:text-stone-600 hover:bg-stone-100 ${isRoot ? '' : 'opacity-0 group-hover:opacity-100'}`}
                                     >
                                         <MoreHorizontal size={18} />
                                     </button>
@@ -278,15 +315,24 @@ export default function ProjectsPage() {
                                     {activeMenu === item.id && (
                                         <>
                                             <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
-                                            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-stone-200 py-1.5 z-50 min-w-[160px]">
+                                            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-stone-200 py-1.5 z-50 min-w-[180px]">
                                                 <button onClick={() => { handleEdit(item.id); setActiveMenu(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
                                                     <Pencil size={14} className="text-emerald-500" /> Düzenle
                                                 </button>
                                                 <button onClick={() => { setEditingNodeId(item.id); setEditingTitle(item.title); setActiveMenu(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
                                                     <FileText size={14} className="text-amber-500" /> Yeniden Adlandır
                                                 </button>
-                                                <button onClick={() => handleAddChild(item.id)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
-                                                    <Plus size={14} className="text-sky-500" /> Alt Dal Ekle
+                                                <hr className="my-1 border-stone-100" />
+                                                <button onClick={() => handleAddChild(item.id, hasChildren)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50">
+                                                    {hasChildren ? (
+                                                        <>
+                                                            <BranchIcon size={14} className="text-amber-500" /> Yeni Dal Ekle
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Leaf size={14} className="text-lime-500" /> Yeni Yaprak Ekle
+                                                        </>
+                                                    )}
                                                 </button>
                                                 <hr className="my-1 border-stone-100" />
                                                 <button onClick={() => handleDelete(item.id)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
@@ -299,9 +345,9 @@ export default function ProjectsPage() {
                             </div>
                         </div>
 
-                        {/* Alt elemanlar */}
+                        {/* Alt elemanlar - dallar açıldığında görünür */}
                         {hasChildren && isExpanded && (
-                            <div className="mt-4 space-y-2">
+                            <div className="mt-3 ml-5 pl-4 border-l-2 border-emerald-200/50 space-y-1">
                                 {item.children.map((child) => renderTreeItem(child, depth + 1))}
                             </div>
                         )}
@@ -363,11 +409,11 @@ export default function ProjectsPage() {
                                 className="h-10 px-4 flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors border border-stone-200 hover:border-emerald-200"
                             >
                                 <Layout size={18} />
-                                <span className="hidden sm:inline">Canvas Görünümü</span>
+                                <span className="hidden sm:inline">Canvas</span>
                             </button>
                             <button
                                 onClick={handleAddRoot}
-                                className="h-10 px-5 flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30"
+                                className="h-10 px-5 flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:shadow-xl"
                             >
                                 <Plus size={18} />
                                 <span className="hidden sm:inline">Yeni Ağaç</span>
@@ -434,6 +480,15 @@ export default function ProjectsPage() {
                 )}
             </main>
 
+            <style jsx>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(-4px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fadeIn {
+                    animation: fadeIn 0.2s ease-out;
+                }
+            `}</style>
         </div>
     );
 }
