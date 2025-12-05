@@ -283,20 +283,20 @@ export default function ProjectsPage() {
                             </div>
 
                             {/* Kopyala butonları - her zaman görünür, renkli */}
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="flex items-center gap-2 flex-shrink-0">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleCopy(item.title, item.id, 'title'); }}
-                                    className={`w-5 h-5 flex items-center justify-center rounded transition-all ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
+                                    className={`w-6 h-6 flex items-center justify-center rounded-md transition-all ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
                                     title="Başlığı kopyala"
                                 >
-                                    {copiedId === `title-${item.id}` ? <Check size={10} /> : <Copy size={10} />}
+                                    {copiedId === `title-${item.id}` ? <Check size={12} /> : <Copy size={12} />}
                                 </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); const c = item.content.split('\n').slice(1).join('\n').trim(); handleCopy(c || item.title, item.id, 'content'); }}
-                                    className={`w-5 h-5 flex items-center justify-center rounded transition-all ${copiedId === `content-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-sky-100 text-sky-600 hover:bg-sky-200'}`}
+                                    className={`w-6 h-6 flex items-center justify-center rounded-md transition-all ${copiedId === `content-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-sky-100 text-sky-600 hover:bg-sky-200'}`}
                                     title="İçeriği kopyala"
                                 >
-                                    {copiedId === `content-${item.id}` ? <Check size={10} /> : <FileText size={10} />}
+                                    {copiedId === `content-${item.id}` ? <Check size={12} /> : <FileText size={12} />}
                                 </button>
                             </div>
 
@@ -366,20 +366,20 @@ export default function ProjectsPage() {
                         </div>
 
                         {/* Kopyala butonları - her zaman görünür, renkli */}
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleCopy(item.title, item.id, 'title'); }}
-                                className={`w-5 h-5 flex items-center justify-center rounded transition-all ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
+                                className={`w-6 h-6 flex items-center justify-center rounded-md transition-all ${copiedId === `title-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
                                 title="Başlığı kopyala"
                             >
-                                {copiedId === `title-${item.id}` ? <Check size={10} /> : <Copy size={10} />}
+                                {copiedId === `title-${item.id}` ? <Check size={12} /> : <Copy size={12} />}
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); const c = item.content.split('\n').slice(1).join('\n').trim(); handleCopy(c || item.title, item.id, 'content'); }}
-                                className={`w-5 h-5 flex items-center justify-center rounded transition-all ${copiedId === `content-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-sky-100 text-sky-600 hover:bg-sky-200'}`}
+                                className={`w-6 h-6 flex items-center justify-center rounded-md transition-all ${copiedId === `content-${item.id}` ? 'bg-emerald-500 text-white' : 'bg-sky-100 text-sky-600 hover:bg-sky-200'}`}
                                 title="İçeriği kopyala"
                             >
-                                {copiedId === `content-${item.id}` ? <Check size={10} /> : <FileText size={10} />}
+                                {copiedId === `content-${item.id}` ? <Check size={12} /> : <FileText size={12} />}
                             </button>
                         </div>
 
