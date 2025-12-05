@@ -231,7 +231,13 @@ export default function ProjectsPage() {
         );
     };
 
-    const renderTreeItem = (item: TreeItem, depth: number = 0) => {
+    // Seviye renklerini belirle
+    const getDepthColor = (d: number) => {
+        const colors = ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899'];
+        return colors[d % colors.length];
+    };
+
+    const renderTreeItem = (item: TreeItem, depth: number = 0, isLastChild: boolean = true, parentLines: boolean[] = []) => {
         const hasChildren = item.children.length > 0;
         const isExpanded = searchQuery ? true : expandedNodes.has(item.id);
         const isRoot = depth === 0;
@@ -306,27 +312,40 @@ export default function ProjectsPage() {
                             </div>
                         </div>
 
-                        {/* Alt dallar - kompakt spacing */}
+                        {/* Alt dallar */}
                         {hasChildren && isExpanded && (
-                            <div className="mt-2 space-y-0.5">
-                                {item.children.map((child) => renderTreeItem(child, depth + 1))}
+                            <div className="mt-2">
+                                {item.children.map((child, idx) => 
+                                    renderTreeItem(child, depth + 1, idx === item.children.length - 1, [])
+                                )}
                             </div>
                         )}
                     </div>
                 ) : (
-                    /* Alt node - dal veya yaprak - çoklu çizgili tasarım */
-                    <div className="flex items-center py-1 group">
-                        {/* Sol tarafta seviye çizgileri - her seviye için bir çizgi */}
-                        <div className="flex items-stretch gap-1 mr-2 self-stretch">
-                            {Array.from({ length: depth }, (_, i) => (
+                    /* Alt node - dal veya yaprak */
+                    <div className="flex py-0.5 group">
+                        {/* Sol tarafta çizgiler - üst seviyelerin devam eden çizgileri */}
+                        <div className="flex">
+                            {parentLines.map((showLine, i) => (
+                                <div key={i} className="w-4 flex justify-center">
+                                    {showLine && (
+                                        <div 
+                                            className="w-0.5 h-full rounded-full"
+                                            style={{ backgroundColor: getDepthColor(i) }}
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                            {/* Kendi seviyesinin çizgisi */}
+                            <div className="w-4 flex justify-center">
                                 <div 
-                                    key={i}
-                                    className="w-0.5 rounded-full min-h-full"
+                                    className="w-0.5 rounded-full"
                                     style={{ 
-                                        backgroundColor: i === 0 ? '#10b981' : i === 1 ? '#f59e0b' : i === 2 ? '#3b82f6' : '#8b5cf6'
+                                        backgroundColor: getDepthColor(depth - 1),
+                                        height: isLastChild ? '50%' : '100%'
                                     }}
                                 />
-                            ))}
+                            </div>
                         </div>
 
                         {/* Dal/Yaprak İkonu */}
@@ -396,8 +415,15 @@ export default function ProjectsPage() {
 
                 {/* Alt dallar - kök değilse burada render et */}
                 {!isRoot && hasChildren && isExpanded && (
-                    <div className="space-y-0.5">
-                        {item.children.map((child) => renderTreeItem(child, depth + 1))}
+                    <div>
+                        {item.children.map((child, idx) => 
+                            renderTreeItem(
+                                child, 
+                                depth + 1, 
+                                idx === item.children.length - 1,
+                                [...parentLines, !isLastChild]
+                            )
+                        )}
                     </div>
                 )}
             </div>
