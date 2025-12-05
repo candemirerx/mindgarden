@@ -383,8 +383,8 @@ export default function ProjectsPage() {
                             </button>
                         </div>
 
-                        {/* Menü - hover'da görünür */}
-                        <div className="relative flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Menü - her zaman görünür */}
+                        <div className="relative flex-shrink-0">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === item.id ? null : item.id); }}
                                 className="p-0.5 rounded text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-all"
