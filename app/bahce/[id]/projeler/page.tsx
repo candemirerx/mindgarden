@@ -237,7 +237,7 @@ export default function ProjectsPage() {
         return colors[d % colors.length];
     };
 
-    const renderTreeItem = (item: TreeItem, depth: number = 0, isLastChild: boolean = true, parentLines: boolean[] = []) => {
+    const renderTreeItem = (item: TreeItem, depth: number = 0) => {
         const hasChildren = item.children.length > 0;
         const isExpanded = searchQuery ? true : expandedNodes.has(item.id);
         const isRoot = depth === 0;
@@ -315,38 +315,21 @@ export default function ProjectsPage() {
                         {/* Alt dallar */}
                         {hasChildren && isExpanded && (
                             <div className="mt-2">
-                                {item.children.map((child, idx) => 
-                                    renderTreeItem(child, depth + 1, idx === item.children.length - 1, [])
-                                )}
+                                {item.children.map((child) => renderTreeItem(child, depth + 1))}
                             </div>
                         )}
                     </div>
                 ) : (
-                    /* Alt node - dal veya yaprak */
-                    <div className="flex py-0.5 group">
-                        {/* Sol tarafta çizgiler - üst seviyelerin devam eden çizgileri */}
-                        <div className="flex">
-                            {parentLines.map((showLine, i) => (
-                                <div key={i} className="w-4 flex justify-center">
-                                    {showLine && (
-                                        <div 
-                                            className="w-0.5 h-full rounded-full"
-                                            style={{ backgroundColor: getDepthColor(i) }}
-                                        />
-                                    )}
-                                </div>
-                            ))}
-                            {/* Kendi seviyesinin çizgisi */}
-                            <div className="w-4 flex justify-center">
-                                <div 
-                                    className="w-0.5 rounded-full"
-                                    style={{ 
-                                        backgroundColor: getDepthColor(depth - 1),
-                                        height: isLastChild ? '50%' : '100%'
-                                    }}
-                                />
-                            </div>
-                        </div>
+                    /* Alt node - dal veya yaprak - sadece kendi çizgisi */
+                    <div 
+                        className="flex items-center py-0.5 group gap-1.5"
+                        style={{ marginLeft: `${(depth - 1) * 16}px` }}
+                    >
+                        {/* Sadece kendi seviyesinin çizgisi */}
+                        <div 
+                            className="w-0.5 self-stretch rounded-full flex-shrink-0"
+                            style={{ backgroundColor: getDepthColor(depth - 1) }}
+                        />
 
                         {/* Dal/Yaprak İkonu */}
                         <div
@@ -416,14 +399,7 @@ export default function ProjectsPage() {
                 {/* Alt dallar - kök değilse burada render et */}
                 {!isRoot && hasChildren && isExpanded && (
                     <div>
-                        {item.children.map((child, idx) => 
-                            renderTreeItem(
-                                child, 
-                                depth + 1, 
-                                idx === item.children.length - 1,
-                                [...parentLines, !isLastChild]
-                            )
-                        )}
+                        {item.children.map((child) => renderTreeItem(child, depth + 1))}
                     </div>
                 )}
             </div>
