@@ -314,11 +314,20 @@ export default function ProjectsPage() {
                         )}
                     </div>
                 ) : (
-                    /* Alt node - dal veya yaprak - kompakt tasarım */
+                    /* Alt node - dal veya yaprak - çizgili tasarım */
                     <div 
-                        className="flex items-center gap-1.5 py-1 group" 
-                        style={{ marginLeft: `${Math.min(depth - 1, 4) * 16}px` }}
+                        className="relative flex items-center gap-1.5 py-1 group" 
+                        style={{ marginLeft: `${Math.min(depth - 1, 4) * 12}px` }}
                     >
+                        {/* Sol dikey çizgi - hiyerarşiyi gösterir */}
+                        <div 
+                            className="absolute left-0 top-0 bottom-0 w-0.5 rounded-full"
+                            style={{ 
+                                backgroundColor: depth === 1 ? '#10b981' : depth === 2 ? '#f59e0b' : depth === 3 ? '#3b82f6' : '#8b5cf6',
+                                marginLeft: '-6px'
+                            }}
+                        />
+
                         {/* Dal/Yaprak İkonu */}
                         <div
                             onClick={() => hasChildren ? toggleExpand(item.id) : handleEdit(item.id)}
@@ -384,9 +393,20 @@ export default function ProjectsPage() {
                     </div>
                 )}
 
-                {/* Alt dallar - kök değilse burada render et */}
+                {/* Alt dallar - kök değilse burada render et, çizgi ile sarılı */}
                 {!isRoot && hasChildren && isExpanded && (
-                    <div className="space-y-0.5">
+                    <div 
+                        className="relative space-y-0.5"
+                        style={{ marginLeft: `${Math.min(depth - 1, 4) * 12}px` }}
+                    >
+                        {/* Dikey çizgi - tüm alt elemanları kapsar */}
+                        <div 
+                            className="absolute left-0 top-0 bottom-0 w-0.5 rounded-full"
+                            style={{ 
+                                backgroundColor: depth === 1 ? '#10b981' : depth === 2 ? '#f59e0b' : depth === 3 ? '#3b82f6' : '#8b5cf6',
+                                marginLeft: '-6px'
+                            }}
+                        />
                         {item.children.map((child) => renderTreeItem(child, depth + 1))}
                     </div>
                 )}
