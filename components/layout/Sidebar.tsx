@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType } from 'lucide-react';
+import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType, ChevronDown } from 'lucide-react';
 import { useStore } from '@/lib/store/useStore';
 import { supabase } from '@/lib/supabaseClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -26,12 +26,12 @@ export default function Sidebar() {
     const [authLoading, setAuthLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
 
-    // İçe aktarma modal state'leri
-    const [showImportModal, setShowImportModal] = useState(false);
+    // İçe aktarma inline state'leri
+    const [showImportOptions, setShowImportOptions] = useState(false);
     const [importData, setImportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
 
-    // Dışa aktarma modal state'leri
-    const [showExportModal, setShowExportModal] = useState(false);
+    // Dışa aktarma inline state'leri  
+    const [showExportOptions, setShowExportOptions] = useState(false);
     const [exportData, setExportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
     const [exportStep, setExportStep] = useState<'select' | 'format'>('select');
     const [selectedGardenIds, setSelectedGardenIds] = useState<Set<string>>(new Set());
@@ -201,8 +201,15 @@ export default function Sidebar() {
         }
     };
 
-    // Dışa aktarma modal'ını aç - verileri çek ve modal göster
+    // Dışa aktarma seçeneklerini aç/kapat - verileri çek
     const handleExportClick = async () => {
+        // Zaten açıksa kapat
+        if (showExportOptions) {
+            setShowExportOptions(false);
+            setExportData(null);
+            return;
+        }
+
         if (!user) return;
         setIsExporting(true);
 
@@ -230,7 +237,8 @@ export default function Sidebar() {
             setExportData({ gardens: gardensData || [], nodes: nodesData });
             setSelectedGardenIds(new Set(gardenIds)); // Varsayılan: tümü seçili
             setExportStep('select');
-            setShowExportModal(true);
+            setShowExportOptions(true);
+            setShowImportOptions(false); // Diğerini kapat
         } catch (error) {
             console.error('Export error:', error);
             alert('Veriler alınırken hata oluştu.');
@@ -277,7 +285,7 @@ export default function Sidebar() {
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         downloadFile(blob, `not-bahcesi-backup-${new Date().toISOString().split('T')[0]}.json`);
-        setShowExportModal(false);
+        setShowExportOptions(false);
         setExportData(null);
     };
 
@@ -392,7 +400,7 @@ export default function Sidebar() {
 
         const blob = new Blob([html], { type: 'text/html' });
         downloadFile(blob, `not-bahcesi-${new Date().toISOString().split('T')[0]}.html`);
-        setShowExportModal(false);
+        setShowExportOptions(false);
         setExportData(null);
     };
 
@@ -547,7 +555,7 @@ export default function Sidebar() {
             };
         }
 
-        setShowExportModal(false);
+        setShowExportOptions(false);
         setExportData(null);
     };
 
@@ -561,9 +569,9 @@ export default function Sidebar() {
         URL.revokeObjectURL(url);
     };
 
-    // Export modal'ı kapat
+    // Export seçeneklerini kapat
     const handleExportCancel = () => {
-        setShowExportModal(false);
+        setShowExportOptions(false);
         setExportData(null);
     };
 
@@ -581,7 +589,8 @@ export default function Sidebar() {
             }
 
             setImportData(data);
-            setShowImportModal(true);
+            setShowImportOptions(true);
+            setShowExportOptions(false); // Diğerini kapat
         } catch (error) {
             console.error('File read error:', error);
             alert('Dosya okunamadı. Geçerli bir JSON dosyası seçtiğinizden emin olun.');
@@ -595,7 +604,7 @@ export default function Sidebar() {
     // Verileri değiştir (mevcut verileri sil, yenilerini ekle)
     const handleImportReplace = async () => {
         if (!importData || !user) return;
-        setShowImportModal(false);
+        setShowImportOptions(false);
         setIsImporting(true);
 
         try {
@@ -629,7 +638,7 @@ export default function Sidebar() {
     // Verileri mevcut verilere ekle
     const handleImportAppend = async () => {
         if (!importData || !user) return;
-        setShowImportModal(false);
+        setShowImportOptions(false);
         setIsImporting(true);
 
         try {
@@ -646,353 +655,117 @@ export default function Sidebar() {
         }
     };
 
-    // Ortak içe aktarma fonksiyonu
+    // Ortak içe aktarma fonksiyonu - Optimize edilmiş batch insert
     const importGardenData = async (data: { gardens: any[]; nodes: any[] }) => {
         if (!user) return;
 
         // ID eşleştirme için map
         const gardenIdMap: Record<string, string> = {};
-
-        // Bahçeleri ekle
-        for (const garden of data.gardens) {
-            const { data: newGarden, error } = await supabase
-                .from('gardens')
-                .insert({
-                    name: garden.name,
-                    user_id: user.id,
-                    view_state: garden.view_state
-                })
-                .select()
-                .single();
-
-            if (error) throw error;
-            if (newGarden) {
-                gardenIdMap[garden.id] = newGarden.id;
-            }
-        }
-
-        // Node'ları seviye seviye ekle (BFS yaklaşımı)
         const nodeIdMap: Record<string, string> = {};
 
-        const getNodeLevel = (nodeId: string, nodes: any[]): number => {
-            const node = nodes.find((n: any) => n.id === nodeId);
-            if (!node || !node.parent_id) return 0;
-            return 1 + getNodeLevel(node.parent_id, nodes);
+        // Bahçeleri toplu ekle
+        const gardensToInsert = data.gardens.map(garden => ({
+            name: garden.name,
+            user_id: user.id,
+            view_state: garden.view_state
+        }));
+
+        const { data: insertedGardens, error: gardenError } = await supabase
+            .from('gardens')
+            .insert(gardensToInsert)
+            .select();
+
+        if (gardenError) throw gardenError;
+
+        // Eski ID -> Yeni ID eşleştirmesi
+        if (insertedGardens) {
+            data.gardens.forEach((oldGarden, index) => {
+                if (insertedGardens[index]) {
+                    gardenIdMap[oldGarden.id] = insertedGardens[index].id;
+                }
+            });
+        }
+
+        // Node'ları seviyelerine göre grupla (performanslı)
+        const nodesByLevel: Map<number, any[]> = new Map();
+        const nodeLevelCache: Map<string, number> = new Map();
+
+        // Önce parent_id olmayan (root) node'ları bul
+        const getNodeLevel = (nodeId: string): number => {
+            if (nodeLevelCache.has(nodeId)) {
+                return nodeLevelCache.get(nodeId)!;
+            }
+            const node = data.nodes.find((n: any) => n.id === nodeId);
+            if (!node || !node.parent_id) {
+                nodeLevelCache.set(nodeId, 0);
+                return 0;
+            }
+            const level = 1 + getNodeLevel(node.parent_id);
+            nodeLevelCache.set(nodeId, level);
+            return level;
         };
 
-        const sortedNodes = [...data.nodes].sort((a: any, b: any) => {
-            const levelA = getNodeLevel(a.id, data.nodes);
-            const levelB = getNodeLevel(b.id, data.nodes);
-            return levelA - levelB;
-        });
+        // Tüm node'ları seviyelerine göre grupla
+        for (const node of data.nodes) {
+            const level = getNodeLevel(node.id);
+            if (!nodesByLevel.has(level)) {
+                nodesByLevel.set(level, []);
+            }
+            nodesByLevel.get(level)!.push(node);
+        }
 
-        for (const node of sortedNodes) {
-            const newGardenId = gardenIdMap[node.garden_id];
-            if (!newGardenId) continue;
+        // Seviyeleri sıralı şekilde işle (0, 1, 2, ...)
+        const sortedLevels = Array.from(nodesByLevel.keys()).sort((a, b) => a - b);
 
-            const newParentId = node.parent_id ? nodeIdMap[node.parent_id] : null;
+        for (const level of sortedLevels) {
+            const nodesAtLevel = nodesByLevel.get(level)!;
 
-            const { data: newNode, error } = await supabase
-                .from('nodes')
-                .insert({
-                    garden_id: newGardenId,
-                    parent_id: newParentId,
+            // Bu seviyedeki node'ları hazırla
+            const nodesToInsert = nodesAtLevel
+                .filter(node => gardenIdMap[node.garden_id]) // Sadece eşleşen bahçeler
+                .map(node => ({
+                    garden_id: gardenIdMap[node.garden_id],
+                    parent_id: node.parent_id ? nodeIdMap[node.parent_id] : null,
                     content: node.content,
                     position_x: node.position_x,
                     position_y: node.position_y,
                     is_expanded: node.is_expanded ?? true
-                })
-                .select()
-                .single();
+                }));
 
-            if (error) {
-                console.error('Node insert error:', error, node);
-                continue;
+            if (nodesToInsert.length === 0) continue;
+
+            // Toplu insert
+            const { data: insertedNodes, error: nodeError } = await supabase
+                .from('nodes')
+                .insert(nodesToInsert)
+                .select();
+
+            if (nodeError) {
+                console.error('Node batch insert error:', nodeError);
+                throw nodeError;
             }
 
-            if (newNode) {
-                nodeIdMap[node.id] = newNode.id;
+            // ID eşleştirmesini güncelle
+            if (insertedNodes) {
+                const filteredNodesAtLevel = nodesAtLevel.filter(node => gardenIdMap[node.garden_id]);
+                filteredNodesAtLevel.forEach((oldNode, index) => {
+                    if (insertedNodes[index]) {
+                        nodeIdMap[oldNode.id] = insertedNodes[index].id;
+                    }
+                });
             }
         }
     };
 
-    // Modal'ı kapat
+    // Import seçeneklerini kapat
     const handleImportCancel = () => {
-        setShowImportModal(false);
+        setShowImportOptions(false);
         setImportData(null);
     };
 
 
     return (
         <>
-            {/* Dışa Aktarma Modal */}
-            <AnimatePresence>
-                {showExportModal && exportData && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[65]"
-                            onClick={handleExportCancel}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, y: '100%' }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="fixed left-0 right-0 bottom-0 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[calc(100%-32px)] sm:max-w-[320px] bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-t-2xl sm:rounded-2xl shadow-2xl z-[70] overflow-hidden"
-                            style={{
-                                maxHeight: 'calc(100dvh - env(safe-area-inset-top, 24px) - 24px)',
-                                paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
-                                paddingLeft: 'max(16px, env(safe-area-inset-left, 16px))',
-                                paddingRight: 'max(16px, env(safe-area-inset-right, 16px))',
-                                paddingTop: '16px'
-                            }}
-                        >
-                            {/* Drag handle for mobile */}
-                            <div className="sm:hidden flex justify-center mb-2">
-                                <div className="w-10 h-1 bg-stone-300 rounded-full" />
-                            </div>
-                            <div className="flex items-center gap-2.5 mb-3">
-                                <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                                    <Download className="text-white" size={18} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <h3 className="font-bold text-stone-800 font-serif text-sm">Dışa Aktar</h3>
-                                    <p className="text-[11px] text-stone-500">
-                                        {selectedGardenIds.size} / {exportData.gardens.length} bahçe seçili
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 24px) - env(safe-area-inset-bottom, 16px) - 140px)' }}>
-                                {exportStep === 'select' ? (
-                                    <>
-                                        <p className="text-xs text-stone-600 mb-2">
-                                            Hangi bahçeleri dışa aktarmak istiyorsunuz?
-                                        </p>
-
-                                        <div className="space-y-1.5 mb-2">
-                                            <button
-                                                onClick={() => { selectAllGardens(); setExportStep('format'); }}
-                                                className="w-full flex items-center gap-2 px-2.5 py-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200 rounded-lg transition-all text-left"
-                                            >
-                                                <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-emerald-100 rounded-md">
-                                                    <TreePine size={14} className="text-emerald-600" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-emerald-700 text-xs">Tümünü Seç</p>
-                                                    <p className="text-[10px] text-emerald-500">{exportData.gardens.length} bahçe, {exportData.nodes.length} not</p>
-                                                </div>
-                                            </button>
-
-                                            <div className="relative py-1.5">
-                                                <div className="absolute inset-0 flex items-center">
-                                                    <div className="w-full border-t border-stone-200"></div>
-                                                </div>
-                                                <div className="relative flex justify-center">
-                                                    <span className="px-2 bg-[#f0ece5] text-[10px] text-stone-500">veya bahçe seç</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="max-h-24 overflow-y-auto overflow-x-hidden space-y-1.5 pr-0.5 overscroll-contain">
-                                                {exportData.gardens.map(garden => {
-                                                    const nodeCount = exportData.nodes.filter(n => n.garden_id === garden.id).length;
-                                                    const isSelected = selectedGardenIds.has(garden.id);
-                                                    return (
-                                                        <button
-                                                            key={garden.id}
-                                                            onClick={() => toggleGardenSelection(garden.id)}
-                                                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all text-left ${isSelected
-                                                                ? 'bg-emerald-100 border-2 border-emerald-400'
-                                                                : 'bg-white/60 border border-stone-200 hover:border-emerald-300 active:bg-stone-100'
-                                                                }`}
-                                                        >
-                                                            <div className={`flex-shrink-0 w-4 h-4 rounded flex items-center justify-center ${isSelected ? 'bg-emerald-500' : 'bg-stone-200'
-                                                                }`}>
-                                                                {isSelected && <span className="text-white text-[10px]">✓</span>}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="font-medium text-stone-700 text-xs truncate">{garden.name}</p>
-                                                                <p className="text-[10px] text-stone-400">{nodeCount} not</p>
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-2 pt-2">
-                                            <button
-                                                onClick={handleExportCancel}
-                                                className="flex-1 flex items-center justify-center px-2 py-2 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-lg transition-all min-h-[40px]"
-                                            >
-                                                <span className="font-medium text-stone-600 text-xs">İptal</span>
-                                            </button>
-                                            <button
-                                                onClick={() => setExportStep('format')}
-                                                disabled={selectedGardenIds.size === 0}
-                                                className="flex-1 flex items-center justify-center px-2 py-2 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px]"
-                                            >
-                                                <span className="font-medium text-xs">Devam</span>
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="text-xs text-stone-600 mb-2">
-                                            Hangi formatta dışa aktarmak istiyorsunuz?
-                                        </p>
-
-                                        <div className="space-y-1.5">
-                                            <button
-                                                onClick={handleExportJSON}
-                                                className="w-full flex items-center gap-2 px-2.5 py-2 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200 rounded-lg transition-all text-left min-h-[44px]"
-                                            >
-                                                <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-amber-100 rounded-md">
-                                                    <FileJson size={14} className="text-amber-600" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-amber-700 text-xs">JSON</p>
-                                                    <p className="text-[10px] text-amber-500">Yedekleme için</p>
-                                                </div>
-                                            </button>
-
-                                            <button
-                                                onClick={handleExportHTML}
-                                                className="w-full flex items-center gap-2 px-2.5 py-2 bg-sky-50 hover:bg-sky-100 active:bg-sky-200 border border-sky-200 rounded-lg transition-all text-left min-h-[44px]"
-                                            >
-                                                <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-sky-100 rounded-md">
-                                                    <FileText size={14} className="text-sky-600" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-sky-700 text-xs">HTML</p>
-                                                    <p className="text-[10px] text-sky-500">Ağaç yapısında</p>
-                                                </div>
-                                            </button>
-
-                                            <button
-                                                onClick={handleExportPDF}
-                                                className="w-full flex items-center gap-2 px-2.5 py-2 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border border-rose-200 rounded-lg transition-all text-left min-h-[44px]"
-                                            >
-                                                <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-rose-100 rounded-md">
-                                                    <FileType size={14} className="text-rose-600" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-rose-700 text-xs">PDF</p>
-                                                    <p className="text-[10px] text-rose-500">Belge formatı</p>
-                                                </div>
-                                            </button>
-
-                                            <div className="flex gap-2 pt-2">
-                                                <button
-                                                    onClick={() => setExportStep('select')}
-                                                    className="flex-1 flex items-center justify-center px-2 py-2 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-lg transition-all min-h-[40px]"
-                                                >
-                                                    <span className="font-medium text-stone-600 text-xs">Geri</span>
-                                                </button>
-                                                <button
-                                                    onClick={handleExportCancel}
-                                                    className="flex-1 flex items-center justify-center gap-1 px-2 py-2 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-lg transition-all min-h-[40px]"
-                                                >
-                                                    <X size={12} className="text-stone-600" />
-                                                    <span className="font-medium text-stone-600 text-xs">İptal</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
-            {/* İçe Aktarma Modal */}
-            <AnimatePresence>
-                {showImportModal && importData && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[65]"
-                            onClick={handleImportCancel}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, y: '100%' }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="fixed left-0 right-0 bottom-0 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[calc(100%-32px)] sm:max-w-[320px] bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-t-2xl sm:rounded-2xl shadow-2xl z-[70] overflow-hidden"
-                            style={{
-                                maxHeight: 'calc(100dvh - env(safe-area-inset-top, 24px) - 24px)',
-                                paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
-                                paddingLeft: 'max(16px, env(safe-area-inset-left, 16px))',
-                                paddingRight: 'max(16px, env(safe-area-inset-right, 16px))',
-                                paddingTop: '16px'
-                            }}
-                        >
-                            {/* Drag handle for mobile */}
-                            <div className="sm:hidden flex justify-center mb-2">
-                                <div className="w-10 h-1 bg-stone-300 rounded-full" />
-                            </div>
-                            <div className="flex items-center gap-2.5 mb-3">
-                                <div className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                                    <Upload className="text-white" size={18} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <h3 className="font-bold text-stone-800 font-serif text-sm">İçe Aktar</h3>
-                                    <p className="text-[11px] text-stone-500">
-                                        {importData.gardens.length} bahçe, {importData.nodes.length} not
-                                    </p>
-                                </div>
-                            </div>
-
-                            <p className="text-xs text-stone-600 mb-3">
-                                Verileri nasıl içe aktarmak istiyorsunuz?
-                            </p>
-
-                            <div className="space-y-1.5">
-                                <button
-                                    onClick={handleImportReplace}
-                                    className="w-full flex items-center gap-2 px-2.5 py-2 bg-red-50 hover:bg-red-100 active:bg-red-200 border border-red-200 rounded-lg transition-all text-left min-h-[44px]"
-                                >
-                                    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-red-100 rounded-md">
-                                        <Database size={14} className="text-red-600" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-red-700 text-xs">Verileri Değiştir</p>
-                                        <p className="text-[10px] text-red-500">Mevcut veriler silinir</p>
-                                    </div>
-                                </button>
-
-                                <button
-                                    onClick={handleImportAppend}
-                                    className="w-full flex items-center gap-2 px-2.5 py-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200 rounded-lg transition-all text-left min-h-[44px]"
-                                >
-                                    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-emerald-100 rounded-md">
-                                        <Upload size={14} className="text-emerald-600" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-emerald-700 text-xs">Verilere Ekle</p>
-                                        <p className="text-[10px] text-emerald-500">Mevcut veriler korunur</p>
-                                    </div>
-                                </button>
-
-                                <button
-                                    onClick={handleImportCancel}
-                                    className="w-full flex items-center justify-center gap-1.5 px-2 py-2 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-lg transition-all min-h-[40px]"
-                                >
-                                    <X size={14} className="text-stone-600" />
-                                    <span className="font-medium text-stone-600 text-xs">İptal</span>
-                                </button>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
 
             <AnimatePresence>
                 {isSidebarOpen && (
@@ -1076,25 +849,8 @@ export default function Sidebar() {
                                                     <h4 className="font-semibold text-stone-700">Veri Yönetimi</h4>
                                                 </div>
 
-                                                <div className="space-y-3">
-                                                    {/* Export */}
-                                                    <button
-                                                        onClick={handleExportClick}
-                                                        disabled={isExporting || gardens.length === 0}
-                                                        className="w-full flex items-center gap-3 px-4 py-3 bg-white/80 hover:bg-white border border-stone-200 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        {isExporting ? (
-                                                            <Loader2 size={18} className="text-emerald-600 animate-spin" />
-                                                        ) : (
-                                                            <Download size={18} className="text-emerald-600" />
-                                                        )}
-                                                        <div className="text-left">
-                                                            <p className="font-medium text-stone-700">Dışa Aktar</p>
-                                                            <p className="text-xs text-stone-500">JSON, HTML veya PDF olarak indir</p>
-                                                        </div>
-                                                    </button>
-
-                                                    {/* Import */}
+                                                <div className="space-y-2">
+                                                    {/* Hidden file input */}
                                                     <input
                                                         ref={fileInputRef}
                                                         type="file"
@@ -1102,21 +858,213 @@ export default function Sidebar() {
                                                         onChange={handleFileSelect}
                                                         className="hidden"
                                                     />
-                                                    <button
-                                                        onClick={() => fileInputRef.current?.click()}
-                                                        disabled={isImporting}
-                                                        className="w-full flex items-center gap-3 px-4 py-3 bg-white/80 hover:bg-white border border-stone-200 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        {isImporting ? (
-                                                            <Loader2 size={18} className="text-amber-600 animate-spin" />
-                                                        ) : (
-                                                            <Upload size={18} className="text-amber-600" />
-                                                        )}
-                                                        <div className="text-left">
-                                                            <p className="font-medium text-stone-700">İçe Aktar</p>
-                                                            <p className="text-xs text-stone-500">JSON dosyasından geri yükle</p>
-                                                        </div>
-                                                    </button>
+
+                                                    {/* Export Section */}
+                                                    <div className="bg-white/60 border border-stone-200 rounded-xl overflow-hidden">
+                                                        <button
+                                                            onClick={handleExportClick}
+                                                            disabled={isExporting || gardens.length === 0}
+                                                            className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                {isExporting ? (
+                                                                    <Loader2 size={18} className="text-emerald-600 animate-spin" />
+                                                                ) : (
+                                                                    <Download size={18} className="text-emerald-600" />
+                                                                )}
+                                                                <div className="text-left">
+                                                                    <p className="font-medium text-stone-700 text-sm">Dışa Aktar</p>
+                                                                    <p className="text-xs text-stone-500">JSON, HTML veya PDF</p>
+                                                                </div>
+                                                            </div>
+                                                            <motion.div
+                                                                animate={{ rotate: showExportOptions ? 180 : 0 }}
+                                                                transition={{ duration: 0.2 }}
+                                                            >
+                                                                <ChevronDown size={16} className="text-stone-400" />
+                                                            </motion.div>
+                                                        </button>
+
+                                                        <AnimatePresence>
+                                                            {showExportOptions && exportData && (
+                                                                <motion.div
+                                                                    initial={{ height: 0, opacity: 0 }}
+                                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                                    exit={{ height: 0, opacity: 0 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                    className="overflow-hidden"
+                                                                >
+                                                                    <div className="px-4 pb-4 pt-2 border-t border-stone-200 space-y-3">
+                                                                        {exportStep === 'select' ? (
+                                                                            <>
+                                                                                <p className="text-xs text-stone-600">
+                                                                                    {selectedGardenIds.size} / {exportData.gardens.length} bahçe seçili
+                                                                                </p>
+
+                                                                                {/* Tümünü Seç */}
+                                                                                <button
+                                                                                    onClick={() => { selectAllGardens(); setExportStep('format'); }}
+                                                                                    className="w-full flex items-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all text-left"
+                                                                                >
+                                                                                    <TreePine size={14} className="text-emerald-600" />
+                                                                                    <span className="text-xs font-medium text-emerald-700">Tümünü Seç ve Devam</span>
+                                                                                </button>
+
+                                                                                {/* Bahçe listesi */}
+                                                                                <div className="max-h-32 overflow-y-auto space-y-1.5">
+                                                                                    {exportData.gardens.map(garden => {
+                                                                                        const nodeCount = exportData.nodes.filter(n => n.garden_id === garden.id).length;
+                                                                                        const isSelected = selectedGardenIds.has(garden.id);
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={garden.id}
+                                                                                                onClick={() => toggleGardenSelection(garden.id)}
+                                                                                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-left text-xs ${isSelected
+                                                                                                    ? 'bg-emerald-100 border border-emerald-400'
+                                                                                                    : 'bg-white/80 border border-stone-200 hover:border-emerald-300'
+                                                                                                    }`}
+                                                                                            >
+                                                                                                <div className={`w-4 h-4 rounded flex items-center justify-center ${isSelected ? 'bg-emerald-500' : 'bg-stone-200'}`}>
+                                                                                                    {isSelected && <span className="text-white text-[10px]">✓</span>}
+                                                                                                </div>
+                                                                                                <span className="flex-1 truncate text-stone-700">{garden.name}</span>
+                                                                                                <span className="text-stone-400">{nodeCount} not</span>
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+
+                                                                                <button
+                                                                                    onClick={() => setExportStep('format')}
+                                                                                    disabled={selectedGardenIds.size === 0}
+                                                                                    className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                >
+                                                                                    Devam
+                                                                                </button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <p className="text-xs text-stone-600">Format seçin:</p>
+
+                                                                                <div className="grid grid-cols-3 gap-2">
+                                                                                    <button
+                                                                                        onClick={handleExportJSON}
+                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-all"
+                                                                                    >
+                                                                                        <FileJson size={18} className="text-amber-600" />
+                                                                                        <span className="text-xs font-medium text-amber-700">JSON</span>
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={handleExportHTML}
+                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg transition-all"
+                                                                                    >
+                                                                                        <FileText size={18} className="text-sky-600" />
+                                                                                        <span className="text-xs font-medium text-sky-700">HTML</span>
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={handleExportPDF}
+                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-all"
+                                                                                    >
+                                                                                        <FileType size={18} className="text-rose-600" />
+                                                                                        <span className="text-xs font-medium text-rose-700">PDF</span>
+                                                                                    </button>
+                                                                                </div>
+
+                                                                                <button
+                                                                                    onClick={() => setExportStep('select')}
+                                                                                    className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium rounded-lg transition-all"
+                                                                                >
+                                                                                    ← Geri
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </div>
+
+                                                    {/* Import Section */}
+                                                    <div className="bg-white/60 border border-stone-200 rounded-xl overflow-hidden">
+                                                        <button
+                                                            onClick={() => {
+                                                                if (showImportOptions) {
+                                                                    handleImportCancel();
+                                                                } else {
+                                                                    fileInputRef.current?.click();
+                                                                }
+                                                            }}
+                                                            disabled={isImporting}
+                                                            className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                {isImporting ? (
+                                                                    <Loader2 size={18} className="text-amber-600 animate-spin" />
+                                                                ) : (
+                                                                    <Upload size={18} className="text-amber-600" />
+                                                                )}
+                                                                <div className="text-left">
+                                                                    <p className="font-medium text-stone-700 text-sm">İçe Aktar</p>
+                                                                    <p className="text-xs text-stone-500">JSON dosyasından yükle</p>
+                                                                </div>
+                                                            </div>
+                                                            {showImportOptions && (
+                                                                <motion.div
+                                                                    animate={{ rotate: 180 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                >
+                                                                    <ChevronDown size={16} className="text-stone-400" />
+                                                                </motion.div>
+                                                            )}
+                                                        </button>
+
+                                                        <AnimatePresence>
+                                                            {showImportOptions && importData && (
+                                                                <motion.div
+                                                                    initial={{ height: 0, opacity: 0 }}
+                                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                                    exit={{ height: 0, opacity: 0 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                    className="overflow-hidden"
+                                                                >
+                                                                    <div className="px-4 pb-4 pt-2 border-t border-stone-200 space-y-3">
+                                                                        <p className="text-xs text-stone-600">
+                                                                            {importData.gardens.length} bahçe, {importData.nodes.length} not bulundu
+                                                                        </p>
+
+                                                                        <button
+                                                                            onClick={handleImportAppend}
+                                                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all text-left"
+                                                                        >
+                                                                            <Upload size={16} className="text-emerald-600" />
+                                                                            <div>
+                                                                                <p className="text-xs font-medium text-emerald-700">Mevcut Verilere Ekle</p>
+                                                                                <p className="text-[10px] text-emerald-500">Verileriniz korunur</p>
+                                                                            </div>
+                                                                        </button>
+
+                                                                        <button
+                                                                            onClick={handleImportReplace}
+                                                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all text-left"
+                                                                        >
+                                                                            <Database size={16} className="text-red-600" />
+                                                                            <div>
+                                                                                <p className="text-xs font-medium text-red-700">Verileri Değiştir</p>
+                                                                                <p className="text-[10px] text-red-500">Mevcut veriler silinir</p>
+                                                                            </div>
+                                                                        </button>
+
+                                                                        <button
+                                                                            onClick={handleImportCancel}
+                                                                            className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium rounded-lg transition-all"
+                                                                        >
+                                                                            İptal
+                                                                        </button>
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </>
