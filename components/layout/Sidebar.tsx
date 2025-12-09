@@ -737,160 +737,173 @@ export default function Sidebar() {
                             onClick={handleExportCancel}
                         />
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-sm bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-2xl shadow-2xl z-[70] p-4 sm:p-5 max-h-[85vh] overflow-y-auto"
-                            style={{ maxHeight: 'calc(100dvh - 48px)' }}
+                            initial={{ opacity: 0, y: '100%' }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            className="fixed left-0 right-0 bottom-0 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[calc(100%-32px)] sm:max-w-[320px] bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-t-2xl sm:rounded-2xl shadow-2xl z-[70] overflow-hidden"
+                            style={{
+                                maxHeight: 'calc(100dvh - env(safe-area-inset-top, 24px) - 24px)',
+                                paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+                                paddingLeft: 'max(16px, env(safe-area-inset-left, 16px))',
+                                paddingRight: 'max(16px, env(safe-area-inset-right, 16px))',
+                                paddingTop: '16px'
+                            }}
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center">
-                                    <Download className="text-white" size={20} />
+                            {/* Drag handle for mobile */}
+                            <div className="sm:hidden flex justify-center mb-2">
+                                <div className="w-10 h-1 bg-stone-300 rounded-full" />
+                            </div>
+                            <div className="flex items-center gap-2.5 mb-3">
+                                <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <Download className="text-white" size={18} />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-stone-800 font-serif">Dışa Aktar</h3>
-                                    <p className="text-xs text-stone-500">
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="font-bold text-stone-800 font-serif text-sm">Dışa Aktar</h3>
+                                    <p className="text-[11px] text-stone-500">
                                         {selectedGardenIds.size} / {exportData.gardens.length} bahçe seçili
                                     </p>
                                 </div>
                             </div>
 
-                            {exportStep === 'select' ? (
-                                <>
-                                    <p className="text-sm text-stone-600 mb-3">
-                                        Hangi bahçeleri dışa aktarmak istiyorsunuz?
-                                    </p>
+                            <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 24px) - env(safe-area-inset-bottom, 16px) - 140px)' }}>
+                                {exportStep === 'select' ? (
+                                    <>
+                                        <p className="text-xs text-stone-600 mb-2">
+                                            Hangi bahçeleri dışa aktarmak istiyorsunuz?
+                                        </p>
 
-                                    <div className="space-y-2 mb-3">
-                                        <button
-                                            onClick={() => { selectAllGardens(); setExportStep('format'); }}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200 rounded-xl transition-all text-left"
-                                        >
-                                            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-emerald-100 rounded-lg">
-                                                <TreePine size={16} className="text-emerald-600" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-emerald-700 text-sm">Tümünü Seç</p>
-                                                <p className="text-xs text-emerald-500">{exportData.gardens.length} bahçe, {exportData.nodes.length} not</p>
-                                            </div>
-                                        </button>
-
-                                        <div className="relative py-2">
-                                            <div className="absolute inset-0 flex items-center">
-                                                <div className="w-full border-t border-stone-200"></div>
-                                            </div>
-                                            <div className="relative flex justify-center">
-                                                <span className="px-2 bg-[#f0ece5] text-xs text-stone-500">veya bahçe seç</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 overscroll-contain">
-                                            {exportData.gardens.map(garden => {
-                                                const nodeCount = exportData.nodes.filter(n => n.garden_id === garden.id).length;
-                                                const isSelected = selectedGardenIds.has(garden.id);
-                                                return (
-                                                    <button
-                                                        key={garden.id}
-                                                        onClick={() => toggleGardenSelection(garden.id)}
-                                                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-left ${isSelected
-                                                            ? 'bg-emerald-100 border-2 border-emerald-400'
-                                                            : 'bg-white/60 border border-stone-200 hover:border-emerald-300 active:bg-stone-100'
-                                                            }`}
-                                                    >
-                                                        <div className={`flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center ${isSelected ? 'bg-emerald-500' : 'bg-stone-200'
-                                                            }`}>
-                                                            {isSelected && <span className="text-white text-xs">✓</span>}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="font-medium text-stone-700 text-sm truncate">{garden.name}</p>
-                                                            <p className="text-xs text-stone-400">{nodeCount} not</p>
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2 pt-1">
-                                        <button
-                                            onClick={handleExportCancel}
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-xl transition-all"
-                                        >
-                                            <span className="font-medium text-stone-600 text-sm">İptal</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setExportStep('format')}
-                                            disabled={selectedGardenIds.size === 0}
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <span className="font-medium text-sm">Devam</span>
-                                        </button>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-sm text-stone-600 mb-3">
-                                        Hangi formatta dışa aktarmak istiyorsunuz?
-                                    </p>
-
-                                    <div className="space-y-2">
-                                        <button
-                                            onClick={handleExportJSON}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200 rounded-xl transition-all text-left"
-                                        >
-                                            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-amber-100 rounded-lg">
-                                                <FileJson size={16} className="text-amber-600" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-amber-700 text-sm">JSON</p>
-                                                <p className="text-xs text-amber-500 truncate">Yedekleme ve geri yükleme için</p>
-                                            </div>
-                                        </button>
-
-                                        <button
-                                            onClick={handleExportHTML}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-sky-50 hover:bg-sky-100 active:bg-sky-200 border border-sky-200 rounded-xl transition-all text-left"
-                                        >
-                                            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-sky-100 rounded-lg">
-                                                <FileText size={16} className="text-sky-600" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-sky-700 text-sm">HTML</p>
-                                                <p className="text-xs text-sky-500 truncate">Ağaç yapısında görüntüleme</p>
-                                            </div>
-                                        </button>
-
-                                        <button
-                                            onClick={handleExportPDF}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border border-rose-200 rounded-xl transition-all text-left"
-                                        >
-                                            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-rose-100 rounded-lg">
-                                                <FileType size={16} className="text-rose-600" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-rose-700 text-sm">PDF</p>
-                                                <p className="text-xs text-rose-500 truncate">Düzenli belge formatında</p>
-                                            </div>
-                                        </button>
-
-                                        <div className="flex gap-2 mt-3">
+                                        <div className="space-y-1.5 mb-2">
                                             <button
-                                                onClick={() => setExportStep('select')}
-                                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-xl transition-all"
+                                                onClick={() => { selectAllGardens(); setExportStep('format'); }}
+                                                className="w-full flex items-center gap-2 px-2.5 py-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200 rounded-lg transition-all text-left"
                                             >
-                                                <span className="font-medium text-stone-600 text-sm">Geri</span>
+                                                <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-emerald-100 rounded-md">
+                                                    <TreePine size={14} className="text-emerald-600" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-emerald-700 text-xs">Tümünü Seç</p>
+                                                    <p className="text-[10px] text-emerald-500">{exportData.gardens.length} bahçe, {exportData.nodes.length} not</p>
+                                                </div>
                                             </button>
+
+                                            <div className="relative py-1.5">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <div className="w-full border-t border-stone-200"></div>
+                                                </div>
+                                                <div className="relative flex justify-center">
+                                                    <span className="px-2 bg-[#f0ece5] text-[10px] text-stone-500">veya bahçe seç</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="max-h-24 overflow-y-auto overflow-x-hidden space-y-1.5 pr-0.5 overscroll-contain">
+                                                {exportData.gardens.map(garden => {
+                                                    const nodeCount = exportData.nodes.filter(n => n.garden_id === garden.id).length;
+                                                    const isSelected = selectedGardenIds.has(garden.id);
+                                                    return (
+                                                        <button
+                                                            key={garden.id}
+                                                            onClick={() => toggleGardenSelection(garden.id)}
+                                                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all text-left ${isSelected
+                                                                ? 'bg-emerald-100 border-2 border-emerald-400'
+                                                                : 'bg-white/60 border border-stone-200 hover:border-emerald-300 active:bg-stone-100'
+                                                                }`}
+                                                        >
+                                                            <div className={`flex-shrink-0 w-4 h-4 rounded flex items-center justify-center ${isSelected ? 'bg-emerald-500' : 'bg-stone-200'
+                                                                }`}>
+                                                                {isSelected && <span className="text-white text-[10px]">✓</span>}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-medium text-stone-700 text-xs truncate">{garden.name}</p>
+                                                                <p className="text-[10px] text-stone-400">{nodeCount} not</p>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2 pt-2">
                                             <button
                                                 onClick={handleExportCancel}
-                                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-xl transition-all"
+                                                className="flex-1 flex items-center justify-center px-2 py-2 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-lg transition-all min-h-[40px]"
                                             >
-                                                <X size={14} className="text-stone-600" />
-                                                <span className="font-medium text-stone-600 text-sm">İptal</span>
+                                                <span className="font-medium text-stone-600 text-xs">İptal</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setExportStep('format')}
+                                                disabled={selectedGardenIds.size === 0}
+                                                className="flex-1 flex items-center justify-center px-2 py-2 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px]"
+                                            >
+                                                <span className="font-medium text-xs">Devam</span>
                                             </button>
                                         </div>
-                                    </div>
-                                </>
-                            )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-xs text-stone-600 mb-2">
+                                            Hangi formatta dışa aktarmak istiyorsunuz?
+                                        </p>
+
+                                        <div className="space-y-1.5">
+                                            <button
+                                                onClick={handleExportJSON}
+                                                className="w-full flex items-center gap-2 px-2.5 py-2 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200 rounded-lg transition-all text-left min-h-[44px]"
+                                            >
+                                                <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-amber-100 rounded-md">
+                                                    <FileJson size={14} className="text-amber-600" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-amber-700 text-xs">JSON</p>
+                                                    <p className="text-[10px] text-amber-500">Yedekleme için</p>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={handleExportHTML}
+                                                className="w-full flex items-center gap-2 px-2.5 py-2 bg-sky-50 hover:bg-sky-100 active:bg-sky-200 border border-sky-200 rounded-lg transition-all text-left min-h-[44px]"
+                                            >
+                                                <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-sky-100 rounded-md">
+                                                    <FileText size={14} className="text-sky-600" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-sky-700 text-xs">HTML</p>
+                                                    <p className="text-[10px] text-sky-500">Ağaç yapısında</p>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={handleExportPDF}
+                                                className="w-full flex items-center gap-2 px-2.5 py-2 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border border-rose-200 rounded-lg transition-all text-left min-h-[44px]"
+                                            >
+                                                <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-rose-100 rounded-md">
+                                                    <FileType size={14} className="text-rose-600" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-rose-700 text-xs">PDF</p>
+                                                    <p className="text-[10px] text-rose-500">Belge formatı</p>
+                                                </div>
+                                            </button>
+
+                                            <div className="flex gap-2 pt-2">
+                                                <button
+                                                    onClick={() => setExportStep('select')}
+                                                    className="flex-1 flex items-center justify-center px-2 py-2 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-lg transition-all min-h-[40px]"
+                                                >
+                                                    <span className="font-medium text-stone-600 text-xs">Geri</span>
+                                                </button>
+                                                <button
+                                                    onClick={handleExportCancel}
+                                                    className="flex-1 flex items-center justify-center gap-1 px-2 py-2 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-lg transition-all min-h-[40px]"
+                                                >
+                                                    <X size={12} className="text-stone-600" />
+                                                    <span className="font-medium text-stone-600 text-xs">İptal</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </motion.div>
                     </>
                 )}
@@ -908,61 +921,72 @@ export default function Sidebar() {
                             onClick={handleImportCancel}
                         />
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-sm bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-2xl shadow-2xl z-[70] p-4 sm:p-5 max-h-[85vh] overflow-y-auto"
-                            style={{ maxHeight: 'calc(100dvh - 48px)' }}
+                            initial={{ opacity: 0, y: '100%' }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            className="fixed left-0 right-0 bottom-0 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[calc(100%-32px)] sm:max-w-[320px] bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] rounded-t-2xl sm:rounded-2xl shadow-2xl z-[70] overflow-hidden"
+                            style={{
+                                maxHeight: 'calc(100dvh - env(safe-area-inset-top, 24px) - 24px)',
+                                paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+                                paddingLeft: 'max(16px, env(safe-area-inset-left, 16px))',
+                                paddingRight: 'max(16px, env(safe-area-inset-right, 16px))',
+                                paddingTop: '16px'
+                            }}
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-                                    <Upload className="text-white" size={20} />
+                            {/* Drag handle for mobile */}
+                            <div className="sm:hidden flex justify-center mb-2">
+                                <div className="w-10 h-1 bg-stone-300 rounded-full" />
+                            </div>
+                            <div className="flex items-center gap-2.5 mb-3">
+                                <div className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <Upload className="text-white" size={18} />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-stone-800 font-serif">İçe Aktar</h3>
-                                    <p className="text-xs text-stone-500">
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="font-bold text-stone-800 font-serif text-sm">İçe Aktar</h3>
+                                    <p className="text-[11px] text-stone-500">
                                         {importData.gardens.length} bahçe, {importData.nodes.length} not
                                     </p>
                                 </div>
                             </div>
 
-                            <p className="text-sm text-stone-600 mb-5">
+                            <p className="text-xs text-stone-600 mb-3">
                                 Verileri nasıl içe aktarmak istiyorsunuz?
                             </p>
 
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <button
                                     onClick={handleImportReplace}
-                                    className="w-full flex items-center gap-3 px-3 py-2.5 bg-red-50 hover:bg-red-100 active:bg-red-200 border border-red-200 rounded-xl transition-all text-left"
+                                    className="w-full flex items-center gap-2 px-2.5 py-2 bg-red-50 hover:bg-red-100 active:bg-red-200 border border-red-200 rounded-lg transition-all text-left min-h-[44px]"
                                 >
-                                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-red-100 rounded-lg">
-                                        <Database size={16} className="text-red-600" />
+                                    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-red-100 rounded-md">
+                                        <Database size={14} className="text-red-600" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-red-700 text-sm">Verileri Değiştir</p>
-                                        <p className="text-xs text-red-500 truncate">Mevcut veriler silinir, yenileri eklenir</p>
+                                        <p className="font-medium text-red-700 text-xs">Verileri Değiştir</p>
+                                        <p className="text-[10px] text-red-500">Mevcut veriler silinir</p>
                                     </div>
                                 </button>
 
                                 <button
                                     onClick={handleImportAppend}
-                                    className="w-full flex items-center gap-3 px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200 rounded-xl transition-all text-left"
+                                    className="w-full flex items-center gap-2 px-2.5 py-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200 rounded-lg transition-all text-left min-h-[44px]"
                                 >
-                                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-emerald-100 rounded-lg">
-                                        <Upload size={16} className="text-emerald-600" />
+                                    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-emerald-100 rounded-md">
+                                        <Upload size={14} className="text-emerald-600" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-emerald-700 text-sm">Verilere Ekle</p>
-                                        <p className="text-xs text-emerald-500 truncate">Mevcut veriler korunur, yenileri eklenir</p>
+                                        <p className="font-medium text-emerald-700 text-xs">Verilere Ekle</p>
+                                        <p className="text-[10px] text-emerald-500">Mevcut veriler korunur</p>
                                     </div>
                                 </button>
 
                                 <button
                                     onClick={handleImportCancel}
-                                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-xl transition-all"
+                                    className="w-full flex items-center justify-center gap-1.5 px-2 py-2 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 border border-stone-200 rounded-lg transition-all min-h-[40px]"
                                 >
-                                    <X size={16} className="text-stone-600" />
-                                    <span className="font-medium text-stone-600 text-sm">İptal</span>
+                                    <X size={14} className="text-stone-600" />
+                                    <span className="font-medium text-stone-600 text-xs">İptal</span>
                                 </button>
                             </div>
                         </motion.div>
