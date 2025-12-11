@@ -655,7 +655,7 @@ export default function Sidebar() {
         }
     };
 
-    // Ortak içe aktarma fonksiyonu - Optimize edilmiş batch insert
+    // Ortak içe aktarma fonksiyonu - Tek tek insert ile güvenilir ID eşleştirmesi
     const importGardenData = async (data: { gardens: any[]; nodes: any[] }) => {
         if (!user) return;
 
@@ -663,34 +663,33 @@ export default function Sidebar() {
         const gardenIdMap: Record<string, string> = {};
         const nodeIdMap: Record<string, string> = {};
 
-        // Bahçeleri toplu ekle
-        const gardensToInsert = data.gardens.map(garden => ({
-            name: garden.name,
-            user_id: user.id,
-            view_state: garden.view_state
-        }));
+        // Bahçeleri tek tek ekle (sıralama garantisi için)
+        for (const garden of data.gardens) {
+            const { data: insertedGarden, error: gardenError } = await supabase
+                .from('gardens')
+                .insert({
+                    name: garden.name,
+                    user_id: user.id,
+                    view_state: garden.view_state
+                })
+                .select()
+                .single();
 
-        const { data: insertedGardens, error: gardenError } = await supabase
-            .from('gardens')
-            .insert(gardensToInsert)
-            .select();
+            if (gardenError) {
+                console.error('Garden insert error:', gardenError);
+                throw gardenError;
+            }
 
-        if (gardenError) throw gardenError;
-
-        // Eski ID -> Yeni ID eşleştirmesi
-        if (insertedGardens) {
-            data.gardens.forEach((oldGarden, index) => {
-                if (insertedGardens[index]) {
-                    gardenIdMap[oldGarden.id] = insertedGardens[index].id;
-                }
-            });
+            if (insertedGarden) {
+                gardenIdMap[garden.id] = insertedGarden.id;
+            }
         }
 
-        // Node'ları seviyelerine göre grupla (performanslı)
+        // Node'ları seviyelerine göre grupla
         const nodesByLevel: Map<number, any[]> = new Map();
         const nodeLevelCache: Map<string, number> = new Map();
 
-        // Önce parent_id olmayan (root) node'ları bul
+        // Node seviyesini hesapla
         const getNodeLevel = (nodeId: string): number => {
             if (nodeLevelCache.has(nodeId)) {
                 return nodeLevelCache.get(nodeId)!;
@@ -720,39 +719,32 @@ export default function Sidebar() {
         for (const level of sortedLevels) {
             const nodesAtLevel = nodesByLevel.get(level)!;
 
-            // Bu seviyedeki node'ları hazırla
-            const nodesToInsert = nodesAtLevel
-                .filter(node => gardenIdMap[node.garden_id]) // Sadece eşleşen bahçeler
-                .map(node => ({
-                    garden_id: gardenIdMap[node.garden_id],
-                    parent_id: node.parent_id ? nodeIdMap[node.parent_id] : null,
-                    content: node.content,
-                    position_x: node.position_x,
-                    position_y: node.position_y,
-                    is_expanded: node.is_expanded ?? true
-                }));
+            // Bu seviyedeki node'ları tek tek ekle (sıralama garantisi için)
+            for (const node of nodesAtLevel) {
+                // Bahçe eşleşmesi yoksa atla
+                if (!gardenIdMap[node.garden_id]) continue;
 
-            if (nodesToInsert.length === 0) continue;
+                const { data: insertedNode, error: nodeError } = await supabase
+                    .from('nodes')
+                    .insert({
+                        garden_id: gardenIdMap[node.garden_id],
+                        parent_id: node.parent_id ? nodeIdMap[node.parent_id] : null,
+                        content: node.content,
+                        position_x: node.position_x,
+                        position_y: node.position_y,
+                        is_expanded: node.is_expanded ?? true
+                    })
+                    .select()
+                    .single();
 
-            // Toplu insert
-            const { data: insertedNodes, error: nodeError } = await supabase
-                .from('nodes')
-                .insert(nodesToInsert)
-                .select();
+                if (nodeError) {
+                    console.error('Node insert error:', nodeError);
+                    throw nodeError;
+                }
 
-            if (nodeError) {
-                console.error('Node batch insert error:', nodeError);
-                throw nodeError;
-            }
-
-            // ID eşleştirmesini güncelle
-            if (insertedNodes) {
-                const filteredNodesAtLevel = nodesAtLevel.filter(node => gardenIdMap[node.garden_id]);
-                filteredNodesAtLevel.forEach((oldNode, index) => {
-                    if (insertedNodes[index]) {
-                        nodeIdMap[oldNode.id] = insertedNodes[index].id;
-                    }
-                });
+                if (insertedNode) {
+                    nodeIdMap[node.id] = insertedNode.id;
+                }
             }
         }
     };

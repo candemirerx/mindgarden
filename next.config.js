@@ -10,6 +10,22 @@ const nextConfig = {
       },
     ],
   },
+  // Performans optimizasyonları
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+  },
+  // Bundle analizi için
+  webpack: (config, { isServer }) => {
+    // Tree shaking için
+    config.optimization = {
+      ...config.optimization,
+      sideEffects: true,
+    };
+    return config;
+  },
 }
 
 module.exports = nextConfig
