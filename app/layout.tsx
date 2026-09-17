@@ -1,17 +1,18 @@
-import type { Metadata } from 'next';
-import { Inter, Merriweather } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Inter, Fraunces } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ 
+const inter = Inter({
     subsets: ['latin'],
     variable: '--font-inter',
     display: 'swap',
 });
 
-const merriweather = Merriweather({ 
+// Başlıklar için editoryal serif: organik/köklenmiş kimliği korur,
+// Merriweather'ın ağır görünümü yerine daha ince ve modern bir duruş verir.
+const fraunces = Fraunces({
     subsets: ['latin'],
-    weight: ['300', '400', '700', '900'],
-    variable: '--font-merriweather',
+    variable: '--font-display',
     display: 'swap',
 });
 
@@ -20,14 +21,22 @@ export const metadata: Metadata = {
     description: 'Bahçe ve ağaç temalı, modern zihin haritası not tutma uygulaması',
 };
 
+export const viewport: Viewport = {
+    themeColor: '#F9F6F1',
+    width: 'device-width',
+    initialScale: 1,
+    // Mobil klavye açıldığında sayfanın zıplamasını engeller.
+    maximumScale: 5,
+};
+
 export default function RootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
     return (
-        <html lang="tr" className={`${inter.variable} ${merriweather.variable}`}>
-            <body className={inter.className}>{children}</body>
+        <html lang="tr" className={`${inter.variable} ${fraunces.variable}`}>
+            <body className="font-sans antialiased">{children}</body>
         </html>
     );
 }

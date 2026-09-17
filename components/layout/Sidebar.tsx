@@ -2,12 +2,28 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType, ChevronDown } from 'lucide-react';
+import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType, ChevronDown, Sparkles, Key, Trash2 } from 'lucide-react';
 import { useStore } from '@/lib/store/useStore';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, isLocalBackend } from '@/lib/supabaseClient';
+import { signInAsGuest } from '@/lib/localClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+
+const PRODUCTION_URL = 'https://mindgarden-neon.vercel.app';
+
+/**
+ * OAuth dönüş adresi için origin.
+ *
+ * Sabit production adresi kullanıldığında localhost'ta yapılan bir giriş
+ * kullanıcıyı production'a fırlatıyordu. Tarayıcıda bulunduğumuz origin'i,
+ * yerel paketten çalışan native uygulamada ise production adresini kullanırız.
+ */
+function getOAuthOrigin(): string {
+    if (typeof window === 'undefined') return PRODUCTION_URL;
+    if (!/^https?:$/.test(window.location.protocol)) return PRODUCTION_URL;
+    return window.location.origin;
+}
 
 export default function Sidebar() {
     const { isSidebarOpen, setSidebarOpen, gardens, fetchGardens } = useStore();
@@ -21,6 +37,8 @@ export default function Sidebar() {
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [aiKey, setAiKey] = useState('');
+    const [isAiKeySaved, setIsAiKeySaved] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [authError, setAuthError] = useState('');
     const [authLoading, setAuthLoading] = useState(false);
@@ -60,6 +78,12 @@ export default function Sidebar() {
             if (mounted) {
                 setUser(session?.user ?? null);
                 setIsLoading(false);
+                // AI key'i yükle
+                const storedKey = localStorage.getItem('nb-gemini-key');
+                if (storedKey) {
+                    setAiKey(storedKey);
+                    setIsAiKeySaved(true);
+                }
             }
         };
         initAuth();
@@ -81,7 +105,7 @@ export default function Sidebar() {
         try {
             // OAuth URL'ini al ve manuel yönlendir
             // Bu sayede WebView içinde kalır, harici tarayıcı açılmaz
-            const callbackUrl = 'https://mindgarden-neon.vercel.app/auth/callback';
+            const callbackUrl = `${getOAuthOrigin()}/auth/callback`;
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
@@ -107,6 +131,14 @@ export default function Sidebar() {
         } finally {
             setAuthLoading(false);
         }
+    };
+
+    // Şifresiz yerel giriş - form doldurmaya gerek kalmadan oturum açar
+    const handleGuestSignIn = () => {
+        signInAsGuest();
+        setAuthError('');
+        setSuccessMessage('');
+        setSidebarOpen(false);
     };
 
     const handleSignOut = async () => {
@@ -159,6 +191,20 @@ export default function Sidebar() {
         }
     };
 
+    const handleSaveAiKey = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (aiKey.trim()) {
+            localStorage.setItem('nb-gemini-key', aiKey.trim());
+            setIsAiKeySaved(true);
+            setSuccessMessage('Yapay zeka anahtarı kaydedildi!');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        } else {
+            localStorage.removeItem('nb-gemini-key');
+            setAiKey('');
+            setIsAiKeySaved(false);
+        }
+    };
+
     // E-posta ile kayıt
     const handleEmailSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -190,7 +236,12 @@ export default function Sidebar() {
                     setAuthError(error.message);
                 }
             } else {
-                setSuccessMessage('Kayıt başarılı! E-postanızı kontrol edin.');
+                // Yerel modda e-posta doğrulaması yok, hesap anında açılır.
+                setSuccessMessage(
+                    isLocalBackend
+                        ? 'Kayıt başarılı! Yerel moddasınız, doğrudan giriş yapıldı.'
+                        : 'Kayıt başarılı! E-postanızı kontrol edin.'
+                );
                 setEmail('');
                 setPassword('');
             }
@@ -345,24 +396,46 @@ export default function Sidebar() {
     <title>Not Bahçesi - Dışa Aktarım</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px; background: #fafaf9; color: #1c1917; line-height: 1.5; }
-        h1 { color: #166534; text-align: center; margin-bottom: 8px; font-size: 28px; }
-        .subtitle { text-align: center; color: #78716c; margin-bottom: 32px; font-size: 14px; }
-        .garden { margin-bottom: 32px; padding: 20px; background: #f5f5f4; border-radius: 16px; border: 1px solid #e7e5e4; }
-        .garden h2 { color: #166534; margin-bottom: 16px; font-size: 20px; }
-        .empty { color: #a8a29e; font-style: italic; }
+        body {
+            font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 860px; margin: 0 auto; padding: 40px 20px 64px;
+            background: #f6f3ee; color: #1e1813; line-height: 1.55;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1 { color: #275939; text-align: center; margin-bottom: 6px; font-size: 30px; letter-spacing: -0.02em; }
+        .subtitle { text-align: center; color: #7c7268; margin-bottom: 36px; font-size: 13px; }
+        .garden {
+            margin-bottom: 24px; padding: 22px; background: #fff;
+            border-radius: 16px; border: 1px solid #eae5de;
+            box-shadow: 0 1px 3px rgba(29,21,16,0.05), 0 8px 24px -10px rgba(29,21,16,0.12);
+        }
+        .garden h2 { color: #275939; margin-bottom: 16px; font-size: 19px; letter-spacing: -0.01em; }
+        .empty { color: #ada396; font-style: italic; }
+        .node { padding: 6px 0; }
         .node-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .icon { font-size: 16px; }
-        .title { color: #166534; font-size: 15px; }
-        .copy-btn { padding: 4px 8px; font-size: 11px; background: #ecfccb; border: 1px solid #bef264; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-        .copy-btn:hover { background: #d9f99d; }
-        .copy-btn.copied { background: #22c55e; color: white; border-color: #22c55e; }
-        .toggle-btn { padding: 4px 10px; font-size: 11px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 6px; cursor: pointer; transition: all 0.2s; color: #0369a1; }
-        .toggle-btn:hover { background: #bae6fd; }
-        .toggle-btn.open { background: #0ea5e9; color: white; border-color: #0ea5e9; }
-        .content { margin-left: 28px; margin-top: 8px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e7e5e4; color: #57534e; white-space: pre-wrap; font-size: 14px; }
+        .icon { font-size: 15px; }
+        .title { color: #2c251d; font-size: 15px; font-weight: 600; }
+        .copy-btn {
+            padding: 3px 9px; font-size: 11px; font-weight: 600;
+            background: #f0f7ef; border: 1px solid #bbdcc1; color: #306c47;
+            border-radius: 7px; cursor: pointer; transition: background 0.18s, border-color 0.18s;
+        }
+        .copy-btn:hover { background: #deedda; }
+        .copy-btn.copied { background: #44825b; color: #fff; border-color: #44825b; }
+        .toggle-btn {
+            padding: 3px 10px; font-size: 11px; font-weight: 600;
+            background: #fdf8e9; border: 1px solid #f4dc94; color: #8c5210;
+            border-radius: 7px; cursor: pointer; transition: background 0.18s, border-color 0.18s;
+        }
+        .toggle-btn:hover { background: #faedc9; }
+        .toggle-btn.open { background: #c9841b; color: #fff; border-color: #c9841b; }
+        .content {
+            margin: 8px 0 0 26px; padding: 12px 14px; background: #fbf9f6;
+            border-radius: 10px; border: 1px solid #eae5de; color: #5b5348;
+            white-space: pre-wrap; font-size: 14px;
+        }
         .content.hidden { display: none; }
-        .children { margin-top: 12px; }
+        .children { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -776,69 +849,70 @@ export default function Sidebar() {
                             animate={{ x: 0 }}
                             exit={{ x: '-100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed left-0 top-0 h-full w-80 bg-gradient-to-b from-[#f4f1ea] to-[#e8e4dc] shadow-2xl z-50 flex flex-col overflow-hidden"
+                            className="fixed left-0 top-0 z-50 flex h-full w-80 flex-col overflow-hidden border-r border-sand-200 bg-sand-50/95 backdrop-blur-xl shadow-pop"
                         >
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-6 border-b border-stone-300/50">
+                            {/* Başlık */}
+                            <div className="flex items-center justify-between border-b border-sand-200 px-5 py-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-green-700 rounded-xl flex items-center justify-center shadow-lg">
-                                        <TreePine className="text-white" size={20} />
-                                    </div>
+                                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-moss-600 to-moss-800 shadow-soft">
+                                        <TreePine className="text-moss-50" size={20} />
+                                    </span>
                                     <div>
-                                        <h2 className="font-bold text-stone-800 font-serif">Not Bahçesi</h2>
-                                        <p className="text-xs text-stone-500">Ayarlar</p>
+                                        <h2 className="text-base font-semibold text-sand-900">Not Bahçesi</h2>
+                                        <p className="text-xs text-sand-500">Ayarlar</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setSidebarOpen(false)}
-                                    className="p-2 hover:bg-stone-200/50 rounded-full transition-colors"
+                                    aria-label="Kapat"
+                                    className="rounded-xl p-2 text-sand-500 transition-colors duration-200 hover:bg-sand-200 hover:text-sand-700"
                                 >
-                                    <X size={20} className="text-stone-600" />
+                                    <X size={19} />
                                 </button>
                             </div>
 
-                            {/* Scrollable Content */}
+                            {/* Kaydırılabilir içerik */}
                             <div className="flex-1 overflow-y-auto">
-                                <div className="p-6 space-y-6">
+                                <div className="space-y-5 p-5">
                                     {isLoading ? (
-                                        <div className="flex items-center justify-center h-32">
-                                            <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                        <div className="flex h-32 items-center justify-center">
+                                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-sand-300 border-t-moss-600" />
                                         </div>
                                     ) : user ? (
                                         <>
-                                            {/* Profil Kartı */}
-                                            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 border border-stone-200/50 shadow-sm">
-                                                <div className="flex items-center gap-4">
+                                            {/* Profil */}
+                                            <div className="rounded-2xl border border-sand-200 bg-white p-4 shadow-soft">
+                                                <div className="flex items-center gap-3.5">
                                                     {user.user_metadata?.avatar_url ? (
                                                         <img
                                                             src={user.user_metadata.avatar_url}
                                                             alt="Profil"
-                                                            className="w-14 h-14 rounded-full border-2 border-emerald-500/30 shadow-md"
+                                                            className="h-12 w-12 rounded-full ring-2 ring-moss-200"
                                                         />
                                                     ) : (
-                                                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
-                                                            <User className="text-white" size={24} />
-                                                        </div>
+                                                        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-moss-500 to-moss-700">
+                                                            <User className="text-white" size={22} />
+                                                        </span>
                                                     )}
-                                                    <div className="flex-1 min-w-0">
-                                                        <h3 className="font-semibold text-stone-800 truncate">
+                                                    <div className="min-w-0 flex-1">
+                                                        <h3 className="truncate text-sm font-semibold text-sand-900">
                                                             {user.user_metadata?.full_name || 'Kullanıcı'}
                                                         </h3>
-                                                        <p className="text-sm text-stone-500 truncate">{user.email}</p>
+                                                        <p className="truncate text-xs text-sand-500">{user.email}</p>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2 text-stone-600 text-sm">
-                                                <Leaf size={16} className="text-emerald-600" />
+                                            <div className="flex items-center gap-2 px-1 text-sm text-sand-600">
+                                                <Leaf size={15} className="text-moss-600" />
                                                 <span>Bahçene hoş geldin!</span>
                                             </div>
 
                                             {/* Veri Yönetimi Bölümü */}
-                                            <div className="pt-4 border-t border-stone-300/50">
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <Database size={18} className="text-amber-600" />
-                                                    <h4 className="font-semibold text-stone-700">Veri Yönetimi</h4>
+                                            <div className="border-t border-sand-200 pt-4">
+                                                <div className="mb-3 flex items-center gap-2">
+                                                    <Database size={17} className="text-clay-600" />
+                                                    <h4 className="text-sm font-semibold text-sand-800">Veri Yönetimi</h4>
                                                 </div>
 
                                                 <div className="space-y-2">
@@ -852,28 +926,28 @@ export default function Sidebar() {
                                                     />
 
                                                     {/* Export Section */}
-                                                    <div className="bg-white/60 border border-stone-200 rounded-xl overflow-hidden">
+                                                    <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
                                                         <button
                                                             onClick={handleExportClick}
                                                             disabled={isExporting || gardens.length === 0}
-                                                            className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="flex w-full items-center justify-between gap-3 px-4 py-3 transition-colors duration-200 hover:bg-sand-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                         >
                                                             <div className="flex items-center gap-3">
                                                                 {isExporting ? (
-                                                                    <Loader2 size={18} className="text-emerald-600 animate-spin" />
+                                                                    <Loader2 size={18} className="text-moss-600 animate-spin" />
                                                                 ) : (
-                                                                    <Download size={18} className="text-emerald-600" />
+                                                                    <Download size={18} className="text-moss-600" />
                                                                 )}
                                                                 <div className="text-left">
-                                                                    <p className="font-medium text-stone-700 text-sm">Dışa Aktar</p>
-                                                                    <p className="text-xs text-stone-500">JSON, HTML veya PDF</p>
+                                                                    <p className="font-medium text-sand-700 text-sm">Dışa Aktar</p>
+                                                                    <p className="text-xs text-sand-500">JSON, HTML veya PDF</p>
                                                                 </div>
                                                             </div>
                                                             <motion.div
                                                                 animate={{ rotate: showExportOptions ? 180 : 0 }}
                                                                 transition={{ duration: 0.2 }}
                                                             >
-                                                                <ChevronDown size={16} className="text-stone-400" />
+                                                                <ChevronDown size={16} className="text-sand-400" />
                                                             </motion.div>
                                                         </button>
 
@@ -886,20 +960,20 @@ export default function Sidebar() {
                                                                     transition={{ duration: 0.2 }}
                                                                     className="overflow-hidden"
                                                                 >
-                                                                    <div className="px-4 pb-4 pt-2 border-t border-stone-200 space-y-3">
+                                                                    <div className="px-4 pb-4 pt-2 border-t border-sand-200 space-y-3">
                                                                         {exportStep === 'select' ? (
                                                                             <>
-                                                                                <p className="text-xs text-stone-600">
+                                                                                <p className="text-xs text-sand-600">
                                                                                     {selectedGardenIds.size} / {exportData.gardens.length} bahçe seçili
                                                                                 </p>
 
                                                                                 {/* Tümünü Seç */}
                                                                                 <button
                                                                                     onClick={() => { selectAllGardens(); setExportStep('format'); }}
-                                                                                    className="w-full flex items-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all text-left"
+                                                                                    className="w-full flex items-center gap-2 px-3 py-2 bg-moss-50 hover:bg-moss-100 border border-moss-200 rounded-lg transition-all text-left"
                                                                                 >
-                                                                                    <TreePine size={14} className="text-emerald-600" />
-                                                                                    <span className="text-xs font-medium text-emerald-700">Tümünü Seç ve Devam</span>
+                                                                                    <TreePine size={14} className="text-moss-600" />
+                                                                                    <span className="text-xs font-medium text-moss-700">Tümünü Seç ve Devam</span>
                                                                                 </button>
 
                                                                                 {/* Bahçe listesi */}
@@ -912,15 +986,15 @@ export default function Sidebar() {
                                                                                                 key={garden.id}
                                                                                                 onClick={() => toggleGardenSelection(garden.id)}
                                                                                                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-left text-xs ${isSelected
-                                                                                                    ? 'bg-emerald-100 border border-emerald-400'
-                                                                                                    : 'bg-white/80 border border-stone-200 hover:border-emerald-300'
+                                                                                                    ? 'bg-moss-100 border border-moss-400'
+                                                                                                    : 'bg-white/80 border border-sand-200 hover:border-moss-300'
                                                                                                     }`}
                                                                                             >
-                                                                                                <div className={`w-4 h-4 rounded flex items-center justify-center ${isSelected ? 'bg-emerald-500' : 'bg-stone-200'}`}>
+                                                                                                <div className={`w-4 h-4 rounded flex items-center justify-center ${isSelected ? 'bg-moss-500' : 'bg-sand-200'}`}>
                                                                                                     {isSelected && <span className="text-white text-[10px]">✓</span>}
                                                                                                 </div>
-                                                                                                <span className="flex-1 truncate text-stone-700">{garden.name}</span>
-                                                                                                <span className="text-stone-400">{nodeCount} not</span>
+                                                                                                <span className="flex-1 truncate text-sand-700">{garden.name}</span>
+                                                                                                <span className="text-sand-400">{nodeCount} not</span>
                                                                                             </button>
                                                                                         );
                                                                                     })}
@@ -929,42 +1003,42 @@ export default function Sidebar() {
                                                                                 <button
                                                                                     onClick={() => setExportStep('format')}
                                                                                     disabled={selectedGardenIds.size === 0}
-                                                                                    className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                    className="w-full py-2 bg-moss-500 hover:bg-moss-600 text-white text-xs font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                                                 >
                                                                                     Devam
                                                                                 </button>
                                                                             </>
                                                                         ) : (
                                                                             <>
-                                                                                <p className="text-xs text-stone-600">Format seçin:</p>
+                                                                                <p className="text-xs text-sand-600">Format seçin:</p>
 
                                                                                 <div className="grid grid-cols-3 gap-2">
                                                                                     <button
                                                                                         onClick={handleExportJSON}
-                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-all"
+                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-clay-50 hover:bg-clay-100 border border-clay-200 rounded-lg transition-all"
                                                                                     >
-                                                                                        <FileJson size={18} className="text-amber-600" />
-                                                                                        <span className="text-xs font-medium text-amber-700">JSON</span>
+                                                                                        <FileJson size={18} className="text-clay-600" />
+                                                                                        <span className="text-xs font-medium text-clay-700">JSON</span>
                                                                                     </button>
                                                                                     <button
                                                                                         onClick={handleExportHTML}
-                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg transition-all"
+                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-moss-50 hover:bg-moss-100 border border-moss-200 rounded-lg transition-all"
                                                                                     >
-                                                                                        <FileText size={18} className="text-sky-600" />
-                                                                                        <span className="text-xs font-medium text-sky-700">HTML</span>
+                                                                                        <FileText size={18} className="text-moss-600" />
+                                                                                        <span className="text-xs font-medium text-moss-700">HTML</span>
                                                                                     </button>
                                                                                     <button
                                                                                         onClick={handleExportPDF}
-                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-all"
+                                                                                        className="flex flex-col items-center gap-1 px-3 py-3 bg-berry-50 hover:bg-berry-100 border border-berry-200 rounded-lg transition-all"
                                                                                     >
-                                                                                        <FileType size={18} className="text-rose-600" />
-                                                                                        <span className="text-xs font-medium text-rose-700">PDF</span>
+                                                                                        <FileType size={18} className="text-berry-600" />
+                                                                                        <span className="text-xs font-medium text-berry-700">PDF</span>
                                                                                     </button>
                                                                                 </div>
 
                                                                                 <button
                                                                                     onClick={() => setExportStep('select')}
-                                                                                    className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium rounded-lg transition-all"
+                                                                                    className="w-full py-2 bg-sand-100 hover:bg-sand-200 text-sand-600 text-xs font-medium rounded-lg transition-all"
                                                                                 >
                                                                                     ← Geri
                                                                                 </button>
@@ -977,7 +1051,7 @@ export default function Sidebar() {
                                                     </div>
 
                                                     {/* Import Section */}
-                                                    <div className="bg-white/60 border border-stone-200 rounded-xl overflow-hidden">
+                                                    <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
                                                         <button
                                                             onClick={() => {
                                                                 if (showImportOptions) {
@@ -987,17 +1061,17 @@ export default function Sidebar() {
                                                                 }
                                                             }}
                                                             disabled={isImporting}
-                                                            className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="flex w-full items-center justify-between gap-3 px-4 py-3 transition-colors duration-200 hover:bg-sand-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                         >
                                                             <div className="flex items-center gap-3">
                                                                 {isImporting ? (
-                                                                    <Loader2 size={18} className="text-amber-600 animate-spin" />
+                                                                    <Loader2 size={18} className="text-clay-600 animate-spin" />
                                                                 ) : (
-                                                                    <Upload size={18} className="text-amber-600" />
+                                                                    <Upload size={18} className="text-clay-600" />
                                                                 )}
                                                                 <div className="text-left">
-                                                                    <p className="font-medium text-stone-700 text-sm">İçe Aktar</p>
-                                                                    <p className="text-xs text-stone-500">JSON dosyasından yükle</p>
+                                                                    <p className="font-medium text-sand-700 text-sm">İçe Aktar</p>
+                                                                    <p className="text-xs text-sand-500">JSON dosyasından yükle</p>
                                                                 </div>
                                                             </div>
                                                             {showImportOptions && (
@@ -1005,7 +1079,7 @@ export default function Sidebar() {
                                                                     animate={{ rotate: 180 }}
                                                                     transition={{ duration: 0.2 }}
                                                                 >
-                                                                    <ChevronDown size={16} className="text-stone-400" />
+                                                                    <ChevronDown size={16} className="text-sand-400" />
                                                                 </motion.div>
                                                             )}
                                                         </button>
@@ -1019,36 +1093,36 @@ export default function Sidebar() {
                                                                     transition={{ duration: 0.2 }}
                                                                     className="overflow-hidden"
                                                                 >
-                                                                    <div className="px-4 pb-4 pt-2 border-t border-stone-200 space-y-3">
-                                                                        <p className="text-xs text-stone-600">
+                                                                    <div className="px-4 pb-4 pt-2 border-t border-sand-200 space-y-3">
+                                                                        <p className="text-xs text-sand-600">
                                                                             {importData.gardens.length} bahçe, {importData.nodes.length} not bulundu
                                                                         </p>
 
                                                                         <button
                                                                             onClick={handleImportAppend}
-                                                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all text-left"
+                                                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-moss-50 hover:bg-moss-100 border border-moss-200 rounded-lg transition-all text-left"
                                                                         >
-                                                                            <Upload size={16} className="text-emerald-600" />
+                                                                            <Upload size={16} className="text-moss-600" />
                                                                             <div>
-                                                                                <p className="text-xs font-medium text-emerald-700">Mevcut Verilere Ekle</p>
-                                                                                <p className="text-[10px] text-emerald-500">Verileriniz korunur</p>
+                                                                                <p className="text-xs font-medium text-moss-700">Mevcut Verilere Ekle</p>
+                                                                                <p className="text-[10px] text-moss-500">Verileriniz korunur</p>
                                                                             </div>
                                                                         </button>
 
                                                                         <button
                                                                             onClick={handleImportReplace}
-                                                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all text-left"
+                                                                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-berry-50 hover:bg-berry-100 border border-berry-200 rounded-lg transition-all text-left"
                                                                         >
-                                                                            <Database size={16} className="text-red-600" />
+                                                                            <Database size={16} className="text-berry-600" />
                                                                             <div>
-                                                                                <p className="text-xs font-medium text-red-700">Verileri Değiştir</p>
-                                                                                <p className="text-[10px] text-red-500">Mevcut veriler silinir</p>
+                                                                                <p className="text-xs font-medium text-berry-700">Verileri Değiştir</p>
+                                                                                <p className="text-[10px] text-berry-500">Mevcut veriler silinir</p>
                                                                             </div>
                                                                         </button>
 
                                                                         <button
                                                                             onClick={handleImportCancel}
-                                                                            className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium rounded-lg transition-all"
+                                                                            className="w-full py-2 bg-sand-100 hover:bg-sand-200 text-sand-600 text-xs font-medium rounded-lg transition-all"
                                                                         >
                                                                             İptal
                                                                         </button>
@@ -1059,31 +1133,39 @@ export default function Sidebar() {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            
                                         </>
                                     ) : (
                                         /* Giriş Yapılmamış */
                                         <div className="space-y-5">
                                             <div className="text-center py-4">
-                                                <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full flex items-center justify-center">
-                                                    <User className="text-emerald-600" size={28} />
+                                                <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-moss-100 to-moss-100 rounded-full flex items-center justify-center">
+                                                    <User className="text-moss-600" size={28} />
                                                 </div>
-                                                <h3 className="font-semibold text-stone-800 mb-1">
+                                                <h3 className="font-semibold text-sand-800 mb-1">
                                                     {authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol'}
                                                 </h3>
-                                                <p className="text-xs text-stone-500">Notlarınızı kaydetmek için giriş yapın</p>
+                                                <p className="text-xs text-sand-500">Notlarınızı kaydetmek için giriş yapın</p>
                                             </div>
+
+                                            {isLocalBackend && (
+                                                <div className="rounded-xl border border-clay-200 bg-clay-50 px-3 py-2 text-[11px] leading-relaxed text-clay-800">
+                                                    <span className="font-semibold">Yerel mod.</span> Supabase altyapısı bağlı değil; veriler bu tarayıcıda saklanır ve şifre doğrulaması yapılmaz. Altyapı kurulduğunda otomatik olarak buluta geçer.
+                                                </div>
+                                            )}
 
                                             {/* E-posta Formu */}
                                             <form onSubmit={authMode === 'login' ? handleEmailSignIn : handleEmailSignUp} className="space-y-3">
                                                 <div className="relative">
-                                                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                                                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-sand-400" />
                                                     <input
                                                         type="email"
                                                         value={email}
                                                         onChange={(e) => setEmail(e.target.value)}
                                                         placeholder="E-posta"
                                                         required
-                                                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500"
+                                                        className="input pl-10"
                                                     />
                                                 </div>
                                                 <div className="relative">
@@ -1094,28 +1176,28 @@ export default function Sidebar() {
                                                         placeholder="Şifre"
                                                         required
                                                         minLength={6}
-                                                        className="w-full pl-4 pr-10 py-2.5 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500"
+                                                        className="input pr-10"
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPassword(!showPassword)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-sand-400 hover:text-sand-600"
                                                     >
                                                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                                     </button>
                                                 </div>
 
                                                 {authError && (
-                                                    <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{authError}</p>
+                                                    <p className="rounded-xl border border-berry-200 bg-berry-50 px-3 py-2 text-xs text-berry-700">{authError}</p>
                                                 )}
                                                 {successMessage && (
-                                                    <p className="text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">{successMessage}</p>
+                                                    <p className="rounded-xl border border-moss-200 bg-moss-50 px-3 py-2 text-xs text-moss-700">{successMessage}</p>
                                                 )}
 
                                                 <button
                                                     type="submit"
                                                     disabled={authLoading}
-                                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-sm transition-colors disabled:opacity-50"
+                                                    className="btn btn-primary w-full py-2.5 text-sm"
                                                 >
                                                     {authLoading ? (
                                                         <Loader2 size={16} className="animate-spin" />
@@ -1133,24 +1215,35 @@ export default function Sidebar() {
                                                         setAuthError('');
                                                         setSuccessMessage('');
                                                     }}
-                                                    className="text-xs text-emerald-600 hover:underline"
+                                                    className="text-xs text-moss-600 hover:underline"
                                                 >
                                                     {authMode === 'login' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
                                                 </button>
                                             </div>
 
+                                            {isLocalBackend ? (
+                                                <button
+                                                    onClick={handleGuestSignIn}
+                                                    title="Altyapı bağlı olmadığı için şifre sormadan bu cihazda oturum açar"
+                                                    className="btn w-full border border-clay-300 bg-clay-50 px-4 py-3 text-sm text-clay-800 hover:bg-clay-100"
+                                                >
+                                                    <Sparkles size={18} />
+                                                    <span className="text-sm">Yerel Modda Giriş Yap</span>
+                                                </button>
+                                            ) : (
+                                                <>
                                             <div className="relative">
                                                 <div className="absolute inset-0 flex items-center">
-                                                    <div className="w-full border-t border-stone-200"></div>
+                                                    <div className="w-full border-t border-sand-200"></div>
                                                 </div>
                                                 <div className="relative flex justify-center text-xs">
-                                                    <span className="px-2 bg-[#f0ece5] text-stone-500">veya</span>
+                                                    <span className="px-2 bg-sand-200 text-sand-500">veya</span>
                                                 </div>
                                             </div>
 
                                             <button
                                                 onClick={handleGoogleSignIn}
-                                                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-white hover:bg-stone-50 border border-stone-200 rounded-xl shadow-sm transition-all hover:shadow-md"
+                                                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-white hover:bg-sand-50 border border-sand-200 rounded-xl shadow-soft transition-all hover:shadow-soft"
                                             >
                                                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                                                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -1158,31 +1251,88 @@ export default function Sidebar() {
                                                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                                                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                                                 </svg>
-                                                <span className="font-medium text-stone-700 text-sm">Google ile Giriş</span>
+                                                <span className="font-medium text-sand-700 text-sm">Google ile Giriş</span>
                                             </button>
+                                                </>
+                                            )}
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Footer - Çıkış Butonu */}
+                            {/* Yapay Zeka (Kullanici Panele Dahil) */}
                             {user && (
-                                <div className="p-6 border-t border-stone-300/50">
-                                    <button
-                                        onClick={handleSignOut}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                                    >
-                                        <LogOut size={18} />
-                                        <span className="font-medium">Çıkış Yap</span>
-                                    </button>
+                                <div className="px-5 pb-5">
+                                    {/* Yapay Zeka Ayarları Bölümü */}
+                                            <div className="border-t border-sand-200 pt-4">
+                                                <div className="mb-3 flex items-center gap-2">
+                                                    <Sparkles size={17} className="text-clay-600" />
+                                                    <h4 className="text-sm font-semibold text-sand-800">Yapay Zeka</h4>
+                                                </div>
+                                                <form onSubmit={handleSaveAiKey} className="space-y-2">
+                                                    <div className="relative">
+                                                        <Key size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-sand-400" />
+                                                        <input
+                                                            type="password"
+                                                            value={aiKey}
+                                                            onChange={(e) => {
+                                                                setAiKey(e.target.value);
+                                                                if (isAiKeySaved && e.target.value !== localStorage.getItem('nb-gemini-key')) {
+                                                                    setIsAiKeySaved(false);
+                                                                }
+                                                            }}
+                                                            placeholder="Gemini API Anahtarı"
+                                                            className="input py-2 pl-9 pr-4 text-xs font-mono placeholder:font-sans"
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="submit"
+                                                            disabled={!aiKey.trim() && !isAiKeySaved}
+                                                            className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${isAiKeySaved
+                                                                    ? 'bg-moss-100 text-moss-700'
+                                                                    : 'bg-sand-800 text-white hover:bg-sand-900'
+                                                                }`}
+                                                        >
+                                                            {isAiKeySaved ? 'Kaydedildi ✓' : 'Anahtarı Kaydet'}
+                                                        </button>
+                                                        {isAiKeySaved && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    localStorage.removeItem('nb-gemini-key');
+                                                                    setAiKey('');
+                                                                    setIsAiKeySaved(false);
+                                                                    setSuccessMessage('Anahtar silindi.');
+                                                                    setTimeout(() => setSuccessMessage(''), 2500);
+                                                                }}
+                                                                className="rounded-lg p-2 text-berry-600 hover:bg-berry-50 transition-colors"
+                                                                title="Anahtarı Sil"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-sand-500 leading-relaxed pt-1">
+                                                        Editördeki imla düzeltme vb. AI özellikleri için kendi Gemini anahtarınızı kullanabilirsiniz. Yalnızca bu cihazda kalır.
+                                                    </p>
+                                                </form>
+                                            </div>
                                 </div>
                             )}
 
-                            {/* Dekoratif */}
-                            <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none overflow-hidden">
-                                <div className="absolute -bottom-16 -left-8 w-32 h-32 bg-emerald-200/20 rounded-full blur-2xl" />
-                                <div className="absolute -bottom-8 right-4 w-24 h-24 bg-amber-200/20 rounded-full blur-2xl" />
-                            </div>
+                            {/* Alt eylem - Çıkış */}
+                            {user && (
+                                <div className="border-t border-sand-200 p-4">
+                                    <button
+                                        onClick={handleSignOut}
+                                        className="btn w-full px-4 py-2.5 text-sm text-berry-600 hover:bg-berry-50"
+                                    >
+                                        <LogOut size={17} />
+                                        <span>Çıkış Yap</span>
+                                    </button>
+                                </div>
+                            )}
                         </motion.aside>
                     </>
                 )}

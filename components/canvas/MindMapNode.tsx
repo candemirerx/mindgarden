@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, FileText } from 'lucide-react';
+import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, TreePine, Leaf, Check, Palette } from 'lucide-react';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 
@@ -23,7 +23,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     depth
 }) => {
     const [isHovered, setIsHovered] = useState(false);
-    const [showCopied, setShowCopied] = useState(false);
     const [isExpanded, setIsExpanded] = useState(node.isExpanded ?? true);
     const [showMenuOnMobile, setShowMenuOnMobile] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -38,32 +37,19 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
         };
-
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    const handleCopy = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        // Sadece içeriği kopyala (başlık hariç - ilk satırdan sonraki kısım)
-        const lines = node.content.split('\n');
-        const contentOnly = lines.slice(1).join('\n').trim();
-        navigator.clipboard.writeText(contentOnly);
-        setShowCopied(true);
-        setTimeout(() => setShowCopied(false), 2000);
-    };
-
     const handleCopyTitle = (e: React.MouseEvent) => {
         e.stopPropagation();
         navigator.clipboard.writeText(node.title);
         setShowTitleCopied(true);
-        setTimeout(() => setShowTitleCopied(false), 2000);
+        setTimeout(() => setShowTitleCopied(false), 1500);
     };
 
-
-
-    const { updateNode, selectedNodeId, setSelectedNode, toggleNodeExpansion } = useStore();
+    const { updateNode, selectedNodeId, setSelectedNode, toggleNodeExpansion, toggleNodeType } = useStore();
 
     const toggleExpand = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -72,19 +58,15 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         toggleNodeExpansion(node.id, newState);
     };
 
-    // Düğüm tıklama mantığı
     const handleNodeClick = (e: React.MouseEvent | React.TouchEvent) => {
         e.stopPropagation();
-
         if (isMobile) {
-            // Mobilde: Menü kapalıysa aç, açıksa başlığı düzenle
             if (!showMenuOnMobile) {
                 setShowMenuOnMobile(true);
             } else {
                 setIsEditingTitle(true);
             }
         } else {
-            // Masaüstünde: Seçili değilse seç, seçiliyse bir şey yapma (başlığa tıklanmasını bekle)
             if (selectedNodeId !== node.id) {
                 setSelectedNode(node.id);
             }
@@ -102,12 +84,8 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         }
     };
 
-
-
-    // Başlık düzenlemeyi kaydet
     const handleSaveTitle = async () => {
         if (editedTitle.trim() && editedTitle !== node.title) {
-            // Başlığı içeriğin ilk satırı olarak güncelle
             const lines = node.content.split('\n');
             lines[0] = editedTitle.trim();
             const newContent = lines.join('\n');
@@ -116,7 +94,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         setIsEditingTitle(false);
     };
 
-    // Enter tuşu ile kaydet, Escape ile iptal
     const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             handleSaveTitle();
@@ -126,7 +103,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         }
     };
 
-    // Input focus olduğunda seç
     useEffect(() => {
         if (isEditingTitle && titleInputRef.current) {
             titleInputRef.current.focus();
@@ -134,33 +110,12 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         }
     }, [isEditingTitle]);
 
-    const getBgColor = (d: number) => {
-        if (d === 0) return 'bg-[#5D4037] text-[#EFEBE9] border-4 border-[#3E2723] shadow-xl shadow-[#3E2723]/40';
-        if (d === 1) return 'bg-[#8D6E63] text-white border-2 border-[#5D4037] shadow-lg shadow-[#5D4037]/30';
-        if (d === 2) return 'bg-[#66BB6A] text-white border-2 border-[#388E3C] shadow-lg shadow-[#388E3C]/30';
-        return 'bg-[#A5D6A7] text-[#1B5E20] border-2 border-[#81C784] shadow-md shadow-[#81C784]/20';
-    };
-
-    const getTextColor = (d: number) => {
-        if (d <= 1) return 'text-[#EFEBE9] font-serif tracking-wide';
-        return 'text-[#1B5E20] font-medium';
-    };
-
-    const getIconColor = (d: number) => {
-        if (d === 0) return 'bg-[#3E2723] text-[#D7CCC8] border-[#5D4037]';
-        if (d === 1) return 'bg-[#5D4037] text-[#D7CCC8] border-[#8D6E63]';
-        return 'bg-[#2E7D32] text-[#E8F5E9] border-[#66BB6A]';
-    };
-
-    const getNodeSize = (d: number) => {
-        if (d === 0) return 'min-w-[200px] max-w-[300px]';
-        if (d === 1) return 'min-w-[140px] max-w-[280px] md:min-w-[160px] md:max-w-[320px] rounded-[20px] rounded-br-[40px] rounded-tl-[40px]';
-        return 'min-w-[120px] max-w-[240px] md:min-w-[140px] md:max-w-[280px] rounded-[20px] rounded-tr-[40px] rounded-bl-[40px]';
-    };
-
     const hasChildren = node.children && node.children.length > 0;
+    const isSelected = selectedNodeId === node.id;
 
-    // Kök Düğüm
+    // =========================================================================
+    // KÖK DÜĞÜM (DEPTH 0)
+    // =========================================================================
     if (depth === 0) {
         return (
             <li>
@@ -170,141 +125,146 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     onMouseLeave={() => setIsHovered(false)}
                     onClick={handleNodeClick}
                 >
-                    <div className={`
-                        absolute -top-12 left-1/2 transform -translate-x-1/2 
-                        flex items-center gap-1 bg-[#fffbf7] backdrop-blur-lg p-1.5 rounded-full shadow-xl border border-[#d7ccc8]
-                        transition-all duration-200 z-40
-                        ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
-                    `}>
+                {/* Üst Yüzen Eylem Araç Çubuğu */}
+                {/* NOT: after:absolute after:inset-x-0 after:-bottom-3 after:h-3 kısmı, 
+                    menü ile düğüm arasında görünmez bir köprü oluşturur. 
+                    Böylece fareyi yukarı kaydırırken menü kaybolmaz. */}
+                <div className={`
+                    absolute bottom-full mb-1 left-1/2 -translate-x-1/2 
+                    flex items-center gap-0.5 glass p-1 rounded-xl shadow-lift border border-sand-200
+                    transition-all duration-200 z-40
+                    after:absolute after:inset-x-0 after:-bottom-2 after:h-2
+                    ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
+                `}>
                         <button
                             onClick={(e) => { e.stopPropagation(); onEdit(node); }}
-                            className="p-2 text-[#5D4037] hover:text-[#3E2723] hover:bg-[#efebe9] rounded-full transition-colors touch-manipulation"
-                            title="Metin Editörü"
+                            className="p-1.5 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
+                            title="Tam Editör"
+                            aria-label="Tam Editör"
                         >
-                            <Pencil size={16} />
-                        </button>
-                        <button
-                            onClick={handleCopy}
-                            className="p-2 text-[#5D4037] hover:text-[#F57C00] hover:bg-[#FFF3E0] rounded-full transition-colors touch-manipulation"
-                            title={showCopied ? "Not Kopyalandı!" : "Notu Kopyala"}
-                        >
-                            <FileText size={16} />
+                            <Pencil size={14} />
                         </button>
                         <button
                             onClick={handleCopyTitle}
-                            className="p-2 text-[#5D4037] hover:text-[#2E7D32] hover:bg-[#E8F5E9] rounded-full transition-colors touch-manipulation"
-                            title={showTitleCopied ? "Başlık Kopyalandı!" : "Başlığı Kopyala"}
+                            className="p-1.5 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
+                            title={showTitleCopied ? "Kopyalandı!" : "Başlığı Kopyala"}
+                            aria-label="Başlığı Kopyala"
                         >
-                            <Copy size={16} />
+                            {showTitleCopied ? <Check size={14} className="text-moss-600" /> : <Copy size={14} />}
                         </button>
-                    </div>
-
-                    <div
-                        className="relative flex flex-col items-center cursor-pointer transition-transform duration-300 hover:scale-105"
-                    >
-                        <div className="
-                            relative z-20 
-                            min-w-[240px] max-w-[340px] p-8
-                            bg-gradient-to-b from-[#66BB6A] to-[#43A047]
-                            text-white text-center
-                            rounded-[3rem]
-                            border-4 border-[#2E7D32]/20
-                            shadow-[0_10px_20px_rgba(46,125,50,0.3)]
-                            flex flex-col items-center justify-center
-                        ">
-                            <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/10 to-transparent rounded-t-[3rem] pointer-events-none" />
-
-                            {isEditingTitle ? (
-                                <input
-                                    ref={titleInputRef}
-                                    type="text"
-                                    value={editedTitle}
-                                    onChange={(e) => setEditedTitle(e.target.value)}
-                                    onKeyDown={handleTitleKeyDown}
-                                    onBlur={handleSaveTitle}
-                                    className="font-bold text-xl mb-2 relative z-10 font-serif tracking-wide drop-shadow-sm bg-white/20 text-white px-3 py-1 rounded-lg border-2 border-white/40 outline-none w-full text-center"
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            ) : (
-
-                                <h4
-                                    className="font-bold text-xl mb-2 relative z-10 font-serif tracking-wide drop-shadow-sm cursor-text"
-                                    onClick={handleTitleClick}
-                                >
-                                    {node.title}
-                                </h4>
-                            )}
-
-                        </div>
-
-                        <div className="
-                            w-12 h-16 
-                            bg-gradient-to-r from-[#5D4037] via-[#795548] to-[#5D4037]
-                            -mt-4 pt-4
-                            rounded-b-xl rounded-t-sm
-                            border-x-2 border-b-2 border-[#3E2723]/30
-                            shadow-inner
-                            relative z-10
-                        " />
-
-                        <div className="absolute -bottom-2 w-24 h-4 bg-[#3E2723]/10 blur-md rounded-full z-0" />
-
                         <button
                             onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                            className={`
-                                absolute -bottom-4 left-1/2 transform -translate-x-1/2
-                                w-10 h-10 rounded-full flex items-center justify-center
-                                bg-[#2E7D32] text-white border-3 border-white shadow-lg
-                                hover:scale-110 hover:bg-[#1B5E20] active:scale-95 transition-all duration-300
-                                ${isExpanded ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'}
-                                z-30
-                            `}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-moss-700 hover:bg-moss-100 rounded-xl transition-colors"
                             title="Yeni Dal Ekle"
                         >
-                            <Plus size={20} />
+                            <Plus size={13} />
+                            <span>Dal Ekle</span>
                         </button>
+                    </div>
+
+                    {/* Kök Kartı: Zarif orman yeşili, temiz tipografi */}
+                    <div
+                        className={`
+                            relative z-20 flex min-w-[220px] max-w-[340px] flex-col items-center justify-center
+                            rounded-3xl bg-gradient-to-br from-moss-700 via-moss-800 to-moss-900
+                            px-7 py-6 text-center text-white
+                            shadow-lift transition-all duration-200 cursor-pointer
+                            ${isSelected ? 'ring-4 ring-moss-500/40 scale-[1.02]' : 'ring-1 ring-moss-950/40 hover:scale-[1.01] hover:shadow-pop'}
+                        `}
+                    >
+                        {/* Kök Düşünce Etiketi */}
+                        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-moss-100 backdrop-blur-sm">
+                            <TreePine size={12} />
+                            <span>Kök Düşünce</span>
+                        </div>
+
+                        {isEditingTitle ? (
+                            <input
+                                ref={titleInputRef}
+                                type="text"
+                                value={editedTitle}
+                                onChange={(e) => setEditedTitle(e.target.value)}
+                                onKeyDown={handleTitleKeyDown}
+                                onBlur={handleSaveTitle}
+                                className="w-full rounded-xl border border-white/40 bg-white/20 px-3 py-1 text-center font-serif text-xl font-semibold tracking-tight text-white outline-none ring-2 ring-white/40"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        ) : (
+                            <h4
+                                className="cursor-text font-serif text-xl font-semibold tracking-tight text-white transition-opacity hover:opacity-90"
+                                onClick={handleTitleClick}
+                            >
+                                {node.title}
+                            </h4>
+                        )}
 
                         {hasChildren && (
-                            <button
-                                onClick={toggleExpand}
-                                className="
-                                    absolute bottom-16 left-1/2 transform -translate-x-1/2 translate-x-24
-                                    w-8 h-8 rounded-full flex items-center justify-center
-                                    bg-amber-600 text-white border-2 border-white shadow-md
-                                    hover:scale-110 active:scale-95 transition-all duration-300
-                                    opacity-0 group-hover:opacity-100
-                                    z-30
-                                "
-                                title={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
-                            >
-                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                            </button>
+                            <p className="mt-1 text-xs text-moss-200/80">
+                                {node.children.length} ana dal
+                            </p>
                         )}
                     </div>
+
+                    {/* Alt Bağlantı Noktası: Yeni Dal Ekle düğmesi */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
+                        className={`
+                            absolute -bottom-3 left-1/2 -translate-x-1/2
+                            flex h-6 w-6 items-center justify-center rounded-full
+                            bg-white text-moss-700 border-2 border-moss-400 shadow-soft
+                            transition-all duration-200 hover:scale-110 hover:bg-moss-50 hover:border-moss-500 active:scale-95
+                            ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                            z-30
+                        `}
+                        title="Yeni Dal Ekle"
+                        aria-label="Yeni Dal Ekle"
+                    >
+                        <Plus size={16} />
+                    </button>
+
+                    {/* Eğer çocukları varsa: Katla / Aç Rozeti */}
+                    {hasChildren && (
+                        <button
+                            onClick={toggleExpand}
+                            className="absolute -bottom-3 left-1/2 translate-x-4 flex h-6 w-6 items-center justify-center rounded-full bg-sand-100 text-bark-800 border-2 border-white shadow-soft transition-all duration-200 hover:scale-110 hover:bg-sand-200 z-30 text-xs font-bold"
+                            title={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
+                            aria-label={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
+                        >
+                            {isExpanded ? <ChevronDown size={14} /> : <span>{node.children.length}</span>}
+                        </button>
+                    )}
                 </div>
 
-                {
-                    hasChildren && isExpanded && (
-                        <ul>
-                            {node.children.map(child => (
-                                <MindMapNode
-                                    key={child.id}
-                                    node={child}
-                                    onAddChild={onAddChild}
-                                    onAddSibling={(siblingId, direction) => onAddChild(node.id, direction)}
-                                    onDelete={onDelete}
-                                    onEdit={onEdit}
-                                    depth={depth + 1}
-                                />
-                            ))}
-                        </ul>
-                    )
-                }
-            </li >
+                {hasChildren && isExpanded && (
+                    <ul>
+                        {node.children.map(child => (
+                            <MindMapNode
+                                key={child.id}
+                                node={child}
+                                onAddChild={onAddChild}
+                                onAddSibling={(siblingId, direction) => onAddChild(node.id, direction)}
+                                onDelete={onDelete}
+                                onEdit={onEdit}
+                                depth={depth + 1}
+                            />
+                        ))}
+                    </ul>
+                )}
+            </li>
         );
     }
 
-    // Diğer Düğümler
+    // =========================================================================
+    // DAL VE YAPRAK DÜĞÜMLERİ (DEPTH >= 1)
+    // =========================================================================
+    // Eğer node.nodeType belirtilmişse o kullanılır, yoksa default olarak:
+    // Derinlik 1 ise 'branch' (Dal/Sarı), daha derinse 'leaf' (Yaprak/Yeşil) kabul edilir.
+    const resolvedType = node.nodeType && node.nodeType !== 'auto'
+        ? node.nodeType
+        : (depth === 1 ? 'branch' : 'leaf');
+
+    const isBranchStyle = resolvedType === 'branch';
+
     return (
         <li>
             <div
@@ -313,180 +273,184 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={handleNodeClick}
             >
+                {/* Üst Yüzen Eylem Araç Çubuğu */}
+                {/* Görünmez köprü (after:) ile farenin boşluktan düşmesi engellenir */}
                 <div className={`
-          absolute -top-10 md:-top-12 left-1/2 transform -translate-x-1/2 
-          flex items-center gap-1 bg-[#fffbf7] backdrop-blur-lg p-1.5 md:p-2 rounded-full shadow-xl border border-[#d7ccc8]
-          transition-all duration-200 z-20
-          ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
-        `}>
+                    absolute bottom-full mb-1 left-1/2 -translate-x-1/2 
+                    flex items-center gap-0.5 glass p-1 rounded-xl shadow-lift border border-sand-200
+                    transition-all duration-200 z-30
+                    after:absolute after:inset-x-0 after:-bottom-2 after:h-2
+                    ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
+                `}>
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(node); }}
-                        className="p-1.5 md:p-2 text-[#5D4037] hover:text-[#3E2723] hover:bg-[#efebe9] rounded-full transition-colors touch-manipulation"
+                        className="p-1.5 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-lg transition-colors"
                         title="Metin Editörü"
+                        aria-label="Metin Editörü"
                     >
-                        <Pencil size={14} className="md:w-4 md:h-4" />
-                    </button>
-                    <button
-                        onClick={handleCopy}
-                        className="p-1.5 md:p-2 text-[#5D4037] hover:text-[#F57C00] hover:bg-[#FFF3E0] rounded-full transition-colors touch-manipulation"
-                        title={showCopied ? "Not Kopyalandı!" : "Notu Kopyala"}
-                    >
-                        <FileText size={14} className="md:w-4 md:h-4" />
+                        <Pencil size={13} />
                     </button>
                     <button
                         onClick={handleCopyTitle}
-                        className="p-1.5 md:p-2 text-[#5D4037] hover:text-[#2E7D32] hover:bg-[#E8F5E9] rounded-full transition-colors touch-manipulation"
-                        title={showTitleCopied ? "Başlık Kopyalandı!" : "Başlığı Kopyala"}
+                        className="p-1.5 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-lg transition-colors"
+                        title={showTitleCopied ? "Kopyalandı!" : "Kopyala"}
+                        aria-label="Kopyala"
                     >
-                        <Copy size={14} className="md:w-4 md:h-4" />
+                        {showTitleCopied ? <Check size={13} className="text-moss-600" /> : <Copy size={13} />}
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
+                        className="p-1.5 text-berry-600 hover:bg-berry-50 rounded-lg transition-colors"
+                        title="Dalı Sil"
+                        aria-label="Dalı Sil"
+                    >
+                        <X size={13} />
                     </button>
                 </div>
 
+                {/* Düğüm Kartı:
+                    Dal: Kalın border ve dolgulu amber (clay) filiz ikonu
+                    Yaprak: Standart ince border ve açık yeşil yaprak ikonu */}
                 <div
                     className={`
-            node-content relative z-10 px-4 py-3 md:px-6 md:py-4 shadow-lg cursor-pointer 
-            ${getNodeSize(depth)}
-            transition-all duration-300 hover:scale-105 active:scale-95
-            ${getBgColor(depth)}
-            touch-manipulation
-            flex flex-col justify-center
-          `}
+                        node-content relative z-10 flex cursor-pointer flex-col justify-center
+                        min-w-[140px] max-w-[280px] px-4 py-3 rounded-2xl bg-white text-sand-900
+                        transition-all duration-200 ease-smooth shadow-soft hover:shadow-card
+                        ${isBranchStyle
+                            ? 'border-2 border-clay-400 hover:border-clay-500'
+                            : 'border border-sand-300 hover:border-moss-400'
+                        }
+                        ${isSelected ? 'ring-4 ring-moss-500/20 scale-[1.03]' : 'hover:scale-[1.02]'}
+                    `}
                 >
-                    {depth > 1 && (
-                        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
-                    )}
+                    <div className="flex items-center gap-2">
+                        {isBranchStyle ? (
+                            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-clay-500 text-white flex-shrink-0">
+                                <Plus size={14} />
+                            </span>
+                        ) : (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-moss-100 text-moss-700 flex-shrink-0">
+                                <Leaf size={12} />
+                            </span>
+                        )}
 
-                    {isEditingTitle ? (
-                        <input
-                            ref={titleInputRef}
-                            type="text"
-                            value={editedTitle}
-                            onChange={(e) => setEditedTitle(e.target.value)}
-                            onKeyDown={handleTitleKeyDown}
-                            onBlur={handleSaveTitle}
-                            className={`font-bold text-sm md:text-base ${getTextColor(depth)} relative z-10 bg-white/30 px-2 py-1 rounded border-2 border-white/50 outline-none w-full`}
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                    ) : (
-
-                        <h4
-                            className={`font-bold text-sm md:text-base truncate ${getTextColor(depth)} relative z-10 cursor-text`}
-                            onClick={handleTitleClick}
-                        >
-                            {node.title}
-                        </h4>
-                    )}
-
-
-                    {onAddSibling && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'left'); }}
-                            className={`
-                                absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2
-                                w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center
-                                border-2 shadow-md
-                                ${getIconColor(depth)}
-                                hover:scale-110 active:scale-95 transition-all duration-300
-                                ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                                touch-manipulation
-                                z-20
-                            `}
-                            title="Sol Yan Dal Ekle"
-                        >
-                            <Plus size={16} className="md:w-4 md:h-4" />
-                        </button>
-                    )}
-
-                    {onAddSibling && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'right'); }}
-                            className={`
-                                absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2
-                                w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center
-                                border-2 shadow-md
-                                ${getIconColor(depth)}
-                                hover:scale-110 active:scale-95 transition-all duration-300
-                                ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                                touch-manipulation
-                                z-20
-                            `}
-                            title="Sağ Yan Dal Ekle"
-                        >
-                            <Plus size={16} className="md:w-4 md:h-4" />
-                        </button>
-                    )}
-
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                        className={`
-              absolute -bottom-3 left-1/2 transform -translate-x-1/2
-              w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center
-              border-2 shadow-md
-              ${getIconColor(depth)}
-              hover:scale-110 active:scale-95 transition-all duration-300
-              ${isExpanded ? ((isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none') : 'opacity-0 pointer-events-none'}
-              touch-manipulation
-            `}
-                        title="Filizlendir"
-                    >
-                        <Plus size={16} className="md:w-4 md:h-4" />
-                    </button>
-
-                    {depth > 0 && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
-                            className={`
-                                absolute -bottom-4 left-[15%]
-                                w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center
-                                bg-red-100 text-red-600 border border-red-200 shadow-sm
-                                hover:bg-red-600 hover:text-white hover:border-red-700 hover:scale-110 
-                                active:scale-95 transition-all duration-300
-                                ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                                z-30
-                            `}
-                            title="Dalı Sil"
-                        >
-                            <X size={12} className="md:w-3.5 md:h-3.5" />
-                        </button>
-                    )}
-
-                    {hasChildren && (
-                        <button
-                            onClick={toggleExpand}
-                            className={`
-                                absolute -bottom-3 left-1/2 transform -translate-x-1/2 translate-x-8
-                                w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center
-                                border-2 shadow-md
-                                bg-amber-600 text-white border-amber-700
-                                hover:scale-110 active:scale-95 transition-all duration-300
-                                ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                                touch-manipulation
-                            `}
-                            title={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
-                        >
-                            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        </button>
-                    )}
+                        <div className="flex-1 min-w-0">
+                            {isEditingTitle ? (
+                                <input
+                                    ref={titleInputRef}
+                                    type="text"
+                                    value={editedTitle}
+                                    onChange={(e) => setEditedTitle(e.target.value)}
+                                    onKeyDown={handleTitleKeyDown}
+                                    onBlur={handleSaveTitle}
+                                    className="w-full rounded-md border border-moss-400 bg-sand-50 px-2 py-0.5 text-sm font-semibold outline-none ring-2 ring-moss-500/20"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            ) : (
+                                <h4
+                                    className="truncate text-[15px] font-semibold cursor-text text-sand-900"
+                                    onClick={handleTitleClick}
+                                >
+                                    {node.title}
+                                </h4>
+                            )}
+                        </div>
+                    </div>
                 </div>
+
+                {/* TİP DEĞİŞTİRME BUTONU (SOL KENAR) */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleNodeType(node.id, resolvedType);
+                    }}
+                    className={`
+                        absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2
+                        flex h-5 w-5 items-center justify-center rounded-full
+                        border-2 shadow-soft transition-all duration-200 hover:scale-110 active:scale-95
+                        ${isBranchStyle
+                            ? 'bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400'
+                            : 'bg-white text-clay-600 border-clay-300 hover:bg-clay-50 hover:border-clay-400'
+                        }
+                        ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                        z-20
+                    `}
+                    title={isBranchStyle ? "Yaprağa Dönüştür" : "Dala Dönüştür"}
+                    aria-label={isBranchStyle ? "Yaprağa Dönüştür" : "Dala Dönüştür"}
+                >
+                    {isBranchStyle ? <Leaf size={11} /> : <Palette size={11} />}
+                </button>
+
+                {/* Alt Dala Ekle Düğmesi (Aşağı) */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
+                    className={`
+                        absolute -bottom-3 left-1/2 -translate-x-1/2
+                        flex h-5 w-5 items-center justify-center rounded-full
+                        bg-white text-moss-600 border-2 border-moss-300 shadow-soft
+                        transition-all duration-200 hover:scale-110 hover:bg-moss-50 hover:border-moss-400 active:scale-95
+                        ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                        z-20
+                    `}
+                    title="Alt Dal Ekle"
+                    aria-label="Alt Dal Ekle"
+                >
+                    <Plus size={14} />
+                </button>
+
+                {/* Katla / Aç Rozeti (Aşağı, sağa kayık) */}
+                {hasChildren && (
+                    <button
+                        onClick={toggleExpand}
+                        className={`
+                            absolute -bottom-3 left-1/2 translate-x-3.5
+                            flex h-5 w-5 items-center justify-center rounded-full
+                            bg-sand-100 text-sand-600 border border-sand-300 shadow-soft
+                            transition-all duration-200 hover:scale-110 hover:bg-sand-200 active:scale-95
+                            z-20 text-[10px] font-bold
+                        `}
+                        title={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
+                        aria-label={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
+                    >
+                        {isExpanded ? <ChevronDown size={14} /> : <span>{node.children.length}</span>}
+                    </button>
+                )}
+
+                {/* Yan Dal Ekle (Sağ Kenar) */}
+                {onAddSibling && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'right'); }}
+                        className={`
+                            absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2
+                            flex h-5 w-5 items-center justify-center rounded-full
+                            bg-white text-clay-600 border-2 border-clay-300 shadow-soft
+                            transition-all duration-200 hover:scale-110 hover:bg-clay-50 hover:border-clay-400 active:scale-95
+                            ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                            z-20
+                        `}
+                        title="Yan Dal Ekle"
+                        aria-label="Yan Dal Ekle"
+                    >
+                        <Plus size={14} />
+                    </button>
+                )}
             </div>
 
-            {
-                hasChildren && isExpanded && (
-                    <ul>
-                        {node.children.map(child => (
-                            <MindMapNode
-                                key={child.id}
-                                node={child}
-                                onAddChild={onAddChild}
-                                onAddSibling={(siblingId) => onAddChild(node.id)}
-                                onDelete={onDelete}
-                                onEdit={onEdit}
-                                depth={depth + 1}
-                            />
-                        ))}
-                    </ul>
-                )
-            }
-        </li >
+            {hasChildren && isExpanded && (
+                <ul>
+                    {node.children.map(child => (
+                        <MindMapNode
+                            key={child.id}
+                            node={child}
+                            onAddChild={onAddChild}
+                            onAddSibling={(siblingId) => onAddChild(node.id, 'right')}
+                            onDelete={onDelete}
+                            onEdit={onEdit}
+                            depth={depth + 1}
+                        />
+                    ))}
+                </ul>
+            )}
+        </li>
     );
 };

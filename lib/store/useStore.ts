@@ -314,4 +314,27 @@ export const useStore = create<StoreState>((set, get) => ({
             console.error('Node genişletme durumu güncellenirken hata:', JSON.stringify(error, null, 2));
         }
     },
+
+    toggleNodeType: async (id: string, currentType: 'branch' | 'leaf' | 'auto') => {
+        try {
+            // auto -> branch -> leaf -> auto döngüsü
+            const nextType = currentType === 'auto' ? 'branch' : currentType === 'branch' ? 'leaf' : 'auto';
+
+            // Optimistic update
+            set((state) => ({
+                nodes: state.nodes.map((n) =>
+                    n.id === id ? { ...n, node_type: nextType } : n
+                ),
+            }));
+
+            const { error } = await supabase
+                .from('nodes')
+                .update({ node_type: nextType })
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Node tipi güncellenirken hata:', JSON.stringify(error, null, 2));
+        }
+    },
 }));

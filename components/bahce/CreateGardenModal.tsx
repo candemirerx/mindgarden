@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store/useStore';
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, Sprout } from 'lucide-react';
 
 interface CreateGardenModalProps {
     isOpen: boolean;
@@ -14,6 +14,26 @@ export default function CreateGardenModal({ isOpen, onClose }: CreateGardenModal
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { addGarden } = useStore();
+
+    const handleClose = () => {
+        setError(null);
+        setGardenName('');
+        onClose();
+    };
+
+    // Esc ile kapatma
+    useEffect(() => {
+        if (!isOpen) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setError(null);
+                setGardenName('');
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, onClose]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,69 +53,81 @@ export default function CreateGardenModal({ isOpen, onClose }: CreateGardenModal
         }
     };
 
-    const handleClose = () => {
-        setError(null);
-        setGardenName('');
-        onClose();
-    };
-
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 animate-fade-in">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-scale-in">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-branch-800">Yeni Bahçe Oluştur</h2>
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bark-950/45 backdrop-blur-sm animate-fade-in"
+            onClick={handleClose}
+            role="presentation"
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="create-garden-title"
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md rounded-3xl border border-sand-200 bg-white p-7 shadow-pop animate-scale-in"
+            >
+                <div className="mb-6 flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-moss-100 text-moss-700">
+                            <Sprout size={22} />
+                        </span>
+                        <div>
+                            <h2 id="create-garden-title" className="text-xl font-semibold text-sand-900">
+                                Yeni Bahçe
+                            </h2>
+                            <p className="text-sm text-sand-600">Notlarınızı gruplayacağınız bir alan açın</p>
+                        </div>
+                    </div>
                     <button
                         onClick={handleClose}
-                        className="p-2 hover:bg-gray-100 rounded-full smooth-transition"
+                        aria-label="Kapat"
+                        className="rounded-xl p-2 text-sand-500 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-700"
                     >
-                        <X size={24} className="text-branch-600" />
+                        <X size={20} />
                     </button>
                 </div>
 
-                {/* Error Message */}
                 {error && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
-                        <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-600">{error}</p>
+                    <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-berry-200 bg-berry-50 p-3">
+                        <AlertCircle size={18} className="mt-0.5 flex-shrink-0 text-berry-500" />
+                        <p className="text-sm text-berry-700">{error}</p>
                     </div>
                 )}
 
-                {/* Form */}
                 <form onSubmit={handleSubmit}>
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-branch-700 mb-2">
-                            Bahçe Adı
+                        <label htmlFor="garden-name" className="label">
+                            Bahçe adı
                         </label>
                         <input
+                            id="garden-name"
                             type="text"
                             value={gardenName}
                             onChange={(e) => setGardenName(e.target.value)}
                             placeholder="Örn: Yapay Zeka Notları"
-                            className="input-field"
+                            className="input"
                             autoFocus
                             disabled={isLoading}
                         />
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-3">
                         <button
                             type="button"
                             onClick={handleClose}
-                            className="btn-secondary flex-1"
+                            className="btn btn-secondary flex-1 px-5 py-2.5"
                             disabled={isLoading}
                         >
                             İptal
                         </button>
                         <button
                             type="submit"
-                            className="btn-primary flex-1"
+                            className="btn btn-primary flex-1 px-5 py-2.5"
                             disabled={isLoading || !gardenName.trim()}
                         >
-                            {isLoading ? 'Oluşturuluyor...' : 'Oluştur'}
+                            {isLoading ? 'Oluşturuluyor…' : 'Oluştur'}
                         </button>
                     </div>
                 </form>

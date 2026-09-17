@@ -10,7 +10,8 @@ const isMobileApp = isClient && (
 );
 
 // Production Vercel URL'i - mobil uygulama için
-const VERCEL_URL = process.env.NEXT_PUBLIC_VERCEL_URL || 'https://not-bahcesi.vercel.app';
+// not-bahcesi.vercel.app kaldırılmıştı (404 dönüyordu), ayakta olan dağıtım kullanılıyor.
+const VERCEL_URL = process.env.NEXT_PUBLIC_VERCEL_URL || 'https://mindgarden-neon.vercel.app';
 
 // API Base URL belirleme
 export const API_BASE_URL = (() => {

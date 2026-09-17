@@ -115,13 +115,19 @@ export default function EditorPage() {
         setIsSpellChecking(true);
 
         try {
+            // İstemcinin girdiği API anahtarını al (yoksa sunucudaki default kullanılır)
+            const clientApiKey = localStorage.getItem('nb-gemini-key') || '';
+
             const response = await fetch('/api/spellcheck', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: textToCheck })
+                body: JSON.stringify({ text: textToCheck, clientApiKey })
             });
 
-            if (!response.ok) throw new Error('API hatası');
+            if (!response.ok) {
+                const errData = await response.json().catch(() => null);
+                throw new Error(errData?.error || 'API hatası');
+            }
 
             const data = await response.json();
             const correctedText = data.correctedText;
@@ -139,9 +145,9 @@ export default function EditorPage() {
                 setPendingSpellCheck({ original: content, corrected: correctedText });
                 setContent(correctedText);
             }
-        } catch (error) {
-            console.error('Spellcheck error:', error);
-            alert('İmla düzeltme sırasında bir hata oluştu.');
+        } catch (error: any) {
+            console.error('İmla düzeltme hatası:', error);
+            alert(error.message || 'İmla düzeltme işlemi başarısız oldu.');
         } finally {
             setIsSpellChecking(false);
         }
@@ -231,20 +237,20 @@ export default function EditorPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f0f0f0] flex flex-col">
+        <div className="min-h-screen bg-sand-200 flex flex-col">
             {/* Header */}
-            <header className="bg-white border-b border-stone-300">
+            <header className="bg-white border-b border-sand-300">
                 <div className="flex items-center justify-between px-4 sm:px-6 py-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <button
                             onClick={handleClose}
-                            className="p-2 hover:bg-stone-100 rounded-lg transition-colors"
+                            className="p-2 hover:bg-sand-100 rounded-lg transition-colors"
                             title="Geri Dön"
                         >
-                            <ArrowLeft size={20} className="text-stone-600" />
+                            <ArrowLeft size={20} className="text-sand-600" />
                         </button>
                         <div className="min-w-0 flex-1">
-                            <h1 className="text-base sm:text-lg font-semibold text-stone-800 truncate">
+                            <h1 className="text-base sm:text-lg font-semibold text-sand-800 truncate">
                                 {title || 'Başlıksız Not'}
                             </h1>
                         </div>
@@ -254,7 +260,7 @@ export default function EditorPage() {
                         {/* Kopyala */}
                         <button
                             onClick={handleCopy}
-                            className={`p-2.5 rounded-lg transition-all ${showCopied ? 'bg-green-100 text-green-600' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-700'}`}
+                            className={`p-2.5 rounded-lg transition-all ${showCopied ? 'bg-moss-100 text-moss-600' : 'text-sand-500 hover:bg-sand-100 hover:text-sand-700'}`}
                             title="İçeriği Kopyala"
                         >
                             {showCopied ? <Check size={20} /> : <Copy size={20} />}
@@ -264,23 +270,23 @@ export default function EditorPage() {
                         <div className="relative" ref={exportMenuRef}>
                             <button
                                 onClick={() => setShowExportMenu(!showExportMenu)}
-                                className="p-2.5 text-stone-500 hover:bg-stone-100 hover:text-stone-700 rounded-lg transition-colors"
+                                className="p-2.5 text-sand-500 hover:bg-sand-100 hover:text-sand-700 rounded-lg transition-colors"
                                 title="Dışa Aktar"
                             >
                                 <Download size={20} />
                             </button>
 
                             {showExportMenu && (
-                                <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl py-1.5 min-w-[150px] z-50">
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-sand-200 rounded-xl shadow-lift py-1.5 min-w-[150px] z-50">
                                     <button
                                         onClick={handleExportPDF}
-                                        className="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                                        className="w-full px-4 py-2.5 text-left text-sm text-sand-700 hover:bg-sand-50 transition-colors"
                                     >
                                         PDF olarak indir
                                     </button>
                                     <button
                                         onClick={handleExportWord}
-                                        className="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                                        className="w-full px-4 py-2.5 text-left text-sm text-sand-700 hover:bg-sand-50 transition-colors"
                                     >
                                         Word olarak indir
                                     </button>
@@ -289,7 +295,7 @@ export default function EditorPage() {
                         </div>
 
                         {/* Ayırıcı */}
-                        <div className="h-6 w-px bg-stone-200 mx-1" />
+                        <div className="h-6 w-px bg-sand-200 mx-1" />
 
                         {/* Otomatik Kaydet Toggle + Kaydet Butonu */}
                         <div className="flex flex-col items-center gap-0.5">
@@ -299,9 +305,9 @@ export default function EditorPage() {
                                     type="checkbox"
                                     checked={autoSave}
                                     onChange={(e) => setAutoSave(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-stone-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                                    className="w-3.5 h-3.5 rounded border-sand-300 text-moss-600 focus:ring-moss-500 focus:ring-offset-0 cursor-pointer"
                                 />
-                                <span className="text-[10px] text-stone-500">Oto</span>
+                                <span className="text-[10px] text-sand-500">Oto</span>
                             </label>
 
                             {/* Kaydet butonu */}
@@ -310,10 +316,10 @@ export default function EditorPage() {
                                 disabled={!hasChanges || isSaving || autoSave}
                                 className={`p-2 rounded-lg transition-all ${
                                     isSaving
-                                        ? 'bg-blue-100 text-blue-600'
+                                        ? 'bg-moss-100 text-moss-600'
                                         : hasChanges && !autoSave
-                                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                            : 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                                            ? 'bg-moss-600 hover:bg-moss-700 text-white'
+                                            : 'bg-sand-100 text-sand-400 cursor-not-allowed'
                                 }`}
                                 title={autoSave ? 'Otomatik kaydetme açık' : 'Kaydet'}
                             >
@@ -324,22 +330,22 @@ export default function EditorPage() {
                 </div>
 
                 {/* AI Toolbar */}
-                <div className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 border-t border-stone-200">
-                    <span className="text-xs font-medium text-indigo-600 mr-2">AI</span>
+                <div className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-gradient-to-r from-clay-50 to-clay-50 border-t border-sand-200">
+                    <span className="text-xs font-medium text-clay-600 mr-2">AI</span>
 
                     {pendingSpellCheck ? (
                         <div className="flex items-center gap-1">
-                            <span className="text-xs text-stone-500 mr-2">Onayla:</span>
+                            <span className="text-xs text-sand-500 mr-2">Onayla:</span>
                             <button
                                 onClick={handleAcceptSpellCheck}
-                                className="p-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all"
+                                className="p-1.5 rounded-lg bg-moss-600 hover:bg-moss-700 text-white transition-all"
                                 title="Onayla"
                             >
                                 <Check size={16} />
                             </button>
                             <button
                                 onClick={handleRejectSpellCheck}
-                                className="p-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all"
+                                className="p-1.5 rounded-lg bg-berry-500 hover:bg-berry-600 text-white transition-all"
                                 title="İptal"
                             >
                                 <X size={16} />
@@ -351,8 +357,8 @@ export default function EditorPage() {
                             disabled={isSpellChecking || !content.trim()}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                                 isSpellChecking || !content.trim()
-                                    ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
-                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow'
+                                    ? 'bg-sand-200 text-sand-400 cursor-not-allowed'
+                                    : 'bg-clay-600 hover:bg-clay-700 text-white shadow-soft hover:shadow'
                             }`}
                             title="İmla Düzelt"
                         >
@@ -370,15 +376,15 @@ export default function EditorPage() {
             {/* Editor Area */}
             <main className="flex-1 overflow-auto py-4 sm:py-6">
                 <div className="max-w-4xl mx-auto px-4 sm:px-0">
-                    <div className="bg-white shadow-lg min-h-[600px] sm:min-h-[842px] rounded-lg sm:rounded-none">
+                    <div className="bg-white shadow-card min-h-[600px] sm:min-h-[842px] rounded-lg sm:rounded-none">
                         {/* Başlık */}
-                        <div className="border-b border-stone-200 px-6 sm:px-12 pt-6 pb-4">
+                        <div className="border-b border-sand-200 px-6 sm:px-12 pt-6 pb-4">
                             <input
                                 type="text"
                                 value={title}
                                 onChange={handleTitleChange}
                                 placeholder="Başlık"
-                                className="w-full text-xl font-semibold text-stone-800 outline-none placeholder:text-stone-300"
+                                className="w-full text-xl font-semibold text-sand-800 outline-none placeholder:text-sand-300"
                             />
                         </div>
 
@@ -389,7 +395,7 @@ export default function EditorPage() {
                                 value={content}
                                 onChange={handleContentChange}
                                 placeholder="İçeriğinizi buraya yazın..."
-                                className="w-full min-h-[500px] sm:min-h-[600px] resize-none outline-none text-stone-700 text-base leading-relaxed placeholder:text-stone-300"
+                                className="w-full min-h-[500px] sm:min-h-[600px] resize-none outline-none text-sand-700 text-base leading-relaxed placeholder:text-sand-300"
                                 autoFocus
                             />
                         </div>
@@ -398,8 +404,8 @@ export default function EditorPage() {
             </main>
 
             {/* Footer */}
-            <footer className="bg-white border-t border-stone-300 px-4 sm:px-6 py-2">
-                <div className="flex items-center justify-between text-xs text-stone-500">
+            <footer className="bg-white border-t border-sand-300 px-4 sm:px-6 py-2">
+                <div className="flex items-center justify-between text-xs text-sand-500">
                     <span>
                         {isSaving ? (
                             <span className="flex items-center gap-1">

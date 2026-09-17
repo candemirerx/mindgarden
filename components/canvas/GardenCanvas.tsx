@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ViewState, Point } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 interface GardenCanvasProps {
     children: React.ReactNode;
@@ -270,10 +271,36 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
         };
     }, [viewState]);
 
+    const handleZoomIn = useCallback(() => {
+        setViewState(prev => ({
+            ...prev,
+            scale: Math.min(4, +(prev.scale * 1.2).toFixed(2))
+        }));
+    }, []);
+
+    const handleZoomOut = useCallback(() => {
+        setViewState(prev => ({
+            ...prev,
+            scale: Math.max(0.2, +(prev.scale / 1.2).toFixed(2))
+        }));
+    }, []);
+
+    const handleResetView = useCallback(() => {
+        if (containerRef.current) {
+            const { width, height } = containerRef.current.getBoundingClientRect();
+            setViewState({
+                scale: 1,
+                offset: { x: width / 2 - 120, y: height / 4 }
+            });
+        } else {
+            setViewState({ scale: 1, offset: { x: 0, y: 0 } });
+        }
+    }, []);
+
     return (
         <div
             ref={containerRef}
-            className={`w-full h-full overflow-hidden relative bg-[#f4f1ea] cursor-grab ${isDragging ? 'cursor-grabbing' : ''} touch-none`}
+            className={`w-full h-full overflow-hidden relative bg-paper cursor-grab ${isDragging ? 'cursor-grabbing' : ''} touch-none`}
             onMouseDown={handlePointerDown}
             onMouseMove={handlePointerMove}
             onMouseUp={handlePointerUp}
@@ -282,13 +309,15 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
             onTouchMove={handlePointerMove}
             onTouchEnd={handlePointerUp}
         >
-            {/* Grid Background Pattern - Toprak Dokusu */}
+            {/* Nokta ızgarası - tuvalin sonsuz olduğunu hissettirir ve
+                sürükleme sırasında yön duygusu verir. */}
             <div
-                className="absolute inset-0 pointer-events-none opacity-[0.03]"
+                className="pointer-events-none absolute inset-0"
                 style={{
-                    backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%233e2723\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                    backgroundSize: `${60 * viewState.scale}px ${60 * viewState.scale}px`,
-                    backgroundPosition: `${viewState.offset.x}px ${viewState.offset.y}px`
+                    backgroundImage:
+                        'radial-gradient(circle, rgba(91, 60, 51, 0.16) 1.2px, transparent 1.2px)',
+                    backgroundSize: `${Math.max(20, 28 * viewState.scale)}px ${Math.max(20, 28 * viewState.scale)}px`,
+                    backgroundPosition: `${viewState.offset.x}px ${viewState.offset.y}px`,
                 }}
             />
 
@@ -301,6 +330,42 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                 }}
             >
                 {children}
+            </div>
+
+            {/* Yüzen Tuval Kontrolleri (Canvas HUD) */}
+            <div className="absolute bottom-5 right-5 z-40 flex items-center gap-1.5 glass rounded-2xl p-1.5 shadow-pop border border-sand-200">
+                <button
+                    onClick={handleZoomOut}
+                    className="p-2 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
+                    title="Uzaklaştır"
+                    aria-label="Uzaklaştır"
+                >
+                    <ZoomOut size={16} />
+                </button>
+                <button
+                    onClick={() => setViewState(prev => ({ ...prev, scale: 1 }))}
+                    className="px-2.5 py-1 text-xs font-semibold text-sand-800 hover:bg-sand-200/80 rounded-lg transition-colors min-w-[50px] text-center"
+                    title="Ölçeği %100 yap"
+                >
+                    {Math.round(viewState.scale * 100)}%
+                </button>
+                <button
+                    onClick={handleZoomIn}
+                    className="p-2 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
+                    title="Yakınlaştır"
+                    aria-label="Yakınlaştır"
+                >
+                    <ZoomIn size={16} />
+                </button>
+                <div className="h-5 w-px bg-sand-300 mx-0.5" />
+                <button
+                    onClick={handleResetView}
+                    className="p-2 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
+                    title="Ağacı Ortala"
+                    aria-label="Ağacı Ortala"
+                >
+                    <RotateCcw size={15} />
+                </button>
             </div>
         </div>
     );

@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, memo, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, isLocalBackend } from '@/lib/supabaseClient';
+import { signInAsGuest } from '@/lib/localClient';
 import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock, Pencil } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
 import type { User } from '@supabase/supabase-js';
@@ -13,9 +14,9 @@ import type { Garden } from '@/lib/types';
 const Sidebar = lazy(() => import('@/components/layout/Sidebar'));
 
 // Garden kartını ayrı component olarak memoize et
-const GardenCard = memo(function GardenCard({ 
-    garden, 
-    isEditing, 
+const GardenCard = memo(function GardenCard({
+    garden,
+    isEditing,
     editingName,
     isMenuOpen,
     onEdit,
@@ -47,17 +48,27 @@ const GardenCard = memo(function GardenCard({
     return (
         <div
             onClick={onOpenGarden}
-            className="group relative bg-gradient-to-br from-[#f8f6f3] to-[#f0ebe4] rounded-2xl border border-stone-200/60 hover:border-emerald-300/60 hover:shadow-lg transition-all overflow-hidden cursor-pointer"
+            onKeyDown={(e) => {
+                if (isEditing) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onOpenGarden();
+                }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`${garden.name} bahçesini aç`}
+            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-card transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-moss-200 hover:shadow-lift focus-visible:border-moss-300"
         >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/30 rounded-full -translate-y-12 translate-x-12" />
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-amber-100/30 rounded-full translate-y-8 -translate-x-8" />
-            
-            <div className="relative p-5">
-                <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-green-700 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
-                            <TreePine className="text-white" size={20} />
-                        </div>
+            {/* Bahçe kimliğini taşıyan ince şerit */}
+            <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-moss-600 via-moss-400 to-clay-300 opacity-70 transition-opacity duration-200 group-hover:opacity-100" />
+
+            <div className="flex flex-1 flex-col p-5 pt-6">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-moss-100 text-moss-700 transition-colors duration-200 group-hover:bg-moss-600 group-hover:text-white">
+                            <TreePine size={21} />
+                        </span>
                         {isEditing ? (
                             <input
                                 type="text"
@@ -65,65 +76,77 @@ const GardenCard = memo(function GardenCard({
                                 onChange={(e) => onNameChange(e.target.value)}
                                 onBlur={onSaveName}
                                 onKeyDown={onKeyDown}
-                                className="font-bold text-stone-800 text-lg bg-white/80 px-2 py-1 rounded-lg border border-emerald-300 outline-none w-full"
+                                aria-label="Bahçe adı"
+                                className="w-full rounded-lg border border-moss-400 bg-white px-2.5 py-1.5 text-base font-semibold text-sand-900 outline-none ring-4 ring-moss-500/10"
                                 autoFocus
                             />
                         ) : (
-                            <h3 
-                                className="font-bold text-stone-800 truncate text-lg cursor-pointer hover:text-emerald-700"
+                            <h3
+                                className="truncate text-base font-semibold text-sand-900 transition-colors duration-200 group-hover:text-moss-700"
                                 onDoubleClick={onEdit}
+                                title={garden.name}
                             >
                                 {garden.name}
                             </h3>
                         )}
                     </div>
-                    
+
                     <div className="relative flex-shrink-0">
                         <button
                             onClick={(e) => { e.stopPropagation(); onMenuToggle(); }}
-                            className="p-1.5 hover:bg-white/60 rounded-lg text-stone-400 hover:text-stone-600"
+                            aria-label="Bahçe seçenekleri"
+                            aria-expanded={isMenuOpen}
+                            className={`rounded-lg p-1.5 transition-colors duration-200 ${
+                                isMenuOpen
+                                    ? 'bg-sand-200 text-sand-700'
+                                    : 'text-sand-500 hover:bg-sand-100 hover:text-sand-700'
+                            }`}
                         >
                             <MoreHorizontal size={18} />
                         </button>
-                        
+
                         {isMenuOpen && (
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl py-1 z-10 min-w-[160px]">
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 top-full z-20 mt-1.5 min-w-[176px] overflow-hidden rounded-xl border border-sand-200 bg-white py-1 shadow-pop animate-scale-in"
+                            >
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50"
+                                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
                                 >
-                                    <Pencil size={15} className="text-amber-500" />
-                                    <span>Yeniden Adlandır</span>
+                                    <Pencil size={15} className="text-clay-600" />
+                                    <span>Yeniden adlandır</span>
                                 </button>
-                                <hr className="my-1 border-stone-100" />
+                                <div className="my-1 h-px bg-sand-200" />
                                 <button
                                     onClick={onDelete}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
                                 >
                                     <Trash2 size={15} />
-                                    <span>Bahçeyi Sil</span>
+                                    <span>Bahçeyi sil</span>
                                 </button>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-stone-500 text-sm mb-5">
-                    <Clock size={14} />
+                <div className="mb-5 flex items-center gap-1.5 text-xs text-sand-500">
+                    <Clock size={13} />
                     <span>{formatDate(garden.created_at)}</span>
                 </div>
 
-                <div className="flex gap-3">
+                {/* Eylemler - kartın altına yaslanır */}
+                <div className="mt-auto flex gap-2.5">
                     <button
                         onClick={onOpenProjects}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white/70 hover:bg-amber-100 text-stone-700 hover:text-amber-800 rounded-xl text-sm font-medium border border-stone-200/50 hover:border-amber-200"
+                        className="btn btn-secondary flex-1 px-3 py-2.5 text-sm"
                     >
                         <FolderTree size={16} />
                         <span>Projeler</span>
                     </button>
                     <button
                         onClick={onOpenCanvas}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium shadow-sm hover:shadow-md"
+                        className="btn btn-primary flex-1 px-3 py-2.5 text-sm"
                     >
                         <Layout size={16} />
                         <span>Canvas</span>
@@ -151,11 +174,11 @@ export default function HomePage() {
         const init = async () => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
-                
+
                 if (!mounted) return;
-                
+
                 setUser(session?.user ?? null);
-                
+
                 if (session?.user) {
                     await fetchGardens();
                 }
@@ -171,13 +194,12 @@ export default function HomePage() {
         // Auth state değişikliklerini dinle
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
-            
+
             // INITIAL_SESSION zaten init() tarafından handle ediliyor
             if (event === 'INITIAL_SESSION') return;
-            
-            console.log('Auth event:', event);
+
             setUser(session?.user ?? null);
-            
+
             if (event === 'SIGNED_IN' && session?.user) {
                 setIsLoading(true);
                 try {
@@ -198,13 +220,25 @@ export default function HomePage() {
         };
     }, [fetchGardens]);
 
+    // Açık menü varken dışına tıklanınca kapat
+    useEffect(() => {
+        if (!openMenuId) return;
+        const closeMenu = () => setOpenMenuId(null);
+        window.addEventListener('click', closeMenu);
+        return () => window.removeEventListener('click', closeMenu);
+    }, [openMenuId]);
+
     // Memoized callbacks
     const formatDate = useCallback((dateStr: string) => {
         const date = new Date(dateStr);
         return date.toLocaleDateString('tr-TR', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
+            day: '2-digit', month: 'long', year: 'numeric'
         });
+    }, []);
+
+    // Şifresiz yerel giriş: oturum açılır, SIGNED_IN olayı listeyi kendisi çeker.
+    const handleGuestSignIn = useCallback(() => {
+        signInAsGuest();
     }, []);
 
     const handleOpenGarden = useCallback((gardenId: string) => {
@@ -241,112 +275,144 @@ export default function HomePage() {
         setOpenMenuId(null);
     }, [gardens, editingName, updateGardenName]);
 
+    const gardenCount = gardens.length;
+
     return (
-        <div className="min-h-screen bg-[#f4f1ea] p-4 md:p-8 font-sans">
-            {/* Header */}
-            <div className="max-w-7xl mx-auto mb-8 md:mb-12">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4 mb-2">
-                        <button onClick={toggleSidebar} className="relative group" title="Menü">
-                            <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-emerald-700 to-green-800 rounded-2xl flex items-center justify-center shadow-xl">
-                                <TreePine className="text-emerald-50" size={32} />
-                            </div>
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-full border-2 border-[#f4f1ea] flex items-center justify-center">
+        <div className="min-h-screen bg-paper">
+            <div className="mx-auto max-w-[1500px] px-4 py-6 md:px-8 md:py-10">
+                {/* Başlık */}
+                <header className="mb-8 flex flex-col gap-5 md:mb-10 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3.5">
+                        <button
+                            onClick={toggleSidebar}
+                            title="Menü"
+                            aria-label="Menüyü aç"
+                            className="group relative flex-shrink-0 rounded-2xl transition-transform duration-200 active:scale-95"
+                        >
+                            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-moss-700 to-moss-900 shadow-lift md:h-16 md:w-16">
+                                <TreePine className="text-moss-50" size={30} />
+                            </span>
+                            <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-sand-100 bg-clay-500">
                                 <Sparkles size={10} className="text-white" />
-                            </div>
+                            </span>
                         </button>
                         <div>
-                            <h1 className="text-3xl md:text-4xl font-bold text-stone-800 font-serif">Not Bahçesi</h1>
-                            <p className="text-stone-500 text-sm md:text-base mt-1">Fikirlerinizi toprağa ekin, ağaca dönüşsün.</p>
+                            <h1 className="text-3xl text-sand-900 md:text-4xl">Not Bahçesi</h1>
+                            <p className="mt-0.5 text-sm text-sand-600 md:text-base">
+                                Fikirlerinizi toprağa ekin, ağaca dönüşsün.
+                            </p>
                         </div>
                     </div>
 
                     {user && (
-                        <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="w-full md:w-auto bg-[#5D4037] hover:bg-[#4E342E] text-amber-50 px-6 md:px-8 py-3 md:py-4 rounded-xl font-semibold shadow-lg flex items-center justify-center gap-3"
-                        >
-                            <Plus size={20} />
-                            <span className="text-base md:text-lg">Yeni Bahçe Ekle</span>
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Content */}
-            <div className="max-w-7xl mx-auto">
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="w-16 h-16 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin" />
-                    </div>
-                ) : !user ? (
-                    <div className="text-center py-20">
-                        <div className="bg-white/80 rounded-3xl shadow-xl p-12 max-w-md mx-auto border-2 border-dashed border-emerald-300">
-                            <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full mx-auto mb-6 flex items-center justify-center shadow-xl">
-                                <TreePine size={48} className="text-white" />
-                            </div>
-                            <h2 className="text-3xl font-bold text-slate-800 mb-3 font-serif">Hoş Geldiniz!</h2>
-                            <p className="text-slate-600 mb-8 text-lg">Notlarınızı kaydetmek için giriş yapın.</p>
-                            <button
-                                onClick={toggleSidebar}
-                                className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center gap-3"
-                            >
-                                <LogIn size={24} />
-                                <span className="text-lg">Giriş Yap</span>
-                            </button>
-                        </div>
-                    </div>
-                ) : gardens.length === 0 ? (
-                    <div className="text-center py-20">
-                        <div className="bg-white/80 rounded-3xl shadow-xl p-12 max-w-md mx-auto border-2 border-dashed border-slate-300">
-                            <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full mx-auto mb-6 flex items-center justify-center shadow-xl">
-                                <TreePine size={48} className="text-white" />
-                            </div>
-                            <h2 className="text-3xl font-bold text-slate-800 mb-3">Bahçeniz Boş</h2>
-                            <p className="text-slate-600 mb-8 text-lg">İlk bahçenizi oluşturun!</p>
+                        <div className="flex items-center gap-3">
+                            {gardenCount > 0 && (
+                                <span className="chip-moss hidden sm:inline-flex">
+                                    {gardenCount} bahçe
+                                </span>
+                            )}
                             <button
                                 onClick={() => setIsModalOpen(true)}
-                                className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center gap-3"
+                                className="btn btn-primary w-full px-5 py-3 md:w-auto md:px-6"
                             >
-                                <Plus size={24} />
-                                <span className="text-lg">İlk Bahçemi Oluştur</span>
+                                <Plus size={19} />
+                                <span>Yeni Bahçe</span>
                             </button>
                         </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {gardens.map((garden) => (
-                            <GardenCard
-                                key={garden.id}
-                                garden={garden}
-                                isEditing={editingGardenId === garden.id}
-                                editingName={editingName}
-                                isMenuOpen={openMenuId === garden.id}
-                                onEdit={() => {
-                                    setEditingGardenId(garden.id);
-                                    setEditingName(garden.name);
-                                    setOpenMenuId(null);
-                                }}
-                                onMenuToggle={() => setOpenMenuId(openMenuId === garden.id ? null : garden.id)}
-                                onNameChange={setEditingName}
-                                onSaveName={() => handleSaveName(garden.id)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSaveName(garden.id);
-                                    else if (e.key === 'Escape') setEditingGardenId(null);
-                                }}
-                                onOpenGarden={() => handleOpenGarden(garden.id)}
-                                onOpenCanvas={(e) => handleOpenCanvas(e, garden.id)}
-                                onOpenProjects={(e) => handleOpenProjects(e, garden.id)}
-                                onDelete={(e) => handleDeleteGarden(e, garden.id)}
-                                formatDate={formatDate}
-                            />
-                        ))}
-                    </div>
-                )}
+                    )}
+                </header>
+
+                {/* İçerik */}
+                <main>
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-24">
+                            <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-sand-300 border-t-moss-600" />
+                        </div>
+                    ) : !user ? (
+                        <div className="py-12 md:py-20">
+                            <div className="mx-auto max-w-md rounded-3xl border border-sand-200 bg-white p-10 text-center shadow-lift">
+                                <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-moss-100 text-moss-700">
+                                    <TreePine size={32} />
+                                </span>
+                                <h2 className="text-2xl text-sand-900">Hoş geldiniz</h2>
+                                <p className="mt-2 text-base text-sand-600">
+                                    Notlarınızı kaydetmek için giriş yapın.
+                                </p>
+                                <div className="mt-7 flex flex-col items-stretch justify-center gap-2.5 sm:flex-row sm:items-center">
+                                    <button
+                                        onClick={toggleSidebar}
+                                        className="btn btn-primary px-6 py-3"
+                                    >
+                                        <LogIn size={19} />
+                                        <span>Giriş Yap</span>
+                                    </button>
+                                    {isLocalBackend && (
+                                        <button
+                                            onClick={handleGuestSignIn}
+                                            title="Altyapı bağlı olmadığı için şifre sormadan bu cihazda oturum açar"
+                                            className="btn px-5 py-3 border border-clay-300 bg-clay-50 text-clay-800 hover:bg-clay-100"
+                                        >
+                                            <Sparkles size={18} />
+                                            <span>Yerel Modda Gir</span>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ) : gardens.length === 0 ? (
+                        <div className="py-12 md:py-20">
+                            <div className="mx-auto max-w-md rounded-3xl border border-sand-200 bg-white p-10 text-center shadow-lift">
+                                <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-clay-100 text-clay-700">
+                                    <TreePine size={32} />
+                                </span>
+                                <h2 className="text-2xl text-sand-900">Bahçeniz boş</h2>
+                                <p className="mt-2 text-base text-sand-600">
+                                    İlk bahçenizi oluşturup notlarınızı ağaca dönüştürün.
+                                </p>
+                                <button
+                                    onClick={() => setIsModalOpen(true)}
+                                    className="btn btn-primary mt-7 px-6 py-3"
+                                >
+                                    <Plus size={19} />
+                                    <span>İlk Bahçemi Oluştur</span>
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                            {gardens.map((garden) => (
+                                <GardenCard
+                                    key={garden.id}
+                                    garden={garden}
+                                    isEditing={editingGardenId === garden.id}
+                                    editingName={editingName}
+                                    isMenuOpen={openMenuId === garden.id}
+                                    onEdit={() => {
+                                        setEditingGardenId(garden.id);
+                                        setEditingName(garden.name);
+                                        setOpenMenuId(null);
+                                    }}
+                                    onMenuToggle={() => setOpenMenuId(openMenuId === garden.id ? null : garden.id)}
+                                    onNameChange={setEditingName}
+                                    onSaveName={() => handleSaveName(garden.id)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveName(garden.id);
+                                        else if (e.key === 'Escape') setEditingGardenId(null);
+                                    }}
+                                    onOpenGarden={() => handleOpenGarden(garden.id)}
+                                    onOpenCanvas={(e) => handleOpenCanvas(e, garden.id)}
+                                    onOpenProjects={(e) => handleOpenProjects(e, garden.id)}
+                                    onDelete={(e) => handleDeleteGarden(e, garden.id)}
+                                    formatDate={formatDate}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </main>
             </div>
 
             <CreateGardenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-            
+
             <Suspense fallback={null}>
                 <Sidebar />
             </Suspense>

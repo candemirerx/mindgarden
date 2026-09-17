@@ -21,6 +21,7 @@ export interface TreeNode {
     created_at: string;
     updated_at?: string;
     is_expanded?: boolean;
+    node_type?: 'branch' | 'leaf' | 'auto';
 }
 
 // Store State Tipi
@@ -47,6 +48,7 @@ export interface StoreState {
     fetchNodes: (gardenId: string) => Promise<void>;
     updateGardenViewState: (id: string, viewState: { x: number; y: number; zoom: number }) => Promise<void>;
     toggleNodeExpansion: (id: string, isExpanded: boolean) => Promise<void>;
+    toggleNodeType: (id: string, currentType: 'branch' | 'leaf' | 'auto') => Promise<void>;
 }
 
 // Yeni MindMap yapısı için tipler
@@ -56,6 +58,7 @@ export interface MindNode {
     content: string;
     children: MindNode[];
     isExpanded?: boolean;
+    nodeType?: 'branch' | 'leaf' | 'auto';
 }
 
 export interface ViewState {

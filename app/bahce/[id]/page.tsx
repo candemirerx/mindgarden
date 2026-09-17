@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Sprout, Settings, List } from 'lucide-react';
+import { ArrowLeft, Sprout, Settings, List, TreePine } from 'lucide-react';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
@@ -18,7 +18,7 @@ export default function GardenPage() {
     const router = useRouter();
     const gardenId = params.id as string;
 
-    const { gardens, nodes, fetchNodes, setCurrentGarden, addNode, updateNode, deleteNode: deleteNodeFromStore } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, deleteNode: deleteNodeFromStore } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
@@ -46,7 +46,8 @@ export default function GardenPage() {
                 title: node.content.split('\n')[0] || 'Başlıksız',
                 content: node.content,
                 children,
-                isExpanded: node.is_expanded ?? true
+                isExpanded: node.is_expanded ?? true,
+                nodeType: node.node_type ?? 'auto'
             };
         };
 
@@ -56,11 +57,16 @@ export default function GardenPage() {
     useEffect(() => {
         const loadData = async () => {
             setCurrentGarden(gardenId);
+            // Sayfaya doğrudan URL ile (veya yenileme sonrası) girildiğinde store boş
+            // olur; bahçe kaydı yoksa "Bahçe bulunamadı" ekranına düşmemek için listeyi çek.
+            if (!useStore.getState().gardens.some((g) => g.id === gardenId)) {
+                await fetchGardens();
+            }
             await fetchNodes(gardenId);
             setIsLoading(false);
         };
         loadData();
-    }, [gardenId, fetchNodes, setCurrentGarden]);
+    }, [gardenId, fetchGardens, fetchNodes, setCurrentGarden]);
 
     // Node'lar yüklendiğinde ağaçları oluştur
     useEffect(() => {
@@ -241,11 +247,11 @@ export default function GardenPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50/30 to-stone-50">
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sand-50 via-clay-50/30 to-sand-50">
                 <div className="relative">
-                    <div className="w-20 h-20 border-4 border-stone-200 border-t-amber-600 rounded-full animate-spin" />
+                    <div className="w-20 h-20 border-4 border-sand-200 border-t-clay-600 rounded-full animate-spin" />
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <Sprout className="text-amber-600" size={24} />
+                        <Sprout className="text-clay-600" size={24} />
                     </div>
                 </div>
             </div>
@@ -254,13 +260,21 @@ export default function GardenPage() {
 
     if (!currentGarden) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50/30 to-stone-50">
-                <div className="text-center">
-                    <h2 className="text-2xl font-semibold text-stone-700 mb-4">
-                        Bahçe bulunamadı
-                    </h2>
-                    <button onClick={() => router.push('/')} className="btn-primary">
-                        Ana Sayfaya Dön
+            <div className="flex min-h-screen items-center justify-center bg-paper p-6">
+                <div className="rounded-3xl border border-sand-200 bg-white p-10 text-center shadow-lift">
+                    <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-clay-100 text-clay-700">
+                        <TreePine size={28} />
+                    </span>
+                    <h2 className="text-xl text-sand-900">Bahçe bulunamadı</h2>
+                    <p className="mt-1.5 text-sm text-sand-600">
+                        Bu bahçe silinmiş ya da artık erişilebilir değil.
+                    </p>
+                    <button
+                        onClick={() => router.push('/')}
+                        className="btn btn-primary mt-6 px-5 py-2.5"
+                    >
+                        <ArrowLeft size={18} />
+                        <span>Ana Sayfaya Dön</span>
                     </button>
                 </div>
             </div>
@@ -270,44 +284,47 @@ export default function GardenPage() {
     return (
         <div className="h-screen flex flex-col">
             {/* Header - Mobil Responsive */}
-            <header className="h-14 md:h-16 bg-white/80 backdrop-blur-md border-b border-stone-200 flex items-center justify-between px-3 md:px-6 z-40 relative shadow-sm">
-                <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+            <header className="relative z-40 flex h-14 items-center justify-between gap-3 border-b border-sand-200 bg-white/85 px-3 backdrop-blur-md md:h-16 md:px-6">
+                <div className="flex min-w-0 flex-1 items-center gap-1.5 md:gap-2">
                     <button
                         onClick={() => router.push('/')}
-                        className="p-2 hover:bg-stone-100 rounded-full text-stone-600 transition-colors flex-shrink-0 touch-manipulation"
+                        aria-label="Ana sayfa"
                         title="Ana Sayfa"
+                        className="flex-shrink-0 rounded-xl p-2 text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800 touch-manipulation"
                     >
-                        <ArrowLeft size={20} className="md:w-5 md:h-5" />
+                        <ArrowLeft size={20} />
                     </button>
                     <div className="min-w-0 flex-1">
-                        <h1 className="text-base md:text-xl font-bold text-amber-900 font-serif truncate">{currentGarden.name}</h1>
-                        <p className="text-[10px] md:text-xs text-stone-400 hidden sm:block">{mindRoots.length} ağaç</p>
+                        <h1 className="truncate text-base text-sand-900 md:text-lg">{currentGarden.name}</h1>
+                        <p className="hidden text-xs text-sand-500 sm:block">
+                            {mindRoots.length > 0 ? `${mindRoots.length} ağaç` : 'Henüz ağaç yok'}
+                        </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
-                    {/* Projeler Butonu */}
+
+                <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
                     <button
                         onClick={() => router.push(`/bahce/${gardenId}/projeler`)}
-                        className="p-2 hover:bg-amber-100 rounded-full text-amber-600 transition-colors flex-shrink-0"
-                        title="Projeler (Liste Görünümü)"
+                        aria-label="Projeler"
+                        title="Projeler (liste görünümü)"
+                        className="flex-shrink-0 rounded-xl p-2 text-clay-700 transition-colors duration-200 hover:bg-clay-50"
                     >
-                        <List size={18} className="md:w-5 md:h-5" />
+                        <List size={19} />
                     </button>
-                    {/* Ayarlar Butonu */}
                     <button
                         onClick={() => setIsSettingsOpen(true)}
-                        className="p-2 hover:bg-stone-100 rounded-full text-stone-500 transition-colors flex-shrink-0"
+                        aria-label="Ayarlar"
                         title="Ayarlar"
+                        className="flex-shrink-0 rounded-xl p-2 text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
                     >
-                        <Settings size={18} className="md:w-5 md:h-5" />
+                        <Settings size={19} />
                     </button>
-                    {/* Ağaç Ekle Butonu */}
                     <button
                         onClick={handleCreateRoot}
-                        className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs md:text-sm font-semibold transition-all shadow-md hover:shadow-lg active:scale-95"
-                        title="Yeni Ağaç Ekle"
+                        title="Yeni ağaç ekle"
+                        className="btn btn-primary ml-1 px-3 py-2 text-xs md:px-4 md:text-sm"
                     >
-                        <Sprout size={16} className="md:w-4 md:h-4" />
+                        <Sprout size={16} />
                         <span className="hidden sm:inline">Ağaç Ekle</span>
                     </button>
                 </div>
@@ -330,18 +347,20 @@ export default function GardenPage() {
                             ))}
                         </ul>
                     ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="absolute inset-0 flex items-center justify-center p-6">
                             <button
                                 onClick={handleCreateRoot}
-                                className="group flex flex-col items-center gap-4 p-8 rounded-3xl border-2 border-dashed border-stone-300 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all"
+                                className="group flex flex-col items-center gap-4 rounded-3xl border-2 border-dashed border-sand-300 bg-white/60 p-9 backdrop-blur-sm transition-all duration-200 ease-smooth hover:border-moss-400 hover:bg-white hover:shadow-lift"
                             >
-                                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-moss-100 text-moss-700 transition-transform duration-200 group-hover:scale-105">
                                     <Sprout size={32} />
-                                </div>
-                                <div className="text-center">
-                                    <h3 className="text-lg font-bold text-stone-700">İlk Tohumu Ek</h3>
-                                    <p className="text-stone-500 text-sm">Düşünce ağacını başlatmak için tıkla</p>
-                                </div>
+                                </span>
+                                <span className="text-center">
+                                    <span className="block text-lg font-semibold text-sand-900">İlk tohumu ek</span>
+                                    <span className="mt-0.5 block text-sm text-sand-600">
+                                        Düşünce ağacını başlatmak için tıkla
+                                    </span>
+                                </span>
                             </button>
                         </div>
                     )}

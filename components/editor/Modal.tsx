@@ -24,25 +24,29 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm animate-fade-in">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bark-950/45 backdrop-blur-sm animate-fade-in"
+            onClick={onClose}
+            role="presentation"
+        >
             <div
                 ref={modalRef}
-                className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border-2 border-stone-200 overflow-hidden flex flex-col max-h-[85vh] animate-slide-up"
+                role="dialog"
+                aria-modal="true"
+                onClick={(e) => e.stopPropagation()}
+                className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-sand-200 bg-white shadow-pop animate-slide-up"
             >
-                <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-gradient-to-r from-amber-50 to-orange-50">
-                    <h3 className="text-lg font-bold text-amber-900 flex items-center gap-2">
-                        {title}
-                    </h3>
+                <div className="flex items-center justify-between gap-4 border-b border-sand-200 px-5 py-4">
+                    <h3 className="text-lg font-semibold text-sand-900">{title}</h3>
                     <button
                         onClick={onClose}
-                        className="p-2 text-stone-400 hover:text-stone-600 hover:bg-white rounded-full transition-colors"
+                        aria-label="Kapat"
+                        className="rounded-xl p-2 text-sand-500 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-700"
                     >
                         <X size={20} />
                     </button>
                 </div>
-                <div className="p-6 overflow-y-auto">
-                    {children}
-                </div>
+                <div className="overflow-y-auto p-6">{children}</div>
             </div>
         </div>
     );

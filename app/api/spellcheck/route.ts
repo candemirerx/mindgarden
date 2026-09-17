@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
     try {
-        const { text } = await request.json();
+        const { text, clientApiKey } = await request.json();
 
         if (!text || text.trim().length === 0) {
             return NextResponse.json({ correctedText: text });
         }
 
-        const apiKey = process.env.GEMINI_API_KEY;
+        // Önce istemciden gelen anahtarı kullan, yoksa sunucu ortam değişkenine düş
+        const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
         if (!apiKey) {
             return NextResponse.json(
-                { error: 'API anahtarı yapılandırılmamış' },
-                { status: 500 }
+                { error: 'API anahtarı bulunamadı. Lütfen Ayarlar bölümünden Yapay Zeka anahtarınızı ekleyin.' },
+                { status: 400 }
             );
         }
 

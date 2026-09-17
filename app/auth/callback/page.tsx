@@ -52,10 +52,10 @@ export default function AuthCallback() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#f4f1ea] to-[#e8e4dc] flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-[#f4f1ea] to-sand-200 flex items-center justify-center">
             <div className="text-center">
-                <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-stone-700 font-medium">{status}</p>
+                <div className="w-16 h-16 border-4 border-moss-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-sand-700 font-medium">{status}</p>
             </div>
         </div>
     );

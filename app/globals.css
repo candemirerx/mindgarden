@@ -2,63 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ==========================================================================
+   TEMEL
+   ========================================================================== */
+
+@layer base {
+  :root {
+    /* Uygulama zemini - sıcak kağıt tonu (sand-100 ile aynı) */
+    --paper: #f6f3ee;
+    /* Ağaç dalları */
+    --branch: #b9a88f; /* Kum/ahşap karışımı tek, temiz bir dal rengi */
+    --branch-hover: #64a378;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: theme('colors.bark.950');
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  /* Klavye kullanıcıları için görünür odak; fare tıklamasında çıkmaz. */
+  :focus-visible {
+    outline: 2px solid theme('colors.moss.500');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: theme('colors.moss.200');
+    color: theme('colors.moss.900');
+  }
+
+  /* Sayı girişlerindeki okları gizle */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
-html,
-body {
-  height: 100%;
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* ==========================================================================
+   KAYDIRMA ÇUBUĞU
+   ========================================================================== */
 
-body {
-  background-color: #f4f1ea;
-  /* Kağıt/Toprak tonu */
-  color: #3e2723;
-  /* Koyu Kahve */
-}
-
-/* Modern scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #efebe9;
-  border-radius: 5px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #a1887f;
-  border-radius: 5px;
-  border: 2px solid #efebe9;
+  background: theme('colors.sand.400');
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #8d6e63;
+  background: theme('colors.sand.500');
+  background-clip: content-box;
 }
 
-/* 
-   ==========================================================================
-   PREMIUM ORGANIC TREE STYLES
-   ==========================================================================
-*/
+/* ==========================================================================
+   AĞAÇ (ZİHİN HARİTASI) BAĞLANTI ÇİZGİLERİ
+   ========================================================================== */
 
 .tree ul {
-  padding-top: 40px;
+  padding-top: 36px;
   position: relative;
   display: flex;
   justify-content: center;
-  gap: 40px;
-  /* Dalların gölgelendirmesi - 3D Derinlik */
-  filter: drop-shadow(2px 4px 6px rgba(62, 39, 35, 0.15));
+  gap: 24px;
+  filter: drop-shadow(0 2px 3px rgba(41, 29, 25, 0.08));
 }
 
 .tree li {
@@ -66,41 +106,34 @@ body {
   text-align: center;
   list-style-type: none;
   position: relative;
-  padding: 40px 10px 0 10px;
-  transition: all 0.5s;
+  padding: 36px 8px 0 8px;
+  transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* 
-   BAĞLANTI ÇİZGİLERİ (CONNECTORS) 
-   --------------------------------------------------
-   Temel yapı: ::before (yukarı/sağ) ve ::after (yukarı/sol)
-*/
-
-/* Ortak Stil - Tüm seviyeler için temel */
+/* Bağlantı çizgileri: ::before (sağ), ::after (sol) */
 .tree li::before,
 .tree li::after {
   content: '';
   position: absolute;
   top: 0;
   right: 50%;
-  border-top: 4px solid #5D4037;
-  /* Koyu Odun Rengi */
+  border-top: 2px solid var(--branch);
   width: 50%;
-  height: 40px;
-  z-index: -1;
-  transition: all 0.3s ease;
+  height: 36px;
+  z-index: 0;
+  transition: border-color 0.3s ease;
 }
 
 .tree li::after {
   right: auto;
   left: 50%;
-  border-left: 4px solid #5D4037;
+  border-left: 2px solid var(--branch);
 }
 
-/* Tek çocuk varsa çizgi olmasın (Sadece yukarıdan gelen dikey çizgi kalsın) */
+/* Tek çocuk varsa yatay çizgi çizilmez */
 .tree li:only-child::after,
 .tree li:only-child::before {
   display: none;
@@ -110,113 +143,156 @@ body {
   padding-top: 0;
 }
 
-/* İlk ve Son Çocukların Köşeleri */
 .tree li:first-child::before,
 .tree li:last-child::after {
   border: 0 none;
 }
 
-/* Köşe Kıvrımları - Organik Görünüm (25px Radius) */
+/* Köşe kıvrımları */
 .tree li:last-child::before {
-  border-right: 4px solid #5D4037;
-  border-radius: 0 25px 0 0;
+  border-right: 2.5px solid var(--branch);
+  border-radius: 0 16px 0 0;
 }
 
 .tree li:first-child::after {
-  border-radius: 25px 0 0 0;
+  border-radius: 16px 0 0 0;
 }
 
-/* Dikey Çizgi (Ebeveynden aşağı inen) */
+/* Ebeveynden aşağı inen dikey çizgi */
 .tree ul ul::before {
   content: '';
   position: absolute;
   top: 0;
   left: 50%;
-  border-left: 4px solid #5D4037;
+  border-left: 2px solid var(--branch);
   width: 0;
-  height: 40px;
-  z-index: -1;
+  height: 36px;
+  z-index: 0;
+  transition: border-color 0.3s ease;
 }
 
-/* 
-   HİYERARŞİK KALINLIK (HIERARCHICAL THICKNESS)
-   --------------------------------------------------
-   Kökten çıkan dallar daha kalın, uçlara doğru incelir.
-*/
-
-/* Seviye 1 Bağlantıları (Kök -> İlk Dallar) - Kalın (6px) */
+/* Kökten çıkan dallar daha belirgin */
 .tree>ul>li>ul::before {
-  border-left-width: 6px;
-  height: 50px;
-  /* Biraz daha uzun gövde */
+  border-left-width: 3px;
+  height: 42px;
 }
 
 .tree>ul>li>ul>li::before {
-  border-top-width: 6px;
-  border-right-width: 6px;
+  border-top-width: 3px;
+  border-right-width: 3px;
 }
 
 .tree>ul>li>ul>li::after {
-  border-top-width: 6px;
-  border-left-width: 6px;
+  border-top-width: 3px;
+  border-left-width: 3px;
 }
 
-/* Kök Node'un kendi çizgilerini gizle */
+/* Kök düğümün kendi çizgileri gizli */
 .tree>ul>li::before,
 .tree>ul>li::after {
   display: none;
 }
 
-/* 
-   HOVER EFEKTLERİ
-   --------------------------------------------------
-   Dalların üzerinden geçince parlaması
-*/
-
-/* Ebeveyne hover yapınca altındaki yollar parlasın */
+/* Üzerine gelince dal canlanır */
 .tree li:hover::before,
 .tree li:hover::after,
 .tree li:hover>ul::before {
-  border-color: #8D6E63;
-  /* Daha açık/canlı kahve */
+  border-color: var(--branch-hover);
 }
 
-/* Utility classes */
+/* ==========================================================================
+   YARDIMCI SINIFLAR
+   ========================================================================== */
+
 @layer utilities {
-  .glass-effect {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+  .bg-paper {
+    background-color: var(--paper);
   }
 
-  .tree-shadow {
-    box-shadow: 0 8px 32px rgba(62, 39, 35, 0.15);
+  /* Cam yüzey - modal ve yüzen paneller */
+  .glass {
+    background-color: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
   }
 
-  .node-glow {
-    box-shadow: 0 0 30px rgba(102, 187, 106, 0.4);
+  .scrollbar-none {
+    scrollbar-width: none;
   }
 
-  .smooth-transition {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 
-/* Component overrides */
+/* ==========================================================================
+   BİLEŞENLER
+   ========================================================================== */
+
 @layer components {
+  /* --- Düğmeler ------------------------------------------------------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl
+           transition-all duration-200 ease-smooth select-none
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40
+           focus-visible:ring-offset-2 focus-visible:ring-offset-sand-100
+           disabled:opacity-45 disabled:pointer-events-none;
+  }
+
   .btn-primary {
-    @apply bg-[#5D4037] hover:bg-[#4E342E] text-[#EFEBE9] font-semibold px-6 py-3 rounded-xl smooth-transition shadow-lg hover:shadow-xl active:scale-95;
+    @apply bg-moss-700 text-sand-50 shadow-soft hover:bg-moss-800
+           hover:shadow-card active:scale-[0.98];
   }
 
   .btn-secondary {
-    @apply bg-white hover:bg-[#EFEBE9] text-[#5D4037] font-semibold px-6 py-3 rounded-xl smooth-transition shadow-md hover:shadow-lg border-2 border-[#D7CCC8];
+    @apply bg-white text-bark-800 border border-sand-300 shadow-soft
+           hover:bg-sand-100 hover:border-sand-400 active:scale-[0.98];
   }
 
+  .btn-ghost {
+    @apply text-bark-700 hover:bg-sand-200/70 active:scale-[0.98];
+  }
+
+  .btn-danger {
+    @apply bg-berry-600 text-white shadow-soft hover:bg-berry-700 active:scale-[0.98];
+  }
+
+  /* --- Yüzeyler ------------------------------------------------------- */
   .card {
-    @apply bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl smooth-transition hover:shadow-2xl border border-[#D7CCC8];
+    @apply bg-white rounded-2xl border border-sand-200 shadow-card;
   }
 
-  .input-field {
-    @apply w-full px-4 py-3 rounded-xl border-2 border-[#D7CCC8] focus:border-[#8D6E63] focus:ring-4 focus:ring-[#D7CCC8]/50 focus:outline-none smooth-transition bg-white/80;
+  .card-interactive {
+    @apply bg-white rounded-2xl border border-sand-200 shadow-card
+           transition-all duration-200 ease-smooth
+           hover:shadow-lift hover:border-sand-300;
+  }
+
+  /* --- Form alanları -------------------------------------------------- */
+  .input {
+    @apply w-full px-4 py-2.5 rounded-xl bg-white border border-sand-300
+           text-bark-900 placeholder:text-sand-600
+           transition-all duration-200 ease-smooth
+           focus:outline-none focus:border-moss-500 focus:ring-4 focus:ring-moss-500/10;
+  }
+
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wide text-sand-700 mb-1.5;
+  }
+
+  /* --- Etiketler ------------------------------------------------------ */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+           text-xs font-semibold bg-sand-200 text-bark-800;
+  }
+
+  .chip-moss {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+           text-xs font-semibold bg-moss-100 text-moss-800;
+  }
+
+  .chip-clay {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+           text-xs font-semibold bg-clay-100 text-clay-800;
   }
 }

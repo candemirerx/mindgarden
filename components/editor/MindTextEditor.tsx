@@ -41,28 +41,28 @@ export const MindTextEditor: React.FC<MindTextEditorProps> = ({
     return (
         <div className="flex flex-col gap-4 h-full">
             <div>
-                <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-sand-500 uppercase tracking-wider mb-1">
                     Başlık / Prompt
                 </label>
                 <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full text-xl font-bold text-stone-800 bg-transparent border-b-2 border-transparent focus:border-amber-400 focus:outline-none pb-2 placeholder-stone-300 transition-colors"
+                    className="w-full text-xl font-bold text-sand-800 bg-transparent border-b-2 border-transparent focus:border-clay-400 focus:outline-none pb-2 placeholder-sand-300 transition-colors"
                     placeholder="Düşüncenin adı..."
                 />
             </div>
 
             <div className="flex-1 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
-                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider">
+                    <label className="block text-xs font-semibold text-sand-500 uppercase tracking-wider">
                         İçerik
                     </label>
                     <button
                         onClick={handleAIExpand}
                         disabled={isGenerating}
                         className={`text-xs flex items-center gap-1 px-3 py-1 rounded-full transition-all
-              ${isGenerating ? 'bg-stone-100 text-stone-400' : 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:shadow-md hover:scale-105'}`}
+              ${isGenerating ? 'bg-sand-100 text-sand-400' : 'bg-gradient-to-r from-clay-500 to-clay-500 text-white hover:shadow-soft hover:scale-105'}`}
                     >
                         {isGenerating ? (
                             <span className="animate-spin">⟳</span>
@@ -75,21 +75,21 @@ export const MindTextEditor: React.FC<MindTextEditorProps> = ({
                 <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    className="flex-1 w-full resize-none p-4 bg-stone-50 rounded-xl border-2 border-stone-200 focus:border-amber-400 focus:ring-4 focus:ring-amber-100 focus:outline-none transition-all font-serif text-lg leading-relaxed text-stone-700"
+                    className="flex-1 w-full resize-none p-4 bg-sand-50 rounded-xl border-2 border-sand-200 focus:border-clay-400 focus:ring-4 focus:ring-clay-100 focus:outline-none transition-all font-serif text-lg leading-relaxed text-sand-700"
                     placeholder="Detayları buraya yazın..."
                 />
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-200">
+            <div className="flex justify-end gap-3 pt-4 border-t border-sand-200">
                 <button
                     onClick={onClose}
-                    className="px-5 py-2 text-stone-600 font-medium hover:bg-stone-100 rounded-lg transition-colors"
+                    className="px-5 py-2 text-sand-600 font-medium hover:bg-sand-100 rounded-lg transition-colors"
                 >
                     İptal
                 </button>
                 <button
                     onClick={() => onSave(title, content)}
-                    className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2"
+                    className="px-5 py-2 bg-gradient-to-r from-moss-600 to-moss-600 text-white font-medium rounded-lg shadow-card shadow-moss-200 hover:shadow-lift hover:scale-105 transition-all flex items-center gap-2"
                 >
                     <Check size={18} />
                     Kaydet
