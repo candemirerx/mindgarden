@@ -14,6 +14,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
  */
 export const hasSupabaseCredentials =
     /^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/.test(supabaseUrl) &&
+    !supabaseUrl.includes('zojnjnyjavftnscbnikv') &&
     supabaseAnonKey.length > 40 &&
     !supabaseAnonKey.includes('placeholder');
 
