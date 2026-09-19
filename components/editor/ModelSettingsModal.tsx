@@ -66,14 +66,14 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bark-950/60 p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bark-950/60 p-0 sm:p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
             <div 
-                className="flex h-full max-h-[750px] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] bg-[#1a1a1a] text-sand-100 shadow-2xl animate-scale-in border border-white/10"
+                className="flex h-full sm:h-[85vh] sm:max-h-[750px] w-full max-w-5xl flex-col overflow-hidden sm:rounded-[24px] bg-[#1a1a1a] text-sand-100 shadow-2xl animate-scale-in sm:border border-white/10"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/10 px-8 py-5">
-                    <h2 className="text-xl font-semibold tracking-tight text-white flex items-center gap-3">
+                <div className="flex flex-shrink-0 items-center justify-between border-b border-white/10 px-5 sm:px-8 py-4 sm:py-5">
+                    <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-white flex items-center gap-3">
                         <Sparkles size={20} className="text-moss-400" />
                         Tercihler & Ayarlar
                     </h2>
@@ -83,43 +83,43 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                 </div>
 
                 {/* Body: Split Layout */}
-                <div className="flex flex-1 overflow-hidden">
-                    {/* Sidebar */}
-                    <div className="w-64 flex-shrink-0 border-r border-white/10 bg-[#141414] p-4 flex flex-col gap-1">
-                        <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sand-500">
+                <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+                    {/* Sidebar / Tabs */}
+                    <div className="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-white/10 bg-[#141414] p-3 sm:p-4 flex flex-row md:flex-col gap-2 overflow-x-auto">
+                        <div className="hidden md:block mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sand-500">
                             Yapılandırma
                         </div>
                         <button
                             onClick={() => setActiveTab('models')}
-                            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                                 activeTab === 'models' 
                                 ? 'bg-white/10 text-white' 
                                 : 'text-sand-400 hover:bg-white/5 hover:text-sand-200'
                             }`}
                         >
                             <Sparkles size={16} />
-                            Yapay Zeka Modelleri
+                            Model Ayarları
                         </button>
                         <button
                             onClick={() => setActiveTab('sync')}
-                            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                                 activeTab === 'sync' 
                                 ? 'bg-white/10 text-white' 
                                 : 'text-sand-400 hover:bg-white/5 hover:text-sand-200'
                             }`}
                         >
                             <Database size={16} />
-                            Bulut Senkronizasyonu
+                            Senkronizasyon
                         </button>
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto bg-[#1a1a1a] p-8">
+                    <div className="flex-1 overflow-y-auto bg-[#1a1a1a] p-5 sm:p-8">
                         {activeTab === 'models' && (
-                            <div className="max-w-2xl animate-fade-in">
-                                <div className="mb-8">
-                                    <h3 className="text-2xl font-semibold text-white mb-2">Model Ayarları</h3>
-                                    <p className="text-sm text-sand-400">
+                            <div className="max-w-2xl animate-fade-in pb-8">
+                                <div className="mb-6 sm:mb-8">
+                                    <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">Model Ayarları</h3>
+                                    <p className="text-xs sm:text-sm text-sand-400 leading-relaxed">
                                         Özel model sağlayıcılarını (provider) yapılandırın. İmla düzeltme ve akıllı asistan yetenekleri bu bağlantı üzerinden çalışır.
                                     </p>
                                 </div>
@@ -128,7 +128,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                     {/* Provider Selection */}
                                     <div className="space-y-3">
                                         <label className="text-sm font-medium text-sand-300">Sağlayıcı (Provider)</label>
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                                             {[
                                                 { id: 'gemini', name: 'Google Gemini' },
                                                 { id: 'openai', name: 'OpenAI' },
@@ -139,14 +139,14 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                                     key={p.id}
                                                     type="button"
                                                     onClick={() => { setProvider(p.id as ProviderType); setIsSaved(false); }}
-                                                    className={`rounded-xl border p-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                                                    className={`rounded-xl border p-2.5 sm:p-3 text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
                                                         provider === p.id 
                                                         ? 'border-moss-500 bg-moss-500/10 text-moss-400' 
                                                         : 'border-white/10 bg-white/5 text-sand-400 hover:border-white/20 hover:text-sand-200'
                                                     }`}
                                                 >
-                                                    {provider === p.id && <div className="w-1.5 h-1.5 rounded-full bg-moss-400" />}
-                                                    {p.name}
+                                                    {provider === p.id && <div className="w-1.5 h-1.5 rounded-full bg-moss-400 flex-shrink-0" />}
+                                                    <span className="truncate">{p.name}</span>
                                                 </button>
                                             ))}
                                         </div>
@@ -181,14 +181,14 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         </div>
                                     </div>
 
-                                    <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                                        <p className="text-xs text-sand-500 max-w-md">
+                                    <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                        <p className="text-[11px] sm:text-xs text-sand-500 max-w-md leading-relaxed">
                                             Bu anahtar yalnızca tarayıcınızın yerel deposunda (localStorage) saklanır ve doğrudan sağlayıcıya gönderilir.
                                         </p>
                                         <button
                                             type="submit"
                                             disabled={!apiKey.trim()}
-                                            className="flex items-center gap-2 rounded-xl bg-moss-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-moss-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-moss-600 px-6 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-moss-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {isSaved ? (
                                                 <><Check size={16} /> Kaydedildi</>
@@ -202,11 +202,11 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                         )}
 
                         {activeTab === 'sync' && (
-                            <div className="max-w-2xl animate-fade-in">
-                                <div className="mb-8 flex items-start gap-4">
+                            <div className="max-w-2xl animate-fade-in pb-8">
+                                <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start gap-4">
                                     <div>
-                                        <h3 className="text-2xl font-semibold text-white mb-2">Bulut Senkronizasyonu</h3>
-                                        <p className="text-sm text-sand-400">
+                                        <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">Bulut Senkronizasyonu</h3>
+                                        <p className="text-xs sm:text-sm text-sand-400 leading-relaxed">
                                             Cihazlar arası eşitleme için kendi Supabase veritabanınızı bağlayın. E-posta ve Google ile girişler bu veritabanı üzerinden yönetilecektir.
                                         </p>
                                     </div>
@@ -247,13 +247,13 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         </div>
                                     </div>
 
-                                    <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                                        <p className="text-xs text-sand-500 max-w-md">
+                                    <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                        <p className="text-[11px] sm:text-xs text-sand-500 max-w-md leading-relaxed">
                                             Bu ayarlar değiştirildiğinde uygulama yeniden başlatılır. Boş bırakırsanız cihazınız Yerel Mod'a döner.
                                         </p>
                                         <button
                                             type="submit"
-                                            className="flex items-center gap-2 rounded-xl bg-white px-6 py-2.5 text-sm font-semibold text-black shadow-lg transition-all hover:bg-sand-200"
+                                            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 sm:py-2.5 text-sm font-semibold text-black shadow-lg transition-all hover:bg-sand-200"
                                         >
                                             <RefreshCw size={16} />
                                             Bağlantıyı Yenile
