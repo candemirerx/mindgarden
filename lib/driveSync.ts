@@ -175,7 +175,13 @@ async function requestTokenNative(): Promise<string> {
         }
     }
     const res: any = await (GoogleAuth as any).signIn();
-    const token = res?.accessToken;
+    // Plugin v3+: token `authentication.accessToken` içinde; eski sürümlerde üst seviyede.
+    const token =
+        res?.authentication?.accessToken ??
+        res?.accessToken ??
+        (typeof res?.serverAuthCode === 'string' && res.serverAuthCode.length > 0
+            ? ''
+            : '');
     if (!token) throw new Error('Google erişim anahtarı alınamadı');
     return token;
 }
@@ -258,7 +264,11 @@ async function findBackupFile(token: string): Promise<string | null> {
         `&q=${encodeURIComponent(`name='${BACKUP_FILE_NAME}' and trashed=false`)}` +
         `&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=1`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) throw new Error('Drive listesi alınamadı (' + res.status + ')');
+    if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        const errMsg = errJson?.error?.message || errJson?.error?.status || res.statusText;
+        throw new Error(`Drive listesi alınamadı (${res.status}): ${errMsg}`);
+    }
     const data = await res.json();
     return data.files?.[0]?.id ?? null;
 }
