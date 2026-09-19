@@ -59,46 +59,105 @@ declare global {
     }
 }
 
-function loadGisScript(): Promise<void> {
+function waitGoogleReady(timeoutMs = 8000): Promise<void> {
     return new Promise((resolve, reject) => {
-        if (window.google?.accounts?.oauth2) return resolve();
-        const existing = document.getElementById('gis-script');
-        if (existing) {
-            existing.addEventListener('load', () => resolve());
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.id = 'gis-script';
-        script.async = true;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Google oturum betiği yüklenemedi'));
-        document.head.appendChild(script);
+        const started = Date.now();
+        const tick = () => {
+            if (window.google?.accounts?.oauth2) return resolve();
+            if (Date.now() - started > timeoutMs) {
+                return reject(new Error('Google oturum servisi zamanında yüklenemedi'));
+            }
+            setTimeout(tick, 200);
+        };
+        tick();
     });
 }
 
+function injectGisScriptOnce(): void {
+    if (document.getElementById('gis-script')) return;
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.id = 'gis-script';
+    script.async = true;
+    script.onload = () => { void waitGoogleReady(); };
+    script.onerror = () => {
+        // Betik yüklenemedi; yedek redirect akışı devreye girecek.
+    };
+    document.head.appendChild(script);
+}
+
+async function loadGisScript(): Promise<void> {
+    if (window.google?.accounts?.oauth2) return;
+    injectGisScriptOnce();
+    await waitGoogleReady();
+}
+
 function requestTokenWeb(): Promise<string> {
-    return new Promise((resolve, reject) => {
+    return (async () => {
         try {
-            const client = window.google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: SCOPES,
-                callback: (resp: any) => {
-                    if (resp?.access_token) {
-                        resolve(resp.access_token);
-                    } else {
-                        reject(new Error(resp?.error_description || resp?.error || 'Google izni alınamadı'));
-                    }
-                },
-                error_callback: (err: any) => {
-                    reject(new Error(err?.message || 'Google penceresi kapatıldı'));
-                },
+            await loadGisScript();
+            return await new Promise<string>((resolve, reject) => {
+                const client = window.google.accounts.oauth2.initTokenClient({
+                    client_id: GOOGLE_CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (resp: any) => {
+                        if (resp?.access_token) {
+                            resolve(resp.access_token);
+                        } else {
+                            reject(new Error(resp?.error_description || resp?.error || 'Google izni alınamadı'));
+                        }
+                    },
+                    error_callback: (err: any) => {
+                        reject(new Error(err?.message || 'Google penceresi kapatıldı'));
+                    },
+                });
+                client.requestAccessToken();
             });
-            client.requestAccessToken();
         } catch (e) {
-            reject(e instanceof Error ? e : new Error('Google oturumu başlatılamadı'));
+            // GIS yüklenemediyse tam sayfa redirect akışına düş (tek gereksinim: JS origin ayarı).
+            if (e instanceof Error && e.message.includes('zamanında')) {
+                return await requestTokenRedirect();
+            }
+            throw e;
         }
+    })();
+}
+
+/** Redirect tabanlı yedek OAuth akışı (GIS çalışmazsa). */
+function requestTokenRedirect(): Promise<string> {
+    return new Promise((resolve, reject) => {
+        sessionStorage.setItem('nb-drive-oauth-pending', '1');
+        const params = new URLSearchParams({
+            client_id: GOOGLE_CLIENT_ID,
+            redirect_uri: window.location.origin + window.location.pathname,
+            response_type: 'token',
+            scope: SCOPES,
+            include_granted_scopes: 'true',
+            prompt: 'consent',
+        });
+        window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+        reject(new Error('Google sayfasına yönlendiriliyorsun; izin verdikten sonra otomatik döneceksin.'));
     });
+}
+
+/** Redirect dönüşünde URL hash'inden token'ı yakalar. */
+export function completeDriveOAuthRedirectIfPresent(): boolean {
+    if (typeof window === 'undefined') return false;
+    if (!sessionStorage.getItem('nb-drive-oauth-pending')) return false;
+    if (!window.location.hash.includes('access_token=')) return false;
+
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const token = hash.get('access_token');
+    const expiresIn = Number(hash.get('expires_in') || '3600');
+    // Hash'i temizle ki yenilemelerde tekrar işlemesin.
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    sessionStorage.removeItem('nb-drive-oauth-pending');
+
+    if (token) {
+        cachedToken = { token, expiresAt: Date.now() + Math.max(60, expiresIn - 300) * 1000 };
+        return true;
+    }
+    return false;
 }
 
 async function requestTokenNative(): Promise<string> {
@@ -415,8 +474,12 @@ export function initDriveAutoSync(store: typeof useStore): void {
         }, AUTOSYNC_DEBOUNCE);
     });
 
-    // Açılışta uzaktaki yedekle birleştir (çapraz cihaz)
+    // Açılışta: redirect akışından dönen token'ı yakala, sonra uzaktaki
+    // yedekle birleştir (çapraz cihaz).
     if (isLocalBackend) {
-        Promise.resolve().then(() => syncOnStartup());
+        Promise.resolve().then(async () => {
+            completeDriveOAuthRedirectIfPresent();
+            await syncOnStartup();
+        });
     }
 }
