@@ -103,8 +103,19 @@ function requestTokenWeb(): Promise<string> {
 
 async function requestTokenNative(): Promise<string> {
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-    // Plugin tipi seçenek almıyor olabilir; çalışma anında desteklenir.
-    const res: any = await (GoogleAuth as any).signIn({ scopes: SCOPES.split(' ') });
+    // Android'de clientId VERİLMEZ (serverClientId kullanılır); scope'lar
+    // initialize ile tanımlanır çünkü plugin'in signIn'i seçenek almaz.
+    try {
+        await (GoogleAuth as any).initialize({ scopes: SCOPES.split(' ') });
+    } catch (e) {
+        // Zaten initialize edilmişse sorun değil; scopes ile tekrar denenir.
+        try {
+            await (GoogleAuth as any).initialize();
+        } catch {
+            // yoksay
+        }
+    }
+    const res: any = await (GoogleAuth as any).signIn();
     const token = res?.accessToken;
     if (!token) throw new Error('Google erişim anahtarı alınamadı');
     return token;
