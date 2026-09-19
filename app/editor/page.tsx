@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, Suspense, useState, useRef, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
 
-export default function EditorPage() {
-    const params = useParams();
+function EditorPageInner() {
+    const searchParams = useSearchParams();
     const router = useRouter();
-    const gardenId = params.id as string;
-    const nodeId = params.nodeId as string;
+    const gardenId = searchParams.get('id') || '';
+    const nodeId = searchParams.get('nodeId') || '';
 
     const { nodes, updateNode } = useStore();
     const [content, setContent] = useState('');
@@ -428,4 +428,8 @@ export default function EditorPage() {
             </footer>
         </div>
     );
+}
+
+export default function EditorPage() {
+  return <Suspense fallback={<div>Yükleniyor...</div>}><EditorPageInner /></Suspense>;
 }

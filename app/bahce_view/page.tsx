@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, Suspense, useState, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Sprout, Settings, List, TreePine } from 'lucide-react';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
@@ -13,10 +13,10 @@ import Sidebar from '@/components/layout/Sidebar';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
-export default function GardenPage() {
-    const params = useParams();
+function GardenPageInner() {
+    const searchParams = useSearchParams();
     const router = useRouter();
-    const gardenId = params.id as string;
+    const gardenId = searchParams.get('id') || '';
 
     const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, deleteNode: deleteNodeFromStore } = useStore();
     const [isLoading, setIsLoading] = useState(true);
@@ -304,7 +304,7 @@ export default function GardenPage() {
 
                 <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
                     <button
-                        onClick={() => router.push(`/bahce/${gardenId}/projeler`)}
+                        onClick={() => router.push(`/projeler?id=${gardenId}`)}
                         aria-label="Projeler"
                         title="Projeler (liste görünümü)"
                         className="flex-shrink-0 rounded-xl p-2 text-clay-700 transition-colors duration-200 hover:bg-clay-50"
@@ -341,7 +341,7 @@ export default function GardenPage() {
                                     node={root}
                                     onAddChild={handleAddChild}
                                     onDelete={handleDeleteNode}
-                                    onEdit={(node) => router.push(`/bahce/${gardenId}/editor/${node.id}`)}
+                                    onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
                                     depth={0}
                                 />
                             ))}
@@ -396,4 +396,8 @@ export default function GardenPage() {
             <Sidebar />
         </div>
     );
+}
+
+export default function Bahce_viewPage() {
+  return <Suspense fallback={<div>Yükleniyor...</div>}><GardenPageInner /></Suspense>;
 }

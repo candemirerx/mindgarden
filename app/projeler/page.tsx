@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, Suspense, useState, useCallback, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
     Plus, Trash2, Pencil, Layout, Search,
@@ -24,10 +24,10 @@ interface TreeItem {
  */
 const LEVEL_COLORS = ['#306C47', '#C9841B', '#4A7C8C', '#8A6A9E', '#B5626F'];
 
-export default function ProjectsPage() {
-    const params = useParams();
+function ProjectsPageInner() {
+    const searchParams = useSearchParams();
     const router = useRouter();
-    const gardenId = params.id as string;
+    const gardenId = searchParams.get('id') || '';
 
     const { gardens, nodes, fetchGardens, fetchNodes, addNode, updateNode, deleteNode, toggleNodeExpansion } = useStore();
     const [isLoading, setIsLoading] = useState(true);
@@ -177,7 +177,7 @@ export default function ProjectsPage() {
     };
 
     const handleEdit = (nodeId: string) => {
-        router.push(`/bahce/${gardenId}/editor/${nodeId}`);
+        router.push(`/editor?id=${gardenId}&nodeId=${nodeId}`);
     };
 
     const handleSaveTitle = async (nodeId: string, originalContent: string) => {
@@ -642,7 +642,7 @@ export default function ProjectsPage() {
                             </div>
 
                             <button
-                                onClick={() => router.push(`/bahce/${gardenId}`)}
+                                onClick={() => router.push(`/bahce_view?id=${gardenId}`)}
                                 className="btn btn-secondary h-10 px-4 text-sm"
                             >
                                 <Layout size={16} />
@@ -912,7 +912,7 @@ export default function ProjectsPage() {
 
                                     <div className="pt-2">
                                         <button
-                                            onClick={() => router.push(`/bahce/${gardenId}`)}
+                                            onClick={() => router.push(`/bahce_view?id=${gardenId}`)}
                                             className="btn btn-secondary px-4 py-2 text-sm"
                                         >
                                             <Layout size={15} />
@@ -935,4 +935,8 @@ export default function ProjectsPage() {
             </main>
         </div>
     );
+}
+
+export default function ProjelerPage() {
+  return <Suspense fallback={<div>Yükleniyor...</div>}><ProjectsPageInner /></Suspense>;
 }

@@ -243,19 +243,19 @@ export default function HomePage() {
 
     const handleOpenGarden = useCallback((gardenId: string) => {
         const lastView = localStorage.getItem(`garden-view-${gardenId}`);
-        router.push(lastView === 'projects' ? `/bahce/${gardenId}/projeler` : `/bahce/${gardenId}`);
+        router.push(lastView === 'projects' ? `/projeler?id=${gardenId}` : `/bahce_view?id=${gardenId}`);
     }, [router]);
 
     const handleOpenCanvas = useCallback((e: React.MouseEvent, gardenId: string) => {
         e.stopPropagation();
         localStorage.setItem(`garden-view-${gardenId}`, 'canvas');
-        router.push(`/bahce/${gardenId}`);
+        router.push(`/bahce_view?id=${gardenId}`);
     }, [router]);
 
     const handleOpenProjects = useCallback((e: React.MouseEvent, gardenId: string) => {
         e.stopPropagation();
         localStorage.setItem(`garden-view-${gardenId}`, 'projects');
-        router.push(`/bahce/${gardenId}/projeler`);
+        router.push(`/projeler?id=${gardenId}`);
     }, [router]);
 
     const handleDeleteGarden = useCallback(async (e: React.MouseEvent, gardenId: string) => {
