@@ -115,13 +115,15 @@ function EditorPageInner() {
         setIsSpellChecking(true);
 
         try {
-            // İstemcinin girdiği API anahtarını al (yoksa sunucudaki default kullanılır)
-            const clientApiKey = localStorage.getItem('nb-gemini-key') || '';
+            // İstemcinin girdiği ayarları al
+            const clientApiKey = localStorage.getItem('nb-ai-key') || localStorage.getItem('nb-gemini-key') || '';
+            const provider = localStorage.getItem('nb-ai-provider') || 'gemini';
+            const customUrl = localStorage.getItem('nb-ai-custom-url') || '';
 
-            const response = await fetch('/api/spellcheck', {
+            const response = await fetch('https://mindgarden-neon.vercel.app/api/spellcheck', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: textToCheck, clientApiKey })
+                body: JSON.stringify({ text: textToCheck, clientApiKey, provider, customUrl })
             });
 
             if (!response.ok) {

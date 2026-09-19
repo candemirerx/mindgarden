@@ -9,6 +9,7 @@ import { signInAsGuest } from '@/lib/localClient';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
 
 const PRODUCTION_URL = 'https://mindgarden-neon.vercel.app';
 
@@ -43,6 +44,7 @@ export default function Sidebar() {
     const [authError, setAuthError] = useState('');
     const [authLoading, setAuthLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
     // İçe aktarma inline state'leri
     const [showImportOptions, setShowImportOptions] = useState(false);
@@ -1263,61 +1265,21 @@ export default function Sidebar() {
                             {/* Yapay Zeka (Kullanici Panele Dahil) */}
                             {user && (
                                 <div className="px-5 pb-5">
-                                    {/* Yapay Zeka Ayarları Bölümü */}
-                                            <div className="border-t border-sand-200 pt-4">
-                                                <div className="mb-3 flex items-center gap-2">
-                                                    <Sparkles size={17} className="text-clay-600" />
-                                                    <h4 className="text-sm font-semibold text-sand-800">Yapay Zeka</h4>
-                                                </div>
-                                                <form onSubmit={handleSaveAiKey} className="space-y-2">
-                                                    <div className="relative">
-                                                        <Key size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-sand-400" />
-                                                        <input
-                                                            type="password"
-                                                            value={aiKey}
-                                                            onChange={(e) => {
-                                                                setAiKey(e.target.value);
-                                                                if (isAiKeySaved && e.target.value !== localStorage.getItem('nb-gemini-key')) {
-                                                                    setIsAiKeySaved(false);
-                                                                }
-                                                            }}
-                                                            placeholder="Gemini API Anahtarı"
-                                                            className="input py-2 pl-9 pr-4 text-xs font-mono placeholder:font-sans"
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            type="submit"
-                                                            disabled={!aiKey.trim() && !isAiKeySaved}
-                                                            className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${isAiKeySaved
-                                                                    ? 'bg-moss-100 text-moss-700'
-                                                                    : 'bg-sand-800 text-white hover:bg-sand-900'
-                                                                }`}
-                                                        >
-                                                            {isAiKeySaved ? 'Kaydedildi ✓' : 'Anahtarı Kaydet'}
-                                                        </button>
-                                                        {isAiKeySaved && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    localStorage.removeItem('nb-gemini-key');
-                                                                    setAiKey('');
-                                                                    setIsAiKeySaved(false);
-                                                                    setSuccessMessage('Anahtar silindi.');
-                                                                    setTimeout(() => setSuccessMessage(''), 2500);
-                                                                }}
-                                                                className="rounded-lg p-2 text-berry-600 hover:bg-berry-50 transition-colors"
-                                                                title="Anahtarı Sil"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-[10px] text-sand-500 leading-relaxed pt-1">
-                                                        Editördeki imla düzeltme vb. AI özellikleri için kendi Gemini anahtarınızı kullanabilirsiniz. Yalnızca bu cihazda kalır.
-                                                    </p>
-                                                </form>
-                                            </div>
+                                    <div className="border-t border-sand-200 pt-4">
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <Sparkles size={17} className="text-clay-600" />
+                                            <h4 className="text-sm font-semibold text-sand-800">Yapay Zeka</h4>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsSettingsModalOpen(true)}
+                                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-moss-600 px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition-all hover:bg-moss-700"
+                                        >
+                                            Model ve API Ayarları
+                                        </button>
+                                        <p className="mt-2 text-[10px] text-sand-500 leading-relaxed">
+                                            İmla düzeltme ve asistan özelliklerini farklı model sağlayıcılarıyla (Gemini, OpenAI, Anthropic, Custom) kullanabilirsiniz.
+                                        </p>
+                                    </div>
                                 </div>
                             )}
 
@@ -1337,6 +1299,11 @@ export default function Sidebar() {
                     </>
                 )}
             </AnimatePresence>
+
+            <ModelSettingsModal 
+                isOpen={isSettingsModalOpen} 
+                onClose={() => setIsSettingsModalOpen(false)} 
+            />
         </>
     );
 }

@@ -274,7 +274,7 @@ function ProjectsPageInner() {
                     <div className="w-full">
                         <div
                             onClick={() => setSelectedNodeId(item.id)}
-                            className={`overflow-hidden rounded-2xl border bg-white p-3 shadow-card transition-all duration-200 cursor-pointer ${
+                            className={`relative rounded-2xl border bg-white p-3 shadow-card transition-all duration-200 cursor-pointer ${
                                 isSelected
                                     ? 'border-moss-500 ring-2 ring-moss-500/15 shadow-lift'
                                     : 'border-sand-200 hover:border-moss-200 hover:shadow-lift'
