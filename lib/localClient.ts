@@ -21,7 +21,7 @@ const SESSION_KEY = 'nb-local-session-v1';
 export interface LocalUser {
     id: string;
     email: string;
-    user_metadata: { full_name: string; avatar_url: null };
+    user_metadata: { full_name: string; avatar_url: string | null; provider?: string };
 }
 
 interface LocalSession {
@@ -187,7 +187,7 @@ function scopeForTable(table: Table, rows: Row[]): Row[] {
 /* ------------------------------------------------------------------ */
 
 type Table = 'gardens' | 'nodes';
-type Action = 'select' | 'insert' | 'update' | 'delete';
+type Action = 'select' | 'insert' | 'update' | 'delete' | 'upsert';
 
 interface QueryResult {
     data: unknown;
@@ -284,6 +284,8 @@ class LocalQuery implements PromiseLike<QueryResult> {
                     return this.runSelect();
                 case 'insert':
                     return this.runInsert();
+                case 'upsert':
+                    return this.runUpsert();
                 case 'update':
                     return this.runUpdate();
                 case 'delete':
@@ -345,6 +347,34 @@ class LocalQuery implements PromiseLike<QueryResult> {
             Object.assign(row, patch);
             if (this.table === 'nodes' && patch.updated_at === undefined) {
                 row.updated_at = new Date().toISOString();
+            }
+        }
+
+        writeDatabase(db);
+        return { data: null, error: null };
+    }
+
+    private runUpsert(): QueryResult {
+        const incoming = Array.isArray(this.payload) ? this.payload : [this.payload ?? {}];
+        const db = readDatabase();
+        const key = this.table === 'gardens' ? 'gardens' : 'nodes';
+        const collection = db[key] as unknown as Row[];
+        const byId = new Map(collection.map((row) => [row.id, row]));
+
+        for (const row of incoming) {
+            if (!row.id) continue;
+            const existing = byId.get(row.id);
+            if (existing) {
+                Object.assign(existing, row);
+            } else {
+                const record: Row = { ...row };
+                if (this.table === 'gardens') {
+                    record.user_id = record.user_id ?? activeUserId() ?? undefined;
+                } else {
+                    record.is_expanded = record.is_expanded ?? true;
+                }
+                collection.push(record);
+                byId.set(record.id, record);
             }
         }
 
@@ -428,6 +458,36 @@ export const localClient = {
             return { data: { url: null, provider: null }, error: { message: UNSUPPORTED_GOOGLE } };
         },
 
+        /**
+         * Google profiliyle (Supabase'siz) yerel oturum açar.
+         * driveSync'teki Google girişi bu metodu kullanır; aynı e-posta
+         * her cihazda aynı kullanıcı kimliğini üretir.
+         */
+        async signInWithGoogleProfile(profile: {
+            email: string;
+            name?: string | null;
+            avatarUrl?: string | null;
+        }) {
+            if (!profile.email) {
+                return { data: { session: null, user: null }, error: { message: 'Google profili okunamadı' } };
+            }
+            const session: LocalSession = {
+                user: {
+                    id: userIdFor(profile.email.toLowerCase()),
+                    email: profile.email,
+                    user_metadata: {
+                        full_name: profile.name || profile.email.split('@')[0],
+                        avatar_url: profile.avatarUrl ?? null,
+                        provider: 'google',
+                    },
+                },
+                access_token: createId(),
+            };
+            writeLocalSession(session);
+            emit('SIGNED_IN', session);
+            return { data: { session, user: session.user }, error: null };
+        },
+
         async exchangeCodeForSession() {
             return { data: { session: null }, error: { message: UNSUPPORTED_GOOGLE } };
         },
@@ -438,6 +498,7 @@ export const localClient = {
             select: () => new LocalQuery(table, 'select').select(),
             insert: (rows: Row | Row[]) => new LocalQuery(table, 'insert', rows),
             update: (patch: Row) => new LocalQuery(table, 'update', patch),
+            upsert: (rows: Row | Row[]) => new LocalQuery(table, 'upsert', rows),
             delete: () => new LocalQuery(table, 'delete'),
         };
     },

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { initDriveAutoSync } from '@/lib/driveSync';
 
 function EditorPageInner() {
     const searchParams = useSearchParams();
@@ -30,6 +31,11 @@ function EditorPageInner() {
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const currentNode = nodes.find(n => n.id === nodeId);
+
+    // Editör sayfası Sidebar içermez; otomatik Drive yedeklemesini burada da başlat.
+    useEffect(() => {
+        initDriveAutoSync(useStore);
+    }, []);
 
     useEffect(() => {
         if (currentNode) {

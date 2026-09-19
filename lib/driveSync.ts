@@ -1,29 +1,57 @@
 'use client';
 
 /**
- * Google Drive senkronizasyonu (Supabase gerektirmeyen kolay yedekleme).
+ * Google Drive senkronizasyonu (Supabase gerektirmeyen kolay senkron).
  *
- * Veriler kullanıcının kendi Google Drive'ındaki gizli "appDataFolder"
- * alanına JSON olarak yazılır; başka hiçbir uygulama/kişi erişemez.
+ * - Google ile giriş: tarayıcıda GIS, APK'da @codetrix-studio/capacitor-google-auth.
+ * - Yedek: kullanıcının Drive'ındaki gizli "appDataFolder" alanına JSON.
+ * - Otomatik senkron: Google oturumu açıkken not değişince (5 sn hareketsizlikte)
+ *   Drive'a yazılır; uygulama açılışında uzaktaki yedek cihazla birleştirilir.
  *
- * - Native (APK): @codetrix-studio/capacitor-google-auth ile token alınır.
- * - Web: Google Identity Services (GIS) token istemcisi ile token alınır.
+ * Birleştirme kuralı: notlarda "son değişiklik kazanır" (updated_at);
+ * bahçelerde eksik olanlar uzaktan eklenir. Silinen kayıtlar taşınmaz (v1).
  */
 
 import { Capacitor } from '@capacitor/core';
-import { supabase } from './supabaseClient';
+import { supabase, isLocalBackend } from './supabaseClient';
+import type { useStore } from './store/useStore';
 
 export const GOOGLE_CLIENT_ID =
     '745502376472-dqf1pus06s224bakb2i3sls86flgfjm5.apps.googleusercontent.com';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const PROFILE_SCOPE = 'openid email profile';
+const SCOPES = `${PROFILE_SCOPE} ${DRIVE_SCOPE}`;
 const BACKUP_FILE_NAME = 'notbahcesi-backup.json';
+const AUTOSYNC_KEY = 'nb-drive-autosync';
+const LAST_SYNC_KEY = 'nb-drive-last-sync';
 
-// ---------------------------------------------------------------------------
-// Token yönetimi
-// ---------------------------------------------------------------------------
+export function isAutoSyncEnabled(): boolean {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(AUTOSYNC_KEY) === '1';
+}
+
+export function setAutoSyncEnabled(on: boolean): void {
+    localStorage.setItem(AUTOSYNC_KEY, on ? '1' : '0');
+}
+
+export function lastSyncTime(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(LAST_SYNC_KEY);
+}
+
+export function isSignedInWithGoogle(): boolean {
+    if (typeof window === 'undefined') return false;
+    const session = JSON.parse(localStorage.getItem('nb-local-session-v1') || 'null');
+    return session?.user?.user_metadata?.provider === 'google';
+}
+
+/* ------------------------------------------------------------------ */
+/* Token yönetimi                                                     */
+/* ------------------------------------------------------------------ */
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
+let lastAutoAttempt = 0;
 
 declare global {
     interface Window {
@@ -49,13 +77,12 @@ function loadGisScript(): Promise<void> {
     });
 }
 
-async function requestTokenWeb(): Promise<string> {
-    await loadGisScript();
+function requestTokenWeb(): Promise<string> {
     return new Promise((resolve, reject) => {
         try {
             const client = window.google.accounts.oauth2.initTokenClient({
                 client_id: GOOGLE_CLIENT_ID,
-                scope: DRIVE_SCOPE,
+                scope: SCOPES,
                 callback: (resp: any) => {
                     if (resp?.access_token) {
                         resolve(resp.access_token);
@@ -77,13 +104,13 @@ async function requestTokenWeb(): Promise<string> {
 async function requestTokenNative(): Promise<string> {
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
     // Plugin tipi seçenek almıyor olabilir; çalışma anında desteklenir.
-    const res: any = await (GoogleAuth as any).signIn({ scopes: [DRIVE_SCOPE] });
+    const res: any = await (GoogleAuth as any).signIn({ scopes: SCOPES.split(' ') });
     const token = res?.accessToken;
     if (!token) throw new Error('Google erişim anahtarı alınamadı');
     return token;
 }
 
-/** Google Drive için erişim anahtarı alır (mümkünse önbellekten). */
+/** Google Drive + profil için erişim anahtarı alır (mümkünse önbellekten). */
 export async function getDriveToken(force = false): Promise<string> {
     if (!force && cachedToken && cachedToken.expiresAt > Date.now() + 60_000) {
         return cachedToken.token;
@@ -92,7 +119,6 @@ export async function getDriveToken(force = false): Promise<string> {
         ? await requestTokenNative()
         : await requestTokenWeb();
 
-    // Token süresini ölçmek için basit bir istek atıyoruz; Google 1 saat verir.
     cachedToken = { token, expiresAt: Date.now() + 55 * 60 * 1000 };
     return token;
 }
@@ -101,9 +127,34 @@ export function clearDriveToken(): void {
     cachedToken = null;
 }
 
-// ---------------------------------------------------------------------------
-// Yerel veriyi toplama / geri yazma
-// ---------------------------------------------------------------------------
+/* ------------------------------------------------------------------ */
+/* Google girişi (Supabase'siz)                                       */
+/* ------------------------------------------------------------------ */
+
+export interface GoogleProfile {
+    email: string;
+    name: string | null;
+    avatarUrl: string | null;
+}
+
+/** Google oturumu açar ve profili döndürür; hemen ardından yerel oturum yazılmaz. */
+export async function fetchGoogleProfile(): Promise<{ token: string; profile: GoogleProfile }> {
+    const token = await getDriveToken(true);
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Google profili alınamadı (' + res.status + ')');
+    const data = await res.json();
+    if (!data?.email) throw new Error('Google profili e-posta içermiyor');
+    return {
+        token,
+        profile: { email: data.email, name: data.name ?? null, avatarUrl: data.picture ?? null },
+    };
+}
+
+/* ------------------------------------------------------------------ */
+/* Veri toplama                                                       */
+/* ------------------------------------------------------------------ */
 
 export interface BackupPayload {
     app: 'notbahcesi';
@@ -124,9 +175,9 @@ async function collectLocalData(): Promise<Omit<BackupPayload, 'exportedAt' | 'd
     return { app: 'notbahcesi', version: 1, gardens: gardensRes.data ?? [], nodes: nodesRes.data ?? [] };
 }
 
-// ---------------------------------------------------------------------------
-// Drive API (appDataFolder)
-// ---------------------------------------------------------------------------
+/* ------------------------------------------------------------------ */
+/* Drive API (appDataFolder)                                          */
+/* ------------------------------------------------------------------ */
 
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
@@ -142,22 +193,13 @@ async function findBackupFile(token: string): Promise<string | null> {
     return data.files?.[0]?.id ?? null;
 }
 
-/** Yerel veriyi Drive'a yazar (varsa üzerine günceller). */
-export async function uploadBackup(token: string): Promise<{ exportedAt: string; count: number }> {
-    const base = await collectLocalData();
-    const payload: BackupPayload = {
-        ...base,
-        exportedAt: new Date().toISOString(),
-        device: Capacitor.isNativePlatform() ? 'android' : 'web',
-    };
-    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-
+async function writeBackup(token: string, payload: BackupPayload): Promise<void> {
     const fileId = await findBackupFile(token);
     const url = fileId
         ? `${UPLOAD_API}/files/${fileId}?uploadType=media&fields=id`
         : `${UPLOAD_API}/files?uploadType=multipart&fields=id`;
 
-    let body: FormData | Blob = blob;
+    let body: Blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
     const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
     if (!fileId) {
         headers['Content-Type'] = 'multipart/related; boundary="nb"';
@@ -178,16 +220,11 @@ export async function uploadBackup(token: string): Promise<{ exportedAt: string;
         const err = await res.text();
         throw new Error('Drive yükleme başarısız (' + res.status + '): ' + err.slice(0, 200));
     }
-    return {
-        exportedAt: payload.exportedAt,
-        count: payload.gardens.length + payload.nodes.length,
-    };
 }
 
-/** Drive'daki yedeği okur. */
-export async function downloadBackup(token: string): Promise<BackupPayload> {
+async function downloadBackup(token: string): Promise<BackupPayload | null> {
     const fileId = await findBackupFile(token);
-    if (!fileId) throw new Error('Drive üzerinde yedek bulunamadı');
+    if (!fileId) return null;
     const res = await fetch(`${API}/files/${fileId}?alt=media`, {
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -197,26 +234,178 @@ export async function downloadBackup(token: string): Promise<BackupPayload> {
     return data;
 }
 
-/**
- * Yedeği cihaza geri yükler: mevcut kayıtların üzerine yazar, yedekte olmayan
- * aynı id'li kayıtları upsert eder.
- */
+/* ------------------------------------------------------------------ */
+/* Senkron işlemleri                                                  */
+/* ------------------------------------------------------------------ */
+
+/** Yerel veriyi Drive'a yazar (manuel buton veya otomatik). */
+export async function uploadBackup(token: string): Promise<{ exportedAt: string; count: number }> {
+    const base = await collectLocalData();
+    const payload: BackupPayload = {
+        ...base,
+        exportedAt: new Date().toISOString(),
+        device: Capacitor.isNativePlatform() ? 'android' : 'web',
+    };
+    await writeBackup(token, payload);
+    localStorage.setItem(LAST_SYNC_KEY, payload.exportedAt);
+    return {
+        exportedAt: payload.exportedAt,
+        count: payload.gardens.length + payload.nodes.length,
+    };
+}
+
+/** Drive'daki yedeği olduğu gibi cihaza yazar (eskiyi silmeden upsert). */
 export async function restoreBackup(
     token: string,
     onProgress?: (msg: string) => void
 ): Promise<{ gardens: number; nodes: number }> {
+    onProgress?.('Yedek indiriliyor…');
     const payload = await downloadBackup(token);
-    onProgress?.('Yedek okundu, cihaza yazılıyor…');
+    if (!payload) throw new Error('Drive üzerinde yedek bulunamadı');
+    return writePayloadToLocal(payload, onProgress);
+}
 
-    for (const garden of payload.gardens ?? []) {
-        await supabase.from('gardens').upsert(garden);
+async function writePayloadToLocal(
+    payload: BackupPayload,
+    onProgress?: (msg: string) => void
+): Promise<{ gardens: number; nodes: number }> {
+    merging = true;
+    try {
+        onProgress?.('Cihaza yazılıyor…');
+        for (const garden of payload.gardens ?? []) {
+            await supabase.from('gardens').upsert(garden);
+        }
+        for (const node of payload.nodes ?? []) {
+            await supabase.from('nodes').upsert(node);
+        }
+        // Store'u uyar (açık sayfalar tazelesin)
+        if (storeRef) {
+            await storeRef.getState().fetchGardens();
+        }
+        return { gardens: payload.gardens?.length ?? 0, nodes: payload.nodes?.length ?? 0 };
+    } finally {
+        // Bir tur bekle ki store'un kendi güncellemesi debounce'u tetiklemesin
+        setTimeout(() => { merging = false; }, 2000);
     }
-    for (const node of payload.nodes ?? []) {
-        await supabase.from('nodes').upsert(node);
+}
+
+/**
+ * Çapraz cihaz senkronu: Drive'daki yedeği cihazla birleştirir.
+ * Notlarda updated_at yeni olan kazanır; eksikler karşı taraftan gelir.
+ * Sonuç hem cihaza yazılır hem Drive'a geri yüklenir.
+ */
+export async function mergeSync(token: string): Promise<{ gardens: number; nodes: number; merged: boolean }> {
+    const remote = await downloadBackup(token);
+    if (!remote) {
+        // Yedek yok: yerel veriyi ilk kez yükle
+        const res = await uploadBackup(token);
+        return { gardens: res.count, nodes: 0, merged: false };
     }
 
-    return {
-        gardens: payload.gardens?.length ?? 0,
-        nodes: payload.nodes?.length ?? 0,
-    };
+    const local = await collectLocalData();
+    merging = true;
+    try {
+        // Bahçeler: cihazda olmayanları uzaktan ekle
+        const localGardenIds = new Set(local.gardens.map((g) => g.id));
+        const missingGardens = (remote.gardens ?? []).filter((g) => g.id && !localGardenIds.has(g.id));
+        for (const garden of missingGardens) {
+            await supabase.from('gardens').upsert(garden);
+        }
+
+        // Notlar: son değişiklik kazanır
+        const localNodes = new Map(local.nodes.map((n) => [n.id, n]));
+        const remoteNodes = remote.nodes ?? [];
+        const toWrite: any[] = [];
+        for (const rNode of remoteNodes) {
+            if (!rNode.id) continue;
+            const lNode = localNodes.get(rNode.id);
+            if (!lNode) {
+                toWrite.push(rNode);
+                continue;
+            }
+            const lTime = lNode.updated_at || lNode.created_at || '';
+            const rTime = rNode.updated_at || rNode.created_at || '';
+            if (rTime > lTime) {
+                toWrite.push(rNode);
+            }
+        }
+        for (const node of toWrite) {
+            await supabase.from('nodes').upsert(node);
+        }
+
+        // Birleşik sonucu Drive'a yaz
+        const merged = await collectLocalData();
+        const payload: BackupPayload = {
+            ...merged,
+            exportedAt: new Date().toISOString(),
+            device: Capacitor.isNativePlatform() ? 'android' : 'web',
+        };
+        await writeBackup(token, payload);
+        localStorage.setItem(LAST_SYNC_KEY, payload.exportedAt);
+
+        if (storeRef) {
+            await storeRef.getState().fetchGardens();
+        }
+        return { gardens: missingGardens.length, nodes: toWrite.length, merged: true };
+    } finally {
+        setTimeout(() => { merging = false; }, 2000);
+    }
+}
+
+/** Uygulama açılışında çağrılır: otomatik senkron açıksa birleştirme yapar. */
+export async function syncOnStartup(): Promise<void> {
+    if (!isAutoSyncEnabled() || !isSignedInWithGoogle()) return;
+    const now = Date.now();
+    if (now - lastAutoAttempt < 60_000) return;
+    lastAutoAttempt = now;
+    try {
+        const token = await getDriveToken(true);
+        await mergeSync(token);
+    } catch {
+        // Sessiz geç: çevrimdışı olabilir; sonraki açılışta tekrar denenir.
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Otomatik senkron (store değişimlerini izler)                       */
+/* ------------------------------------------------------------------ */
+
+type StoreApi = typeof useStore;
+let storeRef: StoreApi | null = null;
+let autoSyncInitialized = false;
+let merging = false;
+let uploadTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Değişiklik sonrası otomatik yedekleme gecikmesi (ms). */
+const AUTOSYNC_DEBOUNCE = 5000;
+
+/**
+ * Store değişikliklerini izler; Google oturumu + otomatik senkron açıksa
+ * son değişiklikten 5 sn sonra Drive'a yazar. Sayfa başına bir kez çağrılır.
+ */
+export function initDriveAutoSync(store: typeof useStore): void {
+    if (autoSyncInitialized || typeof window === 'undefined') return;
+    autoSyncInitialized = true;
+    storeRef = store;
+
+    store.subscribe((state) => {
+        if (merging) return;
+        if (!isAutoSyncEnabled() || !isSignedInWithGoogle()) return;
+        if (state.gardens.length === 0 && state.nodes.length === 0) return;
+
+        if (uploadTimer) clearTimeout(uploadTimer);
+        uploadTimer = setTimeout(async () => {
+            try {
+                const token = await getDriveToken(false);
+                await uploadBackup(token);
+            } catch {
+                // Sessiz geç: token süresi/çevrimdışı; bir sonraki değişiklikte tekrar denenir.
+            }
+        }, AUTOSYNC_DEBOUNCE);
+    });
+
+    // Açılışta uzaktaki yedekle birleştir (çapraz cihaz)
+    if (isLocalBackend) {
+        Promise.resolve().then(() => syncOnStartup());
+    }
 }

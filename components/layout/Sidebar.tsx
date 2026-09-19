@@ -10,6 +10,9 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
+import { fetchGoogleProfile, setAutoSyncEnabled, syncOnStartup, initDriveAutoSync } from '@/lib/driveSync';
+import { useMobileShell } from '@/components/mobile/MobileShell';
+import { OfflineOverlay } from '@/components/mobile/MobileShell';
 
 const PRODUCTION_URL = 'https://mindgarden-neon.vercel.app';
 
@@ -28,6 +31,15 @@ function getOAuthOrigin(): string {
 
 export default function Sidebar() {
     const { isSidebarOpen, setSidebarOpen, gardens, fetchGardens } = useStore();
+
+    // Drive otomatik senkron motorunu başlat (tüm uygulama ömrü boyunca tek kez)
+    useEffect(() => {
+        initDriveAutoSync(useStore);
+    }, []);
+
+    // Android geri tuşu + çevrimdışı takibi
+    const isOffline = useMobileShell();
+
     const [user, setUser] = useState<SupabaseUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
@@ -103,6 +115,27 @@ export default function Sidebar() {
     const handleGoogleSignIn = async () => {
         setAuthLoading(true);
         setAuthError('');
+
+        // Yerel modda Google girişi Supabase'e ihtiyaç duymaz:
+        // Google profili alınır, cihazda oturum açılır ve Drive otomatik
+        // yedeklemesi etkinleştirilir.
+        if (isLocalBackend) {
+            try {
+                const { profile } = await fetchGoogleProfile();
+                await (supabase.auth as any).signInWithGoogleProfile(profile);
+                setAutoSyncEnabled(true);
+                setSuccessMessage('Google ile giriş yapıldı. Notlar artık Drive\'ına otomatik yedekleniyor.');
+                setTimeout(() => setSuccessMessage(''), 4000);
+                setSidebarOpen(false);
+                void syncOnStartup();
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                setAuthError('Google ile giriş başarısız: ' + errorMessage);
+            } finally {
+                setAuthLoading(false);
+            }
+            return;
+        }
 
         try {
             // OAuth URL'ini al ve manuel yönlendir
@@ -833,6 +866,7 @@ export default function Sidebar() {
 
     return (
         <>
+            {isOffline && <OfflineOverlay />}
 
             <AnimatePresence>
                 {isSidebarOpen && (

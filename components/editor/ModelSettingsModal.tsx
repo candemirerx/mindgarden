@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, Lock, HardDriveDownload, UploadCloud, Loader2 } from 'lucide-react';
 import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
-import { getDriveToken, uploadBackup, restoreBackup } from '@/lib/driveSync';
+import { getDriveToken, uploadBackup, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
 
 interface ModelSettingsModalProps {
     isOpen: boolean;
@@ -27,8 +27,10 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     const [supaKey, setSupaKey] = useState('');
 
     // Google Drive (kolay senkron) durumu
-    const [driveBusy, setDriveBusy] = useState<'idle' | 'upload' | 'restore'>('idle');
+    const [driveBusy, setDriveBusy] = useState<'idle' | 'upload' | 'restore' | 'merge'>('idle');
     const [driveMessage, setDriveMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+    const [autoSync, setAutoSync] = useState(false);
+    const [lastSync, setLastSync] = useState<string | null>(null);
     const { fetchGardens } = useStore();
 
     const handleDriveUpload = async () => {
@@ -37,6 +39,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
         try {
             const token = await getDriveToken(true);
             const res = await uploadBackup(token);
+            setLastSync(res.exportedAt);
             setDriveMessage({ type: 'ok', text: `Google Drive'a yedeklendi (${res.count} kayıt, ${new Date(res.exportedAt).toLocaleTimeString('tr-TR')}).` });
         } catch (e) {
             setDriveMessage({ type: 'err', text: e instanceof Error ? e.message : 'Yedekleme başarısız' });
@@ -52,9 +55,27 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
             const token = await getDriveToken(false);
             const res = await restoreBackup(token, (msg) => setDriveMessage({ type: 'ok', text: msg }));
             await fetchGardens();
-            setDriveMessage({ type: 'ok', text: `Drive'dan geri yüklendi: ${res.gardens} bahçe, ${res.nodes} not. Listeyi yenilemek için sayfayı kapatıp aç.` });
+            setDriveMessage({ type: 'ok', text: `Drive'dan geri yüklendi: ${res.gardens} bahçe, ${res.nodes} not.` });
         } catch (e) {
             setDriveMessage({ type: 'err', text: e instanceof Error ? e.message : 'Geri yükleme başarısız' });
+        } finally {
+            setDriveBusy('idle');
+        }
+    };
+
+    const handleDriveMerge = async () => {
+        setDriveBusy('merge');
+        setDriveMessage(null);
+        try {
+            const token = await getDriveToken(false);
+            const res = await mergeSync(token);
+            if (!res.merged) {
+                setDriveMessage({ type: 'ok', text: 'Drive\'da yedek yok; bu cihazın verisi ilk kez yedeklendi.' });
+            } else {
+                setDriveMessage({ type: 'ok', text: `Birleştirildi: ${res.gardens} bahçe ve ${res.nodes} not karşı taraftan geldi.` });
+            }
+        } catch (e) {
+            setDriveMessage({ type: 'err', text: e instanceof Error ? e.message : 'Senkron başarısız' });
         } finally {
             setDriveBusy('idle');
         }
@@ -76,6 +97,8 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
             
             setSupaUrl(localStorage.getItem('nb-supa-url') || process.env.NEXT_PUBLIC_SUPABASE_URL || '');
             setSupaKey(localStorage.getItem('nb-supa-key') || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '');
+            setAutoSync(isAutoSyncEnabled());
+            setLastSync(lastSyncTime());
         }
     }, [isOpen]);
 
@@ -284,7 +307,40 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                             {driveBusy === 'restore' ? <Loader2 size={16} className="animate-spin" /> : <HardDriveDownload size={16} />}
                                             Drive'dan Geri Yükle
                                         </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDriveMerge}
+                                            disabled={driveBusy !== 'idle'}
+                                            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-moss-500/40 bg-moss-500/10 px-4 py-3 text-sm font-semibold text-moss-300 transition-all hover:bg-moss-500/20 disabled:opacity-50"
+                                        >
+                                            {driveBusy === 'merge' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                                            Şimdi Senkronla
+                                        </button>
                                     </div>
+
+                                    {/* Otomatik senkron anahtarı */}
+                                    <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoSync}
+                                            onChange={(e) => {
+                                                setAutoSync(e.target.checked);
+                                                setAutoSyncEnabled(e.target.checked);
+                                            }}
+                                            className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer rounded border-white/20 bg-black/40 accent-moss-500"
+                                        />
+                                        <span>
+                                            <span className="block text-sm font-semibold text-white">Otomatik Senkron (Google girişi gerekir)</span>
+                                            <span className="mt-0.5 block text-[11px] leading-relaxed text-sand-400">
+                                                Açıkken her not değişikliği ~5 saniye sonra otomatik Drive'a yazılır ve uygulama açılışında diğer cihazlardaki değişiklikler birleştirilir. Google ile giriş yaptığınız anda bu otomatik açılır.
+                                            </span>
+                                            {lastSync && (
+                                                <span className="mt-1.5 block text-[11px] text-moss-400">
+                                                    Son yedek: {new Date(lastSync).toLocaleString('tr-TR')}
+                                                </span>
+                                            )}
+                                        </span>
+                                    </label>
                                     {driveMessage && (
                                         <p className={`mt-3 text-xs leading-relaxed ${driveMessage.type === 'ok' ? 'text-moss-400' : 'text-berry-400'}`}>
                                             {driveMessage.text}
