@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, Lock } from 'lucide-react';
+import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, Lock, HardDriveDownload, UploadCloud, Loader2 } from 'lucide-react';
 import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
+import { getDriveToken, uploadBackup, restoreBackup } from '@/lib/driveSync';
 
 interface ModelSettingsModalProps {
     isOpen: boolean;
@@ -24,6 +25,40 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     // Senkronizasyon (Supabase) Ayarları
     const [supaUrl, setSupaUrl] = useState('');
     const [supaKey, setSupaKey] = useState('');
+
+    // Google Drive (kolay senkron) durumu
+    const [driveBusy, setDriveBusy] = useState<'idle' | 'upload' | 'restore'>('idle');
+    const [driveMessage, setDriveMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+    const { fetchGardens } = useStore();
+
+    const handleDriveUpload = async () => {
+        setDriveBusy('upload');
+        setDriveMessage(null);
+        try {
+            const token = await getDriveToken(true);
+            const res = await uploadBackup(token);
+            setDriveMessage({ type: 'ok', text: `Google Drive'a yedeklendi (${res.count} kayıt, ${new Date(res.exportedAt).toLocaleTimeString('tr-TR')}).` });
+        } catch (e) {
+            setDriveMessage({ type: 'err', text: e instanceof Error ? e.message : 'Yedekleme başarısız' });
+        } finally {
+            setDriveBusy('idle');
+        }
+    };
+
+    const handleDriveRestore = async () => {
+        setDriveBusy('restore');
+        setDriveMessage(null);
+        try {
+            const token = await getDriveToken(false);
+            const res = await restoreBackup(token, (msg) => setDriveMessage({ type: 'ok', text: msg }));
+            await fetchGardens();
+            setDriveMessage({ type: 'ok', text: `Drive'dan geri yüklendi: ${res.gardens} bahçe, ${res.nodes} not. Listeyi yenilemek için sayfayı kapatıp aç.` });
+        } catch (e) {
+            setDriveMessage({ type: 'err', text: e instanceof Error ? e.message : 'Geri yükleme başarısız' });
+        } finally {
+            setDriveBusy('idle');
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -68,11 +103,11 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bark-950/60 p-0 sm:p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
             <div 
-                className="flex h-full sm:h-[85vh] sm:max-h-[750px] w-full max-w-5xl flex-col overflow-hidden sm:rounded-[24px] bg-[#1a1a1a] text-sand-100 shadow-2xl animate-scale-in sm:border border-white/10"
+                className="flex h-[100dvh] min-h-0 w-full max-w-5xl flex-col overflow-hidden bg-[#1a1a1a] text-sand-100 shadow-2xl animate-scale-in sm:h-[85vh] sm:max-h-[750px] sm:rounded-[24px] sm:border sm:border-white/10"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex flex-shrink-0 items-center justify-between border-b border-white/10 px-5 sm:px-8 py-4 sm:py-5">
+                <div className="flex flex-shrink-0 items-center justify-between border-b border-white/10 px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-8 sm:py-5">
                     <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-white flex items-center gap-3">
                         <Sparkles size={20} className="text-moss-400" />
                         Tercihler & Ayarlar
@@ -83,15 +118,15 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                 </div>
 
                 {/* Body: Split Layout */}
-                <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
                     {/* Sidebar / Tabs */}
-                    <div className="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-white/10 bg-[#141414] p-3 sm:p-4 flex flex-row md:flex-col gap-2 overflow-x-auto">
+                    <div className="flex w-full flex-shrink-0 flex-row gap-2 overflow-x-auto border-b border-white/10 bg-[#141414] p-2.5 sm:p-4 md:w-64 md:flex-col md:overflow-visible md:border-b-0 md:border-r">
                         <div className="hidden md:block mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sand-500">
                             Yapılandırma
                         </div>
                         <button
                             onClick={() => setActiveTab('models')}
-                            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                            className={`flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                                 activeTab === 'models' 
                                 ? 'bg-white/10 text-white' 
                                 : 'text-sand-400 hover:bg-white/5 hover:text-sand-200'
@@ -102,7 +137,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                         </button>
                         <button
                             onClick={() => setActiveTab('sync')}
-                            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                            className={`flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                                 activeTab === 'sync' 
                                 ? 'bg-white/10 text-white' 
                                 : 'text-sand-400 hover:bg-white/5 hover:text-sand-200'
@@ -114,7 +149,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto bg-[#1a1a1a] p-5 sm:p-8">
+                    <div className="min-h-0 flex-1 overflow-y-auto bg-[#1a1a1a] p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:p-8">
                         {activeTab === 'models' && (
                             <div className="max-w-2xl animate-fade-in pb-8">
                                 <div className="mb-6 sm:mb-8">
@@ -207,7 +242,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                     <div>
                                         <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">Bulut Senkronizasyonu</h3>
                                         <p className="text-xs sm:text-sm text-sand-400 leading-relaxed">
-                                            Cihazlar arası eşitleme için kendi Supabase veritabanınızı bağlayın. E-posta ve Google ile girişler bu veritabanı üzerinden yönetilecektir.
+                                            Google Drive ile tek tuşla yedekle / geri yükle ya da kendi Supabase veritabanını bağla.
                                         </p>
                                     </div>
                                     {isLocalBackend ? (
@@ -219,6 +254,48 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                             Bulut Aktif
                                         </span>
                                     )}
+                                </div>
+
+                                {/* Google Drive (kolay senkron) */}
+                                <div className="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+                                    <div className="mb-3 flex items-center gap-2.5">
+                                        <UploadCloud size={18} className="text-moss-400" />
+                                        <h4 className="text-sm sm:text-base font-semibold text-white">Google Drive ile Senkron (Kolay Yol)</h4>
+                                    </div>
+                                    <p className="mb-4 text-[11px] sm:text-xs text-sand-400 leading-relaxed">
+                                        Google hesabına bağlanır; notların, Drive'ındaki gizli uygulama klasörüne JSON olarak yazılır. Sadece bu uygulama görebilir, sunucu gerekmez. Diğer cihazda aynı hesapla bağlanıp "Geri Yükle" demen yeterli.
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row gap-2.5">
+                                        <button
+                                            type="button"
+                                            onClick={handleDriveUpload}
+                                            disabled={driveBusy !== 'idle'}
+                                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-moss-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:bg-moss-500 disabled:opacity-50"
+                                        >
+                                            {driveBusy === 'upload' ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
+                                            Drive'a Yedekle
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDriveRestore}
+                                            disabled={driveBusy !== 'idle'}
+                                            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-sand-100 transition-all hover:bg-white/10 disabled:opacity-50"
+                                        >
+                                            {driveBusy === 'restore' ? <Loader2 size={16} className="animate-spin" /> : <HardDriveDownload size={16} />}
+                                            Drive'dan Geri Yükle
+                                        </button>
+                                    </div>
+                                    {driveMessage && (
+                                        <p className={`mt-3 text-xs leading-relaxed ${driveMessage.type === 'ok' ? 'text-moss-400' : 'text-berry-400'}`}>
+                                            {driveMessage.text}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="mb-5 flex items-center gap-3">
+                                    <span className="h-px flex-1 bg-white/10" />
+                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-sand-500">veya kendi veritabanın</span>
+                                    <span className="h-px flex-1 bg-white/10" />
                                 </div>
 
                                 <form onSubmit={handleSaveSync} className="space-y-6">

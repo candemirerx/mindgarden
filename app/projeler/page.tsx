@@ -10,6 +10,9 @@ import {
     Calendar, Hash, AlignLeft, Sparkles, BookOpen
 } from 'lucide-react';
 
+import PromptModal from '@/components/ui/PromptModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+
 interface TreeItem {
     id: string;
     title: string;
@@ -40,6 +43,10 @@ function ProjectsPageInner() {
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'split' | 'grid'>('split');
+
+    // Modals state
+    const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
+    const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, title: string, description: string, isDanger?: boolean, onConfirm: () => void}>({isOpen: false, title: '', description: '', onConfirm: () => {}});
 
     const currentGarden = gardens.find(g => g.id === gardenId);
 
@@ -143,37 +150,55 @@ function ProjectsPageInner() {
         setExpandedNodes(new Set());
     };
 
-    const handleAddRoot = async () => {
-        const title = prompt('Yeni ağaç adı:');
-        if (!title?.trim()) return;
-        const created = await addNode(gardenId, title.trim(), null, { x: 0, y: 0 });
-        if (created) setSelectedNodeId(created.id);
-    };
-
-    const handleAddChild = async (parentId: string, hasChildren: boolean) => {
-        const label = hasChildren ? 'Yeni dal adı:' : 'Yeni yaprak adı:';
-        const title = prompt(label);
-        if (!title?.trim()) return;
-        const created = await addNode(gardenId, title.trim(), parentId, { x: 0, y: 0 });
-        setActiveMenu(null);
-
-        if (!expandedNodes.has(parentId)) {
-            const newExpanded = new Set(expandedNodes);
-            newExpanded.add(parentId);
-            setExpandedNodes(newExpanded);
-            await toggleNodeExpansion(parentId, true);
-        }
-        if (created) setSelectedNodeId(created.id);
-    };
-
-    const handleDelete = async (nodeId: string) => {
-        if (confirm('Bu notu ve alt dallarını silmek istediğinize emin misiniz?')) {
-            await deleteNode(nodeId);
-            if (selectedNodeId === nodeId) {
-                setSelectedNodeId(null);
+    const handleAddRoot = () => {
+        setPromptConfig({
+            isOpen: true,
+            title: 'Yeni Ağaç Ekle',
+            placeholder: 'Ağaç adı girin...',
+            onConfirm: async (title) => {
+                setPromptConfig(prev => ({ ...prev, isOpen: false }));
+                const created = await addNode(gardenId, title, null, { x: 0, y: 0 });
+                if (created) setSelectedNodeId(created.id);
             }
-        }
+        });
+    };
+
+    const handleAddChild = (parentId: string, hasChildren: boolean) => {
         setActiveMenu(null);
+        setPromptConfig({
+            isOpen: true,
+            title: hasChildren ? 'Yeni Dal Ekle' : 'Yeni Yaprak Ekle',
+            placeholder: 'Adını girin...',
+            onConfirm: async (title) => {
+                setPromptConfig(prev => ({ ...prev, isOpen: false }));
+                const created = await addNode(gardenId, title, parentId, { x: 0, y: 0 });
+                
+                if (!expandedNodes.has(parentId)) {
+                    const newExpanded = new Set(expandedNodes);
+                    newExpanded.add(parentId);
+                    setExpandedNodes(newExpanded);
+                    await toggleNodeExpansion(parentId, true);
+                }
+                if (created) setSelectedNodeId(created.id);
+            }
+        });
+    };
+
+    const handleDelete = (nodeId: string) => {
+        setActiveMenu(null);
+        setConfirmConfig({
+            isOpen: true,
+            title: 'Notu Sil',
+            description: 'Bu notu ve alt dallarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+            isDanger: true,
+            onConfirm: async () => {
+                setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+                await deleteNode(nodeId);
+                if (selectedNodeId === nodeId) {
+                    setSelectedNodeId(null);
+                }
+            }
+        });
     };
 
     const handleEdit = (nodeId: string) => {
@@ -566,8 +591,24 @@ function ProjectsPageInner() {
 
     return (
         <div className="min-h-screen bg-paper flex flex-col">
+            <PromptModal
+                isOpen={promptConfig.isOpen}
+                title={promptConfig.title}
+                placeholder={promptConfig.placeholder}
+                onConfirm={promptConfig.onConfirm}
+                onCancel={() => setPromptConfig(prev => ({ ...prev, isOpen: false }))}
+            />
+            <ConfirmModal
+                isOpen={confirmConfig.isOpen}
+                title={confirmConfig.title}
+                description={confirmConfig.description}
+                isDanger={confirmConfig.isDanger}
+                onConfirm={confirmConfig.onConfirm}
+                onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+            />
+
             {/* Header */}
-            <header className="sticky top-0 z-40 border-b border-sand-200 bg-white/85 backdrop-blur-xl">
+            <header className="sticky top-0 z-40 border-b border-sand-200 bg-white/85 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl">
                 <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 py-3 lg:h-16 lg:flex-nowrap lg:py-0">
                         {/* Sol: Geri & Başlık */}

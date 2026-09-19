@@ -4,10 +4,7 @@ const config: CapacitorConfig = {
   appId: 'com.notbahcesi.app',
   appName: 'Not Bahçesi',
   webDir: 'out',
-  server: {
-    url: 'https://mindgarden-neon.vercel.app/',
-    cleartext: true
-  },
+
   android: {
     allowMixedContent: true
   },

@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  
+  // Android paketi WebView içine statik dosyaları gömer; web dağıtımı API route'larını korur.
+  ...(process.env.CAPACITOR_BUILD === '1' ? { output: 'export' } : {}),
   allowedDevOrigins: ['192.168.1.110', '192.168.1.*', 'localhost'],
   images: {
     remotePatterns: [

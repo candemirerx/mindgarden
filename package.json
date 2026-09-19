@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:android": "set CAPACITOR_BUILD=1&& next build && npx cap sync android",
     "start": "next start",
     "lint": "next lint"
   },

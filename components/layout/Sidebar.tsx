@@ -851,7 +851,7 @@ export default function Sidebar() {
                             animate={{ x: 0 }}
                             exit={{ x: '-100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed left-0 top-0 z-50 flex h-full w-80 flex-col overflow-hidden border-r border-sand-200 bg-sand-50/95 backdrop-blur-xl shadow-pop"
+                            className="fixed left-0 top-0 z-50 flex h-full w-80 flex-col overflow-hidden border-r border-sand-200 bg-sand-50/95 pb-[env(safe-area-inset-bottom,0px)] pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl shadow-pop"
                         >
                             {/* Başlık */}
                             <div className="flex items-center justify-between border-b border-sand-200 px-5 py-4">

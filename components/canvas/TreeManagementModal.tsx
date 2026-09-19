@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Settings, X, Pencil, Trash2 } from 'lucide-react';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { MindNode } from '@/lib/types';
 
 interface TreeManagementModalProps {
@@ -21,6 +22,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
 }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
+    const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
     if (!isOpen) return null;
 
@@ -38,9 +40,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     };
 
     const handleDelete = (treeId: string, treeName: string) => {
-        if (window.confirm(`"${treeName}" ağacını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) {
-            onDeleteTree(treeId);
-        }
+        setPendingDelete({ id: treeId, name: treeName });
     };
 
     return (
@@ -130,6 +130,20 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                     )}
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={pendingDelete !== null}
+                title="Ağacı Sil"
+                description={pendingDelete ? `“${pendingDelete.name}” ağacını ve altındaki tüm düşünceleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.` : ''}
+                confirmText="Ağacı sil"
+                cancelText="Vazgeç"
+                isDanger
+                onCancel={() => setPendingDelete(null)}
+                onConfirm={() => {
+                    if (pendingDelete) onDeleteTree(pendingDelete.id);
+                    setPendingDelete(null);
+                }}
+            />
         </div>
     );
 };

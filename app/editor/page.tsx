@@ -4,6 +4,7 @@ import { useEffect, Suspense, useState, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 function EditorPageInner() {
     const searchParams = useSearchParams();
@@ -22,6 +23,8 @@ function EditorPageInner() {
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, onConfirm?: () => void}>({ isOpen: false });
+
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -79,9 +82,13 @@ function EditorPageInner() {
 
     const handleClose = () => {
         if (hasChanges && !autoSave) {
-            if (confirm('Kaydedilmemiş değişiklikler var. Çıkmak istediğinize emin misiniz?')) {
-                router.back();
-            }
+            setConfirmConfig({
+                isOpen: true,
+                onConfirm: () => {
+                    setConfirmConfig({ isOpen: false });
+                    router.back();
+                }
+            });
         } else {
             router.back();
         }
@@ -241,7 +248,7 @@ function EditorPageInner() {
     return (
         <div className="min-h-screen bg-sand-200 flex flex-col">
             {/* Header */}
-            <header className="bg-white border-b border-sand-300">
+            <header className="bg-white border-b border-sand-300 pt-[env(safe-area-inset-top,0px)]">
                 <div className="flex items-center justify-between px-4 sm:px-6 py-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <button
@@ -406,7 +413,7 @@ function EditorPageInner() {
             </main>
 
             {/* Footer */}
-            <footer className="bg-white border-t border-sand-300 px-4 sm:px-6 py-2">
+            <footer className="bg-white border-t border-sand-300 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6">
                 <div className="flex items-center justify-between text-xs text-sand-500">
                     <span>
                         {isSaving ? (
@@ -428,6 +435,17 @@ function EditorPageInner() {
                     </div>
                 </div>
             </footer>
+
+            <ConfirmModal
+                isOpen={confirmConfig.isOpen}
+                title="Kaydedilmemiş değişiklikler"
+                description="Kaydetmeden çıkarsan yaptığın son değişiklikler kaybolacak."
+                confirmText="Yine de çık"
+                cancelText="Düzenlemeye devam et"
+                isDanger
+                onCancel={() => setConfirmConfig({ isOpen: false })}
+                onConfirm={() => confirmConfig.onConfirm?.()}
+            />
         </div>
     );
 }

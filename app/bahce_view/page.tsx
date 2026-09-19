@@ -10,6 +10,8 @@ import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
 import { Modal } from '@/components/editor/Modal';
 import { MindTextEditor } from '@/components/editor/MindTextEditor';
 import Sidebar from '@/components/layout/Sidebar';
+import PromptModal from '@/components/ui/PromptModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -23,6 +25,10 @@ function GardenPageInner() {
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+    // Modals state
+    const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
+    const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, title: string, description: string, isDanger?: boolean, onConfirm: () => void}>({isOpen: false, title: '', description: '', onConfirm: () => {}});
 
     const currentGarden = gardens.find((g: any) => g.id === gardenId);
 
@@ -79,12 +85,16 @@ function GardenPageInner() {
     }, [nodes, convertToMindTrees]);
 
     // Yeni root node (ağaç) oluştur
-    const handleCreateRoot = async () => {
-        const title = prompt('Ağaç ismi giriniz:');
-        if (!title || !title.trim()) return;
-
-        const newNode = await addNode(gardenId, title.trim(), null, { x: 0, y: 0 });
-        // Supabase'e kaydedildi, useEffect otomatik olarak state'i güncelleyecek
+    const handleCreateRoot = () => {
+        setPromptConfig({
+            isOpen: true,
+            title: 'Yeni Ağaç Ekle',
+            placeholder: 'Ağaç adı girin...',
+            onConfirm: async (title) => {
+                setPromptConfig(prev => ({ ...prev, isOpen: false }));
+                await addNode(gardenId, title, null, { x: 0, y: 0 });
+            }
+        });
     };
 
     // Recursive node bulma
@@ -127,71 +137,93 @@ function GardenPageInner() {
     };
 
     // Alt node ekle
-    const handleAddChild = async (parentId: string, direction: 'left' | 'right' = 'right') => {
+    const handleAddChild = (parentId: string, direction: 'left' | 'right' = 'right') => {
         if (mindRoots.length === 0) return;
 
-        const title = prompt('Dal ismi giriniz:');
-        if (!title || !title.trim()) return;
+        setPromptConfig({
+            isOpen: true,
+            title: 'Dal Ekle',
+            placeholder: 'Dal adı girin...',
+            onConfirm: async (title) => {
+                setPromptConfig(prev => ({ ...prev, isOpen: false }));
+                // Supabase'e kaydet ve gerçek node'u al
+                const newNode = await addNode(gardenId, title, parentId, { x: 0, y: 0 });
 
-        // Supabase'e kaydet ve gerçek node'u al
-        const newNode = await addNode(gardenId, title.trim(), parentId, { x: 0, y: 0 });
+                if (newNode) {
+                    const newMindNode: MindNode = {
+                        id: newNode.id,
+                        title: newNode.content,
+                        content: '',
+                        children: [],
+                        nodeType: 'auto'
+                    };
 
-        if (newNode) {
-            const newMindNode: MindNode = {
-                id: newNode.id,
-                title: newNode.content,
-                content: '',
-                children: []
-            };
+                    // Hangi ağaçta olduğunu bul
+                    const result = findNodeInTrees(parentId);
+                    if (result) {
+                        const { tree, treeIndex } = result;
+                        // UI'da ekle
+                        const newTree = modifyNode(tree, parentId, (node) => {
+                            const newChildren = direction === 'left'
+                                ? [newMindNode, ...node.children]
+                                : [...node.children, newMindNode];
+                            return { ...node, children: newChildren, isExpanded: true };
+                        });
 
-            // Hangi ağaçta olduğunu bul
-            const result = findNodeInTrees(parentId);
-            if (result) {
-                const { tree, treeIndex } = result;
-                // UI'da ekle
-                const newTree = modifyNode(tree, parentId, (node) => {
-                    const newChildren = direction === 'left'
-                        ? [newMindNode, ...node.children]
-                        : [...node.children, newMindNode];
-                    return { ...node, children: newChildren };
-                });
-
-                const newRoots = [...mindRoots];
-                newRoots[treeIndex] = newTree;
-                setMindRoots(newRoots);
+                        const newRoots = [...mindRoots];
+                        newRoots[treeIndex] = newTree;
+                        setMindRoots(newRoots);
+                    }
+                }
             }
-        }
+        });
     };
 
     // Node sil
-    const handleDeleteNode = async (nodeId: string) => {
+    const handleDeleteNode = (nodeId: string) => {
         if (mindRoots.length === 0) return;
 
         // Root silme kontrolü - hangi ağacın root'u olduğunu bul
         const rootIndex = mindRoots.findIndex(root => root.id === nodeId);
         if (rootIndex !== -1) {
-            if (window.confirm("Bütün ağacı silmek istediğine emin misin?")) {
-                await deleteNodeFromStore(nodeId);
-                const newRoots = mindRoots.filter((_, i) => i !== rootIndex);
-                setMindRoots(newRoots);
-            }
+            setConfirmConfig({
+                isOpen: true,
+                title: 'Ağacı Sil',
+                description: 'Bütün ağacı ve altındaki tüm düşünceleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+                isDanger: true,
+                onConfirm: async () => {
+                    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+                    await deleteNodeFromStore(nodeId);
+                    const newRoots = mindRoots.filter((_, i) => i !== rootIndex);
+                    setMindRoots(newRoots);
+                }
+            });
             return;
         }
 
         // Hangi ağaçta olduğunu bul
         const result = findNodeInTrees(nodeId);
         if (result) {
-            const { tree, treeIndex } = result;
-            // UI'dan sil
-            const newTree = deleteNodeRecursive(tree, nodeId);
-            if (newTree) {
-                const newRoots = [...mindRoots];
-                newRoots[treeIndex] = newTree;
-                setMindRoots(newRoots);
-            }
+            setConfirmConfig({
+                isOpen: true,
+                title: 'Dalı Sil',
+                description: 'Bu dalı ve altındaki tüm düşünceleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+                isDanger: true,
+                onConfirm: async () => {
+                    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+                    const { tree, treeIndex } = result;
+                    // UI'dan sil
+                    const newTree = deleteNodeRecursive(tree, nodeId);
+                    if (newTree) {
+                        const newRoots = [...mindRoots];
+                        newRoots[treeIndex] = newTree;
+                        setMindRoots(newRoots);
+                    }
 
-            // Supabase'den sil
-            await deleteNodeFromStore(nodeId);
+                    // Supabase'den sil
+                    await deleteNodeFromStore(nodeId);
+                }
+            });
         }
     };
 
@@ -284,7 +316,7 @@ function GardenPageInner() {
     return (
         <div className="h-screen flex flex-col">
             {/* Header - Mobil Responsive */}
-            <header className="relative z-40 flex h-14 items-center justify-between gap-3 border-b border-sand-200 bg-white/85 px-3 backdrop-blur-md md:h-16 md:px-6">
+            <header className="relative z-40 flex h-[calc(3.5rem+env(safe-area-inset-top,0px))] items-center justify-between gap-3 border-b border-sand-200 bg-white/85 px-3 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md md:h-[calc(4rem+env(safe-area-inset-top,0px))] md:px-6">
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 md:gap-2">
                     <button
                         onClick={() => router.push('/')}
@@ -394,6 +426,22 @@ function GardenPageInner() {
 
             {/* Sidebar */}
             <Sidebar />
+
+            <PromptModal
+                isOpen={promptConfig.isOpen}
+                title={promptConfig.title}
+                placeholder={promptConfig.placeholder}
+                onConfirm={promptConfig.onConfirm}
+                onCancel={() => setPromptConfig(prev => ({ ...prev, isOpen: false }))}
+            />
+            <ConfirmModal
+                isOpen={confirmConfig.isOpen}
+                title={confirmConfig.title}
+                description={confirmConfig.description}
+                isDanger={confirmConfig.isDanger}
+                onConfirm={confirmConfig.onConfirm}
+                onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }

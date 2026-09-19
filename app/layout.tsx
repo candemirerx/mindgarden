@@ -25,6 +25,7 @@ export const viewport: Viewport = {
     themeColor: '#F9F6F1',
     width: 'device-width',
     initialScale: 1,
+    viewportFit: 'cover',
     // Mobil klavye açıldığında sayfanın zıplamasını engeller.
     maximumScale: 5,
 };

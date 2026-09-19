@@ -7,6 +7,7 @@ import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { signInAsGuest } from '@/lib/localClient';
 import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock, Pencil } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import type { User } from '@supabase/supabase-js';
 import type { Garden } from '@/lib/types';
 
@@ -166,6 +167,7 @@ export default function HomePage() {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [editingGardenId, setEditingGardenId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
+    const [gardenPendingDelete, setGardenPendingDelete] = useState<string | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -258,13 +260,11 @@ export default function HomePage() {
         router.push(`/projeler?id=${gardenId}`);
     }, [router]);
 
-    const handleDeleteGarden = useCallback(async (e: React.MouseEvent, gardenId: string) => {
+    const handleDeleteGarden = useCallback((e: React.MouseEvent, gardenId: string) => {
         e.stopPropagation();
-        if (confirm('Bu bahçeyi silmek istediğinize emin misiniz?')) {
-            await deleteGarden(gardenId);
-        }
+        setGardenPendingDelete(gardenId);
         setOpenMenuId(null);
-    }, [deleteGarden]);
+    }, []);
 
     const handleSaveName = useCallback(async (gardenId: string) => {
         const garden = gardens.find(g => g.id === gardenId);
@@ -278,7 +278,7 @@ export default function HomePage() {
     const gardenCount = gardens.length;
 
     return (
-        <div className="min-h-screen bg-paper">
+        <div className="min-h-screen bg-paper pt-[env(safe-area-inset-top,0px)]">
             <div className="mx-auto max-w-[1500px] px-4 py-6 md:px-8 md:py-10">
                 {/* Başlık */}
                 <header className="mb-8 flex flex-col gap-5 md:mb-10 md:flex-row md:items-center md:justify-between">
@@ -412,6 +412,20 @@ export default function HomePage() {
             </div>
 
             <CreateGardenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+            <ConfirmModal
+                isOpen={gardenPendingDelete !== null}
+                title="Bahçeyi Sil"
+                description="Bu bahçeyi ve içindeki tüm notları silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+                confirmText="Bahçeyi sil"
+                cancelText="Vazgeç"
+                isDanger
+                onCancel={() => setGardenPendingDelete(null)}
+                onConfirm={async () => {
+                    if (gardenPendingDelete) await deleteGarden(gardenPendingDelete);
+                    setGardenPendingDelete(null);
+                }}
+            />
 
             <Suspense fallback={null}>
                 <Sidebar />
