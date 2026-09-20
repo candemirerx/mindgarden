@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2, Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { isLocalBackend } from '@/lib/supabaseClient';
-import { Capacitor } from '@capacitor/core';
 import { useStore } from '@/lib/store/useStore';
 import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
 import { readAiMacros, saveAiMacros, createMacro, DEFAULT_MACROS, SPELLCHECK_MACRO_ID } from '@/lib/aiMacro';
@@ -26,11 +25,6 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     const [customModel, setCustomModel] = useState('');
     const [macroList, setMacroList] = useState<AiMacro[]>([]);
     const [macroDraft, setMacroDraft] = useState<AiMacro | null>(null);
-    const [availableModels, setAvailableModels] = useState<string[]>([]);
-    const [modelsBusy, setModelsBusy] = useState(false);
-    const [modelsMessage, setModelsMessage] = useState<{ ok: boolean; text: string } | null>(null);
-    const [testBusy, setTestBusy] = useState(false);
-    const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
     const [isSaved, setIsSaved] = useState(false);
     
     // Google Drive (kolay senkron) durumu
@@ -170,92 +164,6 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
 
     const enabledMacroCount = macroList.filter((item) => item.enabled !== false).length;
 
-    /** Yerel geliştirmede göreli, uygulamada canlı adres kullanılır. */
-    const apiUrl = (path: string) =>
-        Capacitor.isNativePlatform()
-            ? `https://mindgarden-neon.vercel.app${path}`
-            : path;
-
-    /** Sağlayıcının sunduğu modelleri getirir. */
-    const handleFetchModels = async () => {
-        setModelsBusy(true);
-        setModelsMessage(null);
-        try {
-            const res = await fetch(apiUrl('/api/models'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    clientApiKey: apiKey.trim(),
-                    customUrl: customUrl.trim()
-                })
-            });
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                throw new Error(data?.error || 'Model listesi alınamadı.');
-            }
-
-            const list: string[] = Array.isArray(data?.models) ? data.models : [];
-            setAvailableModels(list);
-            setModelsMessage({
-                ok: list.length > 0,
-                text:
-                    list.length > 0
-                        ? `${list.length} model bulundu. Listeden seçebilirsiniz.`
-                        : 'Sağlayıcı model listesi boş döndü.'
-            });
-        } catch (e) {
-            setModelsMessage({
-                ok: false,
-                text: e instanceof Error ? e.message : 'Model listesi alınamadı.'
-            });
-        } finally {
-            setModelsBusy(false);
-        }
-    };
-
-    /** Seçili modelin yanıt hızını ölçer. */
-    const handleTestModel = async () => {
-        setTestBusy(true);
-        setTestResult(null);
-        try {
-            const started = Date.now();
-            const res = await fetch(apiUrl('/api/spellcheck'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: 'bu bir deneme cumlesi',
-                    clientApiKey: apiKey.trim(),
-                    provider,
-                    customUrl: customUrl.trim(),
-                    customModel: customModel.trim()
-                })
-            });
-            const sure = ((Date.now() - started) / 1000).toFixed(1);
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                setTestResult({
-                    ok: false,
-                    text: `${sure} sn sonra hata: ${data?.error ?? 'bilinmeyen hata'}`
-                });
-                return;
-            }
-
-            setTestResult({
-                ok: true,
-                text: `Çalışıyor — yanıt ${sure} saniyede geldi.`
-            });
-        } catch (e) {
-            setTestResult({
-                ok: false,
-                text: e instanceof Error ? e.message : 'Test başarısız.'
-            });
-        } finally {
-            setTestBusy(false);
-        }
-    };
-
     if (!isOpen) return null;
 
     return (
@@ -391,81 +299,6 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                                 />
                                                 <p className="text-[11px] leading-relaxed text-sand-500">
                                                     Sağlayıcınızın panelinde yazan gerçek model kimliğini kullanın.
-                                                </p>
-                                            </div>
-
-                                            {/* Model listesi ve hız testi */}
-                                            <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:col-span-2">
-                                                <div className="flex flex-wrap gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleFetchModels}
-                                                        disabled={modelsBusy || !customUrl.trim()}
-                                                        className="flex items-center gap-2 rounded-xl border border-white/15 px-3.5 py-2 text-xs font-semibold text-sand-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                        {modelsBusy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                                                        Modelleri getir
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleTestModel}
-                                                        disabled={testBusy || !apiKey.trim() || !customModel.trim()}
-                                                        className="flex items-center gap-2 rounded-xl bg-moss-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-moss-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                        {testBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                                                        Bağlantıyı test et
-                                                    </button>
-                                                </div>
-
-                                                {modelsMessage && (
-                                                    <p
-                                                        className={`text-[11px] leading-relaxed ${
-                                                            modelsMessage.ok ? 'text-moss-300' : 'text-berry-300'
-                                                        }`}
-                                                    >
-                                                        {modelsMessage.text}
-                                                    </p>
-                                                )}
-
-                                                {testResult && (
-                                                    <p
-                                                        className={`text-[11px] leading-relaxed ${
-                                                            testResult.ok ? 'text-moss-300' : 'text-berry-300'
-                                                        }`}
-                                                    >
-                                                        {testResult.text}
-                                                    </p>
-                                                )}
-
-                                                {availableModels.length > 0 && (
-                                                    <div className="max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-black/30 p-1.5">
-                                                        <div className="flex flex-wrap gap-1.5">
-                                                            {availableModels.map((modelId) => (
-                                                                <button
-                                                                    key={modelId}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setCustomModel(modelId);
-                                                                        setIsSaved(false);
-                                                                    }}
-                                                                    className={`rounded-lg px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
-                                                                        customModel === modelId
-                                                                            ? 'bg-moss-600 text-white'
-                                                                            : 'bg-white/5 text-sand-300 hover:bg-white/10 hover:text-white'
-                                                                    }`}
-                                                                >
-                                                                    {modelId}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <p className="text-[11px] leading-relaxed text-sand-500">
-                                                    Model listesinden birini seçip <span className="font-semibold text-sand-300">Bağlantıyı test et</span> ile
-                                                    yanıt hızını ölçün. Hızlı yanıt veren modeli seçmek uzun notlarda bekleme süresini kısaltır.
-                                                    Yavaş modeller (düşünen modeller) uzun metinlerde dakikalarca yanıt vermeyebilir.
                                                 </p>
                                             </div>
                                         </div>
