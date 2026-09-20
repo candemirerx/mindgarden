@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import { X, AlertCircle, Sprout } from 'lucide-react';
+import { useKeyboardInset } from '@/lib/useKeyboardInset';
 
 interface CreateGardenModalProps {
     isOpen: boolean;
@@ -14,6 +15,9 @@ export default function CreateGardenModal({ isOpen, onClose }: CreateGardenModal
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { addGarden } = useStore();
+
+    // Klavye açıldığında pencerenin görünür alanda kalmasını sağlar
+    const keyboardInset = useKeyboardInset(isOpen);
 
     const handleClose = () => {
         setError(null);
@@ -58,6 +62,7 @@ export default function CreateGardenModal({ isOpen, onClose }: CreateGardenModal
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bark-950/45 backdrop-blur-sm animate-fade-in"
+            style={{ paddingBottom: keyboardInset ? keyboardInset + 16 : undefined }}
             onClick={handleClose}
             role="presentation"
         >
@@ -66,7 +71,7 @@ export default function CreateGardenModal({ isOpen, onClose }: CreateGardenModal
                 aria-modal="true"
                 aria-labelledby="create-garden-title"
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md rounded-3xl border border-sand-200 bg-white p-7 shadow-pop animate-scale-in"
+                className="w-full max-w-md max-h-full overflow-y-auto rounded-3xl border border-sand-200 bg-white p-7 shadow-pop animate-scale-in"
             >
                 <div className="mb-6 flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3">

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { X, Check } from 'lucide-react';
+import { useKeyboardInset } from '@/lib/useKeyboardInset';
 
 interface PromptModalProps {
     isOpen: boolean;
@@ -29,13 +30,25 @@ export default function PromptModal({
     const [value, setValue] = React.useState(initialValue);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Klavye açıldığında kutunun görünür alanda kalmasını sağlar
+    const keyboardInset = useKeyboardInset(isOpen);
+
     useEffect(() => {
         if (isOpen) {
             setValue(initialValue);
-            setTimeout(() => {
+            const focusTimer = setTimeout(() => {
                 inputRef.current?.focus();
                 inputRef.current?.select();
             }, 100);
+            // Klavye açıldıktan sonra alanı görünür alana getir
+            const scrollTimer = setTimeout(() => {
+                inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }, 400);
+
+            return () => {
+                clearTimeout(focusTimer);
+                clearTimeout(scrollTimer);
+            };
         }
     }, [isOpen, initialValue]);
 
@@ -57,9 +70,13 @@ export default function PromptModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-bark-950/40 p-4 backdrop-blur-sm animate-fade-in" onClick={onCancel}>
+        <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-bark-950/40 p-4 backdrop-blur-sm animate-fade-in"
+            style={{ paddingBottom: keyboardInset ? keyboardInset + 16 : undefined }}
+            onClick={onCancel}
+        >
             <div 
-                className="w-full max-w-sm rounded-[24px] bg-white p-6 shadow-pop animate-scale-in"
+                className="w-full max-w-sm max-h-full overflow-y-auto rounded-[24px] bg-white p-6 shadow-pop animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 <h3 className="text-xl font-semibold text-sand-900 mb-1">{title}</h3>
