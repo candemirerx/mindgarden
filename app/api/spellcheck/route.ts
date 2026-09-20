@@ -79,8 +79,11 @@ async function providerErrorDetail(response: Response, apiKey: string): Promise<
  * Bazı modeller (özellikle "düşünen" modeller) uzun metinlerde dakikalarca
  * yanıt üretmeyebiliyor. Bu durumda istek sonsuza kadar asılı kalmasın diye
  * süre sınırı koyuyoruz; kullanıcıya da nedenini söyleyen net bir hata dönüyor.
+ *
+ * Değer, fonksiyonun toplam süre sınırının (60 sn) hemen altında tutulur ki
+ * yavaş ama başarılı olacak istekler yarıda kesilmesin.
  */
-const PROVIDER_TIMEOUT_MS = 45000;
+const PROVIDER_TIMEOUT_MS = 55000;
 
 /** Sağlayıcı çağrılarını zaman aşımıyla sarmalar. */
 async function fetchProvider(
