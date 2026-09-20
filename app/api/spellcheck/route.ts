@@ -62,7 +62,8 @@ async function providerErrorDetail(response: Response, apiKey: string): Promise<
     return masked.replace(/\s+/g, ' ').trim().slice(0, 300);
 }
 
-export async function POST(request: NextRequest) {    try {
+async function handleSpellcheckRequest(request: NextRequest) {
+    try {
         const {
             text,
             clientApiKey,
@@ -245,4 +246,48 @@ ${text}`;
             { status: 500 }
         );
     }
+}
+
+/**
+ * Android uygulamasında WebView `https://localhost` kaynağından çalıştığı için
+ * bu adrese yapılan istekler çapraz kaynak olur ve tarayıcı katmanı CORS
+ * başlığı olmadan isteği sunucuya hiç göndermez. Bu yüzden yalnızca uygulamanın
+ * ve sitenin kendi kaynaklarına izin veriyoruz.
+ */
+const CORS_ORIGINS = new Set([
+    'https://localhost',
+    'http://localhost',
+    'capacitor://localhost',
+    'https://mindgarden-neon.vercel.app'
+]);
+
+function corsHeaders(origin: string | null): Record<string, string> {
+    if (!origin || !CORS_ORIGINS.has(origin)) return {};
+
+    return {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Max-Age': '86400',
+        Vary: 'Origin'
+    };
+}
+
+/** Tarayıcının gönderdiği CORS ön kontrol isteği. */
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, {
+        status: 204,
+        headers: corsHeaders(request.headers.get('origin'))
+    });
+}
+
+export async function POST(request: NextRequest) {
+    const response = await handleSpellcheckRequest(request);
+    const headers = corsHeaders(request.headers.get('origin'));
+
+    for (const [key, value] of Object.entries(headers)) {
+        response.headers.set(key, value);
+    }
+
+    return response;
 }

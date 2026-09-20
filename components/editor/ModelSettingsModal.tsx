@@ -131,7 +131,11 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                         <Sparkles size={20} className="text-moss-400" />
                         Tercihler & Ayarlar
                     </h2>
-                    <button onClick={onClose} className="rounded-lg p-2 text-sand-400 transition-colors hover:bg-white/10 hover:text-white">
+                    <button
+                        onClick={onClose}
+                        aria-label="Ayarları kapat"
+                        className="rounded-lg p-2 text-sand-400 transition-colors hover:bg-white/10 hover:text-white"
+                    >
                         <X size={20} />
                     </button>
                 </div>
