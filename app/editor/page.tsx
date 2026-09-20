@@ -232,40 +232,26 @@ function EditorPageInner() {
         try {
             let correctedText: string;
 
-            // Uzun metinlerde sağlayıcı tek istekte yanıt veremiyor ve ilk
-            // deneme 45 saniye boyunca boşa bekliyor. Bu yüzden belli bir
-            // uzunluğun üzerindeki metinleri doğrudan parçalayarak göndeririz.
-            const tekIstekSiniri = 350;
-            const oncedenParcala = textToCheck.length > tekIstekSiniri;
-            const parcalar = oncedenParcala ? splitIntoChunks(textToCheck) : [];
+            // Metin tek istekte gönderilir: bir sayfalık metin tek çağrıda
+            // rahatça işlenir ve bölmek her seferinde fazladan bekleme
+            // demektir. Parçalama yalnızca istek gerçekten başarısız olursa
+            // (zaman aşımı veya sunucu hatası) devreye girer.
+            try {
+                correctedText = await sendOnce(textToCheck);
+            } catch (firstError) {
+                const yenidenDenenebilir =
+                    (firstError as Error & { retryable?: boolean })?.retryable === true;
+                const chunks = yenidenDenenebilir ? splitIntoChunks(textToCheck) : [];
 
-            if (parcalar.length > 1) {
+                if (chunks.length <= 1) throw firstError;
+
                 let birlesik = '';
-                for (let i = 0; i < parcalar.length; i++) {
-                    setChunkProgress({ done: i, total: parcalar.length });
-                    birlesik += (await sendOnce(parcalar[i].text)).trim() + parcalar[i].after;
+                for (let i = 0; i < chunks.length; i++) {
+                    setChunkProgress({ done: i, total: chunks.length });
+                    birlesik += (await sendOnce(chunks[i].text)).trim() + chunks[i].after;
                 }
                 setChunkProgress(null);
                 correctedText = birlesik;
-            } else {
-                try {
-                    correctedText = await sendOnce(textToCheck);
-                } catch (firstError) {
-                    // Kısa metin yine de takıldıysa parçalayıp tekrar deneriz.
-                    const yenidenDenenebilir =
-                        (firstError as Error & { retryable?: boolean })?.retryable === true;
-                    const chunks = yenidenDenenebilir ? splitIntoChunks(textToCheck) : [];
-
-                    if (chunks.length <= 1) throw firstError;
-
-                    let birlesik = '';
-                    for (let i = 0; i < chunks.length; i++) {
-                        setChunkProgress({ done: i, total: chunks.length });
-                        birlesik += (await sendOnce(chunks[i].text)).trim() + chunks[i].after;
-                    }
-                    setChunkProgress(null);
-                    correctedText = birlesik;
-                }
             }
 
             // Sonuç girdiyle birebir aynıysa onay ekranı açıp kullanıcıya
