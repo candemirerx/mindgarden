@@ -26,6 +26,7 @@ function EditorPageInner() {
     const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
     const [macros, setMacros] = useState<AiMacro[]>([]);
     const [activeMacroId, setActiveMacroId] = useState<string | null>(null);
+    const [runningLength, setRunningLength] = useState(0);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -164,6 +165,7 @@ function EditorPageInner() {
 
         setIsSpellChecking(true);
         setActiveMacroId(macro.id);
+        setRunningLength(textToCheck.length);
 
         try {
             // İstemcinin girdiği ayarları al
@@ -175,18 +177,38 @@ function EditorPageInner() {
             const spellcheckUrl = Capacitor.isNativePlatform()
                 ? 'https://mindgarden-neon.vercel.app/api/spellcheck'
                 : '/api/spellcheck';
-            const response = await fetch(spellcheckUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: textToCheck,
-                    clientApiKey,
-                    provider,
-                    customUrl,
-                    customModel,
-                    macro: macro.instruction
-                })
-            });
+
+            // Uzun metinlerde yanıt gecikebilir; yine de sonsuza kadar
+            // beklememek için bir üst sınır koyuyoruz.
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+            let response: Response;
+            try {
+                response = await fetch(spellcheckUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        text: textToCheck,
+                        clientApiKey,
+                        provider,
+                        customUrl,
+                        customModel,
+                        macro: macro.instruction
+                    })
+                });
+            } catch (fetchError: unknown) {
+                const isAbort =
+                    fetchError instanceof Error && fetchError.name === 'AbortError';
+                throw new Error(
+                    isAbort
+                        ? 'İstek zaman aşımına uğradı. Metin uzunsa bir bölümünü seçip tekrar deneyin.'
+                        : 'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.'
+                );
+            } finally {
+                clearTimeout(timeoutId);
+            }
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => null);
@@ -215,6 +237,7 @@ function EditorPageInner() {
         } finally {
             setIsSpellChecking(false);
             setActiveMacroId(null);
+            setRunningLength(0);
         }
     };
 
@@ -452,7 +475,11 @@ function EditorPageInner() {
                                             <PenLine size={16} />
                                         )}
                                         <span className="whitespace-nowrap">
-                                            {isRunning ? 'Çalışıyor…' : macro.title}
+                                            {isRunning
+                                                ? (runningLength > 4000
+                                                    ? 'Uzun metin işleniyor…'
+                                                    : 'Çalışıyor…')
+                                                : macro.title}
                                         </span>
                                     </button>
                                 );

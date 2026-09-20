@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_INSTRUCTION } from '@/lib/aiMacro';
 
 /**
+ * Uzun metinlerde sağlayıcının yanıtı 10 saniyeyi aşabildiği için fonksiyon
+ * süresini yükseltiyoruz. Aksi hâlde Vercel isteği yarıda kesiyor ve istemci
+ * hiç yanıt alamıyor.
+ */
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
+/** Sağlayıcıya gönderilebilecek en uzun metin. */
+const MAX_TEXT_LENGTH = 20000;
+
+/**
  * Yerel/özel ağ hedeflerini tespit eder. Özel sağlayıcı adresi sunucu
  * tarafından çağrıldığı için bu adreslerin canlıda engellenmesi gerekir.
  */
@@ -75,6 +86,17 @@ async function handleSpellcheckRequest(request: NextRequest) {
 
         if (!text || text.trim().length === 0) {
             return NextResponse.json({ correctedText: text });
+        }
+
+        // Çok uzun metinlerde sağlayıcı yanıtı zaman aşımına uğradığı için
+        // kullanıcıyı beklemeden net bir mesajla bilgilendiririz.
+        if (typeof text === 'string' && text.length > MAX_TEXT_LENGTH) {
+            return NextResponse.json(
+                {
+                    error: `Metin çok uzun (${text.length} karakter). Yapay zekâ ile işlemek için ${MAX_TEXT_LENGTH} karakterden kısa bir bölüm seçip tekrar deneyin.`
+                },
+                { status: 400 }
+            );
         }
 
         const apiKey = clientApiKey || (provider === 'gemini' ? process.env.GEMINI_API_KEY : undefined);
@@ -166,7 +188,7 @@ ${text}`;
                 },
                 body: JSON.stringify({
                     model: 'claude-3-haiku-20240307',
-                    max_tokens: 4096,
+                    max_tokens: 8192,
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.1
                 })
