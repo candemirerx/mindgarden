@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEFAULT_AI_MACRO } from '@/lib/aiMacro';
+import { DEFAULT_INSTRUCTION } from '@/lib/aiMacro';
 
 /**
  * Yerel/özel ağ hedeflerini tespit eder. Özel sağlayıcı adresi sunucu
@@ -85,12 +85,12 @@ async function handleSpellcheckRequest(request: NextRequest) {
             );
         }
 
-        // Kullanıcının tanımladığı görev (makro) varsa o kullanılır; yoksa
-        // varsayılan imla düzeltme görevi uygulanır.
+        // Kullanıcının seçtiği makro varsa o kullanılır; yoksa varsayılan
+        // imla düzeltme görevi uygulanır.
         const instruction =
             typeof macro === 'string' && macro.trim().length > 0
                 ? macro.trim()
-                : DEFAULT_AI_MACRO;
+                : DEFAULT_INSTRUCTION;
 
         const prompt = `${instruction}
 

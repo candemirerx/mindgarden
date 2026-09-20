@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2, Wand2, RotateCcw } from 'lucide-react';
+import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2, Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
 import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
-import { AI_MACRO_KEY, DEFAULT_AI_MACRO, readAiMacro } from '@/lib/aiMacro';
+import { readAiMacros, saveAiMacros, createMacro, DEFAULT_MACROS, SPELLCHECK_MACRO_ID } from '@/lib/aiMacro';
+import type { AiMacro } from '@/lib/aiMacro';
 
 interface ModelSettingsModalProps {
     isOpen: boolean;
@@ -22,7 +23,8 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     const [apiKey, setApiKey] = useState('');
     const [customUrl, setCustomUrl] = useState('');
     const [customModel, setCustomModel] = useState('');
-    const [macro, setMacro] = useState('');
+    const [macroList, setMacroList] = useState<AiMacro[]>([]);
+    const [macroDraft, setMacroDraft] = useState<AiMacro | null>(null);
     const [isSaved, setIsSaved] = useState(false);
     
     // Google Drive (kolay senkron) durumu
@@ -100,7 +102,8 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
             
             setCustomUrl(localStorage.getItem('nb-ai-custom-url') || '');
             setCustomModel(localStorage.getItem('nb-ai-custom-model') || '');
-            setMacro(readAiMacro());
+            setMacroList(readAiMacros());
+            setMacroDraft(null);
             setAutoSync(isAutoSyncEnabled());
             setLastSync(lastSyncTime());
         }
@@ -113,10 +116,43 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
         localStorage.setItem('nb-gemini-key', apiKey.trim()); // Geriye dönük uyumluluk
         localStorage.setItem('nb-ai-custom-url', customUrl.trim());
         localStorage.setItem('nb-ai-custom-model', customModel.trim());
-        localStorage.setItem(AI_MACRO_KEY, macro.trim());
         setIsSaved(true);
     };
     
+    const persistMacros = (next: AiMacro[]) => {
+        setMacroList(next);
+        saveAiMacros(next);
+    };
+
+    const handleSaveMacro = () => {
+        if (!macroDraft) return;
+        const cleaned: AiMacro = {
+            ...macroDraft,
+            title: macroDraft.title.trim() || 'Adsız Makro',
+            subtitle: macroDraft.subtitle.trim(),
+            instruction: macroDraft.instruction.trim()
+        };
+        persistMacros(macroList.map((item) => (item.id === cleaned.id ? cleaned : item)));
+        setMacroDraft(null);
+    };
+
+    const handleDeleteMacro = () => {
+        if (!macroDraft) return;
+        persistMacros(macroList.filter((item) => item.id !== macroDraft.id));
+        setMacroDraft(null);
+    };
+
+    const handleAddMacro = () => {
+        const created = createMacro();
+        persistMacros([...macroList, created]);
+        setMacroDraft(created);
+    };
+
+    const handleResetMacros = () => {
+        persistMacros(DEFAULT_MACROS);
+        setMacroDraft(null);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -267,38 +303,148 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         </div>
                                     </div>
 
-                                    {/* AI Görevi (Makro) */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <label
-                                                htmlFor="ai-macro"
-                                                className="flex items-center gap-2 text-sm font-medium text-sand-300"
-                                            >
-                                                <Wand2 size={15} className="text-moss-400" />
-                                                AI Görevi (Makro)
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={() => { setMacro(DEFAULT_AI_MACRO); setIsSaved(false); }}
-                                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-sand-400 transition-colors hover:bg-white/5 hover:text-sand-200"
-                                            >
-                                                <RotateCcw size={12} />
-                                                Varsayılanı yaz
-                                            </button>
-                                        </div>
+                                    {/* AI Makroları */}
+                                    <div className="space-y-3">
+                                        {macroDraft ? (
+                                            <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+                                                <div className="flex items-center gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setMacroDraft(null)}
+                                                        aria-label="Makro listesine dön"
+                                                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-sand-400 transition-colors hover:bg-white/10 hover:text-white"
+                                                    >
+                                                        <ArrowLeft size={17} />
+                                                    </button>
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-semibold text-white">
+                                                            {macroDraft.title || 'Adsız Makro'}
+                                                        </p>
+                                                        <p className="truncate text-[11px] text-sand-500">
+                                                            {macroDraft.subtitle || 'Alt başlık eklenmedi'}
+                                                        </p>
+                                                    </div>
+                                                </div>
 
-                                        <textarea
-                                            id="ai-macro"
-                                            value={macro}
-                                            onChange={e => { setMacro(e.target.value); setIsSaved(false); }}
-                                            rows={7}
-                                            placeholder={DEFAULT_AI_MACRO}
-                                            className="w-full resize-y rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm leading-relaxed text-white placeholder-white/25 outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
-                                        />
+                                                <div className="space-y-2">
+                                                    <label htmlFor="macro-title" className="text-xs font-medium text-sand-300">Makro adı</label>
+                                                    <input
+                                                        id="macro-title"
+                                                        type="text"
+                                                        value={macroDraft.title}
+                                                        onChange={e => setMacroDraft({ ...macroDraft, title: e.target.value })}
+                                                        placeholder="Örn. Toplantı notuna çevir"
+                                                        className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                                    />
+                                                </div>
 
-                                        <p className="text-[11px] leading-relaxed text-sand-500">
-                                            Metin editöründeki <span className="font-semibold text-sand-400">AI</span> düğmesine bastığınızda notun metni bu görevle birlikte kendi API anahtarınızla seçtiğiniz sağlayıcıya gönderilir ve dönen cevap nota yazılır. Boş bırakırsanız imla düzeltme görevi kullanılır.
-                                        </p>
+                                                <div className="space-y-2">
+                                                    <label htmlFor="macro-subtitle" className="text-xs font-medium text-sand-300">Alt başlık</label>
+                                                    <input
+                                                        id="macro-subtitle"
+                                                        type="text"
+                                                        value={macroDraft.subtitle}
+                                                        onChange={e => setMacroDraft({ ...macroDraft, subtitle: e.target.value })}
+                                                        placeholder="Bu makronun ne yaptığını kısaca yazın"
+                                                        className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label htmlFor="macro-instruction" className="text-xs font-medium text-sand-300">Yapay zekâya gönderilecek görev</label>
+                                                    <textarea
+                                                        id="macro-instruction"
+                                                        value={macroDraft.instruction}
+                                                        onChange={e => setMacroDraft({ ...macroDraft, instruction: e.target.value })}
+                                                        rows={7}
+                                                        placeholder="Örn. Aşağıdaki notu toplantı tutanağı biçimine çevir ve kararları madde madde yaz."
+                                                        className="w-full resize-y rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm leading-relaxed text-white placeholder-white/25 outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                                    />
+                                                </div>
+
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                    {macroDraft.id !== SPELLCHECK_MACRO_ID ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleDeleteMacro}
+                                                            className="flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-berry-400 transition-colors hover:bg-berry-500/10"
+                                                        >
+                                                            <Trash2 size={14} /> Makroyu sil
+                                                        </button>
+                                                    ) : (
+                                                        <span className="hidden sm:block" />
+                                                    )}
+
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setMacroDraft(null)}
+                                                            className="flex-1 rounded-xl border border-white/10 px-4 py-2 text-xs font-medium text-sand-300 transition-colors hover:bg-white/5 sm:flex-none"
+                                                        >
+                                                            Vazgeç
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleSaveMacro}
+                                                            disabled={!macroDraft.instruction.trim()}
+                                                            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-moss-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-moss-500 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                                                        >
+                                                            <Check size={15} /> Makroyu kaydet
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="flex items-center gap-2 text-sm font-medium text-sand-300">
+                                                        <Wand2 size={15} className="text-moss-400" />
+                                                        AI Makroları
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleResetMacros}
+                                                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-sand-400 transition-colors hover:bg-white/5 hover:text-sand-200"
+                                                    >
+                                                        <RotateCcw size={12} />
+                                                        Varsayılanlar
+                                                    </button>
+                                                </div>
+
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                    {macroList.map((macro) => (
+                                                        <button
+                                                            key={macro.id}
+                                                            type="button"
+                                                            onClick={() => setMacroDraft(macro)}
+                                                            className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition-colors hover:border-moss-500/40 hover:bg-white/[0.06]"
+                                                        >
+                                                            <span className="min-w-0">
+                                                                <span className="block truncate text-sm font-medium text-sand-100">
+                                                                    {macro.title}
+                                                                </span>
+                                                                <span className="mt-0.5 block truncate text-[11px] text-sand-500">
+                                                                    {macro.subtitle || 'Alt başlık yok'}
+                                                                </span>
+                                                            </span>
+                                                            <ChevronRight size={16} className="flex-shrink-0 text-sand-500" />
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddMacro}
+                                                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-4 py-3 text-sm font-medium text-sand-400 transition-colors hover:border-moss-500/50 hover:text-moss-300"
+                                                >
+                                                    <Plus size={16} /> Yeni makro ekle
+                                                </button>
+
+                                                <p className="text-[11px] leading-relaxed text-sand-500">
+                                                    Makrolar metin editöründe imla düzeltmenin yanında kutu olarak görünür. Bir kutuya bastığınızda notun metni o makronun göreviyle birlikte kendi API anahtarınızla seçtiğiniz sağlayıcıya gönderilir ve dönen cevap nota yazılır.
+                                                </p>
+                                            </>
+                                        )}
                                     </div>
 
                                     <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

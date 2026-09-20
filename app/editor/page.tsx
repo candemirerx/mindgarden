@@ -6,7 +6,8 @@ import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
-import { readAiMacro } from '@/lib/aiMacro';
+import { readAiMacros } from '@/lib/aiMacro';
+import type { AiMacro } from '@/lib/aiMacro';
 import { Capacitor } from '@capacitor/core';
 
 function EditorPageInner() {
@@ -23,7 +24,8 @@ function EditorPageInner() {
     const [showCopied, setShowCopied] = useState(false);
     const [isSpellChecking, setIsSpellChecking] = useState(false);
     const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
-    const [hasCustomMacro, setHasCustomMacro] = useState(false);
+    const [macros, setMacros] = useState<AiMacro[]>([]);
+    const [activeMacroId, setActiveMacroId] = useState<string | null>(null);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -139,13 +141,13 @@ function EditorPageInner() {
         setHasChanges(true);
     };
 
-    // Ayarlarda kullanıcı tanımlı bir AI görevi (makro) var mı?
+    // Ayarlarda tanımlı AI makroları (imla düzeltme dahil)
     useEffect(() => {
-        setHasCustomMacro(readAiMacro().trim().length > 0);
+        setMacros(readAiMacros());
     }, []);
 
-    // İmla düzeltme fonksiyonu
-    const handleSpellCheck = async () => {
+    // Makro çalıştırma
+    const runMacro = async (macro: AiMacro) => {
         const textarea = textareaRef.current;
         if (!textarea) return;
 
@@ -160,6 +162,7 @@ function EditorPageInner() {
         if (!textToCheck.trim()) return;
 
         setIsSpellChecking(true);
+        setActiveMacroId(macro.id);
 
         try {
             // İstemcinin girdiği ayarları al
@@ -167,7 +170,6 @@ function EditorPageInner() {
             const provider = localStorage.getItem('nb-ai-provider') || 'gemini';
             const customUrl = localStorage.getItem('nb-ai-custom-url') || '';
             const customModel = localStorage.getItem('nb-ai-custom-model') || '';
-            const macro = readAiMacro();
 
             const spellcheckUrl = Capacitor.isNativePlatform()
                 ? 'https://mindgarden-neon.vercel.app/api/spellcheck'
@@ -181,7 +183,7 @@ function EditorPageInner() {
                     provider,
                     customUrl,
                     customModel,
-                    macro
+                    macro: macro.instruction
                 })
             });
 
@@ -207,10 +209,11 @@ function EditorPageInner() {
                 setContent(correctedText);
             }
         } catch (error: any) {
-            console.error('İmla düzeltme hatası:', error);
-            alert(error.message || 'İmla düzeltme işlemi başarısız oldu.');
+            console.error('AI makro hatası:', error);
+            alert(error.message || `"${macro.title}" makrosu çalıştırılamadı.`);
         } finally {
             setIsSpellChecking(false);
+            setActiveMacroId(null);
         }
     };
 
@@ -391,12 +394,12 @@ function EditorPageInner() {
                 </div>
 
                 {/* AI Toolbar */}
-                <div className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-gradient-to-r from-clay-50 to-clay-50 border-t border-sand-200">
-                    <span className="text-xs font-medium text-clay-600 mr-2">AI</span>
+                <div className="flex items-center gap-2 border-t border-sand-200 bg-gradient-to-r from-clay-50 to-clay-50 px-4 py-2 sm:px-6">
+                    <span className="mr-1 flex-shrink-0 text-xs font-medium text-clay-600">AI</span>
 
                     {pendingSpellCheck ? (
                         <div className="flex items-center gap-1">
-                            <span className="text-xs text-sand-500 mr-2">Onayla:</span>
+                            <span className="mr-2 text-xs text-sand-500">Onayla:</span>
                             <button
                                 onClick={handleAcceptSpellCheck}
                                 className="p-1.5 rounded-lg bg-moss-600 hover:bg-moss-700 text-white transition-all"
@@ -413,31 +416,42 @@ function EditorPageInner() {
                             </button>
                         </div>
                     ) : (
-                        <button
-                            onClick={handleSpellCheck}
-                            disabled={isSpellChecking || !content.trim()}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                                isSpellChecking || !content.trim()
-                                    ? 'bg-sand-200 text-sand-400 cursor-not-allowed'
-                                    : 'bg-clay-600 hover:bg-clay-700 text-white shadow-soft hover:shadow'
-                            }`}
-                            title={
-                                hasCustomMacro
-                                    ? 'Notun metni, ayarlarda yazdığınız AI göreviyle birlikte sağlayıcıya gönderilir'
-                                    : 'Metin ve API anahtarı Vercel sunucusu üzerinden seçtiğiniz sağlayıcıya gönderilir'
-                            }
-                        >
-                            {isSpellChecking ? (
-                                <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                                <PenLine size={16} />
+                        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
+                            {macros.map((macro) => {
+                                const isRunning = isSpellChecking && activeMacroId === macro.id;
+                                const isDisabled = isSpellChecking || !content.trim();
+
+                                return (
+                                    <button
+                                        key={macro.id}
+                                        type="button"
+                                        onClick={() => runMacro(macro)}
+                                        disabled={isDisabled}
+                                        title={macro.subtitle || macro.title}
+                                        className={`flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                                            isDisabled
+                                                ? 'bg-sand-200 text-sand-400 cursor-not-allowed'
+                                                : 'bg-clay-600 text-white shadow-soft hover:bg-clay-700 hover:shadow'
+                                        }`}
+                                    >
+                                        {isRunning ? (
+                                            <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <PenLine size={16} />
+                                        )}
+                                        <span className="whitespace-nowrap">
+                                            {isRunning ? 'Çalışıyor…' : macro.title}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+
+                            {macros.length === 0 && (
+                                <span className="text-xs text-sand-500">
+                                    Makro bulunamadı. Ayarlardan makro ekleyin.
+                                </span>
                             )}
-                            <span className="hidden sm:inline">
-                                {isSpellChecking
-                                    ? (hasCustomMacro ? 'Uygulanıyor...' : 'Düzeltiliyor...')
-                                    : (hasCustomMacro ? 'AI Görevini Uygula' : 'İmla Düzelt')}
-                            </span>
-                        </button>
+                        </div>
                     )}
                 </div>
             </header>
