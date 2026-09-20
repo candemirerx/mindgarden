@@ -28,6 +28,7 @@ function EditorPageInner() {
     const [macros, setMacros] = useState<AiMacro[]>([]);
     const [activeMacroId, setActiveMacroId] = useState<string | null>(null);
     const [runningLength, setRunningLength] = useState(0);
+    const [chunkProgress, setChunkProgress] = useState<{ done: number; total: number } | null>(null);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -231,24 +232,40 @@ function EditorPageInner() {
         try {
             let correctedText: string;
 
-            try {
-                correctedText = await sendOnce(textToCheck);
-            } catch (firstError) {
-                // Uzun metin tek istekte işlenemediyse (sağlayıcı yanıtı süre
-                // sınırını aştıysa) metni parçalara bölüp sırayla işleriz.
-                // Kısa parçalar tek istekte hızlı yanıt aldığı için bu yol
-                // uzun notlarda da çalışır.
-                const yenidenDenenebilir =
-                    (firstError as Error & { retryable?: boolean })?.retryable === true;
-                const chunks = yenidenDenenebilir ? splitIntoChunks(textToCheck) : [];
+            // Uzun metinlerde sağlayıcı tek istekte yanıt veremiyor ve ilk
+            // deneme 45 saniye boyunca boşa bekliyor. Bu yüzden belli bir
+            // uzunluğun üzerindeki metinleri doğrudan parçalayarak göndeririz.
+            const tekIstekSiniri = 350;
+            const oncedenParcala = textToCheck.length > tekIstekSiniri;
+            const parcalar = oncedenParcala ? splitIntoChunks(textToCheck) : [];
 
-                if (chunks.length <= 1) throw firstError;
-
+            if (parcalar.length > 1) {
                 let birlesik = '';
-                for (const chunk of chunks) {
-                    birlesik += (await sendOnce(chunk.text)).trim() + chunk.after;
+                for (let i = 0; i < parcalar.length; i++) {
+                    setChunkProgress({ done: i, total: parcalar.length });
+                    birlesik += (await sendOnce(parcalar[i].text)).trim() + parcalar[i].after;
                 }
+                setChunkProgress(null);
                 correctedText = birlesik;
+            } else {
+                try {
+                    correctedText = await sendOnce(textToCheck);
+                } catch (firstError) {
+                    // Kısa metin yine de takıldıysa parçalayıp tekrar deneriz.
+                    const yenidenDenenebilir =
+                        (firstError as Error & { retryable?: boolean })?.retryable === true;
+                    const chunks = yenidenDenenebilir ? splitIntoChunks(textToCheck) : [];
+
+                    if (chunks.length <= 1) throw firstError;
+
+                    let birlesik = '';
+                    for (let i = 0; i < chunks.length; i++) {
+                        setChunkProgress({ done: i, total: chunks.length });
+                        birlesik += (await sendOnce(chunks[i].text)).trim() + chunks[i].after;
+                    }
+                    setChunkProgress(null);
+                    correctedText = birlesik;
+                }
             }
 
             // Sonuç girdiyle birebir aynıysa onay ekranı açıp kullanıcıya
@@ -282,6 +299,7 @@ function EditorPageInner() {
             setIsSpellChecking(false);
             setActiveMacroId(null);
             setRunningLength(0);
+            setChunkProgress(null);
         }
     };
 
@@ -520,9 +538,11 @@ function EditorPageInner() {
                                         )}
                                         <span className="whitespace-nowrap">
                                             {isRunning
-                                                ? (runningLength > 4000
-                                                    ? 'Uzun metin işleniyor…'
-                                                    : 'Çalışıyor…')
+                                                ? (chunkProgress
+                                                    ? `Parça ${chunkProgress.done + 1}/${chunkProgress.total}…`
+                                                    : runningLength > 4000
+                                                        ? 'Uzun metin işleniyor…'
+                                                        : 'Çalışıyor…')
                                                 : macro.title}
                                         </span>
                                     </button>
