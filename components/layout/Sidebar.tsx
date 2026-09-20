@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType, ChevronDown, Sparkles, Key, Trash2 } from 'lucide-react';
+import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType, ChevronDown, Sparkles } from 'lucide-react';
 import { useStore } from '@/lib/store/useStore';
 import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { signInAsGuest } from '@/lib/localClient';
@@ -10,7 +10,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
-import { fetchGoogleProfile, setAutoSyncEnabled, syncOnStartup, initDriveAutoSync } from '@/lib/driveSync';
+import { clearDriveToken, fetchGoogleProfile, setAutoSyncEnabled, syncOnStartup, initDriveAutoSync } from '@/lib/driveSync';
 import { useMobileShell } from '@/components/mobile/MobileShell';
 import { OfflineOverlay } from '@/components/mobile/MobileShell';
 
@@ -62,7 +62,10 @@ export default function Sidebar() {
     const [showImportOptions, setShowImportOptions] = useState(false);
     const [importData, setImportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
 
-    // Dışa aktarma inline state'leri  
+    // Veri Yönetimi bölümü varsayılan olarak kapalı gelir
+    const [isDataSectionOpen, setIsDataSectionOpen] = useState(false);
+
+    // Dışa aktarma inline state'leri
     const [showExportOptions, setShowExportOptions] = useState(false);
     const [exportData, setExportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
     const [exportStep, setExportStep] = useState<'select' | 'format'>('select');
@@ -189,7 +192,10 @@ export default function Sidebar() {
             await supabase.auth.signOut({ scope: 'local' });
         } catch (error) {
             console.error('Sign out error:', error);
+        } finally {
+            clearDriveToken();
         }
+        useStore.getState().resetData();
         setUser(null);
         setSidebarOpen(false);
     };
@@ -303,7 +309,8 @@ export default function Sidebar() {
             const { data: gardensData, error: gardensError } = await supabase
                 .from('gardens')
                 .select('*')
-                .eq('user_id', user.id);
+                .eq('user_id', user.id)
+                .is('deleted_at', null);
 
             if (gardensError) throw gardensError;
 
@@ -314,7 +321,8 @@ export default function Sidebar() {
                 const { data: fetchedNodes, error: nodesError } = await supabase
                     .from('nodes')
                     .select('*')
-                    .in('garden_id', gardenIds);
+                    .in('garden_id', gardenIds)
+                    .is('deleted_at', null);
 
                 if (nodesError) throw nodesError;
                 nodesData = fetchedNodes || [];
@@ -717,16 +725,27 @@ export default function Sidebar() {
 
         try {
             // Mevcut bahçeleri al
-            const { data: existingGardens } = await supabase
+            const { data: existingGardens, error: existingError } = await supabase
                 .from('gardens')
                 .select('id')
-                .eq('user_id', user.id);
+                .eq('user_id', user.id)
+                .is('deleted_at', null);
+            if (existingError) throw existingError;
 
-            // Mevcut bahçelere ait node'ları sil
+            // Silme bilgisini Drive senkronuna taşıyabilmek için kayıtları tombstone yap.
             if (existingGardens && existingGardens.length > 0) {
                 const gardenIds = existingGardens.map(g => g.id);
-                await supabase.from('nodes').delete().in('garden_id', gardenIds);
-                await supabase.from('gardens').delete().eq('user_id', user.id);
+                const deletedAt = new Date().toISOString();
+                const nodeResult = await supabase
+                    .from('nodes')
+                    .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                    .in('garden_id', gardenIds);
+                if (nodeResult.error) throw nodeResult.error;
+                const gardenResult = await supabase
+                    .from('gardens')
+                    .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                    .in('id', gardenIds);
+                if (gardenResult.error) throw gardenResult.error;
             }
 
             // Yeni verileri ekle
@@ -778,8 +797,9 @@ export default function Sidebar() {
                 .insert({
                     name: garden.name,
                     user_id: user.id,
-                    view_state: garden.view_state
-                })
+                        view_state: garden.view_state,
+                        deleted_at: null
+                    })
                 .select()
                 .single();
 
@@ -840,7 +860,9 @@ export default function Sidebar() {
                         content: node.content,
                         position_x: node.position_x,
                         position_y: node.position_y,
-                        is_expanded: node.is_expanded ?? true
+                        is_expanded: node.is_expanded ?? true,
+                        node_type: node.node_type ?? 'auto',
+                        deleted_at: null
                     })
                     .select()
                     .single();
@@ -944,23 +966,44 @@ export default function Sidebar() {
                                                 <span>Bahçene hoş geldin!</span>
                                             </div>
 
-                                            {/* Veri Yönetimi Bölümü */}
+                                            {/* Veri Yönetimi Bölümü (varsayılan kapalı) */}
                                             <div className="border-t border-sand-200 pt-4">
-                                                <div className="mb-3 flex items-center gap-2">
-                                                    <Database size={17} className="text-clay-600" />
-                                                    <h4 className="text-sm font-semibold text-sand-800">Veri Yönetimi</h4>
-                                                </div>
+                                                <button
+                                                    onClick={() => setIsDataSectionOpen(!isDataSectionOpen)}
+                                                    aria-expanded={isDataSectionOpen}
+                                                    className="mb-3 flex w-full items-center justify-between rounded-lg text-left transition-colors duration-200 hover:bg-sand-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40"
+                                                >
+                                                    <span className="flex items-center gap-2">
+                                                        <Database size={17} className="text-clay-600" />
+                                                        <span className="text-sm font-semibold text-sand-800">Veri Yönetimi</span>
+                                                    </span>
+                                                    <motion.div
+                                                        animate={{ rotate: isDataSectionOpen ? 180 : 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                    >
+                                                        <ChevronDown size={16} className="text-sand-400" />
+                                                    </motion.div>
+                                                </button>
 
+                                                {/* Hidden file input */}
+                                                <input
+                                                    ref={fileInputRef}
+                                                    type="file"
+                                                    accept=".json"
+                                                    onChange={handleFileSelect}
+                                                    className="hidden"
+                                                />
+
+                                                <AnimatePresence initial={false}>
+                                                    {isDataSectionOpen && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            transition={{ duration: 0.2 }}
+                                                            className="overflow-hidden"
+                                                        >
                                                 <div className="space-y-2">
-                                                    {/* Hidden file input */}
-                                                    <input
-                                                        ref={fileInputRef}
-                                                        type="file"
-                                                        accept=".json"
-                                                        onChange={handleFileSelect}
-                                                        className="hidden"
-                                                    />
-
                                                     {/* Export Section */}
                                                     <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
                                                         <button
@@ -1168,9 +1211,12 @@ export default function Sidebar() {
                                                         </AnimatePresence>
                                                     </div>
                                                 </div>
+                                                        </motion.div>
+                                                    )}
+                                                    </AnimatePresence>
                                             </div>
 
-                                            
+
                                         </>
                                     ) : (
                                         /* Giriş Yapılmamış */
@@ -1336,8 +1382,14 @@ export default function Sidebar() {
                                             Model ve API Ayarları
                                         </button>
                                         <p className="mt-2 text-[10px] text-sand-500 leading-relaxed">
-                                            İmla düzeltme ve asistan özelliklerini farklı model sağlayıcılarıyla (Gemini, OpenAI, Anthropic, Custom) kullanabilirsiniz.
+                                            AI istekleri uygulamanın Vercel sunucusu üzerinden seçtiğiniz sağlayıcıya iletilir.
                                         </p>
+                                        <a
+                                            href="/gizlilik"
+                                            className="mt-2 inline-block text-[10px] font-semibold text-moss-700 hover:underline"
+                                        >
+                                            Gizlilik Politikası
+                                        </a>
                                     </div>
                                 </div>
                             )}

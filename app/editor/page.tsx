@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
+import { Capacitor } from '@capacitor/core';
 
 function EditorPageInner() {
     const searchParams = useSearchParams();
@@ -13,7 +14,7 @@ function EditorPageInner() {
     const gardenId = searchParams.get('id') || '';
     const nodeId = searchParams.get('nodeId') || '';
 
-    const { nodes, updateNode } = useStore();
+    const { nodes, updateNode, fetchNodes } = useStore();
     const [content, setContent] = useState('');
     const [title, setTitle] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -24,11 +25,13 @@ function EditorPageInner() {
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [loadedNodeKey, setLoadedNodeKey] = useState<string | null>(null);
     const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, onConfirm?: () => void}>({ isOpen: false });
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const loadingNodeKeyRef = useRef<string | null>(null);
 
     const currentNode = nodes.find(n => n.id === nodeId);
 
@@ -36,6 +39,30 @@ function EditorPageInner() {
     useEffect(() => {
         initDriveAutoSync(useStore);
     }, []);
+
+    useEffect(() => {
+        const nodeKey = `${gardenId}:${nodeId}`;
+        if (
+            !gardenId ||
+            !nodeId ||
+            currentNode ||
+            loadedNodeKey === nodeKey ||
+            loadingNodeKeyRef.current === nodeKey
+        ) return;
+
+        let active = true;
+        loadingNodeKeyRef.current = nodeKey;
+        void fetchNodes(gardenId).finally(() => {
+            if (loadingNodeKeyRef.current === nodeKey) {
+                loadingNodeKeyRef.current = null;
+            }
+            if (active) setLoadedNodeKey(nodeKey);
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [gardenId, nodeId, currentNode, loadedNodeKey, fetchNodes]);
 
     useEffect(() => {
         if (currentNode) {
@@ -133,7 +160,10 @@ function EditorPageInner() {
             const provider = localStorage.getItem('nb-ai-provider') || 'gemini';
             const customUrl = localStorage.getItem('nb-ai-custom-url') || '';
 
-            const response = await fetch('https://mindgarden-neon.vercel.app/api/spellcheck', {
+            const spellcheckUrl = Capacitor.isNativePlatform()
+                ? 'https://mindgarden-neon.vercel.app/api/spellcheck'
+                : '/api/spellcheck';
+            const response = await fetch(spellcheckUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: textToCheck, clientApiKey, provider, customUrl })
@@ -375,7 +405,7 @@ function EditorPageInner() {
                                     ? 'bg-sand-200 text-sand-400 cursor-not-allowed'
                                     : 'bg-clay-600 hover:bg-clay-700 text-white shadow-soft hover:shadow'
                             }`}
-                            title="İmla Düzelt"
+                            title="Metin ve API anahtarı Vercel sunucusu üzerinden seçtiğiniz sağlayıcıya gönderilir"
                         >
                             {isSpellChecking ? (
                                 <Loader2 size={16} className="animate-spin" />

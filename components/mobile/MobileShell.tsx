@@ -80,28 +80,30 @@ export async function hapticTick(): Promise<void> {
     }
 }
 
-/** Çevrimdışı bilgi ekranı — tarayıcı hatası yerine uygulama içi tasarım. */
+/** Yerel notları engellemeden bağlantı durumunu bildiren küçük banner. */
 export function OfflineOverlay({ onRetry }: { onRetry?: () => void }) {
     return (
-        <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-5 bg-paper p-8 text-center">
-            <span className="flex h-20 w-20 items-center justify-center rounded-3xl bg-clay-100 text-clay-700">
-                <WifiOff size={36} />
-            </span>
-            <div>
-                <h2 className="text-xl font-semibold text-sand-900">Bağlantı Yok</h2>
-                <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-sand-600">
-                    Notlarını görmek için internet gerekmiyor; ancak Drive yedekleme ve yapay zeka özellikleri için bağlantı gerekiyor.
-                </p>
+        <div className="pointer-events-none fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-[300] flex justify-center">
+            <div className="pointer-events-auto flex max-w-xl items-start gap-3 rounded-2xl border border-clay-300 bg-clay-50/95 px-4 py-3 text-left shadow-pop backdrop-blur">
+                <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-clay-100 text-clay-700">
+                    <WifiOff size={19} />
+                </span>
+                <div className="min-w-0 flex-1">
+                    <h2 className="text-sm font-semibold text-sand-900">Çevrimdışısınız</h2>
+                    <p className="mt-0.5 text-xs leading-relaxed text-sand-600">
+                        Yerel notlarınızı kullanabilirsiniz. Drive senkronizasyonu ve yapay zekâ bağlantı gelene kadar bekler.
+                    </p>
+                </div>
+                {onRetry && (
+                    <button
+                        onClick={() => { void hapticTick(); onRetry(); }}
+                        aria-label="Bağlantıyı yeniden dene"
+                        className="rounded-lg p-2 text-clay-700 transition-colors hover:bg-clay-100"
+                    >
+                        <RefreshCw size={17} />
+                    </button>
+                )}
             </div>
-            {onRetry && (
-                <button
-                    onClick={() => { void hapticTick(); onRetry(); }}
-                    className="btn btn-primary px-6 py-3"
-                >
-                    <RefreshCw size={18} />
-                    <span>Tekrar Dene</span>
-                </button>
-            )}
         </div>
     );
 }

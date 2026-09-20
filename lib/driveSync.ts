@@ -8,8 +8,8 @@
  * - Otomatik senkron: Google oturumu açıkken not değişince (5 sn hareketsizlikte)
  *   Drive'a yazılır; uygulama açılışında uzaktaki yedek cihazla birleştirilir.
  *
- * Birleştirme kuralı: notlarda "son değişiklik kazanır" (updated_at);
- * bahçelerde eksik olanlar uzaktan eklenir. Silinen kayıtlar taşınmaz (v1).
+ * Birleştirme kuralı: canlı kayıtlarda son değişiklik kazanır; silme
+ * tombstone'ları eski canlı kopyalardan üstün tutulur ve Drive'a taşınır.
  */
 
 import { Capacitor } from '@capacitor/core';
@@ -28,7 +28,8 @@ const LAST_SYNC_KEY = 'nb-drive-last-sync';
 
 export function isAutoSyncEnabled(): boolean {
     if (typeof window === 'undefined') return false;
-    return localStorage.getItem(AUTOSYNC_KEY) === '1';
+    // Varsayılan açık: kullanıcı özellikle kapatmadıysa (değer '0' değilse) senkron çalışır.
+    return localStorage.getItem(AUTOSYNC_KEY) !== '0';
 }
 
 export function setAutoSyncEnabled(on: boolean): void {
@@ -174,6 +175,18 @@ async function requestTokenNative(): Promise<string> {
             // yoksay
         }
     }
+    // Sessiz yenileme: kullanıcı daha önce izin verdiyse onay ekranı çıkmadan
+    // token alınır. Uygulama açılışındaki otomatik senkron bu yolu kullanır.
+    try {
+        const refreshed: any = await (GoogleAuth as any).refresh();
+        const silentToken =
+            refreshed?.authentication?.accessToken ??
+            refreshed?.accessToken ??
+            null;
+        if (silentToken) return silentToken;
+    } catch {
+        // Sessiz yenileme yok (ilk giriş veya oturum kapalı) → normal akış.
+    }
     const res: any = await (GoogleAuth as any).signIn();
     // Plugin v3+: token `authentication.accessToken` içinde; eski sürümlerde üst seviyede.
     const token =
@@ -232,23 +245,52 @@ export async function fetchGoogleProfile(): Promise<{ token: string; profile: Go
 /* Veri toplama                                                       */
 /* ------------------------------------------------------------------ */
 
+type SyncRow = Record<string, any> & {
+    id: string;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+};
+
 export interface BackupPayload {
     app: 'notbahcesi';
-    version: 1;
+    version: 1 | 2;
     exportedAt: string;
     device: string;
-    gardens: any[];
-    nodes: any[];
+    ownerId?: string;
+    gardens: SyncRow[];
+    nodes: SyncRow[];
+}
+
+async function activeSessionUserId(): Promise<string> {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw new Error('Oturum okunamadı: ' + error.message);
+    if (!data.session?.user?.id) throw new Error('Senkronizasyon için giriş yapmalısınız');
+    return data.session.user.id;
 }
 
 async function collectLocalData(): Promise<Omit<BackupPayload, 'exportedAt' | 'device'>> {
-    const [gardensRes, nodesRes] = await Promise.all([
-        supabase.from('gardens').select('*'),
-        supabase.from('nodes').select('*'),
-    ]);
+    const ownerId = await activeSessionUserId();
+    const gardensRes = await supabase
+        .from('gardens')
+        .select('*')
+        .eq('user_id', ownerId);
     if (gardensRes.error) throw new Error('Bahçeler okunamadı: ' + gardensRes.error.message);
-    if (nodesRes.error) throw new Error('Notlar okunamadı: ' + nodesRes.error.message);
-    return { app: 'notbahcesi', version: 1, gardens: gardensRes.data ?? [], nodes: nodesRes.data ?? [] };
+
+    const gardens = (gardensRes.data ?? []) as SyncRow[];
+    const gardenIds = gardens.map((garden) => garden.id).filter(Boolean);
+    let nodes: SyncRow[] = [];
+
+    if (gardenIds.length > 0) {
+        const nodesRes = await supabase
+            .from('nodes')
+            .select('*')
+            .in('garden_id', gardenIds);
+        if (nodesRes.error) throw new Error('Notlar okunamadı: ' + nodesRes.error.message);
+        nodes = (nodesRes.data ?? []) as SyncRow[];
+    }
+
+    return { app: 'notbahcesi', version: 2, ownerId, gardens, nodes };
 }
 
 /* ------------------------------------------------------------------ */
@@ -311,7 +353,94 @@ async function downloadBackup(token: string): Promise<BackupPayload | null> {
     if (!res.ok) throw new Error('Yedek indirilemedi (' + res.status + ')');
     const data = await res.json();
     if (data?.app !== 'notbahcesi') throw new Error('Geçersiz yedek dosyası');
-    return data;
+    return data as BackupPayload;
+}
+
+function effectiveTime(row: SyncRow, fallback = ''): string {
+    return row.deleted_at || row.updated_at || row.created_at || fallback;
+}
+
+function chooseWinner(local: SyncRow | undefined, remote: SyncRow | undefined): SyncRow | undefined {
+    if (!local) return remote;
+    if (!remote) return local;
+
+    const localDeleted = Boolean(local.deleted_at);
+    const remoteDeleted = Boolean(remote.deleted_at);
+    if (localDeleted !== remoteDeleted) return localDeleted ? local : remote;
+
+    const localTime = effectiveTime(local);
+    const remoteTime = effectiveTime(remote);
+    if (localTime !== remoteTime) return remoteTime > localTime ? remote : local;
+
+    // Aynı zaman damgasında iki cihazın farklı sonuç seçmesini önle.
+    return JSON.stringify(remote) > JSON.stringify(local) ? remote : local;
+}
+
+function reconcile(localRows: SyncRow[], remoteRows: SyncRow[]): SyncRow[] {
+    const localById = new Map(localRows.filter((row) => row.id).map((row) => [row.id, row]));
+    const remoteById = new Map(remoteRows.filter((row) => row.id).map((row) => [row.id, row]));
+    const ids = new Set([...localById.keys(), ...remoteById.keys()]);
+    const rows: SyncRow[] = [];
+
+    for (const id of ids) {
+        const winner = chooseWinner(localById.get(id), remoteById.get(id));
+        if (winner) rows.push(winner);
+    }
+    return rows;
+}
+
+async function normalizeRemotePayload(payload: BackupPayload): Promise<BackupPayload> {
+    const ownerId = await activeSessionUserId();
+    const exportedAt = payload.exportedAt || new Date(0).toISOString();
+    const gardens = (Array.isArray(payload.gardens) ? payload.gardens : [])
+        .filter((garden) => !garden.user_id || garden.user_id === ownerId)
+        .map((garden) => ({
+            ...garden,
+            user_id: ownerId,
+            updated_at: garden.updated_at || garden.created_at || exportedAt,
+            deleted_at: garden.deleted_at ?? null,
+        }))
+        .filter((garden) => Boolean(garden.id));
+    const gardenIds = new Set(gardens.map((garden) => garden.id));
+    const nodes = (Array.isArray(payload.nodes) ? payload.nodes : [])
+        .filter((node) => Boolean(node.id) && gardenIds.has(node.garden_id))
+        .map((node) => ({
+            ...node,
+            updated_at: node.updated_at || node.created_at || exportedAt,
+            deleted_at: node.deleted_at ?? null,
+        }));
+
+    return {
+        app: 'notbahcesi',
+        version: 2,
+        exportedAt,
+        device: payload.device || 'unknown',
+        ownerId,
+        gardens,
+        nodes,
+    };
+}
+
+async function checkedUpsert(table: 'gardens' | 'nodes', rows: SyncRow[]): Promise<void> {
+    if (rows.length === 0) return;
+    const { error } = await supabase.from(table).upsert(rows);
+    if (error) throw new Error(`${table === 'gardens' ? 'Bahçeler' : 'Notlar'} yazılamadı: ${error.message}`);
+}
+
+async function refreshVisibleStore(): Promise<void> {
+    if (!storeRef) return;
+    await storeRef.getState().fetchGardens();
+    const state = storeRef.getState();
+    const currentGardenId = state.currentGardenId;
+    if (!currentGardenId) return;
+
+    if (state.gardens.some((garden) => garden.id === currentGardenId)) {
+        await state.fetchNodes(currentGardenId);
+    } else {
+        state.setCurrentGarden(null);
+        state.setNodes([]);
+        state.setSelectedNode(null);
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -334,7 +463,7 @@ export async function uploadBackup(token: string): Promise<{ exportedAt: string;
     };
 }
 
-/** Drive'daki yedeği olduğu gibi cihaza yazar (eskiyi silmeden upsert). */
+/** Drive yedeğini yerel verilerle güvenli biçimde birleştirir. */
 export async function restoreBackup(
     token: string,
     onProgress?: (msg: string) => void
@@ -352,83 +481,60 @@ async function writePayloadToLocal(
     merging = true;
     try {
         onProgress?.('Cihaza yazılıyor…');
-        for (const garden of payload.gardens ?? []) {
-            await supabase.from('gardens').upsert(garden);
-        }
-        for (const node of payload.nodes ?? []) {
-            await supabase.from('nodes').upsert(node);
-        }
-        // Store'u uyar (açık sayfalar tazelesin)
-        if (storeRef) {
-            await storeRef.getState().fetchGardens();
-        }
-        return { gardens: payload.gardens?.length ?? 0, nodes: payload.nodes?.length ?? 0 };
+        const remote = await normalizeRemotePayload(payload);
+        const local = await collectLocalData();
+        const gardens = reconcile(local.gardens, remote.gardens);
+        const nodes = reconcile(local.nodes, remote.nodes);
+        await checkedUpsert('gardens', gardens);
+        await checkedUpsert('nodes', nodes);
+        await refreshVisibleStore();
+        return { gardens: remote.gardens.length, nodes: remote.nodes.length };
     } finally {
-        // Bir tur bekle ki store'un kendi güncellemesi debounce'u tetiklemesin
-        setTimeout(() => { merging = false; }, 2000);
+        merging = false;
     }
 }
 
 /**
- * Çapraz cihaz senkronu: Drive'daki yedeği cihazla birleştirir.
- * Notlarda updated_at yeni olan kazanır; eksikler karşı taraftan gelir.
- * Sonuç hem cihaza yazılır hem Drive'a geri yüklenir.
+ * Çapraz cihaz senkronu: canlı kayıtların en yenisi kazanır; silme tombstone'u
+ * eski canlı kopyalardan daima üstündür. Sonuç cihaza ve Drive'a yazılır.
  */
 export async function mergeSync(token: string): Promise<{ gardens: number; nodes: number; merged: boolean }> {
-    const remote = await downloadBackup(token);
-    if (!remote) {
-        // Yedek yok: yerel veriyi ilk kez yükle
+    const downloaded = await downloadBackup(token);
+    if (!downloaded) {
         const res = await uploadBackup(token);
         return { gardens: res.count, nodes: 0, merged: false };
     }
 
+    const remote = await normalizeRemotePayload(downloaded);
     const local = await collectLocalData();
+    const gardens = reconcile(local.gardens, remote.gardens);
+    const nodes = reconcile(local.nodes, remote.nodes);
+    const localGardenById = new Map(local.gardens.map((row) => [row.id, row]));
+    const localNodeById = new Map(local.nodes.map((row) => [row.id, row]));
+    const changedGardens = gardens.filter((row) => JSON.stringify(localGardenById.get(row.id)) !== JSON.stringify(row));
+    const changedNodes = nodes.filter((row) => JSON.stringify(localNodeById.get(row.id)) !== JSON.stringify(row));
+
     merging = true;
     try {
-        // Bahçeler: cihazda olmayanları uzaktan ekle
-        const localGardenIds = new Set(local.gardens.map((g) => g.id));
-        const missingGardens = (remote.gardens ?? []).filter((g) => g.id && !localGardenIds.has(g.id));
-        for (const garden of missingGardens) {
-            await supabase.from('gardens').upsert(garden);
-        }
+        await checkedUpsert('gardens', gardens);
+        await checkedUpsert('nodes', nodes);
 
-        // Notlar: son değişiklik kazanır
-        const localNodes = new Map(local.nodes.map((n) => [n.id, n]));
-        const remoteNodes = remote.nodes ?? [];
-        const toWrite: any[] = [];
-        for (const rNode of remoteNodes) {
-            if (!rNode.id) continue;
-            const lNode = localNodes.get(rNode.id);
-            if (!lNode) {
-                toWrite.push(rNode);
-                continue;
-            }
-            const lTime = lNode.updated_at || lNode.created_at || '';
-            const rTime = rNode.updated_at || rNode.created_at || '';
-            if (rTime > lTime) {
-                toWrite.push(rNode);
-            }
-        }
-        for (const node of toWrite) {
-            await supabase.from('nodes').upsert(node);
-        }
-
-        // Birleşik sonucu Drive'a yaz
-        const merged = await collectLocalData();
+        const ownerId = await activeSessionUserId();
         const payload: BackupPayload = {
-            ...merged,
+            app: 'notbahcesi',
+            version: 2,
+            ownerId,
+            gardens,
+            nodes,
             exportedAt: new Date().toISOString(),
             device: Capacitor.isNativePlatform() ? 'android' : 'web',
         };
         await writeBackup(token, payload);
         localStorage.setItem(LAST_SYNC_KEY, payload.exportedAt);
-
-        if (storeRef) {
-            await storeRef.getState().fetchGardens();
-        }
-        return { gardens: missingGardens.length, nodes: toWrite.length, merged: true };
+        await refreshVisibleStore();
+        return { gardens: changedGardens.length, nodes: changedNodes.length, merged: true };
     } finally {
-        setTimeout(() => { merging = false; }, 2000);
+        merging = false;
     }
 }
 
@@ -471,13 +577,12 @@ export function initDriveAutoSync(store: typeof useStore): void {
     store.subscribe((state) => {
         if (merging) return;
         if (!isAutoSyncEnabled() || !isSignedInWithGoogle()) return;
-        if (state.gardens.length === 0 && state.nodes.length === 0) return;
 
         if (uploadTimer) clearTimeout(uploadTimer);
         uploadTimer = setTimeout(async () => {
             try {
                 const token = await getDriveToken(false);
-                await uploadBackup(token);
+                await mergeSync(token);
             } catch {
                 // Sessiz geç: token süresi/çevrimdışı; bir sonraki değişiklikte tekrar denenir.
             }

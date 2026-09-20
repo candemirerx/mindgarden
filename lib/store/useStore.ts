@@ -2,117 +2,93 @@ import { create } from 'zustand';
 import { supabase } from '../supabaseClient';
 import type { Garden, TreeNode, StoreState } from '../types';
 
+const activeOnly = <T extends { deleted_at?: string | null }>(rows: T[] | null | undefined): T[] =>
+    (rows ?? []).filter((row) => !row.deleted_at);
+
 export const useStore = create<StoreState>((set, get) => ({
-    // Initial state
     gardens: [],
     currentGardenId: null,
     nodes: [],
     selectedNodeId: null,
     isSidebarOpen: false,
 
-    // Garden actions
-    setGardens: (gardens: Garden[]) => set({ gardens }),
-
+    setGardens: (gardens: Garden[]) => set({ gardens: activeOnly(gardens) }),
     setCurrentGarden: (id: string | null) => set({ currentGardenId: id }),
     setSelectedNode: (id: string | null) => set({ selectedNodeId: id }),
-    
-    // Sidebar actions
     toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
     setSidebarOpen: (open: boolean) => set({ isSidebarOpen: open }),
+    resetData: () => set({ gardens: [], nodes: [], currentGardenId: null, selectedNodeId: null }),
 
     addGarden: async (name: string): Promise<{ success: boolean; error?: string }> => {
         try {
-            console.log('addGarden called with name:', name);
-            
-            // Session kontrolü
             const sessionResult = await supabase.auth.getSession();
             const session = sessionResult.data.session;
-            const sessionError = sessionResult.error;
-            
-            console.log('Session check:', { 
-                hasSession: !!session, 
-                hasUser: !!session?.user,
-                userId: session?.user?.id,
-                sessionError 
-            });
-            
-            if (sessionError) {
-                console.error('Session error:', sessionError);
-                return { success: false, error: 'Oturum hatası: ' + sessionError.message };
+            if (sessionResult.error) {
+                return { success: false, error: 'Oturum hatası: ' + sessionResult.error.message };
             }
-            
             if (!session?.user) {
-                console.error('No session or user found');
                 return { success: false, error: 'Oturum bulunamadı. Lütfen tekrar giriş yapın.' };
             }
 
-            console.log('Inserting garden for user:', session.user.id);
-            
-            // Insert işlemi - basit async/await
-            const result = await supabase
+            const now = new Date().toISOString();
+            const { data, error } = await supabase
                 .from('gardens')
-                .insert([{ name, user_id: session.user.id }])
+                .insert([{ name, user_id: session.user.id, updated_at: now, deleted_at: null }])
                 .select()
                 .single();
 
-            const { data, error } = result;
-            
-            console.log('Insert result:', { data, error });
+            if (error) return { success: false, error: error.message };
+            if (!data) return { success: false, error: 'Beklenmeyen bir hata oluştu' };
 
-            if (error) {
-                console.error('Supabase insert error:', error);
-                return { success: false, error: error.message };
-            }
-
-            if (data) {
-                set((state) => ({
-                    gardens: [...state.gardens, data as Garden],
-                }));
-                console.log('Garden created successfully');
-                return { success: true };
-            }
-            
-            return { success: false, error: 'Beklenmeyen bir hata oluştu' };
+            set((state) => ({ gardens: [...state.gardens, data as Garden] }));
+            return { success: true };
         } catch (error) {
-            console.error('Bahçe eklenirken hata:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
-            return { success: false, error: errorMessage };
+            return { success: false, error: error instanceof Error ? error.message : 'Bilinmeyen hata' };
         }
     },
 
     updateGardenName: async (id: string, name: string) => {
-        try {
-            // Optimistic update
-            set((state) => ({
-                gardens: state.gardens.map((g) =>
-                    g.id === id ? { ...g, name } : g
-                ),
-            }));
+        const updatedAt = new Date().toISOString();
+        const previous = get().gardens;
+        set((state) => ({
+            gardens: state.gardens.map((garden) =>
+                garden.id === id ? { ...garden, name, updated_at: updatedAt } : garden
+            ),
+        }));
 
-            const { error } = await supabase
-                .from('gardens')
-                .update({ name })
-                .eq('id', id);
+        const { error } = await supabase
+            .from('gardens')
+            .update({ name, updated_at: updatedAt })
+            .eq('id', id);
 
-            if (error) throw error;
-        } catch (error) {
+        if (error) {
             console.error('Bahçe adı güncellenirken hata:', error);
+            set({ gardens: previous });
         }
     },
 
     deleteGarden: async (id: string) => {
         try {
-            // Önce bu bahçeye ait tüm node'ları sil
-            await supabase.from('nodes').delete().eq('garden_id', id);
+            const deletedAt = new Date().toISOString();
+            const nodeResult = await supabase
+                .from('nodes')
+                .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                .eq('garden_id', id);
+            if (nodeResult.error) throw nodeResult.error;
 
-            // Sonra bahçeyi sil
-            const { error } = await supabase.from('gardens').delete().eq('id', id);
-
-            if (error) throw error;
+            const gardenResult = await supabase
+                .from('gardens')
+                .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                .eq('id', id);
+            if (gardenResult.error) throw gardenResult.error;
 
             set((state) => ({
-                gardens: state.gardens.filter((g) => g.id !== id),
+                gardens: state.gardens.filter((garden) => garden.id !== id),
+                nodes: state.nodes.filter((node) => node.garden_id !== id),
                 currentGardenId: state.currentGardenId === id ? null : state.currentGardenId,
+                selectedNodeId: state.nodes.some(
+                    (node) => node.garden_id === id && node.id === state.selectedNodeId
+                ) ? null : state.selectedNodeId,
             }));
         } catch (error) {
             console.error('Bahçe silinirken hata:', error);
@@ -120,35 +96,26 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     fetchGardens: async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         try {
-            // AbortController ile timeout kontrolü
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-            
             const { data, error } = await supabase
                 .from('gardens')
                 .select('*')
+                .is('deleted_at', null)
                 .order('created_at', { ascending: false })
                 .abortSignal(controller.signal);
-
-            clearTimeout(timeoutId);
-            
             if (error) throw error;
-
-            set({ gardens: (data as Garden[]) || [] });
+            set({ gardens: activeOnly(data as Garden[]) });
         } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') {
-                console.error('Bahçeler yüklenirken timeout:', error);
-            } else {
-                console.error('Bahçeler yüklenirken hata:', error);
-            }
-            // Hata durumunda boş array set et - UI'ın takılmasını önle
+            console.error('Bahçeler yüklenirken hata:', error);
             set({ gardens: [] });
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
 
-    // Node actions
-    setNodes: (nodes: TreeNode[]) => set({ nodes }),
+    setNodes: (nodes: TreeNode[]) => set({ nodes: activeOnly(nodes) }),
 
     addNode: async (
         gardenId: string,
@@ -157,30 +124,26 @@ export const useStore = create<StoreState>((set, get) => ({
         position = { x: 250, y: 100 }
     ) => {
         try {
+            const now = new Date().toISOString();
             const { data, error } = await supabase
                 .from('nodes')
-                .insert([
-                    {
-                        garden_id: gardenId,
-                        parent_id: parentId,
-                        content,
-                        position_x: position.x,
-                        position_y: position.y,
-                        is_expanded: true,
-                    },
-                ])
+                .insert([{
+                    garden_id: gardenId,
+                    parent_id: parentId,
+                    content,
+                    position_x: position.x,
+                    position_y: position.y,
+                    is_expanded: true,
+                    updated_at: now,
+                    deleted_at: null,
+                }])
                 .select()
                 .single();
 
             if (error) throw error;
-
-            if (data) {
-                set((state) => ({
-                    nodes: [...state.nodes, data as TreeNode],
-                }));
-                return data as TreeNode;
-            }
-            return null;
+            if (!data) return null;
+            set((state) => ({ nodes: [...state.nodes, data as TreeNode] }));
+            return data as TreeNode;
         } catch (error) {
             console.error('Node eklenirken hata:', error);
             return null;
@@ -189,16 +152,15 @@ export const useStore = create<StoreState>((set, get) => ({
 
     updateNode: async (id: string, content: string) => {
         try {
+            const updatedAt = new Date().toISOString();
             const { error } = await supabase
                 .from('nodes')
-                .update({ content, updated_at: new Date().toISOString() })
+                .update({ content, updated_at: updatedAt })
                 .eq('id', id);
-
             if (error) throw error;
-
             set((state) => ({
                 nodes: state.nodes.map((node) =>
-                    node.id === id ? { ...node, content } : node
+                    node.id === id ? { ...node, content, updated_at: updatedAt } : node
                 ),
             }));
         } catch (error) {
@@ -208,16 +170,17 @@ export const useStore = create<StoreState>((set, get) => ({
 
     updateNodePosition: async (id: string, x: number, y: number) => {
         try {
+            const updatedAt = new Date().toISOString();
             const { error } = await supabase
                 .from('nodes')
-                .update({ position_x: x, position_y: y })
+                .update({ position_x: x, position_y: y, updated_at: updatedAt })
                 .eq('id', id);
-
             if (error) throw error;
-
             set((state) => ({
                 nodes: state.nodes.map((node) =>
-                    node.id === id ? { ...node, position_x: x, position_y: y } : node
+                    node.id === id
+                        ? { ...node, position_x: x, position_y: y, updated_at: updatedAt }
+                        : node
                 ),
             }));
         } catch (error) {
@@ -227,19 +190,31 @@ export const useStore = create<StoreState>((set, get) => ({
 
     deleteNode: async (id: string) => {
         try {
-            // Bu node'un alt node'larını da sil (cascade)
-            const childNodes = get().nodes.filter((n) => n.parent_id === id);
-
-            for (const child of childNodes) {
-                await get().deleteNode(child.id);
+            const allNodes = get().nodes;
+            const doomed = new Set<string>([id]);
+            let changed = true;
+            while (changed) {
+                changed = false;
+                for (const node of allNodes) {
+                    if (node.parent_id && doomed.has(node.parent_id) && !doomed.has(node.id)) {
+                        doomed.add(node.id);
+                        changed = true;
+                    }
+                }
             }
 
-            const { error } = await supabase.from('nodes').delete().eq('id', id);
-
+            const deletedAt = new Date().toISOString();
+            const { error } = await supabase
+                .from('nodes')
+                .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                .in('id', Array.from(doomed));
             if (error) throw error;
 
             set((state) => ({
-                nodes: state.nodes.filter((node) => node.id !== id),
+                nodes: state.nodes.filter((node) => !doomed.has(node.id)),
+                selectedNodeId: state.selectedNodeId && doomed.has(state.selectedNodeId)
+                    ? null
+                    : state.selectedNodeId,
             }));
         } catch (error) {
             console.error('Node silinirken hata:', error);
@@ -247,94 +222,84 @@ export const useStore = create<StoreState>((set, get) => ({
     },
 
     fetchNodes: async (gardenId: string) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         try {
-            // AbortController ile timeout kontrolü
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-            
             const { data, error } = await supabase
                 .from('nodes')
                 .select('*')
                 .eq('garden_id', gardenId)
+                .is('deleted_at', null)
                 .order('created_at', { ascending: true })
                 .abortSignal(controller.signal);
-
-            clearTimeout(timeoutId);
-            
             if (error) throw error;
-
-            set({ nodes: (data as TreeNode[]) || [] });
+            set({ nodes: activeOnly(data as TreeNode[]), currentGardenId: gardenId });
         } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') {
-                console.error('Node\'lar yüklenirken timeout:', error);
-            } else {
-                console.error('Node\'lar yüklenirken hata:', error);
-            }
-            // Hata durumunda boş array set et
-            set({ nodes: [] });
+            console.error('Node\'lar yüklenirken hata:', error);
+            set({ nodes: [], currentGardenId: gardenId });
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
 
     updateGardenViewState: async (id: string, viewState: { x: number; y: number; zoom: number }) => {
         try {
-            // Optimistic update
+            const updatedAt = new Date().toISOString();
             set((state) => ({
-                gardens: state.gardens.map((g) =>
-                    g.id === id ? { ...g, view_state: viewState } : g
+                gardens: state.gardens.map((garden) =>
+                    garden.id === id
+                        ? { ...garden, view_state: viewState, updated_at: updatedAt }
+                        : garden
                 ),
             }));
-
             const { error } = await supabase
                 .from('gardens')
-                .update({ view_state: viewState })
+                .update({ view_state: viewState, updated_at: updatedAt })
                 .eq('id', id);
-
             if (error) throw error;
         } catch (error) {
-            console.error('Bahçe görünümü güncellenirken hata:', JSON.stringify(error, null, 2));
+            console.error('Bahçe görünümü güncellenirken hata:', error);
         }
     },
 
     toggleNodeExpansion: async (id: string, isExpanded: boolean) => {
         try {
-            // Optimistic update
+            const updatedAt = new Date().toISOString();
             set((state) => ({
-                nodes: state.nodes.map((n) =>
-                    n.id === id ? { ...n, is_expanded: isExpanded } : n
+                nodes: state.nodes.map((node) =>
+                    node.id === id
+                        ? { ...node, is_expanded: isExpanded, updated_at: updatedAt }
+                        : node
                 ),
             }));
-
             const { error } = await supabase
                 .from('nodes')
-                .update({ is_expanded: isExpanded })
+                .update({ is_expanded: isExpanded, updated_at: updatedAt })
                 .eq('id', id);
-
             if (error) throw error;
         } catch (error) {
-            console.error('Node genişletme durumu güncellenirken hata:', JSON.stringify(error, null, 2));
+            console.error('Node genişletme durumu güncellenirken hata:', error);
         }
     },
 
     toggleNodeType: async (id: string, currentType: 'branch' | 'leaf' | 'auto') => {
         try {
-            // auto -> branch -> leaf -> auto döngüsü
             const nextType = currentType === 'auto' ? 'branch' : currentType === 'branch' ? 'leaf' : 'auto';
-
-            // Optimistic update
+            const updatedAt = new Date().toISOString();
             set((state) => ({
-                nodes: state.nodes.map((n) =>
-                    n.id === id ? { ...n, node_type: nextType } : n
+                nodes: state.nodes.map((node) =>
+                    node.id === id
+                        ? { ...node, node_type: nextType, updated_at: updatedAt }
+                        : node
                 ),
             }));
-
             const { error } = await supabase
                 .from('nodes')
-                .update({ node_type: nextType })
+                .update({ node_type: nextType, updated_at: updatedAt })
                 .eq('id', id);
-
             if (error) throw error;
         } catch (error) {
-            console.error('Node tipi güncellenirken hata:', JSON.stringify(error, null, 2));
+            console.error('Node tipi güncellenirken hata:', error);
         }
     },
 }));

@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ correctedText: text });
         }
 
-        const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
+        const apiKey = clientApiKey || (provider === 'gemini' ? process.env.GEMINI_API_KEY : undefined);
         if (!apiKey) {
             return NextResponse.json(
                 { error: 'API anahtarı bulunamadı. Lütfen Ayarlar bölümünden bir Model Provider ekleyin.' },

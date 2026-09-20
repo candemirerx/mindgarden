@@ -41,36 +41,23 @@ const GardenCard = memo(function GardenCard({
     onSaveName: () => void;
     onKeyDown: (e: React.KeyboardEvent) => void;
     onOpenGarden: () => void;
-    onOpenCanvas: (e: React.MouseEvent) => void;
-    onOpenProjects: (e: React.MouseEvent) => void;
-    onDelete: (e: React.MouseEvent) => void;
+    onOpenCanvas: () => void;
+    onOpenProjects: () => void;
+    onDelete: () => void;
     formatDate: (date: string) => string;
 }) {
     return (
-        <div
-            onClick={onOpenGarden}
-            onKeyDown={(e) => {
-                if (isEditing) return;
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onOpenGarden();
-                }
-            }}
-            role="button"
-            tabIndex={0}
-            aria-label={`${garden.name} bahçesini aç`}
-            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-card transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-moss-200 hover:shadow-lift focus-visible:border-moss-300"
-        >
+        <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-card transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-moss-200 hover:shadow-lift">
             {/* Bahçe kimliğini taşıyan ince şerit */}
             <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-moss-600 via-moss-400 to-clay-300 opacity-70 transition-opacity duration-200 group-hover:opacity-100" />
 
             <div className="flex flex-1 flex-col p-5 pt-6">
                 <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-moss-100 text-moss-700 transition-colors duration-200 group-hover:bg-moss-600 group-hover:text-white">
-                            <TreePine size={21} />
-                        </span>
-                        {isEditing ? (
+                    {isEditing ? (
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-moss-100 text-moss-700">
+                                <TreePine size={21} />
+                            </span>
                             <input
                                 type="text"
                                 value={editingName}
@@ -81,20 +68,31 @@ const GardenCard = memo(function GardenCard({
                                 className="w-full rounded-lg border border-moss-400 bg-white px-2.5 py-1.5 text-base font-semibold text-sand-900 outline-none ring-4 ring-moss-500/10"
                                 autoFocus
                             />
-                        ) : (
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={onOpenGarden}
+                            onDoubleClick={onEdit}
+                            aria-label={`${garden.name} bahçesini aç`}
+                            className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-moss-500/15"
+                        >
+                            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-moss-100 text-moss-700 transition-colors duration-200 group-hover:bg-moss-600 group-hover:text-white">
+                                <TreePine size={21} />
+                            </span>
                             <h3
                                 className="truncate text-base font-semibold text-sand-900 transition-colors duration-200 group-hover:text-moss-700"
-                                onDoubleClick={onEdit}
                                 title={garden.name}
                             >
                                 {garden.name}
                             </h3>
-                        )}
-                    </div>
+                        </button>
+                    )}
 
                     <div className="relative flex-shrink-0">
                         <button
-                            onClick={(e) => { e.stopPropagation(); onMenuToggle(); }}
+                            type="button"
+                            onClick={onMenuToggle}
                             aria-label="Bahçe seçenekleri"
                             aria-expanded={isMenuOpen}
                             className={`rounded-lg p-1.5 transition-colors duration-200 ${
@@ -107,12 +105,10 @@ const GardenCard = memo(function GardenCard({
                         </button>
 
                         {isMenuOpen && (
-                            <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full z-20 mt-1.5 min-w-[176px] overflow-hidden rounded-xl border border-sand-200 bg-white py-1 shadow-pop animate-scale-in"
-                            >
+                            <div className="absolute right-0 top-full z-20 mt-1.5 min-w-[176px] overflow-hidden rounded-xl border border-sand-200 bg-white py-1 shadow-pop animate-scale-in">
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                                    type="button"
+                                    onClick={onEdit}
                                     className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
                                 >
                                     <Pencil size={15} className="text-clay-600" />
@@ -120,6 +116,7 @@ const GardenCard = memo(function GardenCard({
                                 </button>
                                 <div className="my-1 h-px bg-sand-200" />
                                 <button
+                                    type="button"
                                     onClick={onDelete}
                                     className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
                                 >
@@ -131,14 +128,19 @@ const GardenCard = memo(function GardenCard({
                     </div>
                 </div>
 
-                <div className="mb-5 flex items-center gap-1.5 text-xs text-sand-500">
+                <button
+                    type="button"
+                    onClick={onOpenGarden}
+                    className="mb-5 flex w-fit items-center gap-1.5 rounded-md text-xs text-sand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-moss-500/15"
+                >
                     <Clock size={13} />
                     <span>{formatDate(garden.created_at)}</span>
-                </div>
+                </button>
 
                 {/* Eylemler - kartın altına yaslanır */}
                 <div className="mt-auto flex gap-2.5">
                     <button
+                        type="button"
                         onClick={onOpenProjects}
                         className="btn btn-secondary flex-1 px-3 py-2.5 text-sm"
                     >
@@ -146,6 +148,7 @@ const GardenCard = memo(function GardenCard({
                         <span>Projeler</span>
                     </button>
                     <button
+                        type="button"
                         onClick={onOpenCanvas}
                         className="btn btn-primary flex-1 px-3 py-2.5 text-sm"
                     >
@@ -204,6 +207,7 @@ export default function HomePage() {
 
             if (event === 'SIGNED_IN' && session?.user) {
                 setIsLoading(true);
+                useStore.getState().resetData();
                 try {
                     await fetchGardens();
                 } catch (e) {
@@ -212,7 +216,7 @@ export default function HomePage() {
                     if (mounted) setIsLoading(false);
                 }
             } else if (event === 'SIGNED_OUT') {
-                useStore.getState().setGardens([]);
+                useStore.getState().resetData();
             }
         });
 
@@ -248,20 +252,17 @@ export default function HomePage() {
         router.push(lastView === 'projects' ? `/projeler?id=${gardenId}` : `/bahce_view?id=${gardenId}`);
     }, [router]);
 
-    const handleOpenCanvas = useCallback((e: React.MouseEvent, gardenId: string) => {
-        e.stopPropagation();
+    const handleOpenCanvas = useCallback((gardenId: string) => {
         localStorage.setItem(`garden-view-${gardenId}`, 'canvas');
         router.push(`/bahce_view?id=${gardenId}`);
     }, [router]);
 
-    const handleOpenProjects = useCallback((e: React.MouseEvent, gardenId: string) => {
-        e.stopPropagation();
+    const handleOpenProjects = useCallback((gardenId: string) => {
         localStorage.setItem(`garden-view-${gardenId}`, 'projects');
         router.push(`/projeler?id=${gardenId}`);
     }, [router]);
 
-    const handleDeleteGarden = useCallback((e: React.MouseEvent, gardenId: string) => {
-        e.stopPropagation();
+    const handleDeleteGarden = useCallback((gardenId: string) => {
         setGardenPendingDelete(gardenId);
         setOpenMenuId(null);
     }, []);
@@ -400,9 +401,9 @@ export default function HomePage() {
                                         else if (e.key === 'Escape') setEditingGardenId(null);
                                     }}
                                     onOpenGarden={() => handleOpenGarden(garden.id)}
-                                    onOpenCanvas={(e) => handleOpenCanvas(e, garden.id)}
-                                    onOpenProjects={(e) => handleOpenProjects(e, garden.id)}
-                                    onDelete={(e) => handleDeleteGarden(e, garden.id)}
+                                    onOpenCanvas={() => handleOpenCanvas(garden.id)}
+                                    onOpenProjects={() => handleOpenProjects(garden.id)}
+                                    onDelete={() => handleDeleteGarden(garden.id)}
                                     formatDate={formatDate}
                                 />
                             ))}

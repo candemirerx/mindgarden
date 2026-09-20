@@ -3,6 +3,8 @@ export interface Garden {
     id: string;
     name: string;
     created_at: string;
+    updated_at?: string;
+    deleted_at?: string | null;
     user_id?: string;
     view_state?: {
         x: number;
@@ -20,6 +22,7 @@ export interface TreeNode {
     position_y: number;
     created_at: string;
     updated_at?: string;
+    deleted_at?: string | null;
     is_expanded?: boolean;
     node_type?: 'branch' | 'leaf' | 'auto';
 }
@@ -36,6 +39,7 @@ export interface StoreState {
     setSelectedNode: (id: string | null) => void;
     toggleSidebar: () => void;
     setSidebarOpen: (open: boolean) => void;
+    resetData: () => void;
     addGarden: (name: string) => Promise<{ success: boolean; error?: string }>;
     updateGardenName: (id: string, name: string) => Promise<void>;
     deleteGarden: (id: string) => Promise<void>;

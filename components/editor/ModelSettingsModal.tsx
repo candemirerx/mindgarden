@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, Lock, HardDriveDownload, UploadCloud, Loader2 } from 'lucide-react';
-import { supabase, isLocalBackend } from '@/lib/supabaseClient';
+import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2 } from 'lucide-react';
+import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
-import { getDriveToken, uploadBackup, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
+import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
 
 interface ModelSettingsModalProps {
     isOpen: boolean;
@@ -22,10 +22,6 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     const [customUrl, setCustomUrl] = useState('');
     const [isSaved, setIsSaved] = useState(false);
     
-    // Senkronizasyon (Supabase) Ayarları
-    const [supaUrl, setSupaUrl] = useState('');
-    const [supaKey, setSupaKey] = useState('');
-
     // Google Drive (kolay senkron) durumu
     const [driveBusy, setDriveBusy] = useState<'idle' | 'upload' | 'restore' | 'merge'>('idle');
     const [driveMessage, setDriveMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -38,9 +34,15 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
         setDriveMessage(null);
         try {
             const token = await getDriveToken(true);
-            const res = await uploadBackup(token);
-            setLastSync(res.exportedAt);
-            setDriveMessage({ type: 'ok', text: `Google Drive'a yedeklendi (${res.count} kayıt, ${new Date(res.exportedAt).toLocaleTimeString('tr-TR')}).` });
+            const res = await mergeSync(token);
+            const syncedAt = lastSyncTime();
+            setLastSync(syncedAt);
+            setDriveMessage({
+                type: 'ok',
+                text: res.merged
+                    ? `Drive ile güvenli biçimde birleştirildi (${res.gardens} bahçe, ${res.nodes} not güncellendi).`
+                    : 'Drive\'da yedek yoktu; bu cihazın verisi ilk kez yedeklendi.'
+            });
         } catch (e) {
             setDriveMessage({ type: 'err', text: e instanceof Error ? e.message : 'Yedekleme başarısız' });
         } finally {
@@ -94,9 +96,6 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
             }
             
             setCustomUrl(localStorage.getItem('nb-ai-custom-url') || '');
-            
-            setSupaUrl(localStorage.getItem('nb-supa-url') || process.env.NEXT_PUBLIC_SUPABASE_URL || '');
-            setSupaKey(localStorage.getItem('nb-supa-key') || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '');
             setAutoSync(isAutoSyncEnabled());
             setLastSync(lastSyncTime());
         }
@@ -111,16 +110,6 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
         setIsSaved(true);
     };
     
-    const handleSaveSync = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (supaUrl.trim() && supaKey.trim()) {
-            localStorage.setItem('nb-supa-url', supaUrl.trim());
-            localStorage.setItem('nb-supa-key', supaKey.trim());
-            alert('Senkronizasyon ayarları kaydedildi. Uygulama yeniden başlatılacak.');
-            window.location.reload();
-        }
-    };
-
     if (!isOpen) return null;
 
     return (
@@ -241,7 +230,8 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
 
                                     <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                         <p className="text-[11px] sm:text-xs text-sand-500 max-w-md leading-relaxed">
-                                            Bu anahtar yalnızca tarayıcınızın yerel deposunda (localStorage) saklanır ve doğrudan sağlayıcıya gönderilir.
+                                            API anahtarı bu cihazın yerel deposunda saklanır. AI özelliğini kullandığınızda anahtar ve işlenecek metin önce uygulamanın Vercel sunucu rotasına, ardından seçtiğiniz sağlayıcıya iletilir.{' '}
+                                            <a href="/gizlilik" className="font-semibold text-moss-400 hover:underline">Ayrıntılar</a>
                                         </p>
                                         <button
                                             type="submit"
@@ -286,7 +276,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         <h4 className="text-sm sm:text-base font-semibold text-white">Google Drive ile Senkron (Kolay Yol)</h4>
                                     </div>
                                     <p className="mb-4 text-[11px] sm:text-xs text-sand-400 leading-relaxed">
-                                        Google hesabına bağlanır; notların, Drive'ındaki gizli uygulama klasörüne JSON olarak yazılır. Sadece bu uygulama görebilir, sunucu gerekmez. Diğer cihazda aynı hesapla bağlanıp "Geri Yükle" demen yeterli.
+                                        Notların, Google Drive'ındaki gizli uygulama klasörüne yazılır; sadece bu uygulama görebilir. Otomatik senkron açıkken elle bir şey yapmanıza gerek yok.
                                     </p>
                                     <div className="flex flex-col sm:flex-row gap-2.5">
                                         <button
@@ -330,9 +320,9 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                             className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer rounded border-white/20 bg-black/40 accent-moss-500"
                                         />
                                         <span>
-                                            <span className="block text-sm font-semibold text-white">Otomatik Senkron (Google girişi gerekir)</span>
+                                            <span className="block text-sm font-semibold text-white">Otomatik Senkron</span>
                                             <span className="mt-0.5 block text-[11px] leading-relaxed text-sand-400">
-                                                Açıkken her not değişikliği ~5 saniye sonra otomatik Drive'a yazılır ve uygulama açılışında diğer cihazlardaki değişiklikler birleştirilir. Google ile giriş yaptığınız anda bu otomatik açılır.
+                                                Google ile giriş yaptığınız anda otomatik açılır: her not değişikliği kısa süre sonra Drive'a yazılır, uygulama açılışında diğer cihazlardaki değişiklikler birleştirilir. Buradan dilediğiniz zaman kapatabilirsiniz.
                                             </span>
                                             {lastSync && (
                                                 <span className="mt-1.5 block text-[11px] text-moss-400">
@@ -347,52 +337,6 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         </p>
                                     )}
                                 </div>
-
-                                <div className="mb-5 flex items-center gap-3">
-                                    <span className="h-px flex-1 bg-white/10" />
-                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-sand-500">veya kendi veritabanın</span>
-                                    <span className="h-px flex-1 bg-white/10" />
-                                </div>
-
-                                <form onSubmit={handleSaveSync} className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-sand-300">Supabase URL</label>
-                                        <input
-                                            type="url"
-                                            value={supaUrl}
-                                            onChange={e => setSupaUrl(e.target.value)}
-                                            placeholder="https://xxxxx.supabase.co"
-                                            className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500"
-                                        />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-sand-300">Supabase Anon Key</label>
-                                        <div className="relative">
-                                            <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-                                            <input
-                                                type="password"
-                                                value={supaKey}
-                                                onChange={e => setSupaKey(e.target.value)}
-                                                placeholder="eyJhbGci..."
-                                                className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-11 pr-4 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                        <p className="text-[11px] sm:text-xs text-sand-500 max-w-md leading-relaxed">
-                                            Bu ayarlar değiştirildiğinde uygulama yeniden başlatılır. Boş bırakırsanız cihazınız Yerel Mod'a döner.
-                                        </p>
-                                        <button
-                                            type="submit"
-                                            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 sm:py-2.5 text-sm font-semibold text-black shadow-lg transition-all hover:bg-sand-200"
-                                        >
-                                            <RefreshCw size={16} />
-                                            Bağlantıyı Yenile
-                                        </button>
-                                    </div>
-                                </form>
                             </div>
                         )}
                     </div>

@@ -5,7 +5,8 @@ create table gardens (
   name text not null,
   view_state jsonb default '{"x": 0, "y": 0, "zoom": 1}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  deleted_at timestamp with time zone
 );
 
 -- Enable Row Level Security
@@ -33,13 +34,17 @@ create table nodes (
   position_x real default 0 not null,
   position_y real default 0 not null,
   is_expanded boolean default true,
+  node_type text default 'auto',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  deleted_at timestamp with time zone
 );
 
 -- Index'ler performans için
+create index gardens_user_deleted_idx on gardens(user_id, deleted_at);
 create index nodes_garden_id_idx on nodes(garden_id);
 create index nodes_parent_id_idx on nodes(parent_id);
+create index nodes_garden_deleted_idx on nodes(garden_id, deleted_at);
 
 -- Enable Row Level Security
 alter table nodes enable row level security;

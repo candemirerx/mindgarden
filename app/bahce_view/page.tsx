@@ -389,7 +389,7 @@ function GardenPageInner() {
                                 </span>
                                 <span className="text-center">
                                     <span className="block text-lg font-semibold text-sand-900">İlk tohumu ek</span>
-                                    <span className="mt-0.5 block text-sm text-sand-600">
+                                    <span className="mt-0.5 hidden text-sm text-sand-600 sm:block">
                                         Düşünce ağacını başlatmak için tıkla
                                     </span>
                                 </span>

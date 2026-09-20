@@ -58,7 +58,25 @@ function readDatabase(): LocalDatabase {
         const raw = store.getItem(DB_KEY);
         if (!raw) return { gardens: [], nodes: [] };
         const parsed = JSON.parse(raw) as Partial<LocalDatabase>;
-        return { gardens: parsed.gardens ?? [], nodes: parsed.nodes ?? [] };
+        const db: LocalDatabase = {
+            gardens: Array.isArray(parsed.gardens) ? parsed.gardens : [],
+            nodes: Array.isArray(parsed.nodes) ? parsed.nodes : [],
+        };
+
+        // Eski sürümlerde user_id yazılmamış bahçeleri ilk aktif kullanıcıya
+        // bir kez bağla. Böylece aynı cihazdaki sonraki hesaplar bu veriyi göremez.
+        const userId = activeUserId();
+        if (userId) {
+            let migrated = false;
+            db.gardens = db.gardens.map((garden) => {
+                if (garden.user_id) return garden;
+                migrated = true;
+                return { ...garden, user_id: userId };
+            });
+            if (migrated) writeDatabase(db);
+        }
+
+        return db;
     } catch {
         return { gardens: [], nodes: [] };
     }
@@ -175,11 +193,21 @@ export function signInAsGuest(): LocalSession {
 }
 
 /** Bulut modundaki RLS davranışını taklit eder: herkes yalnızca kendi verisini görür. */
-function scopeForTable(table: Table, rows: Row[]): Row[] {
-    if (table !== 'gardens') return rows;
+function scopeForTable(table: Table, rows: Row[], db: LocalDatabase): Row[] {
     const userId = activeUserId();
     if (!userId) return [];
-    return rows.filter((row) => row.user_id === undefined || row.user_id === userId);
+
+    const ownedGardenIds = new Set(
+        db.gardens
+            .filter((garden) => garden.user_id === userId)
+            .map((garden) => garden.id),
+    );
+
+    if (table === 'gardens') {
+        return rows.filter((row) => row.user_id === userId);
+    }
+
+    return rows.filter((row) => ownedGardenIds.has(String(row.garden_id ?? '')));
 }
 
 /* ------------------------------------------------------------------ */
@@ -228,6 +256,14 @@ class LocalQuery implements PromiseLike<QueryResult> {
         return this;
     }
 
+    is(column: string, value: unknown): this {
+        this.filters.push((row) => {
+            if (value === null) return row[column] === null || row[column] === undefined;
+            return row[column] === value;
+        });
+        return this;
+    }
+
     order(column: string, options?: { ascending?: boolean }): this {
         this.ordering = { column, ascending: options?.ascending !== false };
         return this;
@@ -261,7 +297,7 @@ class LocalQuery implements PromiseLike<QueryResult> {
     private matchingRows(): Row[] {
         const db = readDatabase();
         const rows = db[this.table] as unknown as Row[];
-        return scopeForTable(this.table, rows).filter((row) =>
+        return scopeForTable(this.table, rows, db).filter((row) =>
             this.filters.every((filter) => filter(row)),
         );
     }
@@ -318,13 +354,26 @@ class LocalQuery implements PromiseLike<QueryResult> {
 
         for (const row of incoming) {
             const now = new Date().toISOString();
-            const record: Row = { id: createId(), created_at: now, ...row };
+            const record: Row = {
+                id: createId(),
+                created_at: now,
+                updated_at: now,
+                deleted_at: null,
+                ...row,
+            };
             if (this.table === 'gardens') {
                 record.user_id = record.user_id ?? activeUserId() ?? undefined;
                 db.gardens.push(record as unknown as Garden);
             } else {
+                const ownedGardenIds = new Set(
+                    db.gardens
+                        .filter((garden) => garden.user_id === activeUserId())
+                        .map((garden) => garden.id),
+                );
+                if (!ownedGardenIds.has(String(record.garden_id ?? ''))) {
+                    throw new Error('Bu bahçeye not ekleme yetkiniz yok');
+                }
                 record.is_expanded = record.is_expanded ?? true;
-                record.updated_at = record.updated_at ?? now;
                 db.nodes.push(record as unknown as TreeNode);
             }
             inserted.push(record);
@@ -339,13 +388,13 @@ class LocalQuery implements PromiseLike<QueryResult> {
         const patch = (Array.isArray(this.payload) ? this.payload[0] : this.payload) ?? {};
         const db = readDatabase();
         const collection = (this.table === 'gardens' ? db.gardens : db.nodes) as unknown as Row[];
-        const scope = scopeForTable(this.table, collection);
+        const scope = scopeForTable(this.table, collection, db);
         const targets = new Set(scope.filter((row) => this.filters.every((f) => f(row))).map((row) => row.id));
 
         for (const row of collection) {
             if (!targets.has(row.id)) continue;
             Object.assign(row, patch);
-            if (this.table === 'nodes' && patch.updated_at === undefined) {
+            if (patch.updated_at === undefined) {
                 row.updated_at = new Date().toISOString();
             }
         }
@@ -359,22 +408,45 @@ class LocalQuery implements PromiseLike<QueryResult> {
         const db = readDatabase();
         const key = this.table === 'gardens' ? 'gardens' : 'nodes';
         const collection = db[key] as unknown as Row[];
+        const scopedIds = new Set(scopeForTable(this.table, collection, db).map((row) => row.id));
         const byId = new Map(collection.map((row) => [row.id, row]));
+        const userId = activeUserId();
+        const ownedGardenIds = new Set(
+            db.gardens.filter((garden) => garden.user_id === userId).map((garden) => garden.id),
+        );
 
         for (const row of incoming) {
-            if (!row.id) continue;
+            if (!row.id || !userId) continue;
+            const now = new Date().toISOString();
             const existing = byId.get(row.id);
+
+            if (this.table === 'gardens') {
+                const incomingOwner = row.user_id;
+                if (incomingOwner !== undefined && incomingOwner !== userId) continue;
+            } else if (!ownedGardenIds.has(String(row.garden_id ?? ''))) {
+                continue;
+            }
+
             if (existing) {
+                if (!scopedIds.has(row.id)) continue;
                 Object.assign(existing, row);
+                existing.updated_at = existing.updated_at ?? existing.created_at ?? now;
             } else {
-                const record: Row = { ...row };
+                const record: Row = {
+                    created_at: now,
+                    updated_at: row.updated_at ?? row.created_at ?? now,
+                    deleted_at: null,
+                    ...row,
+                };
                 if (this.table === 'gardens') {
-                    record.user_id = record.user_id ?? activeUserId() ?? undefined;
+                    record.user_id = userId;
+                    ownedGardenIds.add(String(record.id));
                 } else {
                     record.is_expanded = record.is_expanded ?? true;
                 }
                 collection.push(record);
                 byId.set(record.id, record);
+                scopedIds.add(record.id);
             }
         }
 
@@ -386,7 +458,7 @@ class LocalQuery implements PromiseLike<QueryResult> {
         const db = readDatabase();
         const key = this.table === 'gardens' ? 'gardens' : 'nodes';
         const collection = db[key] as unknown as Row[];
-        const scope = scopeForTable(this.table, collection);
+        const scope = scopeForTable(this.table, collection, db);
         const doomed = new Set(scope.filter((row) => this.filters.every((f) => f(row))).map((row) => row.id));
 
         db[key] = collection.filter((row) => !doomed.has(row.id)) as never;
