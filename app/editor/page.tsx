@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
+import { readAiMacro } from '@/lib/aiMacro';
 import { Capacitor } from '@capacitor/core';
 
 function EditorPageInner() {
@@ -22,6 +23,7 @@ function EditorPageInner() {
     const [showCopied, setShowCopied] = useState(false);
     const [isSpellChecking, setIsSpellChecking] = useState(false);
     const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
+    const [hasCustomMacro, setHasCustomMacro] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -137,6 +139,11 @@ function EditorPageInner() {
         setHasChanges(true);
     };
 
+    // Ayarlarda kullanıcı tanımlı bir AI görevi (makro) var mı?
+    useEffect(() => {
+        setHasCustomMacro(readAiMacro().trim().length > 0);
+    }, []);
+
     // İmla düzeltme fonksiyonu
     const handleSpellCheck = async () => {
         const textarea = textareaRef.current;
@@ -159,6 +166,8 @@ function EditorPageInner() {
             const clientApiKey = localStorage.getItem('nb-ai-key') || localStorage.getItem('nb-gemini-key') || '';
             const provider = localStorage.getItem('nb-ai-provider') || 'gemini';
             const customUrl = localStorage.getItem('nb-ai-custom-url') || '';
+            const customModel = localStorage.getItem('nb-ai-custom-model') || '';
+            const macro = readAiMacro();
 
             const spellcheckUrl = Capacitor.isNativePlatform()
                 ? 'https://mindgarden-neon.vercel.app/api/spellcheck'
@@ -166,7 +175,14 @@ function EditorPageInner() {
             const response = await fetch(spellcheckUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: textToCheck, clientApiKey, provider, customUrl })
+                body: JSON.stringify({
+                    text: textToCheck,
+                    clientApiKey,
+                    provider,
+                    customUrl,
+                    customModel,
+                    macro
+                })
             });
 
             if (!response.ok) {
@@ -405,14 +421,22 @@ function EditorPageInner() {
                                     ? 'bg-sand-200 text-sand-400 cursor-not-allowed'
                                     : 'bg-clay-600 hover:bg-clay-700 text-white shadow-soft hover:shadow'
                             }`}
-                            title="Metin ve API anahtarı Vercel sunucusu üzerinden seçtiğiniz sağlayıcıya gönderilir"
+                            title={
+                                hasCustomMacro
+                                    ? 'Notun metni, ayarlarda yazdığınız AI göreviyle birlikte sağlayıcıya gönderilir'
+                                    : 'Metin ve API anahtarı Vercel sunucusu üzerinden seçtiğiniz sağlayıcıya gönderilir'
+                            }
                         >
                             {isSpellChecking ? (
                                 <Loader2 size={16} className="animate-spin" />
                             ) : (
                                 <PenLine size={16} />
                             )}
-                            <span className="hidden sm:inline">{isSpellChecking ? 'Düzeltiliyor...' : 'İmla Düzelt'}</span>
+                            <span className="hidden sm:inline">
+                                {isSpellChecking
+                                    ? (hasCustomMacro ? 'Uygulanıyor...' : 'Düzeltiliyor...')
+                                    : (hasCustomMacro ? 'AI Görevini Uygula' : 'İmla Düzelt')}
+                            </span>
                         </button>
                     )}
                 </div>

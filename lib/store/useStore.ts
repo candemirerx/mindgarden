@@ -40,7 +40,9 @@ export const useStore = create<StoreState>((set, get) => ({
             if (error) return { success: false, error: error.message };
             if (!data) return { success: false, error: 'Beklenmeyen bir hata oluştu' };
 
-            set((state) => ({ gardens: [...state.gardens, data as Garden] }));
+            // Listede en yeni bahçe en üstte görünür; bu sıralama fetchGardens
+            // sorgusundaki `created_at` azalan düzeniyle aynı olmalıdır.
+            set((state) => ({ gardens: [data as Garden, ...state.gardens] }));
             return { success: true };
         } catch (error) {
             return { success: false, error: error instanceof Error ? error.message : 'Bilinmeyen hata' };

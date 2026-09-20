@@ -1,8 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { DEFAULT_AI_MACRO } from '@/lib/aiMacro';
+
+/**
+ * Yerel/özel ağ hedeflerini tespit eder. Özel sağlayıcı adresi sunucu
+ * tarafından çağrıldığı için bu adreslerin canlıda engellenmesi gerekir.
+ */
+function isPrivateHost(hostname: string): boolean {
+    const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+
+    if (
+        host === 'localhost' ||
+        host.endsWith('.localhost') ||
+        host.endsWith('.local') ||
+        host.endsWith('.internal')
+    ) {
+        return true;
+    }
+
+    // IPv6 sabit adresleri (yalnızca gerçek IPv6 gösterimlerinde)
+    if (host.includes(':')) {
+        return (
+            host === '::1' ||
+            host.startsWith('fc') ||
+            host.startsWith('fd') ||
+            host.startsWith('fe80:')
+        );
+    }
+
+    const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (!ipv4) return false;
+
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+
+    return (
+        a === 0 ||
+        a === 10 ||
+        a === 127 ||
+        (a === 169 && b === 254) ||
+        (a === 172 && b >= 16 && b <= 31) ||
+        (a === 192 && b === 168)
+    );
+}
 
 export async function POST(request: NextRequest) {
     try {
-        const { text, clientApiKey, provider = 'gemini', customUrl } = await request.json();
+        const {
+            text,
+            clientApiKey,
+            provider = 'gemini',
+            customUrl,
+            customModel,
+            macro
+        } = await request.json();
 
         if (!text || text.trim().length === 0) {
             return NextResponse.json({ correctedText: text });
@@ -16,13 +65,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const prompt = `Sen bir Türkçe imla ve yazım düzeltici asistansın. Aşağıdaki metni düzelt:
-- Sadece yazım ve imla hatalarını düzelt
-- Noktalama işaretlerini düzelt
-- Büyük/küçük harf kullanımını düzelt
-- İçeriği, anlamı veya cümle yapısını DEĞİŞTİRME
-- Yeni kelime veya cümle EKLEME
-- Sadece düzeltilmiş metni döndür, açıklama yapma
+        // Kullanıcının tanımladığı görev (makro) varsa o kullanılır; yoksa
+        // varsayılan imla düzeltme görevi uygulanır.
+        const instruction =
+            typeof macro === 'string' && macro.trim().length > 0
+                ? macro.trim()
+                : DEFAULT_AI_MACRO;
+
+        const prompt = `${instruction}
 
 Metin:
 ${text}`;
@@ -103,20 +153,47 @@ ${text}`;
             correctedText = data.content?.[0]?.text || text;
 
         } else if (provider === 'custom') {
-            if (!customUrl) {
-                return NextResponse.json({ error: 'Custom Base URL belirtilmedi.' }, { status: 400 });
+            if (!customUrl?.trim()) {
+                return NextResponse.json({ error: 'Özel sağlayıcı Base URL adresi belirtilmedi.' }, { status: 400 });
             }
-            
-            // Custom provider genellikle OpenAI formatıyla uyumludur
-            const baseUrl = customUrl.endsWith('/') ? customUrl.slice(0, -1) : customUrl;
-            const response = await fetch(`${baseUrl}/chat/completions`, {
+            if (!customModel?.trim()) {
+                return NextResponse.json({ error: 'Özel sağlayıcı model adı belirtilmedi.' }, { status: 400 });
+            }
+
+            let endpoint: URL;
+            try {
+                const normalizedUrl = customUrl.trim().replace(/\/+$/, '');
+                endpoint = new URL(
+                    normalizedUrl.endsWith('/chat/completions')
+                        ? normalizedUrl
+                        : `${normalizedUrl}/chat/completions`
+                );
+            } catch {
+                return NextResponse.json({ error: 'Özel sağlayıcı Base URL adresi geçersiz.' }, { status: 400 });
+            }
+
+            if (!['http:', 'https:'].includes(endpoint.protocol)) {
+                return NextResponse.json({ error: 'Özel sağlayıcı adresi HTTP veya HTTPS kullanmalıdır.' }, { status: 400 });
+            }
+
+            // Canlı sunucuda adres sunucu tarafından çağrıldığı için yerel/özel ağ
+            // hedeflerini engelleriz (SSRF koruması). Yerel geliştirmede kendi
+            // makinedeki bir modele bağlanabilmek için serbest bırakılır.
+            if (process.env.NODE_ENV === 'production' && isPrivateHost(endpoint.hostname)) {
+                return NextResponse.json(
+                    { error: 'Özel sağlayıcı adresi genel bir alan adı olmalıdır.' },
+                    { status: 400 }
+                );
+            }
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'default', // Model id esnek, genellikle default kabul edilir veya url den alınır
+                    model: customModel.trim(),
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.1
                 })

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType, ChevronDown, Sparkles } from 'lucide-react';
+import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType, ChevronDown, ChevronRight, Sparkles, Settings } from 'lucide-react';
 import { useStore } from '@/lib/store/useStore';
 import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { signInAsGuest } from '@/lib/localClient';
@@ -50,8 +50,6 @@ export default function Sidebar() {
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [aiKey, setAiKey] = useState('');
-    const [isAiKeySaved, setIsAiKeySaved] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [authError, setAuthError] = useState('');
     const [authLoading, setAuthLoading] = useState(false);
@@ -95,12 +93,6 @@ export default function Sidebar() {
             if (mounted) {
                 setUser(session?.user ?? null);
                 setIsLoading(false);
-                // AI key'i yükle
-                const storedKey = localStorage.getItem('nb-gemini-key');
-                if (storedKey) {
-                    setAiKey(storedKey);
-                    setIsAiKeySaved(true);
-                }
             }
         };
         initAuth();
@@ -229,20 +221,6 @@ export default function Sidebar() {
             setAuthError('Bir hata oluştu');
         } finally {
             setAuthLoading(false);
-        }
-    };
-
-    const handleSaveAiKey = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (aiKey.trim()) {
-            localStorage.setItem('nb-gemini-key', aiKey.trim());
-            setIsAiKeySaved(true);
-            setSuccessMessage('Yapay zeka anahtarı kaydedildi!');
-            setTimeout(() => setSuccessMessage(''), 3000);
-        } else {
-            localStorage.removeItem('nb-gemini-key');
-            setAiKey('');
-            setIsAiKeySaved(false);
         }
     };
 
@@ -966,23 +944,49 @@ export default function Sidebar() {
                                                 <span>Bahçene hoş geldin!</span>
                                             </div>
 
-                                            {/* Veri Yönetimi Bölümü (varsayılan kapalı) */}
-                                            <div className="border-t border-sand-200 pt-4">
+                                            {/* Ayarlar ve Veri Yönetimi */}
+                                            <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
                                                 <button
+                                                    type="button"
+                                                    onClick={() => setIsSettingsModalOpen(true)}
+                                                    className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors duration-200 hover:bg-sand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-moss-500/40"
+                                                >
+                                                    <span className="flex min-w-0 items-center gap-3">
+                                                        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-moss-100 text-moss-700">
+                                                            <Settings size={17} />
+                                                        </span>
+                                                        <span className="min-w-0">
+                                                            <span className="block text-sm font-semibold text-sand-800">Model, API ve Senkronizasyon</span>
+                                                            <span className="mt-0.5 block text-[11px] text-sand-500">AI sağlayıcısı ve Google Drive</span>
+                                                        </span>
+                                                    </span>
+                                                    <ChevronRight size={17} className="flex-shrink-0 text-sand-400" />
+                                                </button>
+
+                                                <div className="h-px bg-sand-200" />
+
+                                                <button
+                                                    type="button"
                                                     onClick={() => setIsDataSectionOpen(!isDataSectionOpen)}
                                                     aria-expanded={isDataSectionOpen}
-                                                    className="mb-3 flex w-full items-center justify-between rounded-lg text-left transition-colors duration-200 hover:bg-sand-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40"
+                                                    className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors duration-200 hover:bg-sand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-moss-500/40"
                                                 >
-                                                    <span className="flex items-center gap-2">
-                                                        <Database size={17} className="text-clay-600" />
-                                                        <span className="text-sm font-semibold text-sand-800">Veri Yönetimi</span>
+                                                    <span className="flex min-w-0 items-center gap-3">
+                                                        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-clay-100 text-clay-700">
+                                                            <Database size={17} />
+                                                        </span>
+                                                        <span className="min-w-0">
+                                                            <span className="block text-sm font-semibold text-sand-800">Veri Yönetimi</span>
+                                                            <span className="mt-0.5 block text-[11px] text-sand-500">İçe ve dışa aktarma araçları</span>
+                                                        </span>
                                                     </span>
-                                                    <motion.div
+                                                    <motion.span
                                                         animate={{ rotate: isDataSectionOpen ? 180 : 0 }}
                                                         transition={{ duration: 0.2 }}
+                                                        className="flex-shrink-0"
                                                     >
-                                                        <ChevronDown size={16} className="text-sand-400" />
-                                                    </motion.div>
+                                                        <ChevronDown size={17} className="text-sand-400" />
+                                                    </motion.span>
                                                 </button>
 
                                                 {/* Hidden file input */}
@@ -1003,7 +1007,7 @@ export default function Sidebar() {
                                                             transition={{ duration: 0.2 }}
                                                             className="overflow-hidden"
                                                         >
-                                                <div className="space-y-2">
+                                                <div className="space-y-2 border-t border-sand-200 bg-sand-50/70 p-3">
                                                     {/* Export Section */}
                                                     <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
                                                         <button
@@ -1366,33 +1370,6 @@ export default function Sidebar() {
                                     )}
                                 </div>
                             </div>
-
-                            {/* Yapay Zeka (Kullanici Panele Dahil) */}
-                            {user && (
-                                <div className="px-5 pb-5">
-                                    <div className="border-t border-sand-200 pt-4">
-                                        <div className="mb-3 flex items-center gap-2">
-                                            <Sparkles size={17} className="text-clay-600" />
-                                            <h4 className="text-sm font-semibold text-sand-800">Yapay Zeka</h4>
-                                        </div>
-                                        <button
-                                            onClick={() => setIsSettingsModalOpen(true)}
-                                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-moss-600 px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition-all hover:bg-moss-700"
-                                        >
-                                            Model ve API Ayarları
-                                        </button>
-                                        <p className="mt-2 text-[10px] text-sand-500 leading-relaxed">
-                                            AI istekleri uygulamanın Vercel sunucusu üzerinden seçtiğiniz sağlayıcıya iletilir.
-                                        </p>
-                                        <a
-                                            href="/gizlilik"
-                                            className="mt-2 inline-block text-[10px] font-semibold text-moss-700 hover:underline"
-                                        >
-                                            Gizlilik Politikası
-                                        </a>
-                                    </div>
-                                </div>
-                            )}
 
                             {/* Alt eylem - Çıkış */}
                             {user && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense, useState, useCallback, useMemo } from 'react';
+import { useEffect, Suspense, useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
@@ -12,6 +12,7 @@ import {
 
 import PromptModal from '@/components/ui/PromptModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
 
 interface TreeItem {
     id: string;
@@ -41,6 +42,7 @@ function ProjectsPageInner() {
     const [editingTitle, setEditingTitle] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'split' | 'grid'>('split');
 
@@ -389,11 +391,14 @@ function ProjectsPageInner() {
 
                                     <div className="relative">
                                         <button
+                                            ref={(element) => { menuButtonRefs.current[item.id] = element; }}
                                             onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)}
-                                            className="rounded-lg p-1 text-sand-500 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
-                                            aria-label="Menü"
+                                            className="flex h-11 w-11 items-center justify-center rounded-xl text-sand-500 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
+                                            aria-label={`${item.title} seçenekleri`}
+                                            aria-expanded={activeMenu === item.id}
+                                            aria-haspopup="menu"
                                         >
-                                            <MoreHorizontal size={16} />
+                                            <MoreHorizontal size={18} />
                                         </button>
                                         {activeMenu === item.id && renderMenu(item, hasChildren)}
                                     </div>
@@ -510,11 +515,14 @@ function ProjectsPageInner() {
 
                             <div className="relative">
                                 <button
+                                    ref={(element) => { menuButtonRefs.current[item.id] = element; }}
                                     onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)}
-                                    className="rounded-lg p-1 text-sand-500 transition-colors duration-200 hover:bg-white hover:text-sand-800"
-                                    aria-label="Menü"
+                                    className="flex h-10 w-10 items-center justify-center rounded-xl text-sand-500 transition-colors duration-200 hover:bg-white hover:text-sand-800"
+                                    aria-label={`${item.title} seçenekleri`}
+                                    aria-expanded={activeMenu === item.id}
+                                    aria-haspopup="menu"
                                 >
-                                    <MoreHorizontal size={14} />
+                                    <MoreHorizontal size={17} />
                                 </button>
                                 {activeMenu === item.id && renderMenu(item, hasChildren)}
                             </div>
@@ -532,45 +540,56 @@ function ProjectsPageInner() {
     };
 
     const renderMenu = (item: TreeItem, hasChildren: boolean) => (
-        <>
-            <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
-            <div className="absolute right-0 top-full z-50 mt-1.5 min-w-[186px] overflow-hidden rounded-xl border border-sand-200 bg-white py-1 shadow-pop animate-scale-in">
-                <button
-                    onClick={() => { handleEdit(item.id); setActiveMenu(null); }}
-                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
-                >
-                    <Pencil size={15} className="text-moss-600" /> Tam editörde aç
-                </button>
-                <button
-                    onClick={() => { setEditingNodeId(item.id); setEditingTitle(item.title); setActiveMenu(null); }}
-                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
-                >
-                    <FileText size={15} className="text-clay-600" /> Yeniden adlandır
-                </button>
-                <div className="my-1 h-px bg-sand-200" />
-                <button
-                    onClick={() => handleAddChild(item.id, hasChildren)}
-                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
-                >
-                    {hasChildren ? (
-                        <>
-                            <Sprout size={15} className="text-clay-600" /> Yeni dal ekle
-                        </>
-                    ) : (
-                        <>
-                            <Leaf size={15} className="text-moss-600" /> Yeni yaprak ekle
-                        </>
-                    )}
-                </button>
-                <div className="my-1 h-px bg-sand-200" />
-                <button
-                    onClick={() => handleDelete(item.id)}
-                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
-                >
-                    <Trash2 size={15} /> Sil
-                </button>
-            </div>
-        </>
+        <AnchoredDropdown
+            isOpen={activeMenu === item.id}
+            anchorElement={menuButtonRefs.current[item.id]}
+            onClose={() => setActiveMenu(null)}
+            width={196}
+            ariaLabel={`${item.title} not seçenekleri`}
+        >
+            <button
+                type="button"
+                role="menuitem"
+                onClick={() => { handleEdit(item.id); setActiveMenu(null); }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+            >
+                <Pencil size={15} className="text-moss-600" /> Tam editörde aç
+            </button>
+            <button
+                type="button"
+                role="menuitem"
+                onClick={() => { setEditingNodeId(item.id); setEditingTitle(item.title); setActiveMenu(null); }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+            >
+                <FileText size={15} className="text-clay-600" /> Yeniden adlandır
+            </button>
+            <div className="my-1 h-px bg-sand-200" />
+            <button
+                type="button"
+                role="menuitem"
+                onClick={() => handleAddChild(item.id, hasChildren)}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+            >
+                {hasChildren ? (
+                    <>
+                        <Sprout size={15} className="text-clay-600" /> Yeni dal ekle
+                    </>
+                ) : (
+                    <>
+                        <Leaf size={15} className="text-moss-600" /> Yeni yaprak ekle
+                    </>
+                )}
+            </button>
+            <div className="my-1 h-px bg-sand-200" />
+            <button
+                type="button"
+                role="menuitem"
+                onClick={() => handleDelete(item.id)}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
+            >
+                <Trash2 size={15} /> Sil
+            </button>
+        </AnchoredDropdown>
     );
 
     if (isLoading) {

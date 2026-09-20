@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2 } from 'lucide-react';
+import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2, Wand2, RotateCcw } from 'lucide-react';
 import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
 import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
+import { AI_MACRO_KEY, DEFAULT_AI_MACRO, readAiMacro } from '@/lib/aiMacro';
 
 interface ModelSettingsModalProps {
     isOpen: boolean;
@@ -20,6 +21,8 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     const [provider, setProvider] = useState<ProviderType>('gemini');
     const [apiKey, setApiKey] = useState('');
     const [customUrl, setCustomUrl] = useState('');
+    const [customModel, setCustomModel] = useState('');
+    const [macro, setMacro] = useState('');
     const [isSaved, setIsSaved] = useState(false);
     
     // Google Drive (kolay senkron) durumu
@@ -89,13 +92,15 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
             const savedProvider = localStorage.getItem('nb-ai-provider') as ProviderType;
             if (savedProvider) setProvider(savedProvider);
             
-            const savedKey = localStorage.getItem('nb-gemini-key') || localStorage.getItem('nb-ai-key');
+            const savedKey = localStorage.getItem('nb-ai-key') || localStorage.getItem('nb-gemini-key');
             if (savedKey) {
                 setApiKey(savedKey);
                 setIsSaved(true);
             }
             
             setCustomUrl(localStorage.getItem('nb-ai-custom-url') || '');
+            setCustomModel(localStorage.getItem('nb-ai-custom-model') || '');
+            setMacro(readAiMacro());
             setAutoSync(isAutoSyncEnabled());
             setLastSync(lastSyncTime());
         }
@@ -104,9 +109,11 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     const handleSaveAi = (e: React.FormEvent) => {
         e.preventDefault();
         localStorage.setItem('nb-ai-provider', provider);
-        localStorage.setItem('nb-ai-key', apiKey);
-        localStorage.setItem('nb-gemini-key', apiKey); // Geriye dönük uyumluluk
-        localStorage.setItem('nb-ai-custom-url', customUrl);
+        localStorage.setItem('nb-ai-key', apiKey.trim());
+        localStorage.setItem('nb-gemini-key', apiKey.trim()); // Geriye dönük uyumluluk
+        localStorage.setItem('nb-ai-custom-url', customUrl.trim());
+        localStorage.setItem('nb-ai-custom-model', customModel.trim());
+        localStorage.setItem(AI_MACRO_KEY, macro.trim());
         setIsSaved(true);
     };
     
@@ -199,17 +206,45 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         </div>
                                     </div>
 
-                                    {/* Custom URL */}
-                                    {provider === 'custom' && (
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-sand-300">Base URL</label>
-                                            <input
-                                                type="url"
-                                                value={customUrl}
-                                                onChange={e => { setCustomUrl(e.target.value); setIsSaved(false); }}
-                                                placeholder="https://api.example.com/v1"
-                                                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
-                                            />
+                                    {provider === 'custom' ? (
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-sand-300">Base URL</label>
+                                                <input
+                                                    type="url"
+                                                    value={customUrl}
+                                                    onChange={e => { setCustomUrl(e.target.value); setIsSaved(false); }}
+                                                    placeholder="https://api.example.com/v1"
+                                                    required
+                                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                                />
+                                                <p className="text-[11px] leading-relaxed text-sand-500">
+                                                    `/v1` adresini veya doğrudan `/chat/completions` endpoint&apos;ini girebilirsiniz.
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-sand-300">Model adı / Model ID</label>
+                                                <input
+                                                    type="text"
+                                                    value={customModel}
+                                                    onChange={e => { setCustomModel(e.target.value); setIsSaved(false); }}
+                                                    placeholder="Örn. gpt-4o-mini veya llama3.1"
+                                                    required
+                                                    autoCapitalize="none"
+                                                    autoCorrect="off"
+                                                    spellCheck={false}
+                                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                                />
+                                                <p className="text-[11px] leading-relaxed text-sand-500">
+                                                    Sağlayıcınızın panelinde yazan gerçek model kimliğini kullanın.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-relaxed text-sand-400">
+                                            {provider === 'gemini' && 'Model: Gemini 2.5 Flash; kullanılamazsa Gemini 2.0 Flash denenir.'}
+                                            {provider === 'openai' && 'Model: gpt-4o-mini'}
+                                            {provider === 'anthropic' && 'Model: claude-3-haiku-20240307'}
                                         </div>
                                     )}
 
@@ -228,6 +263,40 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         </div>
                                     </div>
 
+                                    {/* AI Görevi (Makro) */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <label
+                                                htmlFor="ai-macro"
+                                                className="flex items-center gap-2 text-sm font-medium text-sand-300"
+                                            >
+                                                <Wand2 size={15} className="text-moss-400" />
+                                                AI Görevi (Makro)
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setMacro(DEFAULT_AI_MACRO); setIsSaved(false); }}
+                                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-sand-400 transition-colors hover:bg-white/5 hover:text-sand-200"
+                                            >
+                                                <RotateCcw size={12} />
+                                                Varsayılanı yaz
+                                            </button>
+                                        </div>
+
+                                        <textarea
+                                            id="ai-macro"
+                                            value={macro}
+                                            onChange={e => { setMacro(e.target.value); setIsSaved(false); }}
+                                            rows={7}
+                                            placeholder={DEFAULT_AI_MACRO}
+                                            className="w-full resize-y rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm leading-relaxed text-white placeholder-white/25 outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                        />
+
+                                        <p className="text-[11px] leading-relaxed text-sand-500">
+                                            Metin editöründeki <span className="font-semibold text-sand-400">AI</span> düğmesine bastığınızda notun metni bu görevle birlikte kendi API anahtarınızla seçtiğiniz sağlayıcıya gönderilir ve dönen cevap nota yazılır. Boş bırakırsanız imla düzeltme görevi kullanılır.
+                                        </p>
+                                    </div>
+
                                     <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                         <p className="text-[11px] sm:text-xs text-sand-500 max-w-md leading-relaxed">
                                             API anahtarı bu cihazın yerel deposunda saklanır. AI özelliğini kullandığınızda anahtar ve işlenecek metin önce uygulamanın Vercel sunucu rotasına, ardından seçtiğiniz sağlayıcıya iletilir.{' '}
@@ -235,7 +304,10 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         </p>
                                         <button
                                             type="submit"
-                                            disabled={!apiKey.trim()}
+                                            disabled={
+                                                !apiKey.trim() ||
+                                                (provider === 'custom' && (!customUrl.trim() || !customModel.trim()))
+                                            }
                                             className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-moss-600 px-6 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-moss-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {isSaved ? (
@@ -255,7 +327,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                     <div>
                                         <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">Bulut Senkronizasyonu</h3>
                                         <p className="text-xs sm:text-sm text-sand-400 leading-relaxed">
-                                            Google Drive ile tek tuşla yedekle / geri yükle ya da kendi Supabase veritabanını bağla.
+                                            Google Drive yedeklerini yönetin ve cihazlar arasındaki değişiklikleri güvenle birleştirin.
                                         </p>
                                     </div>
                                     {isLocalBackend ? (

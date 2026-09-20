@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback, memo, lazy, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, memo, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { signInAsGuest } from '@/lib/localClient';
-import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock, Pencil } from 'lucide-react';
+import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock, Pencil, Settings } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
 import type { User } from '@supabase/supabase-js';
 import type { Garden } from '@/lib/types';
 
@@ -46,6 +47,8 @@ const GardenCard = memo(function GardenCard({
     onDelete: () => void;
     formatDate: (date: string) => string;
 }) {
+    const menuButtonRef = useRef<HTMLButtonElement>(null);
+
     return (
         <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-card transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-moss-200 hover:shadow-lift">
             {/* Bahçe kimliğini taşıyan ince şerit */}
@@ -91,40 +94,51 @@ const GardenCard = memo(function GardenCard({
 
                     <div className="relative flex-shrink-0">
                         <button
+                            ref={menuButtonRef}
                             type="button"
-                            onClick={onMenuToggle}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onMenuToggle();
+                            }}
                             aria-label="Bahçe seçenekleri"
                             aria-expanded={isMenuOpen}
-                            className={`rounded-lg p-1.5 transition-colors duration-200 ${
+                            aria-haspopup="menu"
+                            className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-200 ${
                                 isMenuOpen
                                     ? 'bg-sand-200 text-sand-700'
                                     : 'text-sand-500 hover:bg-sand-100 hover:text-sand-700'
                             }`}
                         >
-                            <MoreHorizontal size={18} />
+                            <MoreHorizontal size={19} />
                         </button>
 
-                        {isMenuOpen && (
-                            <div className="absolute right-0 top-full z-20 mt-1.5 min-w-[176px] overflow-hidden rounded-xl border border-sand-200 bg-white py-1 shadow-pop animate-scale-in">
-                                <button
-                                    type="button"
-                                    onClick={onEdit}
-                                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
-                                >
-                                    <Pencil size={15} className="text-clay-600" />
-                                    <span>Yeniden adlandır</span>
-                                </button>
-                                <div className="my-1 h-px bg-sand-200" />
-                                <button
-                                    type="button"
-                                    onClick={onDelete}
-                                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
-                                >
-                                    <Trash2 size={15} />
-                                    <span>Bahçeyi sil</span>
-                                </button>
-                            </div>
-                        )}
+                        <AnchoredDropdown
+                            isOpen={isMenuOpen}
+                            anchorElement={menuButtonRef.current}
+                            onClose={onMenuToggle}
+                            width={184}
+                            ariaLabel={`${garden.name} bahçe seçenekleri`}
+                        >
+                            <button
+                                type="button"
+                                role="menuitem"
+                                onClick={onEdit}
+                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+                            >
+                                <Pencil size={15} className="text-clay-600" />
+                                <span>Yeniden adlandır</span>
+                            </button>
+                            <div className="my-1 h-px bg-sand-200" />
+                            <button
+                                type="button"
+                                role="menuitem"
+                                onClick={onDelete}
+                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
+                            >
+                                <Trash2 size={15} />
+                                <span>Bahçeyi sil</span>
+                            </button>
+                        </AnchoredDropdown>
                     </div>
                 </div>
 
@@ -226,14 +240,6 @@ export default function HomePage() {
         };
     }, [fetchGardens]);
 
-    // Açık menü varken dışına tıklanınca kapat
-    useEffect(() => {
-        if (!openMenuId) return;
-        const closeMenu = () => setOpenMenuId(null);
-        window.addEventListener('click', closeMenu);
-        return () => window.removeEventListener('click', closeMenu);
-    }, [openMenuId]);
-
     // Memoized callbacks
     const formatDate = useCallback((dateStr: string) => {
         const date = new Date(dateStr);
@@ -286,15 +292,15 @@ export default function HomePage() {
                     <div className="flex items-center gap-3.5">
                         <button
                             onClick={toggleSidebar}
-                            title="Menü"
-                            aria-label="Menüyü aç"
+                            title="Ayarlar"
+                            aria-label="Ayarları aç"
                             className="group relative flex-shrink-0 rounded-2xl transition-transform duration-200 active:scale-95"
                         >
                             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-moss-700 to-moss-900 shadow-lift md:h-16 md:w-16">
                                 <TreePine className="text-moss-50" size={30} />
                             </span>
                             <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-sand-100 bg-clay-500">
-                                <Sparkles size={10} className="text-white" />
+                                <Settings size={10} className="text-white" />
                             </span>
                         </button>
                         <div>
