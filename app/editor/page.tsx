@@ -251,6 +251,17 @@ function EditorPageInner() {
                 correctedText = birlesik;
             }
 
+            // Sonuç girdiyle birebir aynıysa onay ekranı açıp kullanıcıya
+            // "bir şey oldu" izlenimi vermek yerine durumu açıkça söyleriz.
+            if (correctedText.trim() === textToCheck.trim()) {
+                alert(
+                    'Yapay zekâ bu metinde değişiklik yapmadı.\n\n' +
+                        'Metin zaten doğru olabilir ya da seçtiğiniz model görevi uygulamamış olabilir. ' +
+                        'Farklı bir makro deneyebilir veya sağlayıcınızdan daha yetenekli bir model seçebilirsiniz.'
+                );
+                return;
+            }
+
             setPendingSpellCheck({ original: content, corrected: '' });
 
             if (hasSelection) {

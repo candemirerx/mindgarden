@@ -195,10 +195,10 @@ ${text}`;
                    );
                 }
                 const data = await fallbackResponse.json();
-                correctedText = data.candidates?.[0]?.content?.parts?.[0]?.text || text;
+                correctedText = requireProviderText(data.candidates?.[0]?.content?.parts?.[0]?.text, data, 'Google Gemini');
             } else {
                 const data = await response.json();
-                correctedText = data.candidates?.[0]?.content?.parts?.[0]?.text || text;
+                correctedText = requireProviderText(data.candidates?.[0]?.content?.parts?.[0]?.text, data, 'Google Gemini');
             }
 
         } else if (provider === 'openai') {
@@ -216,7 +216,7 @@ ${text}`;
             }, 'OpenAI');
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
-            correctedText = data.choices?.[0]?.message?.content || text;
+            correctedText = requireProviderText(data.choices?.[0]?.message?.content, data, 'Sağlayıcı');
 
         } else if (provider === 'anthropic') {
             const response = await fetchProvider('https://api.anthropic.com/v1/messages', {
@@ -235,7 +235,7 @@ ${text}`;
             }, 'Anthropic');
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
-            correctedText = data.content?.[0]?.text || text;
+            correctedText = requireProviderText(data.content?.[0]?.text, data, 'Anthropic');
 
         } else if (provider === 'custom') {
             if (!customUrl?.trim()) {
@@ -282,14 +282,16 @@ ${text}`;
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.1,
                     // Görev metni baştan yazdırmak olduğu için çıktı sınırını
-                    // girdiye göre belirleriz; böylece model gereksiz uzun üretip
-                    // zaman aşımına uğramaz.
-                    max_tokens: Math.min(8192, Math.max(1024, text.length * 2))
+                    // girdiye göre belirleriz. Alt sınırı yüksek tutuyoruz:
+                    // "düşünen" modeller yanıtı yazmadan önce uzun bir akıl
+                    // yürütme bölümü üretiyor ve küçük sınırlarda içerik boş
+                    // kalıyor (finish_reason: length).
+                    max_tokens: Math.min(8192, Math.max(4096, text.length * 2))
                 })
             }, 'Özel sağlayıcı');
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
-            correctedText = data.choices?.[0]?.message?.content || text;
+            correctedText = requireProviderText(data.choices?.[0]?.message?.content, data, 'Sağlayıcı');
         }
 
         return NextResponse.json({ correctedText: correctedText.trim() });
@@ -345,6 +347,37 @@ export async function OPTIONS(request: NextRequest) {
         status: 204,
         headers: corsHeaders(request.headers.get('origin'))
     });
+}
+
+/**
+ * Sağlayıcı yanıtından düzeltilmiş metni çıkarır.
+ *
+ * Yanıt boş geldiğinde eskiden orijinal metin geri döndürülüyordu; bu da
+ * kullanıcıya "işlem çalıştı ama hiçbir şey değişmedi" gibi görünüyordu.
+ * Bunun yerine nedenini söyleyen bir hata fırlatırız.
+ */
+function requireProviderText(content: unknown, raw: unknown, label: string): string {
+    if (typeof content === 'string' && content.trim().length > 0) {
+        return content;
+    }
+
+    const kaynak = raw as {
+        choices?: Array<{ finish_reason?: string }>;
+        candidates?: Array<{ finishReason?: string }>;
+    } | null;
+
+    const bitis =
+        kaynak?.choices?.[0]?.finish_reason ?? kaynak?.candidates?.[0]?.finishReason;
+
+    const ayrinti = bitis ? ` (bitiş nedeni: ${bitis})` : '';
+    const ozet = JSON.stringify(raw ?? null).slice(0, 160);
+
+    throw new ProviderError(
+        502,
+        `${label} boş yanıt döndü${ayrinti}. Seçtiğiniz model yanıtı yazmadan ` +
+            'çıktı sınırına takılmış olabilir; sağlayıcınızdan farklı bir model ' +
+            `seçmeyi deneyin. Gelen yanıt: ${ozet}`
+    );
 }
 
 export async function POST(request: NextRequest) {
