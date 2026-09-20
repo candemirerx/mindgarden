@@ -274,24 +274,52 @@ ${text}`;
                 );
             }
 
-            const response = await fetchProvider(endpoint, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
+            const basliklar = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            };
+
+            const temelGovde = {
+                model: customModel.trim(),
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.1,
+                // Görev metni baştan yazdırmak olduğu için çıktı sınırı girdiye
+                // göre belirlenir.
+                max_tokens: Math.min(8192, Math.max(2048, text.length * 2))
+            };
+
+            // "Düşünen" modeller yanıtı yazmadan önce uzun bir akıl yürütme
+            // üretiyor; bu yüzden tek sayfalık bir metin bile dakikalarca
+            // sürebiliyor. Düşünmeyi kapatmayı deneriz: destekleyen
+            // sağlayıcılarda yanıt anında gelir. Alanları tanımayan sağlayıcı
+            // 400 döndürürse istek, alanlar olmadan tekrarlanır.
+            let response = await fetchProvider(
+                endpoint,
+                {
+                    method: 'POST',
+                    headers: basliklar,
+                    body: JSON.stringify({
+                        ...temelGovde,
+                        enable_thinking: false,
+                        reasoning_effort: 'none',
+                        chat_template_kwargs: { enable_thinking: false }
+                    })
                 },
-                body: JSON.stringify({
-                    model: customModel.trim(),
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.1,
-                    // Görev metni baştan yazdırmak olduğu için çıktı sınırını
-                    // girdiye göre belirleriz. Alt sınırı yüksek tutuyoruz:
-                    // "düşünen" modeller yanıtı yazmadan önce uzun bir akıl
-                    // yürütme bölümü üretiyor ve küçük sınırlarda içerik boş
-                    // kalıyor (finish_reason: length).
-                    max_tokens: Math.min(8192, Math.max(4096, text.length * 2))
-                })
-            }, 'Özel sağlayıcı');
+                'Özel sağlayıcı'
+            );
+
+            if (response.status === 400) {
+                response = await fetchProvider(
+                    endpoint,
+                    {
+                        method: 'POST',
+                        headers: basliklar,
+                        body: JSON.stringify(temelGovde)
+                    },
+                    'Özel sağlayıcı'
+                );
+            }
+
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = requireProviderText(data.choices?.[0]?.message?.content, data, 'Sağlayıcı');
