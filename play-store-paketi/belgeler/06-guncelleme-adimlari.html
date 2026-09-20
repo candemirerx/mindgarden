@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Güncelleme Adımları</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px 16px 64px;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #2C251D;
+  background: #F6F3EE;
+  -webkit-text-size-adjust: 100%;
+}
+.icerik { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 26px; line-height: 1.25; margin: 8px 0 20px; color: #1B3A28; }
+h2 {
+  font-size: 21px; margin: 34px 0 12px; color: #275939;
+  border-bottom: 2px solid #DEEDDA; padding-bottom: 6px;
+}
+h3 { font-size: 18px; margin: 26px 0 10px; color: #306C47; }
+h4 { font-size: 17px; margin: 20px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: #275939; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 7px; }
+hr { border: 0; border-top: 1px solid #DAD3C9; margin: 30px 0; }
+code {
+  background: #EAE5DE; padding: 2px 6px; border-radius: 5px;
+  font-family: Consolas, Menlo, monospace; font-size: 15px;
+}
+pre {
+  background: #2C251D; color: #F6F3EE; padding: 14px 16px; border-radius: 12px;
+  overflow-x: auto; font-size: 14px; line-height: 1.5;
+}
+pre code { background: none; color: inherit; padding: 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px;
+  background: #FDF8E9; border-left: 4px solid #E0A632; border-radius: 0 10px 10px 0;
+}
+blockquote p { margin: 0; }
+.tablo-sarmal { overflow-x: auto; margin: 0 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid #DAD3C9; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #DEEDDA; color: #1B3A28; }
+strong { color: #1B3A28; }
+.geri {
+  display: inline-block; margin-bottom: 18px; font-size: 15px;
+  text-decoration: none; color: #275939; font-weight: 600;
+}
+.kart {
+  display: block; padding: 16px 18px; margin-bottom: 12px;
+  background: #fff; border: 1px solid #DAD3C9; border-radius: 14px;
+  text-decoration: none; color: inherit;
+}
+.kart strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.kart span { font-size: 14px; color: #5B5348; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1E1813; color: #EAE5DE; }
+  h1 { color: #DEEDDA; }
+  h2 { color: #BBDCC1; border-bottom-color: #275939; }
+  h3 { color: #91C39D; }
+  strong { color: #F0F7EF; }
+  a, .geri { color: #91C39D; }
+  code { background: #2C251D; color: #DEEDDA; }
+  .kart { background: #2C251D; border-color: #463F36; }
+  .kart span { color: #ADA396; }
+  th { background: #275939; color: #F0F7EF; }
+  th, td { border-color: #463F36; }
+  blockquote { background: #361C09; border-left-color: #C9841B; }
+  hr { border-top-color: #463F36; }
+}
+</style>
+</head>
+<body>
+<div class="icerik">
+<a class="geri" href="../basla.html">← Başlangıç sayfası</a>
+<h1>Güncelleme Adımları</h1>
+<p>Bir değişiklik yaptığında iki yere ayrı ayrı göndermen gerekir: <strong>web sitesi</strong> ve <strong>Play Store</strong>. İkisi birbirinden bağımsız çalışır.</p>
+<hr />
+<h2>A. Web sitesini güncelleme (Vercel)</h2>
+<p>Site GitHub deposuna bağlıdır. <code>main</code> dalına gönderdiğin her değişiklik Vercel tarafından <strong>kendiliğinden</strong> yayınlanır; ayrıca bir şey yapman gerekmez.</p>
+<h3>Adımlar</h3>
+<ol><li>Değişiklikleri kaydet ve gönder:</li></ol>
+<pre><code>git add -A
+git commit -m "kısa açıklama"
+git push origin main</code></pre>
+<ol><li><strong>Yaklaşık 1 dakika bekle.</strong> Vercel yeni sürümü kendisi derleyip yayınlar.</li></ol>
+<ol><li>Kontrol et: https://mindgarden-neon.vercel.app adresini tarayıcıda aç.</li></ol>
+<p>   Değişiklik görünmüyorsa sayfayı <code>Ctrl + F5</code> ile yenile (tarayıcı önbelleği).</p>
+<blockquote>Yayının gerçekten çalıştığını görmek için Vercel panelinde <strong>Deployments</strong> sekmesinden son dağıtımın "Ready" olduğuna bakabilirsin.</blockquote>
+<hr />
+<h2>B. Play Store'u güncelleme</h2>
+<p>Play Store'a yüklenmiş bir uygulamaya güncelleme göndermek için <strong>sürüm kodunu artırmak zorundasın</strong>. Aynı sürüm kodunu ikinci kez yükleyemezsin.</p>
+<h3>Adımlar</h3>
+<p><strong>1. Sürüm numarasını artır</strong></p>
+<p><code>android/app/build.gradle</code> dosyasını aç:</p>
+<pre><code>versionCode 9          // her yüklemede 1 artır (8 -&gt; 9 -&gt; 10 ...)
+versionName "1.8.0"    // kullanıcının gördüğü sürüm</code></pre>
+<p><strong>2. Yeni paketi üret</strong></p>
+<pre><code>npm run build:android</code></pre>
+<p>Sonra:</p>
+<pre><code>cd android
+gradlew.bat bundleRelease</code></pre>
+<p>Yeni dosya: <code>android/app/build/outputs/bundle/release/app-release.aab</code></p>
+<p><strong>3. Play Console'a yükle</strong></p>
+<ol><li>https://play.google.com/console adresine gir</li><li>Uygulamayı seç</li><li><strong>Test etme → Kapalı test → Yeni sürüm oluştur</strong></li></ol>
+<p>   (üretime çıkmışsa <strong>Üretim → Yeni sürüm oluştur</strong>)</p>
+<ol><li>Yeni AAB dosyasını yükle</li><li><strong>Sürüm notları</strong> alanına kullanıcıya görünecek kısa notu yaz</li><li><strong>Kaydet → Sürümü incele → Yayına gönder</strong></li></ol>
+<blockquote>İlk yüklemeden sonra sonraki sürümler genelde birkaç saat içinde yayınlanır.</blockquote>
+<hr />
+<h2>C. Sürüm notu nasıl yazılır</h2>
+<p>Kısa, madde madde ve kullanıcı dilinde olmalı. Teknik terim kullanma.</p>
+<p>İyi örnek:</p>
+<pre><code>• Notlarına artık renk verebilirsin
+• Metin editöründe onayla/geri al düğmeleri büyütüldü
+• Yapay zekâ makroları hızlandırıldı</code></pre>
+<p>Kötü örnek:</p>
+<pre><code>• CORS başlıkları eklendi, max_tokens değeri güncellendi</code></pre>
+<hr />
+<h2>D. Sık yapılan hatalar</h2>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Hata</th><th>Sebep ve çözüm</th></tr></thead>
+<tbody><tr><td>"Bu sürüm kodu zaten kullanılıyor"</td><td><code>versionCode</code> artırılmamış. Bir artır ve yeniden üret.</td></tr><tr><td>Site güncellenmedi</td><td><code>git push</code> yapılmamış ya da Vercel hâlâ derliyor. Vercel panelinden kontrol et.</td></tr><tr><td>Play Store güncellemesi görünmüyor</td><td>Google incelemesi sürüyor olabilir; 1–7 gün sürebilir.</td></tr><tr><td>Telefonda eski sürüm görünüyor</td><td>Play Store'da uygulama sayfasından güncellemeyi elle tetikle.</td></tr></tbody>
+</table></div>
+<hr />
+<h2>E. Sürüm geçmişi</h2>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Sürüm kodu</th><th>Sürüm adı</th><th>Not</th></tr></thead>
+<tbody><tr><td>7</td><td>1.6.0</td><td>Play Store hazırlığı</td></tr><tr><td>8</td><td>1.7.0</td><td>Çoklu AI makroları, dal renkleri, yeni ikon, AI hız düzeltmeleri</td></tr><tr><td>9</td><td>1.8.0</td><td>(sıradaki sürüm için ayrıldı)</td></tr></tbody>
+</table></div>
+<hr />
+<h2>F. Önemli hatırlatmalar</h2>
+<ul><li><strong>Paket adı</strong> <code>com.notbahcesi.app</code> bir kez seçildi, değiştirilemez.</li><li><strong>İmza dosyaları</strong> (<code>notbahcesi-release.jks</code>, <code>keystore.properties</code>) proje</li></ul>
+<p>  klasöründe duruyor ve <strong>gizli kalmalı</strong>. Bunları kaybedersen uygulamaya bir   daha güncelleme yayınlayamazsın. Güvenli bir yere yedekle.</p>
+<ul><li><strong>Her yüklemede sürüm kodu artmalı.</strong> Aynı numarayı tekrar kullanamazsın.</li><li>Site ve Play Store <strong>ayrı</strong> güncellenir; birini güncellemek diğerini etkilemez.</li></ul>
+</div>
+</body>
+</html>
