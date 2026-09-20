@@ -73,6 +73,44 @@ async function providerErrorDetail(response: Response, apiKey: string): Promise<
     return masked.replace(/\s+/g, ' ').trim().slice(0, 300);
 }
 
+/**
+ * Sağlayıcı isteğinin en fazla ne kadar sürebileceği.
+ *
+ * Bazı modeller (özellikle "düşünen" modeller) uzun metinlerde dakikalarca
+ * yanıt üretmeyebiliyor. Bu durumda istek sonsuza kadar asılı kalmasın diye
+ * süre sınırı koyuyoruz; kullanıcıya da nedenini söyleyen net bir hata dönüyor.
+ */
+const PROVIDER_TIMEOUT_MS = 45000;
+
+/** Sağlayıcı çağrılarını zaman aşımıyla sarmalar. */
+async function fetchProvider(
+    input: string | URL,
+    init: RequestInit,
+    label: string
+): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new ProviderError(
+                504,
+                `${label} ${PROVIDER_TIMEOUT_MS / 1000} saniye içinde yanıt vermedi. ` +
+                    'Seçtiğiniz model uzun metinlerde çok yavaş kalıyor olabilir; ' +
+                    'sağlayıcı panelinden daha hızlı bir model seçmeyi deneyin.'
+            );
+        }
+        throw new ProviderError(
+            502,
+            `${label} adresine bağlanılamadı. Adresi ve internet bağlantınızı kontrol edin.`
+        );
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 async function handleSpellcheckRequest(request: NextRequest) {
     try {
         const {
@@ -122,7 +160,7 @@ ${text}`;
         let correctedText = text;
 
         if (provider === 'gemini') {
-            const response = await fetch(
+            const response = await fetchProvider(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
                 {
                     method: 'POST',
@@ -131,12 +169,13 @@ ${text}`;
                         contents: [{ parts: [{ text: prompt }] }],
                         generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
                     })
-                }
+                },
+                'Google Gemini'
             );
 
             if (!response.ok) {
                 // gemini-2.5-flash fallback if 2.5 is not available yet (just in case)
-                const fallbackResponse = await fetch(
+                const fallbackResponse = await fetchProvider(
                     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
                     {
                         method: 'POST',
@@ -145,7 +184,8 @@ ${text}`;
                             contents: [{ parts: [{ text: prompt }] }],
                             generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
                         })
-                    }
+                    },
+                    'Google Gemini'
                 );
                 
                 if (!fallbackResponse.ok) {
@@ -162,7 +202,7 @@ ${text}`;
             }
 
         } else if (provider === 'openai') {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const response = await fetchProvider('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -173,13 +213,13 @@ ${text}`;
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.1
                 })
-            });
+            }, 'OpenAI');
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = data.choices?.[0]?.message?.content || text;
 
         } else if (provider === 'anthropic') {
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
+            const response = await fetchProvider('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -192,7 +232,7 @@ ${text}`;
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.1
                 })
-            });
+            }, 'Anthropic');
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = data.content?.[0]?.text || text;
@@ -231,7 +271,7 @@ ${text}`;
                 );
             }
 
-            const response = await fetch(endpoint, {
+            const response = await fetchProvider(endpoint, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -240,9 +280,13 @@ ${text}`;
                 body: JSON.stringify({
                     model: customModel.trim(),
                     messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.1
+                    temperature: 0.1,
+                    // Görev metni baştan yazdırmak olduğu için çıktı sınırını
+                    // girdiye göre belirleriz; böylece model gereksiz uzun üretip
+                    // zaman aşımına uğramaz.
+                    max_tokens: Math.min(8192, Math.max(1024, text.length * 2))
                 })
-            });
+            }, 'Özel sağlayıcı');
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = data.choices?.[0]?.message?.content || text;

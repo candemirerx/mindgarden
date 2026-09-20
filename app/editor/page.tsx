@@ -8,6 +8,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
 import { readEnabledMacros } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
+import { splitIntoChunks } from '@/lib/aiChunks';
 import { Capacitor } from '@capacitor/core';
 
 function EditorPageInner() {
@@ -167,19 +168,18 @@ function EditorPageInner() {
         setActiveMacroId(macro.id);
         setRunningLength(textToCheck.length);
 
-        try {
-            // İstemcinin girdiği ayarları al
-            const clientApiKey = localStorage.getItem('nb-ai-key') || localStorage.getItem('nb-gemini-key') || '';
-            const provider = localStorage.getItem('nb-ai-provider') || 'gemini';
-            const customUrl = localStorage.getItem('nb-ai-custom-url') || '';
-            const customModel = localStorage.getItem('nb-ai-custom-model') || '';
+        // İstemcinin girdiği ayarları al
+        const clientApiKey = localStorage.getItem('nb-ai-key') || localStorage.getItem('nb-gemini-key') || '';
+        const provider = localStorage.getItem('nb-ai-provider') || 'gemini';
+        const customUrl = localStorage.getItem('nb-ai-custom-url') || '';
+        const customModel = localStorage.getItem('nb-ai-custom-model') || '';
 
-            const spellcheckUrl = Capacitor.isNativePlatform()
-                ? 'https://mindgarden-neon.vercel.app/api/spellcheck'
-                : '/api/spellcheck';
+        const spellcheckUrl = Capacitor.isNativePlatform()
+            ? 'https://mindgarden-neon.vercel.app/api/spellcheck'
+            : '/api/spellcheck';
 
-            // Uzun metinlerde yanıt gecikebilir; yine de sonsuza kadar
-            // beklememek için bir üst sınır koyuyoruz.
+        /** Tek bir metin parçasını sağlayıcıya gönderir. */
+        const sendOnce = async (text: string): Promise<string> => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 90000);
 
@@ -190,7 +190,7 @@ function EditorPageInner() {
                     headers: { 'Content-Type': 'application/json' },
                     signal: controller.signal,
                     body: JSON.stringify({
-                        text: textToCheck,
+                        text,
                         clientApiKey,
                         provider,
                         customUrl,
@@ -201,22 +201,55 @@ function EditorPageInner() {
             } catch (fetchError: unknown) {
                 const isAbort =
                     fetchError instanceof Error && fetchError.name === 'AbortError';
-                throw new Error(
+                const error = new Error(
                     isAbort
-                        ? 'İstek zaman aşımına uğradı. Metin uzunsa bir bölümünü seçip tekrar deneyin.'
-                        : 'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.'
+                        ? 'İstek zaman aşımına uğradı.'
+                        : 'İstek tamamlanamadı. İnternet bağlantınızı kontrol edin.'
                 );
+                // Zaman aşımı ve bağlantı kopması, metni parçalayarak yeniden
+                // denemeye uygun; yapılandırma hataları değil.
+                (error as Error & { retryable?: boolean }).retryable = true;
+                throw error;
             } finally {
                 clearTimeout(timeoutId);
             }
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => null);
-                throw new Error(errData?.error || 'API hatası');
+                const error = new Error(errData?.error || 'API hatası');
+                // Sunucu/sağlayıcı kaynaklı geçici hatalarda parçalayarak
+                // yeniden denemek anlamlı; 4xx yapılandırma hatasında değil.
+                (error as Error & { retryable?: boolean }).retryable =
+                    response.status >= 500;
+                throw error;
             }
 
             const data = await response.json();
-            const correctedText = data.correctedText;
+            return typeof data.correctedText === 'string' ? data.correctedText : text;
+        };
+
+        try {
+            let correctedText: string;
+
+            try {
+                correctedText = await sendOnce(textToCheck);
+            } catch (firstError) {
+                // Uzun metin tek istekte işlenemediyse (sağlayıcı yanıtı süre
+                // sınırını aştıysa) metni parçalara bölüp sırayla işleriz.
+                // Kısa parçalar tek istekte hızlı yanıt aldığı için bu yol
+                // uzun notlarda da çalışır.
+                const yenidenDenenebilir =
+                    (firstError as Error & { retryable?: boolean })?.retryable === true;
+                const chunks = yenidenDenenebilir ? splitIntoChunks(textToCheck) : [];
+
+                if (chunks.length <= 1) throw firstError;
+
+                let birlesik = '';
+                for (const chunk of chunks) {
+                    birlesik += (await sendOnce(chunk.text)).trim() + chunk.after;
+                }
+                correctedText = birlesik;
+            }
 
             setPendingSpellCheck({ original: content, corrected: '' });
 
