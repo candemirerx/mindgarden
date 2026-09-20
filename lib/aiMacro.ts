@@ -15,6 +15,8 @@ export interface AiMacro {
     subtitle: string;
     /** Sağlayıcıya gönderilen görev metni. */
     instruction: string;
+    /** Devre dışı bırakılan makro metin editöründe görünmez. */
+    enabled: boolean;
 }
 
 export const AI_MACROS_KEY = 'nb-ai-macros';
@@ -34,7 +36,8 @@ export const DEFAULT_MACROS: AiMacro[] = [
 - Büyük/küçük harf kullanımını düzelt
 - İçeriği, anlamı veya cümle yapısını DEĞİŞTİRME
 - Yeni kelime veya cümle EKLEME
-- Sadece düzeltilmiş metni döndür, açıklama yapma`
+- Sadece düzeltilmiş metni döndür, açıklama yapma`,
+        enabled: true
     },
     {
         id: 'ozetle',
@@ -43,7 +46,8 @@ export const DEFAULT_MACROS: AiMacro[] = [
         instruction: `Aşağıdaki metni özetle:
 - En fazla 5 madde kullan
 - Her madde tek satır olsun
-- Sadece özeti döndür, açıklama veya giriş cümlesi yazma`
+- Sadece özeti döndür, açıklama veya giriş cümlesi yazma`,
+        enabled: true
     },
     {
         id: 'resmilestir',
@@ -52,7 +56,8 @@ export const DEFAULT_MACROS: AiMacro[] = [
         instruction: `Aşağıdaki metni resmî, kurumsal ve ölçülü bir Türkçe ile yeniden yaz:
 - Anlamı koru, yeni bilgi ekleme
 - Günlük konuşma ifadelerini çıkar
-- Sadece yeniden yazılmış metni döndür`
+- Sadece yeniden yazılmış metni döndür`,
+        enabled: true
     },
     {
         id: 'sadelestir',
@@ -62,7 +67,8 @@ export const DEFAULT_MACROS: AiMacro[] = [
 - Uzun cümleleri kısalt ve böl
 - Karmaşık kelimeleri günlük karşılıklarıyla değiştir
 - Anlamı koru, yeni bilgi ekleme
-- Sadece sadeleştirilmiş metni döndür`
+- Sadece sadeleştirilmiş metni döndür`,
+        enabled: true
     },
     {
         id: 'genislet',
@@ -71,7 +77,8 @@ export const DEFAULT_MACROS: AiMacro[] = [
         instruction: `Aşağıdaki notu genişlet:
 - Mevcut fikirleri koru
 - Her fikri bir örnek veya ayrıntıyla destekle
-- Başlık ekleme, doğrudan genişletilmiş metni döndür`
+- Başlık ekleme, doğrudan genişletilmiş metni döndür`,
+        enabled: true
     },
     {
         id: 'ingilizce',
@@ -80,7 +87,8 @@ export const DEFAULT_MACROS: AiMacro[] = [
         instruction: `Translate the following text into English:
 - Keep the original meaning and tone
 - Do not add explanations
-- Return only the translation`
+- Return only the translation`,
+        enabled: true
     }
 ];
 
@@ -113,7 +121,8 @@ export function readAiMacros(): AiMacro[] {
 
                 return valid.map((item) => ({
                     ...item,
-                    subtitle: typeof item.subtitle === 'string' ? item.subtitle : ''
+                    subtitle: typeof item.subtitle === 'string' ? item.subtitle : '',
+                    enabled: item.enabled !== false
                 }));
             }
         } catch {
@@ -130,7 +139,8 @@ export function readAiMacros(): AiMacro[] {
                 id: createId(),
                 title: 'Kendi Görevim',
                 subtitle: 'Önceki sürümde yazdığınız tek görev.',
-                instruction: legacy.trim()
+                instruction: legacy.trim(),
+                enabled: true
             }
         ];
         saveAiMacros(migrated);
@@ -151,8 +161,20 @@ export function createMacro(): AiMacro {
         id: createId(),
         title: 'Yeni Makro',
         subtitle: '',
-        instruction: ''
+        instruction: '',
+        enabled: true
     };
+}
+
+/**
+ * Metin editöründe gösterilecek makrolar.
+ *
+ * Devre dışı bırakılan ve görevi boş olan makrolar editörde yer kaplamaz.
+ */
+export function readEnabledMacros(): AiMacro[] {
+    return readAiMacros().filter(
+        (macro) => macro.enabled !== false && macro.instruction.trim().length > 0
+    );
 }
 
 /** İmla düzeltme makrosunu bulur; yoksa varsayılanı döner. */

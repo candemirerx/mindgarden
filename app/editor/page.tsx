@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
-import { readAiMacros } from '@/lib/aiMacro';
+import { readEnabledMacros } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
 import { Capacitor } from '@capacitor/core';
 
@@ -141,9 +141,10 @@ function EditorPageInner() {
         setHasChanges(true);
     };
 
-    // Ayarlarda tanımlı AI makroları (imla düzeltme dahil)
+    // Ayarlarda etkin bırakılan AI makroları (imla düzeltme dahil).
+    // Kapalı veya boş makrolar araç çubuğunda yer kaplamaz.
     useEffect(() => {
-        setMacros(readAiMacros());
+        setMacros(readEnabledMacros());
     }, []);
 
     // Makro çalıştırma

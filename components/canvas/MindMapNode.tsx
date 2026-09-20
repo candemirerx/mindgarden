@@ -24,7 +24,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [isExpanded, setIsExpanded] = useState(node.isExpanded ?? true);
-    const [showMenuOnMobile, setShowMenuOnMobile] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(node.title);
     const [isMobile, setIsMobile] = useState(false);
@@ -60,27 +59,30 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 
     const handleNodeClick = (e: React.MouseEvent | React.TouchEvent) => {
         e.stopPropagation();
+
+        // Menü görünürlüğü seçili düğüme bağlıdır: başka bir düğüme
+        // dokunulduğunda öncekinin menüsü kendiliğinden kapanır, böylece
+        // ekranda aynı anda tek menü açık kalır.
+        if (selectedNodeId !== node.id) {
+            setSelectedNode(node.id);
+            return;
+        }
+
+        // Zaten seçili düğüme ikinci dokunuş başlığı düzenlemeye geçirir.
         if (isMobile) {
-            if (!showMenuOnMobile) {
-                setShowMenuOnMobile(true);
-            } else {
-                setIsEditingTitle(true);
-            }
-        } else {
-            if (selectedNodeId !== node.id) {
-                setSelectedNode(node.id);
-            }
+            setIsEditingTitle(true);
         }
     };
 
     const handleTitleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!isMobile) {
-            if (selectedNodeId === node.id) {
-                setIsEditingTitle(true);
-            } else {
-                setSelectedNode(node.id);
-            }
+
+        // Başlığa dokunmak da düğümü seçer; böylece dokunmatik cihazlarda
+        // başlığa basıldığında menü açılır. Zaten seçiliyse düzenlemeye geçer.
+        if (selectedNodeId === node.id) {
+            setIsEditingTitle(true);
+        } else {
+            setSelectedNode(node.id);
         }
     };
 
@@ -112,6 +114,10 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 
     const hasChildren = node.children && node.children.length > 0;
     const isSelected = selectedNodeId === node.id;
+    /** Eylem menüleri yalnızca üzerine gelinen veya seçili düğümde görünür.
+     *  Dokunmatik cihazlarda hover güvenilir olmadığı için yalnızca seçim
+     *  belirleyicidir; böylece ekranda tek menü açık kalır. */
+    const showActions = isSelected || (!isMobile && isHovered);
 
     // =========================================================================
     // KÖK DÜĞÜM (DEPTH 0)
@@ -134,7 +140,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     flex items-center gap-0.5 glass p-1 rounded-xl shadow-lift border border-sand-200
                     transition-all duration-200 z-40
                     after:absolute after:inset-x-0 after:-bottom-2 after:h-2
-                    ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
+                    ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                 `}>
                         <button
                             onClick={(e) => { e.stopPropagation(); onEdit(node); }}
@@ -213,7 +219,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             flex h-6 w-6 items-center justify-center rounded-full
                             bg-white text-moss-700 border-2 border-moss-400 shadow-soft
                             transition-all duration-200 hover:scale-110 hover:bg-moss-50 hover:border-moss-500 active:scale-95
-                            ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                            ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                             z-30
                         `}
                         title="Yeni Dal Ekle"
@@ -280,7 +286,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     flex items-center gap-0.5 glass p-1 rounded-xl shadow-lift border border-sand-200
                     transition-all duration-200 z-30
                     after:absolute after:inset-x-0 after:-bottom-2 after:h-2
-                    ${(isHovered || showMenuOnMobile) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
+                    ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                 `}>
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(node); }}
@@ -372,7 +378,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             ? 'bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400'
                             : 'bg-white text-clay-600 border-clay-300 hover:bg-clay-50 hover:border-clay-400'
                         }
-                        ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                        ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                         z-20
                     `}
                     title={isBranchStyle ? "Yaprağa Dönüştür" : "Dala Dönüştür"}
@@ -389,7 +395,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         flex h-5 w-5 items-center justify-center rounded-full
                         bg-white text-moss-600 border-2 border-moss-300 shadow-soft
                         transition-all duration-200 hover:scale-110 hover:bg-moss-50 hover:border-moss-400 active:scale-95
-                        ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                        ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                         z-20
                     `}
                     title="Alt Dal Ekle"
@@ -425,7 +431,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             flex h-5 w-5 items-center justify-center rounded-full
                             bg-white text-clay-600 border-2 border-clay-300 shadow-soft
                             transition-all duration-200 hover:scale-110 hover:bg-clay-50 hover:border-clay-400 active:scale-95
-                            ${(isHovered || showMenuOnMobile) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                            ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                             z-20
                         `}
                         title="Yan Dal Ekle"
