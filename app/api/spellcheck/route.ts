@@ -42,8 +42,27 @@ function isPrivateHost(hostname: string): boolean {
     );
 }
 
-export async function POST(request: NextRequest) {
-    try {
+/**
+ * Sağlayıcının reddettiği istekleri ayırt eder; böylece kullanıcı "model
+ * bulunamadı" ile "anahtar geçersiz" hatasını ayırt edebilir.
+ */
+class ProviderError extends Error {
+    constructor(
+        readonly status: number,
+        readonly detail: string
+    ) {
+        super(`Sağlayıcı isteği reddetti (HTTP ${status})`);
+    }
+}
+
+/** Sağlayıcı yanıtını kısaltır ve içinde anahtar geçiyorsa maskeler. */
+async function providerErrorDetail(response: Response, apiKey: string): Promise<string> {
+    const raw = await response.text().catch(() => '');
+    const masked = apiKey ? raw.split(apiKey).join('***') : raw;
+    return masked.replace(/\s+/g, ' ').trim().slice(0, 300);
+}
+
+export async function POST(request: NextRequest) {    try {
         const {
             text,
             clientApiKey,
@@ -107,7 +126,10 @@ ${text}`;
                 );
                 
                 if (!fallbackResponse.ok) {
-                   throw new Error(await fallbackResponse.text());
+                   throw new ProviderError(
+                       fallbackResponse.status,
+                       await providerErrorDetail(fallbackResponse, apiKey)
+                   );
                 }
                 const data = await fallbackResponse.json();
                 correctedText = data.candidates?.[0]?.content?.parts?.[0]?.text || text;
@@ -129,7 +151,7 @@ ${text}`;
                     temperature: 0.1
                 })
             });
-            if (!response.ok) throw new Error(await response.text());
+            if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = data.choices?.[0]?.message?.content || text;
 
@@ -148,7 +170,7 @@ ${text}`;
                     temperature: 0.1
                 })
             });
-            if (!response.ok) throw new Error(await response.text());
+            if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = data.content?.[0]?.text || text;
 
@@ -198,13 +220,25 @@ ${text}`;
                     temperature: 0.1
                 })
             });
-            if (!response.ok) throw new Error(await response.text());
+            if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = data.choices?.[0]?.message?.content || text;
         }
 
         return NextResponse.json({ correctedText: correctedText.trim() });
     } catch (error) {
+        // Sağlayıcı hatasını olduğu gibi iletiriz; kullanıcı sorunun anahtar mı,
+        // model adı mı, kota mı olduğunu görebilsin.
+        if (error instanceof ProviderError) {
+            console.error('Spellcheck provider error:', error.status, error.detail);
+            return NextResponse.json(
+                {
+                    error: `Sağlayıcı isteği reddetti (HTTP ${error.status}). ${error.detail}`
+                },
+                { status: 502 }
+            );
+        }
+
         console.error('Spellcheck error:', error);
         return NextResponse.json(
             { error: 'Yapay Zeka servisine bağlanılamadı. Lütfen ayarlarınızı kontrol edin.' },
