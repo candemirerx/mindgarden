@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Not Bahçesi — Kullanma Kılavuzu</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px 16px 64px;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #2C251D;
+  background: #F6F3EE;
+  -webkit-text-size-adjust: 100%;
+}
+.icerik { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 26px; line-height: 1.25; margin: 8px 0 20px; color: #1B3A28; }
+h2 {
+  font-size: 21px; margin: 34px 0 12px; color: #275939;
+  border-bottom: 2px solid #DEEDDA; padding-bottom: 6px;
+}
+h3 { font-size: 18px; margin: 26px 0 10px; color: #306C47; }
+h4 { font-size: 17px; margin: 20px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: #275939; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 7px; }
+hr { border: 0; border-top: 1px solid #DAD3C9; margin: 30px 0; }
+code {
+  background: #EAE5DE; padding: 2px 6px; border-radius: 5px;
+  font-family: Consolas, Menlo, monospace; font-size: 15px;
+}
+pre {
+  background: #2C251D; color: #F6F3EE; padding: 14px 16px; border-radius: 12px;
+  overflow-x: auto; font-size: 14px; line-height: 1.5;
+}
+pre code { background: none; color: inherit; padding: 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px;
+  background: #FDF8E9; border-left: 4px solid #E0A632; border-radius: 0 10px 10px 0;
+}
+blockquote p { margin: 0; }
+.tablo-sarmal { overflow-x: auto; margin: 0 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid #DAD3C9; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #DEEDDA; color: #1B3A28; }
+strong { color: #1B3A28; }
+.geri {
+  display: inline-block; margin-bottom: 18px; font-size: 15px;
+  text-decoration: none; color: #275939; font-weight: 600;
+}
+.kart {
+  display: block; padding: 16px 18px; margin-bottom: 12px;
+  background: #fff; border: 1px solid #DAD3C9; border-radius: 14px;
+  text-decoration: none; color: inherit;
+}
+.kart strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.kart span { font-size: 14px; color: #5B5348; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1E1813; color: #EAE5DE; }
+  h1 { color: #DEEDDA; }
+  h2 { color: #BBDCC1; border-bottom-color: #275939; }
+  h3 { color: #91C39D; }
+  strong { color: #F0F7EF; }
+  a, .geri { color: #91C39D; }
+  code { background: #2C251D; color: #DEEDDA; }
+  .kart { background: #2C251D; border-color: #463F36; }
+  .kart span { color: #ADA396; }
+  th { background: #275939; color: #F0F7EF; }
+  th, td { border-color: #463F36; }
+  blockquote { background: #361C09; border-left-color: #C9841B; }
+  hr { border-top-color: #463F36; }
+}
+</style>
+</head>
+<body>
+<div class="icerik">
+<a class="geri" href="../basla.html">← Başlangıç sayfası</a>
+<h1>Not Bahçesi — Kullanma Kılavuzu</h1>
+<p>Not Bahçesi, notlarını bir ağaç gibi büyütmen için tasarlandı. Her bahçe bir konu, her not bir ağaç, her alt not bir dal ya da yaprak.</p>
+<hr />
+<h2>1. İlk açılış ve giriş</h2>
+<p>Uygulamayı ilk açtığın ekran:</p>
+<ul><li><strong>Sol üstteki ağaç simgesi</strong> — ayar panelini açar. Sağ alt köşesindeki küçük dişli</li></ul>
+<p>  simgesi de aynı işi yapar.</p>
+<ul><li><strong>Yeni Bahçe</strong> — sağ üstteki yeşil düğme.</li></ul>
+<p>Notlarını kaydetmek için giriş yapman gerekir. İki yol var:</p>
+<ol><li><strong>Yerel Modda Gir</strong> — şifre sormaz, veriler yalnızca bu cihazda saklanır.</li></ol>
+<p>   İnternet olmadan da çalışır.</p>
+<ol><li><strong>Google ile Giriş</strong> — notlarını Google Drive'a otomatik yedekler ve</li></ol>
+<p>   diğer cihazlarınla birleştirir.</p>
+<blockquote>Yerel modda başlayıp sonradan Google ile giriş yaparsan, o ana kadar girdiğin notlar silinmez; Drive ile birleştirilir.</blockquote>
+<hr />
+<h2>2. Bahçe oluşturma</h2>
+<ol><li><strong>Yeni Bahçe</strong> düğmesine dokun</li><li>Bahçeye bir ad ver (örn. "Kitap Notları")</li><li><strong>Oluştur</strong></li></ol>
+<p>Yeni oluşturduğun bahçe listenin <strong>en başında</strong> görünür.</p>
+<p>Her bahçe kartında:</p>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Öğe</th><th>Ne yapar</th></tr></thead>
+<tbody><tr><td>Kartın üstündeki ad</td><td>Son kullandığın görünümü açar (Canvas veya Projeler)</td></tr><tr><td><strong>Projeler</strong></td><td>Notları liste hâlinde gösterir</td></tr><tr><td><strong>Canvas</strong></td><td>Notları görsel ağaç olarak gösterir</td></tr><tr><td>Üç nokta</td><td><em>Yeniden adlandır</em> / <em>Bahçeyi sil</em></td></tr></tbody>
+</table></div>
+<hr />
+<h2>3. Canvas — görsel ağaç görünümü</h2>
+<p>Notlarını dallarıyla birlikte bir ağaç olarak gösterir.</p>
+<ul><li><strong>Düğüme dokun</strong> → üstünde eylem menüsü açılır</li><li><strong>Başka düğüme dokun</strong> → öncekinin menüsü kapanır, yalnızca tek menü açık kalır</li><li><strong>Boş alana dokun</strong> → tüm menüler kapanır</li><li><strong>İki parmakla</strong> büyüt/küçült, <strong>parmakla sürükle</strong> gezin</li><li>Menüdeki simgeler: tam editör, başlığı kopyala, yeni dal ekle, düğüm tipini değiştir</li><li><strong>Ağaç yönetimi</strong> düğmesi ile ağaçları toplu açıp kapatabilirsin</li></ul>
+<hr />
+<h2>4. Projeler — liste görünümü</h2>
+<p>Notlarını hiyerarşik liste hâlinde gösterir. Aradığın notu bulmak için üstteki arama kutusunu kullanabilirsin.</p>
+<h3>Not ekleme</h3>
+<ul><li><strong>Yeni Ağaç</strong> ile en üst seviyede bir not aç</li><li>Bir notun üç nokta menüsünden <strong>Yeni dal ekle</strong> (alt notu varsa) veya</li></ul>
+<p>  <strong>Yeni yaprak ekle</strong> (alt notu yoksa)</p>
+<h3>Üç nokta menüsünde neler var</h3>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Seçenek</th><th>Ne yapar</th></tr></thead>
+<tbody><tr><td>Tam editörde aç</td><td>Notu büyük metin editöründe açar</td></tr><tr><td>Yeniden adlandır</td><td>Başlığı yerinde düzenlemeni sağlar</td></tr><tr><td>Yeni dal / yaprak ekle</td><td>Altına yeni not ekler</td></tr><tr><td><strong>Dal rengi</strong></td><td>Notun rengini seçer (aşağıya bak)</td></tr><tr><td>Sil</td><td>Notu ve altındaki tüm dalları siler</td></tr></tbody>
+</table></div>
+<h3>Dal rengi</h3>
+<p>Menüde altı hazır renk ve bir <strong>Varsayılan</strong> düğmesi var:</p>
+<ul><li>Yosun yeşili, Bal köşe, Deniz mavisi, Lavanta, Gül kurusu, Kahve</li><li>Renk seçtiğinde notun simgesi ve yanındaki renk şeridi o renge döner</li><li><strong>Varsayılan</strong> düğmesi rengi seviyeye göre otomatik renge döndürür</li><li>Renkler cihazda saklanır ve Drive yedeklemesiyle diğer cihazlarına da geçer</li></ul>
+<p>Renkleri kullanarak bir bahçedeki farklı konu başlıklarını görsel olarak ayırabilirsin.</p>
+<hr />
+<h2>5. Metin editörü ve yapay zekâ</h2>
+<p>Bir notu açtığın büyük editör ekranı.</p>
+<h3>Temel işlemler</h3>
+<ul><li><strong>Başlık</strong> ve <strong>içerik</strong> alanlarına yaz</li><li><strong>Oto</strong> kutusu açıkken değişiklikler kendiliğinden kaydedilir</li><li>Üstteki düğmeler: geri dön, içeriği kopyala, dışa aktar (PDF / Word)</li><li><strong>Otomatik kaydetme</strong> kapalıysa Kaydet düğmesini kendin basmalısın</li></ul>
+<h3>Yapay zekâ makroları</h3>
+<p>Üst şeritte <strong>AI</strong> etiketinin yanında makro kutuları görünür. Varsayılan olarak:</p>
+<p><strong>İmla Düzelt · Özetle · Resmileştir · Sadeleştir · Genişlet · İngilizceye Çevir</strong></p>
+<p>Bir kutuya dokunduğunda:</p>
+<ol><li>Notun metni (ya da seçtiğin bölüm) senin API anahtarınla seçtiğin sağlayıcıya gönderilir</li><li>Gelen cevap nota yazılır</li><li>Üstte <strong>Sonuç hazır:</strong> yazısıyla <strong>Onayla</strong> ve <strong>Geri Al</strong> düğmeleri çıkar</li></ol>
+<ul><li><strong>Onayla</strong> → sonucu kalıcı hâle getirir</li><li><strong>Geri Al</strong> → notu eski hâline döndürür</li></ul>
+<blockquote>Metnin bir bölümünü seçtiysen yapay zekâ yalnızca o bölümü işler.</blockquote>
+<h3>Yapay zekâ sağlayıcısını ayarlama</h3>
+<p>Ayar paneli → <strong>Model, API ve Senkronizasyon</strong> → <strong>Model Ayarları</strong></p>
+<ol><li>Sağlayıcı seç: Google Gemini, OpenAI, Anthropic veya <strong>Özel (Custom)</strong></li><li><strong>Özel</strong> seçtiysen:</li></ol>
+<ul><li><strong>Base URL</strong> — örn. <code>https://api.ornek.com/v1</code></li></ul>
+<p>     (<code>/v1</code> adresini ya da doğrudan <code>/chat/completions</code> adresini yazabilirsin)</p>
+<ul><li><strong>Model adı / Model ID</strong> — sağlayıcının panelinde yazan gerçek model kimliği</li></ul>
+<ol><li><strong>API Anahtarı</strong> alanına kendi anahtarını gir</li><li><strong>Sağlayıcıyı Ekle</strong></li></ol>
+<blockquote>API anahtarın yalnızca cihazında saklanır. Yapay zekâyı kullandığında anahtar ve işlenecek metin önce uygulamanın sunucu rotasına, oradan seçtiğin sağlayıcıya iletilir.</blockquote>
+<h3>Makroları yönetme</h3>
+<p>Ayar paneli → <strong>Model, API ve Senkronizasyon</strong> → <strong>AI Makroları</strong></p>
+<ul><li>Her makronun yanındaki <strong>anahtar</strong> ile makroyu kapatıp açabilirsin</li><li>Kapatılan makro <strong>editörde görünmez</strong>, böylece arayüz kalabalıklaşmaz</li><li>Makroya dokunup <strong>Makroyu kaydet</strong> ile görev metnini değiştirebilirsin</li><li><strong>Makroyu sil</strong> ile kaldırabilirsin</li><li><strong>Yeni makro ekle</strong> ile kendi görevini yazabilirsin (örn. "Bu notu toplantı</li></ul>
+<p>  tutanağına çevir ve kararları madde madde yaz")</p>
+<ul><li><strong>Varsayılanlar</strong> düğmesi hazır makro setini geri getirir</li></ul>
+<p>Makro detay sayfasında üç alan var: <strong>Makro adı</strong> (kutuda görünen ad), <strong>Alt başlık</strong> (ne yaptığının kısa açıklaması) ve <strong>Yapay zekâya gönderilecek görev</strong>.</p>
+<hr />
+<h2>6. Google Drive yedekleme</h2>
+<p>Ayar paneli → <strong>Model, API ve Senkronizasyon</strong> → <strong>Senkronizasyon</strong></p>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Düğme</th><th>Ne yapar</th></tr></thead>
+<tbody><tr><td>Google Drive ile Senkron</td><td>Drive'daki yedekle bu cihazı güvenle birleştirir</td></tr><tr><td>Drive'a Yedekle</td><td>Bu cihazdaki her şeyi Drive'a yazar</td></tr><tr><td>Drive'dan Geri Yükle</td><td>Drive'daki yedeği cihaza indirir</td></tr><tr><td>Şimdi Senkronla</td><td>Beklemeden hemen senkron yapar</td></tr><tr><td>Otomatik Senkron</td><td>Açıkken değişiklikler kendiliğinden yedeklenir</td></tr></tbody>
+</table></div>
+<p>Yedekler Drive'ın uygulamaya özel gizli klasöründe tutulur; Drive'ında görünmez. Alt tarafta son yedekleme zamanı yazar.</p>
+<hr />
+<h2>7. Veri Yönetimi</h2>
+<p>Ayar paneli → <strong>Veri Yönetimi</strong> (varsayılan olarak kapalıdır, dokununca açılır)</p>
+<ul><li><strong>Dışa Aktar</strong> — bahçelerini JSON, HTML, PDF veya Word olarak kaydeder.</li></ul>
+<p>  Hangi bahçelerin dışa aktarılacağını seçebilirsin.</p>
+<ul><li><strong>İçe Aktar</strong> — daha önce aldığın JSON yedeğini geri yükler.</li></ul>
+<p>Bu yolu cihaz değiştirirken veya Drive kullanmadan yedek almak istediğinde kullan.</p>
+<hr />
+<h2>8. Sık sorulanlar</h2>
+<p><strong>Notlarım kaybolur mu?</strong> Yerel modda veriler cihazda tutulur; uygulamayı kaldırırsan silinir. Google ile giriş yapıp otomatik senkronu açarsan Drive'da yedeklenir.</p>
+<p><strong>Telefon ile bilgisayarda aynı notları görebilir miyim?</strong> Evet. İki cihazda da <strong>aynı Google hesabıyla</strong> giriş yap ve otomatik senkronu aç. Notlar birleştirilir; çakışmada en son değiştirilen sürüm geçerli olur.</p>
+<p><strong>Yapay zekâ hata veriyor, ne yapmalıyım?</strong> Hata mesajı sağlayıcının kendi cevabını gösterir. Sık sebepler: anahtar geçersiz, model adı yanlış yazılmış veya hesabında bakiye/kota kalmamış.</p>
+<p><strong>Yapay zekâ kullanmak zorunda mıyım?</strong> Hayır. Hiçbir sağlayıcı tanımlamazsan makro kutuları çalışmaz ama uygulamanın diğer tüm özellikleri normal çalışır.</p>
+<p><strong>İnternet olmadan çalışır mı?</strong> Evet. Notlar cihazda tutulur; yalnızca Drive senkronu ve yapay zekâ internet ister.</p>
+<p><strong>Bir dalın rengini nasıl değiştiririm?</strong> Projeler ekranında notun üç nokta menüsüne dokun → <strong>Dal rengi</strong> bölümünden bir renk seç.</p>
+</div>
+</body>
+</html>

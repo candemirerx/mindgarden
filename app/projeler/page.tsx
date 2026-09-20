@@ -7,7 +7,7 @@ import {
     Plus, Trash2, Pencil, Layout, Search,
     MoreHorizontal, X, TreePine, FileText, Copy, Check, Leaf, ArrowLeft,
     Sprout, ChevronRight, ChevronsUpDown, Columns, LayoutGrid, ExternalLink,
-    Calendar, Hash, AlignLeft, Sparkles, BookOpen
+    Calendar, Hash, AlignLeft, Sparkles, BookOpen, RotateCcw
 } from 'lucide-react';
 
 import PromptModal from '@/components/ui/PromptModal';
@@ -21,6 +21,7 @@ interface TreeItem {
     children: TreeItem[];
     isExpanded: boolean;
     nodeType: 'branch' | 'leaf' | 'auto';
+    color: string | null;
 }
 
 /**
@@ -28,12 +29,22 @@ interface TreeItem {
  */
 const LEVEL_COLORS = ['#306C47', '#C9841B', '#4A7C8C', '#8A6A9E', '#B5626F'];
 
+/** Kullanıcının dal için seçebileceği renkler. */
+const BRANCH_COLORS: Array<{ name: string; value: string }> = [
+    { name: 'Yosun yeşili', value: '#306C47' },
+    { name: 'Bal köşe', value: '#C9841B' },
+    { name: 'Deniz mavisi', value: '#4A7C8C' },
+    { name: 'Lavanta', value: '#8A6A9E' },
+    { name: 'Gül kurusu', value: '#B5626F' },
+    { name: 'Kahve', value: '#875948' }
+];
+
 function ProjectsPageInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, addNode, updateNode, deleteNode, toggleNodeExpansion } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, addNode, updateNode, deleteNode, toggleNodeExpansion, setNodeColor } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [trees, setTrees] = useState<TreeItem[]>([]);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -55,9 +66,9 @@ function ProjectsPageInner() {
     const buildTrees = useCallback((nodeList: typeof nodes): TreeItem[] => {
         const rootNodes = nodeList.filter(n => !n.parent_id);
 
-        const buildTree = (nodeId: string): TreeItem => {
+            const buildTree = (nodeId: string): TreeItem => {
             const node = nodeList.find(n => n.id === nodeId);
-            if (!node) return { id: nodeId, title: 'Hata', content: '', children: [], isExpanded: true, nodeType: 'auto' };
+            if (!node) return { id: nodeId, title: 'Hata', content: '', children: [], isExpanded: true, nodeType: 'auto', color: null };
 
             const children = nodeList
                 .filter(n => n.parent_id === nodeId)
@@ -69,7 +80,8 @@ function ProjectsPageInner() {
                 content: node.content,
                 children,
                 isExpanded: node.is_expanded ?? true,
-                nodeType: node.node_type ?? 'auto'
+                nodeType: node.node_type ?? 'auto',
+                color: node.color ?? null
             };
         };
 
@@ -207,6 +219,12 @@ function ProjectsPageInner() {
         router.push(`/editor?id=${gardenId}&nodeId=${nodeId}`);
     };
 
+    /** Dal rengini uygular; null verilirse seviye rengine döner. */
+    const handleSetColor = async (nodeId: string, color: string | null) => {
+        setActiveMenu(null);
+        await setNodeColor(nodeId, color);
+    };
+
     const handleSaveTitle = async (nodeId: string, originalContent: string) => {
         if (editingTitle.trim()) {
             const lines = originalContent.split('\n');
@@ -232,7 +250,14 @@ function ProjectsPageInner() {
     const getNodeIcon = (item: TreeItem, isRoot: boolean, isExpanded: boolean) => {
         if (isRoot) {
             return (
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-moss-600 to-moss-800 text-moss-50 shadow-soft ring-1 ring-moss-900/20">
+                <span
+                    className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-soft ring-1 ${
+                        item.color
+                            ? 'text-white ring-black/10'
+                            : 'bg-gradient-to-br from-moss-600 to-moss-800 text-moss-50 ring-moss-900/20'
+                    }`}
+                    style={item.color ? { backgroundColor: item.color } : undefined}
+                >
                     <TreePine size={18} />
                 </span>
             );
@@ -242,10 +267,13 @@ function ProjectsPageInner() {
             return (
                 <span
                     className={`flex h-7 w-7 items-center justify-center rounded-lg ring-1 transition-colors duration-200 ${
-                        isExpanded
-                            ? 'bg-clay-500 text-white ring-clay-600/30'
-                            : 'bg-clay-100 text-clay-700 ring-clay-300'
+                        item.color
+                            ? 'text-white ring-black/10'
+                            : isExpanded
+                                ? 'bg-clay-500 text-white ring-clay-600/30'
+                                : 'bg-clay-100 text-clay-700 ring-clay-300'
                     }`}
+                    style={item.color ? { backgroundColor: item.color } : undefined}
                 >
                     <Sprout size={15} />
                 </span>
@@ -253,7 +281,12 @@ function ProjectsPageInner() {
         }
 
         return (
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-moss-100 text-moss-700 ring-1 ring-moss-300">
+            <span
+                className={`flex h-7 w-7 items-center justify-center rounded-lg ring-1 ${
+                    item.color ? 'text-white ring-black/10' : 'bg-moss-100 text-moss-700 ring-moss-300'
+                }`}
+                style={item.color ? { backgroundColor: item.color } : undefined}
+            >
                 <Leaf size={14} />
             </span>
         );
@@ -293,7 +326,7 @@ function ProjectsPageInner() {
         const isExpanded = searchQuery ? true : expandedNodes.has(item.id);
         const isRoot = depth === 0;
         const isSelected = selectedNodeId === item.id;
-        const levelColor = getDepthColor(depth - 1);
+        const levelColor = item.color || getDepthColor(depth - 1);
 
         return (
             <div key={item.id} className="w-full">
@@ -581,6 +614,48 @@ function ProjectsPageInner() {
                 )}
             </button>
             <div className="my-1 h-px bg-sand-200" />
+
+            {/* Dal rengi seçimi */}
+            <div className="px-3.5 py-2.5">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-sand-500">
+                    Dal rengi
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                    {BRANCH_COLORS.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => handleSetColor(item.id, option.value)}
+                            title={option.name}
+                            aria-label={`${option.name} rengini uygula`}
+                            aria-current={item.color === option.value}
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg ring-2 transition-transform ${
+                                item.color === option.value
+                                    ? 'ring-sand-800'
+                                    : 'ring-transparent hover:scale-110'
+                            }`}
+                            style={{ backgroundColor: option.value }}
+                        >
+                            {item.color === option.value && <Check size={14} className="text-white" />}
+                        </button>
+                    ))}
+
+                    <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleSetColor(item.id, null)}
+                        aria-label="Dal rengini varsayılana döndür"
+                        className="flex h-8 items-center gap-1.5 rounded-lg border border-sand-300 px-2.5 text-[11px] font-medium text-sand-600 transition-colors hover:bg-sand-100"
+                    >
+                        <RotateCcw size={12} />
+                        Varsayılan
+                    </button>
+                </div>
+            </div>
+
+            <div className="my-1 h-px bg-sand-200" />
+
             <button
                 type="button"
                 role="menuitem"

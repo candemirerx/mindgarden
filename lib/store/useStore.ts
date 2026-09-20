@@ -304,4 +304,26 @@ export const useStore = create<StoreState>((set, get) => ({
             console.error('Node tipi güncellenirken hata:', error);
         }
     },
+
+    /**
+     * Dalın rengini kaydeder. Yerel durum önce güncellenir; böylece renk
+     * seçimi her modda anında görünür, kalıcılık hatası kullanıcıyı kesmez.
+     */
+    setNodeColor: async (id: string, color: string | null) => {
+        try {
+            const updatedAt = new Date().toISOString();
+            set((state) => ({
+                nodes: state.nodes.map((node) =>
+                    node.id === id ? { ...node, color, updated_at: updatedAt } : node
+                ),
+            }));
+            const { error } = await supabase
+                .from('nodes')
+                .update({ color, updated_at: updatedAt })
+                .eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Dal rengi güncellenirken hata:', error);
+        }
+    },
 }));

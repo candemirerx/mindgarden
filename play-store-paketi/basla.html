@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Not Bahçesi — Play Store Paketi</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px 16px 64px;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #2C251D;
+  background: #F6F3EE;
+  -webkit-text-size-adjust: 100%;
+}
+.icerik { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 26px; line-height: 1.25; margin: 8px 0 20px; color: #1B3A28; }
+h2 {
+  font-size: 21px; margin: 34px 0 12px; color: #275939;
+  border-bottom: 2px solid #DEEDDA; padding-bottom: 6px;
+}
+h3 { font-size: 18px; margin: 26px 0 10px; color: #306C47; }
+h4 { font-size: 17px; margin: 20px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: #275939; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 7px; }
+hr { border: 0; border-top: 1px solid #DAD3C9; margin: 30px 0; }
+code {
+  background: #EAE5DE; padding: 2px 6px; border-radius: 5px;
+  font-family: Consolas, Menlo, monospace; font-size: 15px;
+}
+pre {
+  background: #2C251D; color: #F6F3EE; padding: 14px 16px; border-radius: 12px;
+  overflow-x: auto; font-size: 14px; line-height: 1.5;
+}
+pre code { background: none; color: inherit; padding: 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px;
+  background: #FDF8E9; border-left: 4px solid #E0A632; border-radius: 0 10px 10px 0;
+}
+blockquote p { margin: 0; }
+.tablo-sarmal { overflow-x: auto; margin: 0 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid #DAD3C9; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #DEEDDA; color: #1B3A28; }
+strong { color: #1B3A28; }
+.geri {
+  display: inline-block; margin-bottom: 18px; font-size: 15px;
+  text-decoration: none; color: #275939; font-weight: 600;
+}
+.kart {
+  display: block; padding: 16px 18px; margin-bottom: 12px;
+  background: #fff; border: 1px solid #DAD3C9; border-radius: 14px;
+  text-decoration: none; color: inherit;
+}
+.kart strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.kart span { font-size: 14px; color: #5B5348; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1E1813; color: #EAE5DE; }
+  h1 { color: #DEEDDA; }
+  h2 { color: #BBDCC1; border-bottom-color: #275939; }
+  h3 { color: #91C39D; }
+  strong { color: #F0F7EF; }
+  a, .geri { color: #91C39D; }
+  code { background: #2C251D; color: #DEEDDA; }
+  .kart { background: #2C251D; border-color: #463F36; }
+  .kart span { color: #ADA396; }
+  th { background: #275939; color: #F0F7EF; }
+  th, td { border-color: #463F36; }
+  blockquote { background: #361C09; border-left-color: #C9841B; }
+  hr { border-top-color: #463F36; }
+}
+</style>
+</head>
+<body>
+<div class="icerik">
+<h1>Not Bahçesi — Play Store Paketi</h1>
+<p>Sürüm <strong>1.7.0</strong> · Paket adı <strong>com.notbahcesi.app</strong></p>
+<p>Aşağıdaki belgelerden başla. Yükleme rehberi sırayla ilerlemen için yazıldı.</p>
+<a class="kart" href="belgeler/01-yukleme-rehberi.html">
+<strong>Not Bahçesi — Play Store Yükleme Rehberi</strong>
+<span>Play Console'da sırayla yapılacaklar</span>
+</a>
+<a class="kart" href="belgeler/02-kullanim-kilavuzu.html">
+<strong>Not Bahçesi — Kullanma Kılavuzu</strong>
+<span>Uygulamayı nasıl kullanacağın</span>
+</a>
+<a class="kart" href="belgeler/03-magaza-metinleri.html">
+<strong>Mağaza Metinleri</strong>
+<span>Mağazaya kopyalanacak açıklama metinleri</span>
+</a>
+<a class="kart" href="belgeler/04-veri-guvenligi.html">
+<strong>Veri Güvenliği Formu Cevapları</strong>
+<span>Veri güvenliği formu cevapları</span>
+</a>
+<a class="kart" href="belgeler/05-yeni-surum.html">
+<strong>Yeni Sürüm Çıkarma</strong>
+<span>Yeni sürüm çıkarırken yapılacaklar</span>
+</a>
+<h2>Klasörde neler var</h2>
+<ul>
+<li><strong>uygulama/not-bahcesi-1.7.0.aab</strong> — Play Console'a yüklenecek dosya</li>
+<li><strong>gorseller/</strong> — mağaza ikonu, öne çıkan görsel ve ekran görüntüleri</li>
+<li><strong>belgeler/</strong> — yukarıdaki kılavuzlar (Markdown ve HTML sürümleri)</li>
+</ul>
+<blockquote>Paket adı ilk yüklemede kilitlenir ve sonradan değiştirilemez. Her yeni
+yüklemede sürüm kodunu artırmayı unutma; ayrıntısı "Yeni Sürüm Çıkarma" belgesinde.</blockquote>
+</div>
+</body>
+</html>

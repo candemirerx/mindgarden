@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Not Bahçesi — Play Store Yükleme Rehberi</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px 16px 64px;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #2C251D;
+  background: #F6F3EE;
+  -webkit-text-size-adjust: 100%;
+}
+.icerik { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 26px; line-height: 1.25; margin: 8px 0 20px; color: #1B3A28; }
+h2 {
+  font-size: 21px; margin: 34px 0 12px; color: #275939;
+  border-bottom: 2px solid #DEEDDA; padding-bottom: 6px;
+}
+h3 { font-size: 18px; margin: 26px 0 10px; color: #306C47; }
+h4 { font-size: 17px; margin: 20px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: #275939; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 7px; }
+hr { border: 0; border-top: 1px solid #DAD3C9; margin: 30px 0; }
+code {
+  background: #EAE5DE; padding: 2px 6px; border-radius: 5px;
+  font-family: Consolas, Menlo, monospace; font-size: 15px;
+}
+pre {
+  background: #2C251D; color: #F6F3EE; padding: 14px 16px; border-radius: 12px;
+  overflow-x: auto; font-size: 14px; line-height: 1.5;
+}
+pre code { background: none; color: inherit; padding: 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px;
+  background: #FDF8E9; border-left: 4px solid #E0A632; border-radius: 0 10px 10px 0;
+}
+blockquote p { margin: 0; }
+.tablo-sarmal { overflow-x: auto; margin: 0 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid #DAD3C9; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #DEEDDA; color: #1B3A28; }
+strong { color: #1B3A28; }
+.geri {
+  display: inline-block; margin-bottom: 18px; font-size: 15px;
+  text-decoration: none; color: #275939; font-weight: 600;
+}
+.kart {
+  display: block; padding: 16px 18px; margin-bottom: 12px;
+  background: #fff; border: 1px solid #DAD3C9; border-radius: 14px;
+  text-decoration: none; color: inherit;
+}
+.kart strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.kart span { font-size: 14px; color: #5B5348; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1E1813; color: #EAE5DE; }
+  h1 { color: #DEEDDA; }
+  h2 { color: #BBDCC1; border-bottom-color: #275939; }
+  h3 { color: #91C39D; }
+  strong { color: #F0F7EF; }
+  a, .geri { color: #91C39D; }
+  code { background: #2C251D; color: #DEEDDA; }
+  .kart { background: #2C251D; border-color: #463F36; }
+  .kart span { color: #ADA396; }
+  th { background: #275939; color: #F0F7EF; }
+  th, td { border-color: #463F36; }
+  blockquote { background: #361C09; border-left-color: #C9841B; }
+  hr { border-top-color: #463F36; }
+}
+</style>
+</head>
+<body>
+<div class="icerik">
+<a class="geri" href="../basla.html">← Başlangıç sayfası</a>
+<h1>Not Bahçesi — Play Store Yükleme Rehberi</h1>
+<p>Bu rehber, uygulamayı Google Play Store'da yayınlayana kadar sırayla yapılacakları anlatır. Her adımı sırasıyla tamamla; bir adım kilitliyse Play Console hangi adımın eksik olduğunu söyler.</p>
+<hr />
+<h2>Hazır olanlar</h2>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Gereken</th><th>Durum</th></tr></thead>
+<tbody><tr><td>Yayın paketi (AAB)</td><td>Hazır — <code>uygulama/not-bahcesi-1.7.0.aab</code></td></tr><tr><td>Uygulama ikonu 512×512</td><td>Hazır — <code>gorseller/uygulama-ikonu-512.png</code></td></tr><tr><td>Öne çıkan görsel 1024×500</td><td>Hazır — <code>gorseller/one-cikan-gorsel-1024x500.png</code></td></tr><tr><td>Telefon ekran görüntüleri (3 adet)</td><td>Hazır — <code>gorseller/ekran-*.png</code></td></tr><tr><td>Gizlilik politikası adresi</td><td>Yayında — https://mindgarden-neon.vercel.app/gizlilik</td></tr><tr><td>Mağaza açıklama metinleri</td><td>Hazır — <code>belgeler/03-magaza-metinleri.md</code></td></tr><tr><td>Veri güvenliği cevapları</td><td>Hazır — <code>belgeler/04-veri-guvenligi.md</code></td></tr></tbody>
+</table></div>
+<p><strong>Sürüm bilgisi:</strong> paket adı <code>com.notbahcesi.app</code>, sürüm kodu <code>8</code>, sürüm adı <code>1.7.0</code>.</p>
+<hr />
+<h2>1. Geliştirici hesabı</h2>
+<p>Play Console'a gir: https://play.google.com/console</p>
+<p>Hesabın yoksa oluştur. <strong>Kişisel</strong> hesap seçersen tek seferlik 25 dolar ücret alınır ve üretime geçmeden önce 12 test kullanıcısıyla 14 gün kapalı test şartı vardır. <strong>Kurumsal</strong> hesapta bu şart yoktur ama vergi/şirket bilgisi ister.</p>
+<hr />
+<h2>2. Uygulamayı oluştur</h2>
+<ol><li><strong>Tüm uygulamalar → Uygulama oluştur</strong></li><li><strong>Uygulama adı:</strong> <code>Not Bahçesi</code></li><li><strong>Varsayılan dil:</strong> Türkçe (tr-TR)</li><li><strong>Uygulama veya oyun:</strong> Uygulama</li><li><strong>Ücretsiz / Ücretli:</strong> Ücretsiz</li><li>Beyan kutularını işaretle → <strong>Uygulama oluştur</strong></li></ol>
+<blockquote>Paket adı sonradan değiştirilemez. İlk AAB yüklendiğinde <code>com.notbahcesi.app</code> olarak kilitlenir.</blockquote>
+<hr />
+<h2>3. Mağaza girişi (Store listing)</h2>
+<p>Sol menüden <strong>Büyüme → Mağaza girişi → Varsayılan mağaza girişi</strong>.</p>
+<p>Metinleri <code>belgeler/03-magaza-metinleri.md</code> dosyasından kopyala:</p>
+<ul><li><strong>Uygulama adı:</strong> Not Bahçesi (30 karakter sınırı)</li><li><strong>Kısa açıklama:</strong> 80 karakter sınırı</li><li><strong>Tam açıklama:</strong> 4000 karakter sınırı</li></ul>
+<p>Görselleri <code>gorseller/</code> klasöründen yükle:</p>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Alan</th><th>Dosya</th><th>Zorunlu mu</th></tr></thead>
+<tbody><tr><td>Uygulama ikonu</td><td><code>uygulama-ikonu-512.png</code></td><td>Evet</td></tr><tr><td>Öne çıkan görsel</td><td><code>one-cikan-gorsel-1024x500.png</code></td><td>Evet</td></tr><tr><td>Telefon ekran görüntüleri</td><td><code>ekran-1/2/3-*.png</code></td><td>En az 2 tane</td></tr></tbody>
+</table></div>
+<hr />
+<h2>4. Uygulama içeriği formları</h2>
+<p>Sol menüde <strong>Politikalar → Uygulama içeriği</strong>. Sırayla doldur:</p>
+<h3>4.1 Gizlilik politikası</h3>
+<p><code>https://mindgarden-neon.vercel.app/gizlilik</code></p>
+<h3>4.2 Uygulama erişimi</h3>
+<p><strong>"Tüm işlevler kısıtlı olmadan kullanılabiliyor"</strong> seçeneğini işaretle ve açıklamaya şunu yaz:</p>
+<blockquote>Uygulama şifresiz kullanılabilir. Ana ekranda sol üstteki ağaç simgesine dokunup "Giriş Yap" ekranındaki "Yerel Modda Gir" düğmesine basmak yeterlidir; e-posta veya şifre gerekmez. İnceleme için herhangi bir hesap bilgisi gerekmiyor.</blockquote>
+<h3>4.3 Reklamlar</h3>
+<p><strong>"Uygulamamda reklam yok"</strong> seçeneğini işaretle.</p>
+<h3>4.4 İçerik derecelendirmesi</h3>
+<p>Anketi doldur. Soruların tamamına <strong>"Hayır"</strong> cevabı uygundur (şiddet, cinsellik, kumar, uyuşturucu, korku öğesi yok). Kategori: <strong>Herkes / 3+</strong>.</p>
+<h3>4.5 Hedef kitle</h3>
+<p><strong>Yaş aralığı:</strong> 18 ve üzeri. (Çocuklara yönelik değil.) <strong>Çocuklara hitap ediyor mu:</strong> Hayır.</p>
+<h3>4.6 Veri güvenliği</h3>
+<p><code>belgeler/04-veri-guvenligi.md</code> dosyasındaki cevapları birebir gir. Bu bölüm en çok reddedilen yerdir; dosyadaki tabloyu takip et.</p>
+<h3>4.7 Haberler / devlet uygulaması / finans</h3>
+<p>Hepsi <strong>Hayır</strong>.</p>
+<h3>4.8 Veri silme talebi</h3>
+<p><strong>"Uygulama verilerinin silinmesini sağlayın"</strong> seçeneğini işaretle. Kullanıcı verisini cihazdan silebilir: Ayarlar → Veri Yönetimi. Ayrıca uygulamayı kaldırmak cihazdaki tüm veriyi siler.</p>
+<hr />
+<h2>5. AAB'yi yükle (kapalı test)</h2>
+<ol><li>Sol menüden <strong>Test etme → Kapalı test → Yeni sürüm oluştur</strong></li><li>"Play App Signing" şartlarını kabul et</li><li><code>uygulama/not-bahcesi-1.7.0.aab</code> dosyasını yükle</li><li>Sürüm notlarına şunu yaz:</li></ol>
+<blockquote>İlk sürüm. Ağaç yapılı notlar, Google Drive yedekleme ve yapay zekâ makroları.</blockquote>
+<ol><li><strong>Kaydet → Sürümü incele → Kapalı teste gönder</strong></li></ol>
+<hr />
+<h2>6. Play App Signing SHA-1 (kritik)</h2>
+<p>Google, uygulamayı kendi anahtarıyla yeniden imzalar. Google ile girişin çalışması için bu anahtarın parmak izini Google Cloud'daki Android istemcisine eklemek zorundasın.</p>
+<ol><li>Play Console → <strong>Sürüm → Kurulum → Uygulama imzalama</strong></li><li><strong>Uygulama imzalama anahtarı sertifikası</strong> altındaki <strong>SHA-1</strong> değerini kopyala</li><li>https://console.cloud.google.com/apis/credentials adresine git</li><li>Android türündeki OAuth istemcini aç (yoksa <strong>Kimlik bilgisi oluştur → OAuth istemci kimliği → Android</strong>)</li><li><strong>Paket adı:</strong> <code>com.notbahcesi.app</code></li><li><strong>SHA-1:</strong> kopyaladığın değeri yapıştır → <strong>Kaydet</strong></li></ol>
+<blockquote>Bu adımı atlarsan uygulama Play Store'dan kurulduğunda "Google ile giriş başarısız" hatası alırsın.</blockquote>
+<hr />
+<h2>7. Test kullanıcılarını ekle</h2>
+<p><strong>Kapalı test → Test kullanıcıları</strong> bölümüne en az 12 kişinin Google e-posta adresini ekle. Onlara katılım bağlantısını gönder. Kişisel geliştirici hesabında 14 gün boyunca testçilerin uygulamayı kullanması gerekir; sonra üretime geçebilirsin.</p>
+<hr />
+<h2>8. Üretime geçiş</h2>
+<p>14 gün dolduktan sonra:</p>
+<ol><li><strong>Üretim → Yeni sürüm oluştur</strong></li><li>Aynı AAB'yi yükle (veya yeni sürüm koduyla yeni bir tane üret)</li><li>Ülkeleri seç (Türkiye ve istersen tüm ülkeler)</li><li><strong>Sürümü incele → Üretime gönder</strong></li></ol>
+<p>İnceleme genellikle 1–7 gün sürer.</p>
+<hr />
+<h2>Yeni sürüm çıkarmak istersen</h2>
+<p>Her yeni yüklemede <strong>sürüm kodu artmak zorundadır</strong>. Proje klasöründe:</p>
+<p><code>android/app/build.gradle</code> dosyasını aç, şu iki satırı güncelle:</p>
+<pre><code>versionCode 9        ← her yüklemede 1 artır
+versionName "1.8.0"  ← kullanıcıya görünen sürüm</code></pre>
+<p>Sonra paketi yeniden üret:</p>
+<pre><code>npm run build:android
+cd android
+gradlew.bat bundleRelease</code></pre>
+<p>Yeni AAB: <code>android/app/build/outputs/bundle/release/app-release.aab</code></p>
+<hr />
+<h2>Sık karşılaşılan ret sebepleri</h2>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Ret mesajı</th><th>Çözüm</th></tr></thead>
+<tbody><tr><td>"Veri güvenliği formu eksik/uyumsuz"</td><td><code>04-veri-guvenligi.md</code> dosyasındaki cevapları birebir gir</td></tr><tr><td>"Uygulama erişimi sağlanamadı"</td><td>4.2'deki açıklamayı yaz; yerel mod düğmesini tarif et</td></tr><tr><td>"Gizlilik politikası erişilemiyor"</td><td>Adresin tarayıcıda açıldığını kontrol et</td></tr><tr><td>"Hedef API seviyesi düşük"</td><td>Paket zaten API 35 hedefliyor, sorun olmamalı</td></tr><tr><td>"Minimum işlevsellik"</td><td>Ekran görüntüleri ve açıklama gerçek işlevi gösteriyor</td></tr></tbody>
+</table></div>
+</div>
+</body>
+</html>

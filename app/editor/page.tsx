@@ -399,21 +399,32 @@ function EditorPageInner() {
                     <span className="mr-1 flex-shrink-0 text-xs font-medium text-clay-600">AI</span>
 
                     {pendingSpellCheck ? (
-                        <div className="flex items-center gap-1">
-                            <span className="mr-2 text-xs text-sand-500">Onayla:</span>
+                        <div
+                            className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5"
+                            role="group"
+                            aria-label="Yapay zekâ sonucu"
+                        >
+                            <span
+                                role="status"
+                                className="flex-shrink-0 text-xs font-medium text-sand-600"
+                            >
+                                Sonuç hazır:
+                            </span>
                             <button
                                 onClick={handleAcceptSpellCheck}
-                                className="p-1.5 rounded-lg bg-moss-600 hover:bg-moss-700 text-white transition-all"
-                                title="Onayla"
+                                aria-label="Yapay zekâ sonucunu onayla ve nota uygula"
+                                className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-moss-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-moss-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-400 sm:flex-none"
                             >
-                                <Check size={16} />
+                                <Check size={18} />
+                                Onayla
                             </button>
                             <button
                                 onClick={handleRejectSpellCheck}
-                                className="p-1.5 rounded-lg bg-berry-500 hover:bg-berry-600 text-white transition-all"
-                                title="İptal"
+                                aria-label="Yapay zekâ sonucunu geri al ve notu eski haline döndür"
+                                className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-berry-300 bg-white px-4 text-sm font-semibold text-berry-700 transition-colors hover:bg-berry-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berry-300 sm:flex-none"
                             >
-                                <X size={16} />
+                                <X size={18} />
+                                Geri Al
                             </button>
                         </div>
                     ) : (

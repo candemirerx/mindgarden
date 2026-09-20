@@ -25,6 +25,8 @@ export interface TreeNode {
     deleted_at?: string | null;
     is_expanded?: boolean;
     node_type?: 'branch' | 'leaf' | 'auto';
+    /** Kullanıcının seçtiği dal rengi; boşsa seviyeye göre renk kullanılır. */
+    color?: string | null;
 }
 
 // Store State Tipi
@@ -53,6 +55,7 @@ export interface StoreState {
     updateGardenViewState: (id: string, viewState: { x: number; y: number; zoom: number }) => Promise<void>;
     toggleNodeExpansion: (id: string, isExpanded: boolean) => Promise<void>;
     toggleNodeType: (id: string, currentType: 'branch' | 'leaf' | 'auto') => Promise<void>;
+    setNodeColor: (id: string, color: string | null) => Promise<void>;
 }
 
 // Yeni MindMap yapısı için tipler

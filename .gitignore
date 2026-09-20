@@ -38,3 +38,6 @@ next-env.d.ts
 /.gradle-user/
 /.gradle_home/
 /android/wrapper/
+
+# Play Store paketindeki yayın paketi derleme çıktısıdır; kaynaktan üretilir.
+play-store-paketi/uygulama/*.aab

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mağaza Metinleri</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px 16px 64px;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #2C251D;
+  background: #F6F3EE;
+  -webkit-text-size-adjust: 100%;
+}
+.icerik { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 26px; line-height: 1.25; margin: 8px 0 20px; color: #1B3A28; }
+h2 {
+  font-size: 21px; margin: 34px 0 12px; color: #275939;
+  border-bottom: 2px solid #DEEDDA; padding-bottom: 6px;
+}
+h3 { font-size: 18px; margin: 26px 0 10px; color: #306C47; }
+h4 { font-size: 17px; margin: 20px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: #275939; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 7px; }
+hr { border: 0; border-top: 1px solid #DAD3C9; margin: 30px 0; }
+code {
+  background: #EAE5DE; padding: 2px 6px; border-radius: 5px;
+  font-family: Consolas, Menlo, monospace; font-size: 15px;
+}
+pre {
+  background: #2C251D; color: #F6F3EE; padding: 14px 16px; border-radius: 12px;
+  overflow-x: auto; font-size: 14px; line-height: 1.5;
+}
+pre code { background: none; color: inherit; padding: 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px;
+  background: #FDF8E9; border-left: 4px solid #E0A632; border-radius: 0 10px 10px 0;
+}
+blockquote p { margin: 0; }
+.tablo-sarmal { overflow-x: auto; margin: 0 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid #DAD3C9; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #DEEDDA; color: #1B3A28; }
+strong { color: #1B3A28; }
+.geri {
+  display: inline-block; margin-bottom: 18px; font-size: 15px;
+  text-decoration: none; color: #275939; font-weight: 600;
+}
+.kart {
+  display: block; padding: 16px 18px; margin-bottom: 12px;
+  background: #fff; border: 1px solid #DAD3C9; border-radius: 14px;
+  text-decoration: none; color: inherit;
+}
+.kart strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.kart span { font-size: 14px; color: #5B5348; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1E1813; color: #EAE5DE; }
+  h1 { color: #DEEDDA; }
+  h2 { color: #BBDCC1; border-bottom-color: #275939; }
+  h3 { color: #91C39D; }
+  strong { color: #F0F7EF; }
+  a, .geri { color: #91C39D; }
+  code { background: #2C251D; color: #DEEDDA; }
+  .kart { background: #2C251D; border-color: #463F36; }
+  .kart span { color: #ADA396; }
+  th { background: #275939; color: #F0F7EF; }
+  th, td { border-color: #463F36; }
+  blockquote { background: #361C09; border-left-color: #C9841B; }
+  hr { border-top-color: #463F36; }
+}
+</style>
+</head>
+<body>
+<div class="icerik">
+<a class="geri" href="../basla.html">← Başlangıç sayfası</a>
+<h1>Mağaza Metinleri</h1>
+<p>Play Console'a kopyala-yapıştır yapılacak metinler.</p>
+<hr />
+<h2>Uygulama adı (30 karakter sınırı)</h2>
+<pre><code>Not Bahçesi</code></pre>
+<hr />
+<h2>Kısa açıklama (80 karakter sınırı)</h2>
+<pre><code>Notlarını ağaç gibi büyüt: dallara ayır, renklendir, Drive'a yedekle.</code></pre>
+<p>Karakter sayısı: 68</p>
+<hr />
+<h2>Tam açıklama (4000 karakter sınırı)</h2>
+<pre><code>Not Bahçesi, notlarını düz bir liste yerine ağaç gibi büyütmenizi sağlar. Her bahçe bir konu, her not bir ağaç, her alt not bir dal ya da yaprak.
+
+FİKİRLERİNİZİ TOPRAĞA EKİN
+
+• Bahçe oluşturun: kitap notları, proje fikirleri, günlük, ders notları
+• Her bahçenin içine sınırsız sayıda ağaç (ana not) ekleyin
+• Notları dallara ve yapraklara bölerek konuyu istediğiniz derinlikte açın
+• Aynı içeriğe iki görünüm: Canvas'ta görsel ağaç, Projeler'de düzenli liste
+
+GÖRSEL AĞAÇ GÖRÜNÜMÜ
+
+Canvas ekranında notlarınızı bir ağaç olarak görürsünüz. Bir düğüme dokunduğunuzda eylem menüsü açılır; başka bir düğüme geçtiğinizde önceki kapanır. İki parmakla büyütüp küçültebilir, sürükleyerek gezinebilirsiniz.
+
+RENKLERLE DÜZEN
+
+Her dala kendi rengini verebilirsiniz: yosun yeşili, bal köşe, deniz mavisi, lavanta, gül kurusu ve kahve. Renkler hem listede hem ağaç görünümünde görünür; böylece farklı konuları bir bakışta ayırt edersiniz.
+
+YAPAY ZEKÂ MAKROLARI
+
+Metin editöründe hazır makro kutuları vardır: İmla Düzelt, Özetle, Resmileştir, Sadeleştir, Genişlet, İngilizceye Çevir. Bir kutuya dokunduğunuzda notunuz kendi yapay zekâ sağlayıcınıza gönderilir ve dönen cevap nota yazılır. Sonucu Onayla ile kabul eder, Geri Al ile eski hâline döndürürsünüz.
+
+• Kendi API anahtarınızı kullanırsınız; anahtar yalnızca cihazınızda saklanır
+• Google Gemini, OpenAI, Anthropic veya OpenAI uyumlu herhangi bir sağlayıcı
+• Kendi makrolarınızı yazabilirsiniz: "Bu notu toplantı tutanağına çevir" gibi
+• Kullanmadığınız makroları kapatabilirsiniz; editörde yer kaplamazlar
+
+CİHAZLAR ARASI OTOMATİK YEDEK
+
+Google hesabınızla giriş yaptığınızda notlarınız Google Drive'ın uygulamaya özel gizli klasörüne otomatik yedeklenir ve cihazlarınız arasında birleştirilir. Telefonda yazdığınız not bilgisayarınızda, bilgisayarda yazdığınız not telefonda görünür. Çakışma olduğunda en son değiştirilen sürüm geçerli olur.
+
+ÇEVRİMDIŞI ÇALIŞIR
+
+Notlarınız önce cihazınıza kaydedilir. İnternet olmadığında da yazmaya devam edersiniz; bağlantı gelince yedekleme kendiliğinden yapılır.
+
+VERİLERİNİZ SİZDE KALIR
+
+• Yapay zekâ anahtarınız cihazdan dışarı çıkmaz
+• Reklam yok, izleme yok, üçüncü taraf analitik yok
+• Dilediğiniz zaman Veri Yönetimi'nden tüm notlarınızı JSON, HTML, PDF veya Word olarak dışa aktarabilirsiniz
+• Uygulamayı kaldırdığınızda cihazdaki veriler silinir
+
+KİMLER İÇİN
+
+• Kitap okurken altını çizdiği satırları biriktirenler
+• Ders çalışırken konuları hiyerarşiye dökenler
+• Proje fikirlerini dallandırarak geliştirenler
+• Günlük tutup zaman içinde geri dönüp okuyanlar
+
+Not Bahçesi reklamsız ve ücretsizdir. Yapay zekâ özelliği için kendi sağlayıcınızın
+anahtarını girmeniz gerekir; bu özellik isteğe bağlıdır ve uygulamanın geri kalanı
+anahtar olmadan da tam çalışır.</code></pre>
+<hr />
+<h2>Sürüm notları (ilk sürüm)</h2>
+<pre><code>İlk sürüm.
+
+• Ağaç yapılı not tutma ve görsel Canvas görünümü
+• Dallara renk verme
+• Google Drive ile otomatik yedekleme ve cihazlar arası birleştirme
+• Metin editöründe yapay zekâ makroları
+• Çevrimdışı çalışma</code></pre>
+<hr />
+<h2>Kategoriler ve etiketler</h2>
+<ul><li><strong>Uygulama kategorisi:</strong> Verimlilik (Productivity)</li><li><strong>Etiketler:</strong> Not alma, Verimlilik, Üretkenlik</li><li><strong>İletişim e-postası:</strong> (Play Console hesabındaki adres)</li><li><strong>Web sitesi:</strong> https://mindgarden-neon.vercel.app</li><li><strong>Gizlilik politikası:</strong> https://mindgarden-neon.vercel.app/gizlilik</li></ul>
+</div>
+</body>
+</html>

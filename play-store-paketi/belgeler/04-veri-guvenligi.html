@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veri Güvenliği Formu Cevapları</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px 16px 64px;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #2C251D;
+  background: #F6F3EE;
+  -webkit-text-size-adjust: 100%;
+}
+.icerik { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 26px; line-height: 1.25; margin: 8px 0 20px; color: #1B3A28; }
+h2 {
+  font-size: 21px; margin: 34px 0 12px; color: #275939;
+  border-bottom: 2px solid #DEEDDA; padding-bottom: 6px;
+}
+h3 { font-size: 18px; margin: 26px 0 10px; color: #306C47; }
+h4 { font-size: 17px; margin: 20px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: #275939; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 7px; }
+hr { border: 0; border-top: 1px solid #DAD3C9; margin: 30px 0; }
+code {
+  background: #EAE5DE; padding: 2px 6px; border-radius: 5px;
+  font-family: Consolas, Menlo, monospace; font-size: 15px;
+}
+pre {
+  background: #2C251D; color: #F6F3EE; padding: 14px 16px; border-radius: 12px;
+  overflow-x: auto; font-size: 14px; line-height: 1.5;
+}
+pre code { background: none; color: inherit; padding: 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px;
+  background: #FDF8E9; border-left: 4px solid #E0A632; border-radius: 0 10px 10px 0;
+}
+blockquote p { margin: 0; }
+.tablo-sarmal { overflow-x: auto; margin: 0 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid #DAD3C9; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #DEEDDA; color: #1B3A28; }
+strong { color: #1B3A28; }
+.geri {
+  display: inline-block; margin-bottom: 18px; font-size: 15px;
+  text-decoration: none; color: #275939; font-weight: 600;
+}
+.kart {
+  display: block; padding: 16px 18px; margin-bottom: 12px;
+  background: #fff; border: 1px solid #DAD3C9; border-radius: 14px;
+  text-decoration: none; color: inherit;
+}
+.kart strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.kart span { font-size: 14px; color: #5B5348; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1E1813; color: #EAE5DE; }
+  h1 { color: #DEEDDA; }
+  h2 { color: #BBDCC1; border-bottom-color: #275939; }
+  h3 { color: #91C39D; }
+  strong { color: #F0F7EF; }
+  a, .geri { color: #91C39D; }
+  code { background: #2C251D; color: #DEEDDA; }
+  .kart { background: #2C251D; border-color: #463F36; }
+  .kart span { color: #ADA396; }
+  th { background: #275939; color: #F0F7EF; }
+  th, td { border-color: #463F36; }
+  blockquote { background: #361C09; border-left-color: #C9841B; }
+  hr { border-top-color: #463F36; }
+}
+</style>
+</head>
+<body>
+<div class="icerik">
+<a class="geri" href="../basla.html">← Başlangıç sayfası</a>
+<h1>Veri Güvenliği Formu Cevapları</h1>
+<p>Play Console → <strong>Politikalar → Uygulama içeriği → Veri güvenliği</strong>. Bu bölüm en çok reddedilen yerdir; aşağıdaki cevapları birebir gir.</p>
+<hr />
+<h2>Genel bakış</h2>
+<p>Uygulama <strong>hiçbir veriyi kendi sunucusuna kaydetmez</strong>. Notlar kullanıcının cihazında tutulur. Yapay zekâ özelliği kullanıldığında metin, kullanıcının kendi seçtiği sağlayıcıya gönderilir. Yedekleme kullanıcının kendi Google Drive hesabına yapılır.</p>
+<hr />
+<h2>1. Veri toplama ve paylaşma</h2>
+<p><strong>Soru:</strong> Uygulamanız gerekli kullanıcı verilerini topluyor veya paylaşıyor mu? <strong>Cevap:</strong> <strong>Evet</strong></p>
+<hr />
+<h2>2. Toplanan / paylaşılan veri türleri</h2>
+<p>Aşağıdaki tabloyu birebir gir. "Toplanıyor" = uygulamadan dışarı çıkıyor, "Paylaşılıyor" = üçüncü tarafla paylaşılıyor.</p>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Veri türü</th><th>Toplanıyor</th><th>Paylaşılıyor</th><th>Zorunlu mu</th><th>Amaç</th><th>Not</th></tr></thead>
+<tbody><tr><td><strong>Kişisel bilgiler → E-posta adresi</strong></td><td>Evet</td><td>Hayır</td><td>Hayır (isteğe bağlı)</td><td>Uygulama işlevselliği, Hesap yönetimi</td><td>Google ile giriş yapılırsa alınır</td></tr><tr><td><strong>Kişisel bilgiler → Ad</strong></td><td>Evet</td><td>Hayır</td><td>Hayır (isteğe bağlı)</td><td>Uygulama işlevselliği</td><td>Google profili ile gelir</td></tr><tr><td><strong>Uygulama etkinliği → Diğer kullanıcı içeriği</strong></td><td>Evet</td><td>Evet</td><td>Evet</td><td>Uygulama işlevselliği</td><td>Not metinleri; yapay zekâ kullanıldığında seçilen sağlayıcıya gönderilir</td></tr></tbody>
+</table></div>
+<p>Diğer tüm kategoriler (konum, kişiler, takvim, fotoğraf, dosyalar, sağlık, mesajlar, cihaz kimlikleri, ödeme bilgileri) için: <strong>Hayır</strong>.</p>
+<hr />
+<h2>3. Veri güvenliği ayrıntıları</h2>
+<p><strong>Soru:</strong> Veriler aktarım sırasında şifreleniyor mu? <strong>Cevap:</strong> <strong>Evet</strong> (HTTPS)</p>
+<p><strong>Soru:</strong> Kullanıcı verilerinin silinmesini talep edebiliyor mu? <strong>Cevap:</strong> <strong>Evet</strong></p>
+<p>Silme yolları:</p>
+<ul><li>Uygulama içinde <strong>Ayarlar → Veri Yönetimi</strong> ile kayıtlar silinebilir</li><li>Uygulamayı kaldırmak cihazdaki tüm verileri siler</li><li>Drive yedeği kullanıcının kendi Drive'ında olduğu için kullanıcı oradan da silebilir</li></ul>
+<hr />
+<h2>4. Yapay zekâ özelliği için ayrı beyan</h2>
+<p>Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:</p>
+<blockquote>Uygulamadaki yapay zekâ özelliği isteğe bağlıdır. Kullanıcı kendi API anahtarını girer ve bir makro çalıştırdığında seçili notun metni, kullanıcının kendi seçtiği yapay zekâ sağlayıcısına (Google, OpenAI, Anthropic veya kullanıcının belirttiği OpenAI uyumlu bir servis) gönderilir. Metin ve anahtar uygulamanın kendi sunucusunda saklanmaz; yalnızca isteği iletmek için kullanılır. Kullanıcı bu özelliği hiç kullanmayabilir; uygulamanın diğer tüm işlevleri anahtar olmadan çalışır.</blockquote>
+<hr />
+<h2>5. Google Drive yedekleme için ayrı beyan</h2>
+<blockquote>Kullanıcı Google hesabıyla giriş yaptığında notları, kullanıcının kendi Google Drive hesabındaki uygulamaya özel gizli klasöre (appDataFolder) yedeklenir. Bu veri yalnızca kullanıcının kendi hesabında tutulur ve uygulama dışında kimseyle paylaşılmaz. Kullanıcı otomatik senkronu kapatabilir.</blockquote>
+<hr />
+<h2>6. Reklam ve analitik</h2>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Soru</th><th>Cevap</th></tr></thead>
+<tbody><tr><td>Uygulama reklam içeriyor mu?</td><td><strong>Hayır</strong></td></tr><tr><td>Üçüncü taraf analitik var mı?</td><td><strong>Hayır</strong></td></tr><tr><td>Veriler reklam için kullanılıyor mu?</td><td><strong>Hayır</strong></td></tr><tr><td>Veriler kredi/uygunluk için kullanılıyor mu?</td><td><strong>Hayır</strong></td></tr></tbody>
+</table></div>
+<hr />
+<h2>7. Güvenlik pratikleri</h2>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Soru</th><th>Cevap</th></tr></thead>
+<tbody><tr><td>Veriler aktarımda şifreleniyor mu?</td><td>Evet</td></tr><tr><td>Kullanıcı silme talebinde bulunabilir mi?</td><td>Evet</td></tr><tr><td>Bağımsız güvenlik incelemesinden geçti mi?</td><td>Hayır</td></tr><tr><td>Çocuklara yönelik mi?</td><td>Hayır</td></tr><tr><td>Play Aile politikalarına uygun mu?</td><td>Hayır (hedef kitle 18+)</td></tr></tbody>
+</table></div>
+<hr />
+<h2>Özet (formun sonunda sorulan özet ekranı için)</h2>
+<blockquote>Not Bahçesi notlarınızı cihazınızda saklar. Yalnızca siz istediğinizde, seçtiğiniz yapay zekâ sağlayıcısına metin gönderilir; yalnızca Google ile giriş yaptığınızda notlarınız kendi Drive hesabınıza yedeklenir. Reklam ve izleme yoktur.</blockquote>
+</div>
+</body>
+</html>
