@@ -39,6 +39,8 @@ function EditorPageInner() {
     const exportMenuRef = useRef<HTMLDivElement>(null);
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const loadingNodeKeyRef = useRef<string | null>(null);
+    /** İçeriği hangi not için yüklediğimizi tutar; kaydetme sonrası ezmeyi önler. */
+    const loadedContentNodeRef = useRef<string | null>(null);
 
     const currentNode = nodes.find(n => n.id === nodeId);
 
@@ -72,11 +74,20 @@ function EditorPageInner() {
     }, [gardenId, nodeId, currentNode, loadedNodeKey, fetchNodes]);
 
     useEffect(() => {
-        if (currentNode) {
-            const lines = currentNode.content.split('\n');
-            setTitle(lines[0] || '');
-            setContent(lines.slice(1).join('\n').trim());
-        }
+        if (!currentNode) return;
+
+        // İçerik yalnızca farklı bir nota geçildiğinde yüklenir. Bu kontrol
+        // olmadan otomatik kaydetme sonrası mağaza güncellendiğinde bu etki
+        // yeniden çalışıyor ve yazılmakta olan metni kaydedilmiş hâliyle
+        // eziyordu; kullanıcı boşluk yazdığında boşluğun kaybolmasının sebebi
+        // buydu.
+        if (loadedContentNodeRef.current === currentNode.id) return;
+        loadedContentNodeRef.current = currentNode.id;
+
+        const lines = currentNode.content.split('\n');
+        setTitle(lines[0] || '');
+        // Kırpma yapılmaz: kullanıcının bıraktığı boşluklar ve satır düzeni korunur.
+        setContent(lines.slice(1).join('\n'));
     }, [currentNode]);
 
     // Kaydetme fonksiyonu
