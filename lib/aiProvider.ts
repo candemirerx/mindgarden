@@ -120,6 +120,42 @@ export function saveProviderModel(provider: ProviderType, model: string): void {
     }
 }
 
+function modelListStorageKey(provider: ProviderType): string {
+    return `nb-ai-model-list-${provider}`;
+}
+
+/** Kayıtlı model adları; varsayılan model de listede yer alır. */
+export function readModelList(provider: ProviderType): string[] {
+    if (typeof window === 'undefined') return [];
+
+    const varsayilan = DEFAULT_MODELS[provider];
+    let kayitli: string[] = [];
+
+    try {
+        const raw = localStorage.getItem(modelListStorageKey(provider));
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(parsed)) {
+            kayitli = parsed.filter((x): x is string => typeof x === 'string' && !!x.trim());
+        }
+    } catch {
+        kayitli = [];
+    }
+
+    // Varsayılan model her zaman listede bulunsun ki tek tıkla geri dönülebilsin.
+    if (varsayilan && !kayitli.includes(varsayilan)) {
+        kayitli = [varsayilan, ...kayitli];
+    }
+
+    return kayitli;
+}
+
+export function saveModelList(provider: ProviderType, list: string[]): void {
+    if (typeof window === 'undefined') return;
+
+    const temiz = Array.from(new Set(list.map((x) => x.trim()).filter(Boolean)));
+    localStorage.setItem(modelListStorageKey(provider), JSON.stringify(temiz));
+}
+
 export function readCustomUrl(): string {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem(CUSTOM_URL_KEY) ?? '';

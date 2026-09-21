@@ -19,6 +19,8 @@ import {
     saveProviderKey,
     readRawProviderModel,
     saveProviderModel,
+    readModelList,
+    saveModelList,
     readCustomUrl,
     saveCustomUrl
 } from '@/lib/aiProvider';
@@ -44,6 +46,11 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     const [models, setModels] = useState<Record<ProviderType, string>>({
         gemini: '', openai: '', anthropic: '', custom: ''
     });
+    /** Sağlayıcı başına kayıtlı model adları. */
+    const [modelLists, setModelLists] = useState<Record<ProviderType, string[]>>({
+        gemini: [], openai: [], anthropic: [], custom: []
+    });
+    const [yeniModel, setYeniModel] = useState('');
     const [macroList, setMacroList] = useState<AiMacro[]>([]);
     const [macroDraft, setMacroDraft] = useState<AiMacro | null>(null);
     const [isSaved, setIsSaved] = useState(false);
@@ -124,6 +131,11 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
             }
             setKeys(nextKeys);
             setModels(nextModels);
+
+            const nextLists = { gemini: [], openai: [], anthropic: [], custom: [] } as Record<ProviderType, string[]>;
+            for (const id of PROVIDER_IDS) nextLists[id] = readModelList(id);
+            setModelLists(nextLists);
+            setYeniModel('');
             if (PROVIDER_IDS.some((id) => nextKeys[id])) setIsSaved(true);
 
             setCustomUrl(readCustomUrl());
@@ -144,7 +156,34 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
         }
         saveCustomUrl(customUrl);
         setCustomModel(models.custom);
+        for (const id of PROVIDER_IDS) saveModelList(id, modelLists[id]);
         setIsSaved(true);
+    };
+
+    /** Girişteki model adını listeye ekler ve etkin model yapar. */
+    const handleAddModel = () => {
+        const ad = yeniModel.trim();
+        if (!ad) return;
+
+        setModelLists(prev => ({
+            ...prev,
+            [provider]: Array.from(new Set([...prev[provider], ad]))
+        }));
+        setModels(prev => ({ ...prev, [provider]: ad }));
+        setYeniModel('');
+        setIsSaved(false);
+    };
+
+    /** Modeli listeden çıkarır; etkinse varsayılana döner. */
+    const handleRemoveModel = (ad: string) => {
+        setModelLists(prev => ({
+            ...prev,
+            [provider]: prev[provider].filter(x => x !== ad)
+        }));
+        if (models[provider] === ad) {
+            setModels(prev => ({ ...prev, [provider]: '' }));
+        }
+        setIsSaved(false);
     };
     
     const persistMacros = (next: AiMacro[]) => {
@@ -314,28 +353,83 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                             </div>
                                         )}
 
-                                        {/* Model adı: her sağlayıcıda elle değiştirilebilir */}
-                                        <div className="space-y-2">
+                                        {/* Model seçimi: kaydet, seç, sil */}
+                                        <div className="space-y-3 sm:col-span-2">
                                             <label className="text-sm font-medium text-sand-300">
                                                 Model adı / Model ID
                                             </label>
-                                            <input
-                                                type="text"
-                                                value={models[provider]}
-                                                onChange={e => {
-                                                    setModels(prev => ({ ...prev, [provider]: e.target.value }));
-                                                    setIsSaved(false);
-                                                }}
-                                                placeholder={DEFAULT_MODELS[provider] || 'Örn. gpt-4o-mini'}
-                                                autoCapitalize="none"
-                                                autoCorrect="off"
-                                                spellCheck={false}
-                                                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
-                                            />
+
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={yeniModel}
+                                                    onChange={e => setYeniModel(e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleAddModel();
+                                                        }
+                                                    }}
+                                                    placeholder={DEFAULT_MODELS[provider] || 'Örn. gpt-4o-mini'}
+                                                    autoCapitalize="none"
+                                                    autoCorrect="off"
+                                                    spellCheck={false}
+                                                    className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddModel}
+                                                    disabled={!yeniModel.trim()}
+                                                    className="flex flex-shrink-0 items-center gap-1.5 rounded-xl bg-moss-600 px-4 py-3 text-xs font-semibold text-white transition-colors hover:bg-moss-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <Plus size={14} /> Kaydet
+                                                </button>
+                                            </div>
+
+                                            {modelLists[provider].length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {modelLists[provider].map(ad => {
+                                                        const secili = models[provider] === ad ||
+                                                            (!models[provider] && ad === DEFAULT_MODELS[provider]);
+
+                                                        return (
+                                                            <span
+                                                                key={ad}
+                                                                className={`flex items-center gap-1 rounded-lg border pr-1 font-mono text-[11px] transition-colors ${
+                                                                    secili
+                                                                        ? 'border-moss-500 bg-moss-500/15 text-moss-200'
+                                                                        : 'border-white/10 bg-white/5 text-sand-300'
+                                                                }`}
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setModels(prev => ({ ...prev, [provider]: ad }));
+                                                                        setIsSaved(false);
+                                                                    }}
+                                                                    className="px-2.5 py-1.5"
+                                                                >
+                                                                    {ad}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveModel(ad)}
+                                                                    aria-label={`${ad} modelini listeden çıkar`}
+                                                                    className="rounded p-0.5 text-sand-500 transition-colors hover:bg-berry-500/20 hover:text-berry-300"
+                                                                >
+                                                                    <X size={12} />
+                                                                </button>
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
                                             <p className="text-[11px] leading-relaxed text-sand-500">
-                                                {MODEL_HINTS[provider]}
+                                                {MODEL_HINTS[provider]} Yazıp <span className="font-semibold text-sand-300">Kaydet</span>&apos;e
+                                                basın; ad listede kalır, dilediğinizde tek dokunuşla seçer veya silersiniz.
                                                 {DEFAULT_MODELS[provider] && (
-                                                    <> Boş bırakırsanız <span className="font-mono text-sand-400">{DEFAULT_MODELS[provider]}</span> kullanılır.</>
+                                                    <> Seçili model boşsa <span className="font-mono text-sand-400">{DEFAULT_MODELS[provider]}</span> kullanılır.</>
                                                 )}
                                             </p>
                                         </div>
