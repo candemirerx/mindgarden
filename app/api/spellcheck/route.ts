@@ -125,6 +125,16 @@ async function handleSpellcheckRequest(request: NextRequest) {
             macro
         } = await request.json();
 
+        // Kullanıcı hazır sağlayıcılarda da model adını elle girebilir;
+        // boş bırakılırsa sağlayıcının varsayılan modeli kullanılır.
+        const secilenModel = (varsayilan: string) =>
+            typeof customModel === 'string' && customModel.trim()
+                ? customModel.trim()
+                : varsayilan;
+
+        const geminiModel = secilenModel('gemini-2.5-flash');
+        const geminiFallback = 'gemini-2.0-flash';
+
         if (!text || text.trim().length === 0) {
             return NextResponse.json({ correctedText: text });
         }
@@ -164,7 +174,7 @@ ${text}`;
 
         if (provider === 'gemini') {
             const response = await fetchProvider(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -179,7 +189,7 @@ ${text}`;
             if (!response.ok) {
                 // gemini-2.5-flash fallback if 2.5 is not available yet (just in case)
                 const fallbackResponse = await fetchProvider(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/${geminiFallback}:generateContent?key=${apiKey}`,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -212,7 +222,7 @@ ${text}`;
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o-mini',
+                    model: secilenModel('gpt-4o-mini'),
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.1
                 })
@@ -230,7 +240,7 @@ ${text}`;
                     'anthropic-version': '2023-06-01'
                 },
                 body: JSON.stringify({
-                    model: 'claude-3-haiku-20240307',
+                    model: secilenModel('claude-3-haiku-20240307'),
                     max_tokens: 8192,
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.1
@@ -280,7 +290,7 @@ ${text}`;
             };
 
             const temelGovde = {
-                model: customModel.trim(),
+                model: secilenModel(''),
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.1,
                 // Görev metni baştan yazdırmak olduğu için çıktı sınırı girdiye

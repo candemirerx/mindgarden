@@ -7,6 +7,21 @@ import { useStore } from '@/lib/store/useStore';
 import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
 import { readAiMacros, saveAiMacros, createMacro, DEFAULT_MACROS, SPELLCHECK_MACRO_ID } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
+import {
+    PROVIDER_IDS,
+    PROVIDER_LABELS,
+    MODEL_HINTS,
+    KEY_HINTS,
+    DEFAULT_MODELS,
+    readActiveProvider,
+    saveActiveProvider,
+    readProviderKey,
+    saveProviderKey,
+    readRawProviderModel,
+    saveProviderModel,
+    readCustomUrl,
+    saveCustomUrl
+} from '@/lib/aiProvider';
 
 interface ModelSettingsModalProps {
     isOpen: boolean;
@@ -20,9 +35,15 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     
     // AI Ayarları
     const [provider, setProvider] = useState<ProviderType>('gemini');
-    const [apiKey, setApiKey] = useState('');
     const [customUrl, setCustomUrl] = useState('');
     const [customModel, setCustomModel] = useState('');
+    /** Sağlayıcı başına anahtar ve model; biri diğerini etkilemez. */
+    const [keys, setKeys] = useState<Record<ProviderType, string>>({
+        gemini: '', openai: '', anthropic: '', custom: ''
+    });
+    const [models, setModels] = useState<Record<ProviderType, string>>({
+        gemini: '', openai: '', anthropic: '', custom: ''
+    });
     const [macroList, setMacroList] = useState<AiMacro[]>([]);
     const [macroDraft, setMacroDraft] = useState<AiMacro | null>(null);
     const [isSaved, setIsSaved] = useState(false);
@@ -91,17 +112,22 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     useEffect(() => {
         if (isOpen) {
             // Yüklendiğinde mevcut ayarları al
-            const savedProvider = localStorage.getItem('nb-ai-provider') as ProviderType;
-            if (savedProvider) setProvider(savedProvider);
+            setProvider(readActiveProvider());
             
-            const savedKey = localStorage.getItem('nb-ai-key') || localStorage.getItem('nb-gemini-key');
-            if (savedKey) {
-                setApiKey(savedKey);
-                setIsSaved(true);
+            // Her sağlayıcının kendi anahtarı ve modeli yüklenir
+            const bosKayit = { gemini: '', openai: '', anthropic: '', custom: '' } as Record<ProviderType, string>;
+            const nextKeys = { ...bosKayit };
+            const nextModels = { ...bosKayit };
+            for (const id of PROVIDER_IDS) {
+                nextKeys[id] = readProviderKey(id);
+                nextModels[id] = readRawProviderModel(id);
             }
-            
-            setCustomUrl(localStorage.getItem('nb-ai-custom-url') || '');
-            setCustomModel(localStorage.getItem('nb-ai-custom-model') || '');
+            setKeys(nextKeys);
+            setModels(nextModels);
+            if (PROVIDER_IDS.some((id) => nextKeys[id])) setIsSaved(true);
+
+            setCustomUrl(readCustomUrl());
+            setCustomModel(nextModels.custom);
             setMacroList(readAiMacros());
             setMacroDraft(null);
             setAutoSync(isAutoSyncEnabled());
@@ -111,11 +137,13 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
 
     const handleSaveAi = (e: React.FormEvent) => {
         e.preventDefault();
-        localStorage.setItem('nb-ai-provider', provider);
-        localStorage.setItem('nb-ai-key', apiKey.trim());
-        localStorage.setItem('nb-gemini-key', apiKey.trim()); // Geriye dönük uyumluluk
-        localStorage.setItem('nb-ai-custom-url', customUrl.trim());
-        localStorage.setItem('nb-ai-custom-model', customModel.trim());
+        saveActiveProvider(provider);
+        for (const id of PROVIDER_IDS) {
+            saveProviderKey(id, keys[id]);
+            saveProviderModel(id, models[id]);
+        }
+        saveCustomUrl(customUrl);
+        setCustomModel(models.custom);
         setIsSaved(true);
     };
     
@@ -268,9 +296,9 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         </div>
                                     </div>
 
-                                    {provider === 'custom' ? (
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="space-y-2">
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {provider === 'custom' && (
+                                            <div className="space-y-2 sm:col-span-2">
                                                 <label className="text-sm font-medium text-sand-300">Base URL</label>
                                                 <input
                                                     type="url"
@@ -284,44 +312,56 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                                     `/v1` adresini veya doğrudan `/chat/completions` endpoint&apos;ini girebilirsiniz.
                                                 </p>
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-sand-300">Model adı / Model ID</label>
-                                                <input
-                                                    type="text"
-                                                    value={customModel}
-                                                    onChange={e => { setCustomModel(e.target.value); setIsSaved(false); }}
-                                                    placeholder="Örn. gpt-4o-mini veya llama3.1"
-                                                    required
-                                                    autoCapitalize="none"
-                                                    autoCorrect="off"
-                                                    spellCheck={false}
-                                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
-                                                />
-                                                <p className="text-[11px] leading-relaxed text-sand-500">
-                                                    Sağlayıcınızın panelinde yazan gerçek model kimliğini kullanın.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-relaxed text-sand-400">
-                                            {provider === 'gemini' && 'Model: Gemini 2.5 Flash; kullanılamazsa Gemini 2.0 Flash denenir.'}
-                                            {provider === 'openai' && 'Model: gpt-4o-mini'}
-                                            {provider === 'anthropic' && 'Model: claude-3-haiku-20240307'}
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* API Key */}
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-sand-300">API Anahtarı (API Key)</label>
-                                        <div className="relative">
-                                            <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                                        {/* Model adı: her sağlayıcıda elle değiştirilebilir */}
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-sand-300">
+                                                Model adı / Model ID
+                                            </label>
                                             <input
-                                                type="password"
-                                                value={apiKey}
-                                                onChange={e => { setApiKey(e.target.value); setIsSaved(false); }}
-                                                placeholder="Anahtarınızı buraya girin"
-                                                className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-11 pr-4 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                                type="text"
+                                                value={models[provider]}
+                                                onChange={e => {
+                                                    setModels(prev => ({ ...prev, [provider]: e.target.value }));
+                                                    setIsSaved(false);
+                                                }}
+                                                placeholder={DEFAULT_MODELS[provider] || 'Örn. gpt-4o-mini'}
+                                                autoCapitalize="none"
+                                                autoCorrect="off"
+                                                spellCheck={false}
+                                                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
                                             />
+                                            <p className="text-[11px] leading-relaxed text-sand-500">
+                                                {MODEL_HINTS[provider]}
+                                                {DEFAULT_MODELS[provider] && (
+                                                    <> Boş bırakırsanız <span className="font-mono text-sand-400">{DEFAULT_MODELS[provider]}</span> kullanılır.</>
+                                                )}
+                                            </p>
+                                        </div>
+
+                                        {/* API anahtarı: her sağlayıcının kendi anahtarı */}
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-sand-300">
+                                                {PROVIDER_LABELS[provider]} API Anahtarı
+                                            </label>
+                                            <div className="relative">
+                                                <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                                                <input
+                                                    type="password"
+                                                    value={keys[provider]}
+                                                    onChange={e => {
+                                                        setKeys(prev => ({ ...prev, [provider]: e.target.value }));
+                                                        setIsSaved(false);
+                                                    }}
+                                                    placeholder="Anahtarınızı buraya girin"
+                                                    className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-11 pr-4 text-sm font-mono text-white placeholder-white/30 placeholder:font-sans outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
+                                                />
+                                            </div>
+                                            <p className="text-[11px] leading-relaxed text-sand-500">
+                                                {KEY_HINTS[provider]} — yalnızca bu sağlayıcı için geçerlidir,
+                                                diğer sağlayıcıların anahtarları ayrı tutulur.
+                                            </p>
                                         </div>
                                     </div>
 
@@ -333,8 +373,8 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         <button
                                             type="submit"
                                             disabled={
-                                                !apiKey.trim() ||
-                                                (provider === 'custom' && (!customUrl.trim() || !customModel.trim()))
+                                                !keys[provider].trim() ||
+                                                (provider === 'custom' && !customUrl.trim())
                                             }
                                             className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-moss-600 px-6 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-moss-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >

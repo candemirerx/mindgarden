@@ -9,6 +9,7 @@ import { initDriveAutoSync } from '@/lib/driveSync';
 import { readEnabledMacros } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
 import { splitIntoChunks } from '@/lib/aiChunks';
+import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl } from '@/lib/aiProvider';
 import { Capacitor } from '@capacitor/core';
 
 function EditorPageInner() {
@@ -181,10 +182,11 @@ function EditorPageInner() {
         setRunningLength(textToCheck.length);
 
         // İstemcinin girdiği ayarları al
-        const clientApiKey = localStorage.getItem('nb-ai-key') || localStorage.getItem('nb-gemini-key') || '';
-        const provider = localStorage.getItem('nb-ai-provider') || 'gemini';
-        const customUrl = localStorage.getItem('nb-ai-custom-url') || '';
-        const customModel = localStorage.getItem('nb-ai-custom-model') || '';
+        // Etkin sağlayıcı ve yalnızca ona ait anahtar/model kullanılır
+        const provider = readActiveProvider();
+        const clientApiKey = readProviderKey(provider);
+        const customUrl = readCustomUrl();
+        const customModel = readProviderModel(provider);
 
         const spellcheckUrl = Capacitor.isNativePlatform()
             ? 'https://mindgarden-neon.vercel.app/api/spellcheck'
