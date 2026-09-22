@@ -169,23 +169,45 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
             ...prev,
             [provider]: Array.from(new Set([...prev[provider], ad]))
         }));
-        setModels(prev => ({ ...prev, [provider]: ad }));
+        const sonrakiModeller = { ...models, [provider]: ad };
+        const sonrakiListe = Array.from(new Set([...modelLists[provider], ad]));
+        setModelLists(prev => ({ ...prev, [provider]: sonrakiListe }));
+        setModels(sonrakiModeller);
+        saveModelList(provider, sonrakiListe);
+        persistAyarlar({ provider, keys, models: sonrakiModeller, customUrl });
         setYeniModel('');
         setIsSaved(false);
     };
 
     /** Modeli listeden çıkarır; etkinse varsayılana döner. */
     const handleRemoveModel = (ad: string) => {
-        setModelLists(prev => ({
-            ...prev,
-            [provider]: prev[provider].filter(x => x !== ad)
-        }));
+        const sonrakiListe = modelLists[provider].filter(x => x !== ad);
+        setModelLists(prev => ({ ...prev, [provider]: sonrakiListe }));
+        saveModelList(provider, sonrakiListe);
         if (models[provider] === ad) {
             setModels(prev => ({ ...prev, [provider]: '' }));
         }
+        persistAyarlar({ provider, keys, models, customUrl });
         setIsSaved(false);
     };
     
+    /** Ayarları anında kalıcı hale getirir; ayrı bir kayıt adımı gerekmez. */
+    const persistAyarlar = (
+        sonraki: {
+            provider: ProviderType;
+            keys: Record<ProviderType, string>;
+            models: Record<ProviderType, string>;
+            customUrl: string;
+        }
+    ) => {
+        saveActiveProvider(sonraki.provider);
+        for (const id of PROVIDER_IDS) {
+            saveProviderKey(id, sonraki.keys[id]);
+            saveProviderModel(id, sonraki.models[id]);
+        }
+        saveCustomUrl(sonraki.customUrl);
+    };
+
     const persistMacros = (next: AiMacro[]) => {
         setMacroList(next);
         saveAiMacros(next);
@@ -321,7 +343,11 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                                 <button
                                                     key={p.id}
                                                     type="button"
-                                                    onClick={() => { setProvider(p.id as ProviderType); setIsSaved(false); }}
+                                                    onClick={() => {
+                                                        setProvider(p.id as ProviderType);
+                                                        persistAyarlar({ provider: p.id as ProviderType, keys, models, customUrl });
+                                                        setIsSaved(false);
+                                                    }}
                                                     className={`rounded-xl border p-2.5 sm:p-3 text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
                                                         provider === p.id 
                                                         ? 'border-moss-500 bg-moss-500/10 text-moss-400' 
@@ -342,7 +368,12 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                                 <input
                                                     type="url"
                                                     value={customUrl}
-                                                    onChange={e => { setCustomUrl(e.target.value); setIsSaved(false); }}
+                                                    onChange={e => {
+                                                    const v = e.target.value;
+                                                    setCustomUrl(v);
+                                                    persistAyarlar({ provider, keys, models, customUrl: v });
+                                                    setIsSaved(false);
+                                                }}
                                                     placeholder="https://api.example.com/v1"
                                                     required
                                                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-all focus:border-moss-500 focus:ring-1 focus:ring-moss-500"
@@ -405,6 +436,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                                                     type="button"
                                                                     onClick={() => {
                                                                         setModels(prev => ({ ...prev, [provider]: ad }));
+                                                                        persistAyarlar({ provider, keys, models: { ...models, [provider]: ad }, customUrl });
                                                                         setIsSaved(false);
                                                                     }}
                                                                     className="px-2.5 py-1.5"
@@ -445,7 +477,9 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                                     type="password"
                                                     value={keys[provider]}
                                                     onChange={e => {
-                                                        setKeys(prev => ({ ...prev, [provider]: e.target.value }));
+                                                        const v = e.target.value;
+                                                        setKeys(prev => ({ ...prev, [provider]: v }));
+                                                        persistAyarlar({ provider, keys: { ...keys, [provider]: v }, models, customUrl });
                                                         setIsSaved(false);
                                                     }}
                                                     placeholder="Anahtarınızı buraya girin"

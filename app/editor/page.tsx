@@ -29,6 +29,8 @@ function EditorPageInner() {
     const [macros, setMacros] = useState<AiMacro[]>([]);
     const [activeMacroId, setActiveMacroId] = useState<string | null>(null);
     const [runningLength, setRunningLength] = useState(0);
+    /** Etkin sağlayıcı için anahtar tanımlı mı? Tanımlı değilse istek gönderilmez. */
+    const [anahtarVar, setAnahtarVar] = useState(false);
     const [chunkProgress, setChunkProgress] = useState<{ done: number; total: number } | null>(null);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
@@ -160,6 +162,7 @@ function EditorPageInner() {
     // Kapalı veya boş makrolar araç çubuğunda yer kaplamaz.
     useEffect(() => {
         setMacros(readEnabledMacros());
+        setAnahtarVar(readProviderKey(readActiveProvider()).trim().length > 0);
     }, []);
 
     // Makro çalıştırma
@@ -176,6 +179,17 @@ function EditorPageInner() {
             : content;
 
         if (!textToCheck.trim()) return;
+
+        // Sağlayıcı anahtarı yoksa istek hiç gönderilmez; kullanıcı önce
+        // ayarlardan sağlayıcı ve anahtar eklemelidir.
+        if (!readProviderKey(readActiveProvider()).trim()) {
+            alert(
+                'Yapay zekâ özelliği için önce bir sağlayıcı ve API anahtarı tanımlamalısınız.\n\n' +
+                    'Ayarlar → Model, API ve Senkronizasyon → Model Ayarları bölümünden ' +
+                    'sağlayıcıyı seçip kendi API anahtarınızı girin.'
+            );
+            return;
+        }
 
         setIsSpellChecking(true);
         setActiveMacroId(macro.id);
@@ -515,7 +529,7 @@ function EditorPageInner() {
                         <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
                             {macros.map((macro) => {
                                 const isRunning = isSpellChecking && activeMacroId === macro.id;
-                                const isDisabled = isSpellChecking || !content.trim();
+                                const isDisabled = isSpellChecking || !content.trim() || !anahtarVar;
 
                                 return (
                                     <button
@@ -551,6 +565,13 @@ function EditorPageInner() {
                             {macros.length === 0 && (
                                 <span className="text-xs text-sand-500">
                                     Makro bulunamadı. Ayarlardan makro ekleyin.
+                                </span>
+                            )}
+
+                            {!anahtarVar && (
+                                <span className="whitespace-nowrap text-xs text-sand-600">
+                                    Yapay zekâ için Ayarlar → Model Ayarları bölümünden
+                                    sağlayıcı ve API anahtarı ekleyin.
                                 </span>
                             )}
                         </div>
