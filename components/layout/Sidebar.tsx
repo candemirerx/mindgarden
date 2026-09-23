@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, LogOut, User, TreePine, Leaf, Download, Upload, Database, Loader2, Mail, Eye, EyeOff, FileJson, FileText, FileType, ChevronDown, ChevronRight, Sparkles, Settings } from 'lucide-react';
 import { useStore } from '@/lib/store/useStore';
@@ -1271,7 +1272,7 @@ export default function Sidebar() {
                                                 />
 
                                                 <AnimatePresence initial={false}>
-                                                    {isDataSectionOpen && (
+                                                    {isDataSectionOpen && createPortal(
                                                         <motion.div
                                                             initial={{ opacity: 0 }}
                                                             animate={{ opacity: 1 }}
@@ -1281,31 +1282,31 @@ export default function Sidebar() {
                                                             onClick={() => setIsDataSectionOpen(false)}
                                                         >
                                                 <div
-                                                    className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl sm:rounded-3xl sm:p-5"
+                                                    className="flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[88vh] sm:max-w-3xl sm:rounded-[24px] sm:border sm:border-sand-200"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     {/* Pencere başlığı */}
-                                                    <div className="mb-4 flex flex-shrink-0 items-center justify-between gap-3 border-b border-sand-200 pb-3">
+                                                    <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-sand-200 px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-7 sm:py-5">
                                                         <div className="flex items-center gap-3">
-                                                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-clay-100 text-clay-700">
-                                                                <Database size={17} />
+                                                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay-100 text-clay-700">
+                                                                <Database size={19} />
                                                             </span>
                                                             <div>
-                                                                <p className="text-sm font-semibold text-sand-900">Veri Yönetimi</p>
-                                                                <p className="text-[11px] text-sand-500">İçe ve dışa aktarma araçları</p>
+                                                                <h2 className="text-lg font-semibold text-sand-900">Veri Yönetimi</h2>
+                                                                <p className="text-xs text-sand-500">İçe ve dışa aktarma araçları</p>
                                                             </div>
                                                         </div>
                                                         <button
                                                             type="button"
                                                             onClick={() => setIsDataSectionOpen(false)}
                                                             aria-label="Veri yönetimini kapat"
-                                                            className="rounded-lg p-2 text-sand-500 transition-colors hover:bg-sand-100 hover:text-sand-800"
+                                                            className="rounded-xl p-2.5 text-sand-500 transition-colors hover:bg-sand-100 hover:text-sand-800"
                                                         >
-                                                            <X size={18} />
+                                                            <X size={20} />
                                                         </button>
                                                     </div>
 
-                                                <div className="space-y-2">
+                                                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-sand-50/60 p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:p-7">
                                                     {/* Export Section */}
                                                     <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
                                                         <button
@@ -1514,7 +1515,8 @@ export default function Sidebar() {
                                                     </div>
                                                 </div>
                                                 </div>
-                                                        </motion.div>
+                                                        </motion.div>,
+                                                        document.body
                                                     )}
                                                     </AnimatePresence>
                                             </div>
