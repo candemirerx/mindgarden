@@ -486,28 +486,39 @@ export default function Sidebar() {
         // JavaScript çalışıyorsa kopyalama düğmelerini görünür yap
         document.documentElement.classList.add('js-var');
 
-        // Kopyalama: navigator.clipboard yalnızca güvenli bağlamlarda (https,
-        // localhost) tanımlıdır. Dosya olarak açılan bir HTML'de bulunmadığı
-        // için eski yönteme düşülür; aksi hâlde düğme hiçbir şey yapmıyordu.
-        function panoyaKopyala(metin) {
-            if (navigator.clipboard && window.isSecureContext) {
-                return navigator.clipboard.writeText(metin);
-            }
-
+        // Kopyalama: tarayıcı pano API'si file:// ile açılan sayfalarda
+        // reddedilir (Chrome bu kaynağa izin vermez). Bu yüzden dosyadan
+        // açıldığında doğrudan, her yerde çalışan yedek yöntem kullanılır;
+        // diğer durumlarda önce pano API'si denenir, reddedilirse yedeğe
+        // düşülür.
+        function yedekKopyala(metin) {
             return new Promise(function (cozumle, reddet) {
                 var alan = document.createElement('textarea');
                 alan.value = metin;
                 alan.setAttribute('readonly', '');
                 alan.style.position = 'fixed';
-                alan.style.top = '-1000px';
+                alan.style.top = '0';
+                alan.style.left = '0';
+                alan.style.width = '2em';
+                alan.style.height = '2em';
+                alan.style.padding = '0';
+                alan.style.border = 'none';
+                alan.style.outline = 'none';
+                alan.style.boxShadow = 'none';
+                alan.style.background = 'transparent';
                 alan.style.opacity = '0';
                 document.body.appendChild(alan);
 
                 var secim = document.getSelection();
                 var onceki = secim && secim.rangeCount > 0 ? secim.getRangeAt(0) : null;
 
+                alan.focus();
                 alan.select();
-                alan.setSelectionRange(0, alan.value.length);
+                try {
+                    alan.setSelectionRange(0, alan.value.length);
+                } catch (e) {
+                    // bazı tarayıcılar readonly alanda bunu desteklemez
+                }
 
                 var basarili = false;
                 try {
@@ -528,6 +539,18 @@ export default function Sidebar() {
                     reddet(new Error('Kopyalanamadı'));
                 }
             });
+        }
+
+        function panoyaKopyala(metin) {
+            var dosyadanAcildi = location.protocol === 'file:';
+
+            if (!dosyadanAcildi && navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(metin).catch(function () {
+                    return yedekKopyala(metin);
+                });
+            }
+
+            return yedekKopyala(metin);
         }
 
         document.querySelectorAll('[data-copy]').forEach(function (dugme) {
