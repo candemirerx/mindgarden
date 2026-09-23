@@ -391,9 +391,12 @@ export default function Sidebar() {
                         <strong class="title">${escapeHtml(title)}</strong>
                         <button type="button" data-copy="${escapeHtml(title)}" class="copy-btn copy-title" title="Başlığı kopyala">📋</button>
                         ${content ? `<button type="button" data-copy="${escapeHtml(content)}" class="copy-btn copy-content" title="İçeriği kopyala">📄</button>` : ''}
-                        ${content ? `<button type="button" data-toggle="${nodeId}" class="toggle-btn" id="toggle-${nodeId}">▶ Detaylar</button>` : ''}
                     </div>
-                    ${content ? `<div class="content hidden" id="content-${nodeId}">${escapeHtml(content)}</div>` : ''}
+                    ${content ? `
+                    <details class="node-details">
+                        <summary>Detaylar</summary>
+                        <div class="content">${escapeHtml(content)}</div>
+                    </details>` : ''}
                     ${childrenHTML ? `<div class="children">${childrenHTML}</div>` : ''}
                 </div>`;
             }).join('');
@@ -424,7 +427,12 @@ export default function Sidebar() {
             -webkit-font-smoothing: antialiased;
         }
         h1 { color: #275939; text-align: center; margin-bottom: 6px; font-size: 30px; letter-spacing: -0.02em; }
-        .subtitle { text-align: center; color: #7c7268; margin-bottom: 36px; font-size: 13px; }
+        .subtitle { text-align: center; color: #7c7268; margin-bottom: 10px; font-size: 13px; }
+        .ipucu {
+            text-align: center; color: #7c7268; margin: 0 auto 34px; font-size: 12px;
+            line-height: 1.5; max-width: 620px; background: #fdf8e9;
+            border: 1px solid #f4dc94; border-radius: 10px; padding: 10px 14px;
+        }
         .garden {
             margin-bottom: 24px; padding: 22px; background: #fff;
             border-radius: 16px; border: 1px solid #eae5de;
@@ -436,34 +444,48 @@ export default function Sidebar() {
         .node-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .icon { font-size: 15px; }
         .title { color: #2c251d; font-size: 15px; font-weight: 600; }
+        /* Kopyalama düğmeleri yalnızca JavaScript çalışıyorsa gösterilir.
+           HTML Viewer gibi JavaScript çalıştırmayan görüntüleyicilerde
+           çalışmayan düğme göstermek yerine metin seçilebilir bırakılır. */
         .copy-btn {
+            display: none;
             padding: 3px 9px; font-size: 11px; font-weight: 600;
             background: #f0f7ef; border: 1px solid #bbdcc1; color: #306c47;
             border-radius: 7px; cursor: pointer; transition: background 0.18s, border-color 0.18s;
         }
+        html.js-var .copy-btn { display: inline-block; }
         .copy-btn:hover { background: #deedda; }
         .copy-btn.copied { background: #44825b; color: #fff; border-color: #44825b; }
-        .toggle-btn {
-            padding: 3px 10px; font-size: 11px; font-weight: 600;
+        /* Detaylar için JavaScript gerektirmeyen yerel açılır öğe */
+        .node-details { margin: 8px 0 0 26px; }
+        .node-details > summary {
+            display: inline-block; padding: 4px 12px; font-size: 12px; font-weight: 600;
             background: #fdf8e9; border: 1px solid #f4dc94; color: #8c5210;
-            border-radius: 7px; cursor: pointer; transition: background 0.18s, border-color 0.18s;
+            border-radius: 7px; cursor: pointer; list-style: none;
         }
-        .toggle-btn:hover { background: #faedc9; }
-        .toggle-btn.open { background: #c9841b; color: #fff; border-color: #c9841b; }
+        .node-details > summary::-webkit-details-marker { display: none; }
+        .node-details > summary::before { content: '▶ '; }
+        .node-details[open] > summary::before { content: '▼ '; }
+        .node-details[open] > summary { background: #c9841b; color: #fff; border-color: #c9841b; }
         .content {
-            margin: 8px 0 0 26px; padding: 12px 14px; background: #fbf9f6;
+            margin: 8px 0 0 0; padding: 12px 14px; background: #fbf9f6;
             border-radius: 10px; border: 1px solid #eae5de; color: #5b5348;
             white-space: pre-wrap; font-size: 14px;
+            -webkit-user-select: text; user-select: text;
         }
-        .content.hidden { display: none; }
+        .title, .content { -webkit-user-select: text; user-select: text; }
         .children { margin-top: 10px; }
     </style>
 </head>
 <body>
     <h1>🌱 Not Bahçesi</h1>
     <p class="subtitle">Dışa aktarım tarihi: ${new Date().toLocaleDateString('tr-TR')}</p>
+    <p class="ipucu">Detaylar bölümleri her cihazda açılır. Tek dokunuşla kopyalamak için dosyayı <strong>Chrome</strong> gibi bir tarayıcıda açın; diğer görüntüleyicilerde metni basılı tutup seçerek kopyalayabilirsiniz.</p>
     ${gardensHTML}
     <script>
+        // JavaScript çalışıyorsa kopyalama düğmelerini görünür yap
+        document.documentElement.classList.add('js-var');
+
         // Kopyalama: navigator.clipboard yalnızca güvenli bağlamlarda (https,
         // localhost) tanımlıdır. Dosya olarak açılan bir HTML'de bulunmadığı
         // için eski yönteme düşülür; aksi hâlde düğme hiçbir şey yapmıyordu.
@@ -526,24 +548,6 @@ export default function Sidebar() {
                         dugme.textContent = eski;
                     }, 1500);
                 });
-            });
-        });
-
-        document.querySelectorAll('[data-toggle]').forEach(function (dugme) {
-            dugme.addEventListener('click', function () {
-                var id = dugme.getAttribute('data-toggle');
-                var icerik = document.getElementById('content-' + id);
-                if (!icerik) return;
-
-                if (icerik.classList.contains('hidden')) {
-                    icerik.classList.remove('hidden');
-                    dugme.classList.add('open');
-                    dugme.textContent = '▼ Gizle';
-                } else {
-                    icerik.classList.add('hidden');
-                    dugme.classList.remove('open');
-                    dugme.textContent = '▶ Detaylar';
-                }
             });
         });
     </script>
