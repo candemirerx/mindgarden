@@ -640,75 +640,148 @@ export default function Sidebar() {
 
         // PDF'i doğrudan dosya olarak üret.
         //
-        // Not: jsPDF'in gömülü Helvetica fontu Türkçeye özgü harfleri (ş, ğ, ı,
-        // İ) içermediği için bu harfler PDF'te bozuk çıkar. Bunu önlemek adına
-        // metin PDF'e yazılırken sadeleştirilir; ekrandaki veri değişmez.
-        const pdfIcinSadelestir = (metin: string) =>
-            metin
-                .replace(/ı/g, 'i').replace(/İ/g, 'I')
-                .replace(/ş/g, 's').replace(/Ş/g, 'S')
-                .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
-                .replace(/ç/g, 'c').replace(/Ç/g, 'C')
-                .replace(/ö/g, 'o').replace(/Ö/g, 'O')
-                .replace(/ü/g, 'u').replace(/Ü/g, 'U');
-
+        // jsPDF'in gömülü Helvetica fontu Türkçeye özgü harfleri (ş, ğ, ı, İ)
+        // içermediği için metni doğrudan PDF'e yazmak yerine tarayıcının kendi
+        // çizim motoruyla (canvas) çizip sayfayı görüntü olarak PDF'e ekleriz.
+        // Böylece Türkçe harfler eksiksiz görünür.
         const { jsPDF } = await import('jspdf');
         const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
         const sayfaGenisligi = doc.internal.pageSize.getWidth();
         const sayfaYuksekligi = doc.internal.pageSize.getHeight();
-        const kenar = 44;
-        const altSinir = sayfaYuksekligi - kenar;
-        let y = kenar;
+        const kenar = 48;
+        const olcek = 2; // net görüntü için
 
-        const satirYaz = (metin: string, boyut: number, kalin: boolean, girinti: number) => {
-            doc.setFontSize(boyut);
-            doc.setFont('helvetica', kalin ? 'bold' : 'normal');
-            const satirlar = doc.splitTextToSize(
-                pdfIcinSadelestir(metin),
-                sayfaGenisligi - kenar * 2 - girinti
-            );
-            for (const satir of satirlar) {
-                if (y > altSinir) {
-                    doc.addPage();
-                    y = kenar;
-                }
-                doc.text(satir, kenar + girinti, y);
-                y += boyut * 1.45;
-            }
+        interface PdfSatiri { metin: string; boyut: number; kalin: boolean; girinti: number; }
+        const satirlar: PdfSatiri[] = [];
+
+        const ekle = (metin: string, boyut: number, kalin: boolean, girinti: number) => {
+            satirlar.push({ metin, boyut, kalin, girinti });
         };
 
-        satirYaz('Not Bahcesi', 20, true, 0);
-        y += 2;
-        satirYaz(
-            new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
-            10,
-            false,
-            0
-        );
-        y += 18;
+        ekle('Not Bahçesi', 24, true, 0);
+        ekle(new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }), 11, false, 0);
+        satirlar.push({ metin: '', boyut: 12, kalin: false, girinti: 0 });
 
         for (const garden of filtered.gardens) {
-            if (y > altSinir - 40) {
-                doc.addPage();
-                y = kenar;
-            }
-            satirYaz(garden.name, 15, true, 0);
-            y += 6;
+            ekle(garden.name, 17, true, 0);
 
             const gardenNodes = filtered.nodes.filter((n: any) => n.garden_id === garden.id);
             const gezin = (parentId: string | null, derinlik: number) => {
                 const cocuklar = gardenNodes.filter((n: any) => n.parent_id === parentId);
                 for (const node of cocuklar) {
-                    const baslik = node.content.split('\n')[0] || 'Basliksiz';
+                    const baslik = node.content.split('\n')[0] || 'Başlıksız';
                     const govde = node.content.split('\n').slice(1).join('\n').trim();
-                    satirYaz(`${derinlik === 0 ? '-' : '+'} ${baslik}`, 12, derinlik === 0, derinlik * 14);
-                    if (govde) satirYaz(govde, 10, false, derinlik * 14 + 14);
+                    ekle(`${derinlik === 0 ? '•' : '–'} ${baslik}`, 12, derinlik === 0, 12 + derinlik * 16);
+                    if (govde) ekle(govde, 10.5, false, 28 + derinlik * 16);
                     gezin(node.id, derinlik + 1);
                 }
             };
             gezin(null, 0);
-            y += 16;
+            satirlar.push({ metin: '', boyut: 10, kalin: false, girinti: 0 });
         }
+
+        // Sayfa numarası ve alt bilgi için ayrılan alan
+        const altBilgiAlani = 34;
+
+        // Çizim alanı: satır kaydırma ölçümü ve sayfa çizimi için ortak kullanılır
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(sayfaGenisligi * olcek);
+        canvas.height = Math.round(sayfaYuksekligi * olcek);
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+            alert('PDF oluşturulamadı: çizim alanı açılamadı.');
+            return;
+        }
+
+        /** Bir satırın sayfa genişliğine sığacak biçimde bölünmüş hâli. */
+        const sarilanSatirlar = (satir: PdfSatiri): string[] => {
+            ctx.font = `${satir.kalin ? '600 ' : ''}${satir.boyut * olcek}px "Segoe UI", Roboto, Arial, sans-serif`;
+            const enFazlaGenislik = canvas.width - (kenar * 2 + satir.girinti) * olcek;
+
+            const parcalar: string[] = [];
+            let birikim = '';
+
+            for (const kelime of satir.metin.split(' ')) {
+                const deneme = birikim ? `${birikim} ${kelime}` : kelime;
+                if (ctx.measureText(deneme).width > enFazlaGenislik && birikim) {
+                    parcalar.push(birikim);
+                    birikim = kelime;
+                } else {
+                    birikim = deneme;
+                }
+            }
+            if (birikim) parcalar.push(birikim);
+
+            return parcalar.length > 0 ? parcalar : [''];
+        };
+
+        const sarilanSatirSayisi = (satir: PdfSatiri) => sarilanSatirlar(satir).length;
+
+        // Satırları sayfalara böl (kaydırma ölçülerek yapılır)
+        const sayfalar: PdfSatiri[][] = [];
+        let aktif: PdfSatiri[] = [];
+        let kullanilan = kenar;
+
+        for (const satir of satirlar) {
+            const yukseklik = satir.metin
+                ? sarilanSatirSayisi(satir) * satir.boyut * 1.5
+                : satir.boyut;
+
+            if (
+                kullanilan + yukseklik > sayfaYuksekligi - kenar - altBilgiAlani &&
+                aktif.length > 0
+            ) {
+                sayfalar.push(aktif);
+                aktif = [];
+                kullanilan = kenar;
+            }
+            aktif.push(satir);
+            kullanilan += yukseklik;
+        }
+        if (aktif.length > 0) sayfalar.push(aktif);
+
+        sayfalar.forEach((sayfa, sayfaNo) => {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            let y = kenar * olcek;
+
+            for (const satir of sayfa) {
+                if (!satir.metin) {
+                    y += satir.boyut * olcek;
+                    continue;
+                }
+
+                ctx.font = `${satir.kalin ? '600 ' : ''}${satir.boyut * olcek}px "Segoe UI", Roboto, Arial, sans-serif`;
+                ctx.fillStyle = satir.girinti === 0 && satir.kalin ? '#1B3A28' : '#2C251D';
+
+                for (const parca of sarilanSatirlar(satir)) {
+                    ctx.fillText(parca, (kenar + satir.girinti) * olcek, y);
+                    y += satir.boyut * 1.5 * olcek;
+                }
+            }
+
+            // Alt bilgi
+            ctx.font = `${10 * olcek}px "Segoe UI", Roboto, Arial, sans-serif`;
+            ctx.fillStyle = '#7C7268';
+            ctx.fillText(
+                `Not Bahçesi · ${sayfaNo + 1} / ${sayfalar.length}`,
+                kenar * olcek,
+                (sayfaYuksekligi - altBilgiAlani / 2) * olcek
+            );
+
+            if (sayfaNo > 0) doc.addPage();
+            doc.addImage(
+                canvas.toDataURL('image/jpeg', 0.92),
+                'JPEG',
+                0,
+                0,
+                sayfaGenisligi,
+                sayfaYuksekligi
+            );
+        });
 
         await saveFile(doc.output('blob'), `not-bahcesi-${tarihDamgasi()}.pdf`);
 
