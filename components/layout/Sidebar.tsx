@@ -356,7 +356,7 @@ export default function Sidebar() {
             nodes: filtered.nodes
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        downloadFile(blob, `not-bahcesi-backup-${new Date().toISOString().split('T')[0]}.json`);
+        void saveFile(blob, `not-bahcesi-backup-${tarihDamgasi()}.json`);
         setShowExportOptions(false);
         setExportData(null);
     };
@@ -493,13 +493,13 @@ export default function Sidebar() {
 </html>`;
 
         const blob = new Blob([html], { type: 'text/html' });
-        downloadFile(blob, `not-bahcesi-${new Date().toISOString().split('T')[0]}.html`);
+        void saveFile(blob, `not-bahcesi-${tarihDamgasi()}.html`);
         setShowExportOptions(false);
         setExportData(null);
     };
 
     // PDF olarak dışa aktar (tarayıcı print ile - Türkçe karakter desteği)
-    const handleExportPDF = () => {
+    const handleExportPDF = async () => {
         const filtered = getFilteredExportData();
         if (!filtered) return;
 
@@ -638,30 +638,150 @@ export default function Sidebar() {
 </body>
 </html>`;
 
-        // Yeni pencere aç ve yazdır
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(printHTML);
-            printWindow.document.close();
-            printWindow.onload = () => {
-                printWindow.print();
-                printWindow.onafterprint = () => printWindow.close();
+        // PDF'i doğrudan dosya olarak üret.
+        //
+        // Not: jsPDF'in gömülü Helvetica fontu Türkçeye özgü harfleri (ş, ğ, ı,
+        // İ) içermediği için bu harfler PDF'te bozuk çıkar. Bunu önlemek adına
+        // metin PDF'e yazılırken sadeleştirilir; ekrandaki veri değişmez.
+        const pdfIcinSadelestir = (metin: string) =>
+            metin
+                .replace(/ı/g, 'i').replace(/İ/g, 'I')
+                .replace(/ş/g, 's').replace(/Ş/g, 'S')
+                .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+                .replace(/ç/g, 'c').replace(/Ç/g, 'C')
+                .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+                .replace(/ü/g, 'u').replace(/Ü/g, 'U');
+
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        const sayfaGenisligi = doc.internal.pageSize.getWidth();
+        const sayfaYuksekligi = doc.internal.pageSize.getHeight();
+        const kenar = 44;
+        const altSinir = sayfaYuksekligi - kenar;
+        let y = kenar;
+
+        const satirYaz = (metin: string, boyut: number, kalin: boolean, girinti: number) => {
+            doc.setFontSize(boyut);
+            doc.setFont('helvetica', kalin ? 'bold' : 'normal');
+            const satirlar = doc.splitTextToSize(
+                pdfIcinSadelestir(metin),
+                sayfaGenisligi - kenar * 2 - girinti
+            );
+            for (const satir of satirlar) {
+                if (y > altSinir) {
+                    doc.addPage();
+                    y = kenar;
+                }
+                doc.text(satir, kenar + girinti, y);
+                y += boyut * 1.45;
+            }
+        };
+
+        satirYaz('Not Bahcesi', 20, true, 0);
+        y += 2;
+        satirYaz(
+            new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
+            10,
+            false,
+            0
+        );
+        y += 18;
+
+        for (const garden of filtered.gardens) {
+            if (y > altSinir - 40) {
+                doc.addPage();
+                y = kenar;
+            }
+            satirYaz(garden.name, 15, true, 0);
+            y += 6;
+
+            const gardenNodes = filtered.nodes.filter((n: any) => n.garden_id === garden.id);
+            const gezin = (parentId: string | null, derinlik: number) => {
+                const cocuklar = gardenNodes.filter((n: any) => n.parent_id === parentId);
+                for (const node of cocuklar) {
+                    const baslik = node.content.split('\n')[0] || 'Basliksiz';
+                    const govde = node.content.split('\n').slice(1).join('\n').trim();
+                    satirYaz(`${derinlik === 0 ? '-' : '+'} ${baslik}`, 12, derinlik === 0, derinlik * 14);
+                    if (govde) satirYaz(govde, 10, false, derinlik * 14 + 14);
+                    gezin(node.id, derinlik + 1);
+                }
             };
+            gezin(null, 0);
+            y += 16;
         }
+
+        await saveFile(doc.output('blob'), `not-bahcesi-${tarihDamgasi()}.pdf`);
 
         setShowExportOptions(false);
         setExportData(null);
     };
 
-    // Dosya indirme yardımcı fonksiyonu
-    const downloadFile = (blob: Blob, filename: string) => {
+    /** Blob'u base64'e çevirir (Capacitor Filesystem base64 bekler). */
+    const blobToBase64 = (blob: Blob): Promise<string> =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const sonuc = reader.result as string;
+                resolve(sonuc.includes(',') ? sonuc.split(',')[1] : sonuc);
+            };
+            reader.onerror = () => reject(new Error('Dosya okunamadı.'));
+            reader.readAsDataURL(blob);
+        });
+
+    /**
+     * Dışa aktarılan dosyayı cihaza kaydeder.
+     *
+     * Android uygulamasında tarayıcı indirmesi çalışmadığı için dosya
+     * Capacitor Filesystem ile Belgeler klasörüne yazılır ve paylaşım menüsü
+     * açılır; kullanıcı dosyayı istediği uygulamaya gönderebilir. Tarayıcıda
+     * ise normal indirme kullanılır.
+     */
+    const saveFile = async (blob: Blob, filename: string) => {
+        if (Capacitor.isNativePlatform()) {
+            try {
+                const base64 = await blobToBase64(blob);
+                const { Filesystem, Directory } = await import('@capacitor/filesystem');
+                const { Share } = await import('@capacitor/share');
+
+                const yazilan = await Filesystem.writeFile({
+                    path: filename,
+                    data: base64,
+                    directory: Directory.Documents,
+                    recursive: true
+                });
+
+                await Share.share({
+                    title: filename,
+                    text: 'Not Bahçesi dışa aktarma',
+                    url: yazilan.uri,
+                    dialogTitle: 'Dosyayı paylaş'
+                });
+                return;
+            } catch (error) {
+                console.error('Dışa aktarma hatası:', error);
+                alert(
+                    'Dosya kaydedilemedi: ' +
+                        (error instanceof Error ? error.message : 'bilinmeyen hata')
+                );
+                return;
+            }
+        }
+
+        // Tarayıcı: bağlantıyı DOM'a ekleyip tıklamak, bazı tarayıcılarda
+        // indirmenin iptal edilmesini önler.
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
     };
+
+    /** Dosya adlarında kullanılan tarih damgası. */
+    const tarihDamgasi = () => new Date().toISOString().split('T')[0];
 
     // Export seçeneklerini kapat
     const handleExportCancel = () => {
