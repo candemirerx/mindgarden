@@ -1245,7 +1245,7 @@ export default function Sidebar() {
 
                                                 <button
                                                     type="button"
-                                                    onClick={() => setIsDataSectionOpen(!isDataSectionOpen)}
+                                                    onClick={() => setIsDataSectionOpen(true)}
                                                     aria-expanded={isDataSectionOpen}
                                                     className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors duration-200 hover:bg-sand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-moss-500/40"
                                                 >
@@ -1258,13 +1258,7 @@ export default function Sidebar() {
                                                             <span className="mt-0.5 block text-[11px] text-sand-500">İçe ve dışa aktarma araçları</span>
                                                         </span>
                                                     </span>
-                                                    <motion.span
-                                                        animate={{ rotate: isDataSectionOpen ? 180 : 0 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        className="flex-shrink-0"
-                                                    >
-                                                        <ChevronDown size={17} className="text-sand-400" />
-                                                    </motion.span>
+                                                    <ChevronRight size={17} className="flex-shrink-0 text-sand-400" />
                                                 </button>
 
                                                 {/* Hidden file input */}
@@ -1279,13 +1273,39 @@ export default function Sidebar() {
                                                 <AnimatePresence initial={false}>
                                                     {isDataSectionOpen && (
                                                         <motion.div
-                                                            initial={{ height: 0, opacity: 0 }}
-                                                            animate={{ height: 'auto', opacity: 1 }}
-                                                            exit={{ height: 0, opacity: 0 }}
-                                                            transition={{ duration: 0.2 }}
-                                                            className="overflow-hidden"
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                            transition={{ duration: 0.15 }}
+                                                            className="fixed inset-0 z-[100] flex items-end justify-center bg-bark-950/60 backdrop-blur-sm sm:items-center sm:p-4"
+                                                            onClick={() => setIsDataSectionOpen(false)}
                                                         >
-                                                <div className="space-y-2 border-t border-sand-200 bg-sand-50/70 p-3">
+                                                <div
+                                                    className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl sm:rounded-3xl sm:p-5"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {/* Pencere başlığı */}
+                                                    <div className="mb-4 flex flex-shrink-0 items-center justify-between gap-3 border-b border-sand-200 pb-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-clay-100 text-clay-700">
+                                                                <Database size={17} />
+                                                            </span>
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-sand-900">Veri Yönetimi</p>
+                                                                <p className="text-[11px] text-sand-500">İçe ve dışa aktarma araçları</p>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsDataSectionOpen(false)}
+                                                            aria-label="Veri yönetimini kapat"
+                                                            className="rounded-lg p-2 text-sand-500 transition-colors hover:bg-sand-100 hover:text-sand-800"
+                                                        >
+                                                            <X size={18} />
+                                                        </button>
+                                                    </div>
+
+                                                <div className="space-y-2">
                                                     {/* Export Section */}
                                                     <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
                                                         <button
@@ -1492,6 +1512,7 @@ export default function Sidebar() {
                                                             )}
                                                         </AnimatePresence>
                                                     </div>
+                                                </div>
                                                 </div>
                                                         </motion.div>
                                                     )}
