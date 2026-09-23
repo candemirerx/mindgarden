@@ -41,3 +41,4 @@ next-env.d.ts
 
 # Play Store paketindeki yayın paketi derleme çıktısıdır; kaynaktan üretilir.
 play-store-paketi/uygulama/*.aab
+play-store-paketi/uygulama/*.apk
