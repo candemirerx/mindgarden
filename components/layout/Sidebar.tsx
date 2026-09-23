@@ -389,9 +389,9 @@ export default function Sidebar() {
                     <div class="node-header">
                         <span class="icon">${depth === 0 ? '🌳' : '🌿'}</span>
                         <strong class="title">${escapeHtml(title)}</strong>
-                        <button onclick="copyText(\`${escapeJs(title)}\`, this)" class="copy-btn copy-title">📋</button>
-                        ${content ? `<button onclick="copyText(\`${escapeJs(content)}\`, this)" class="copy-btn copy-content">📄</button>` : ''}
-                        ${content ? `<button onclick="toggleContent('${nodeId}')" class="toggle-btn" id="toggle-${nodeId}">▶ Detaylar</button>` : ''}
+                        <button type="button" data-copy="${escapeHtml(title)}" class="copy-btn copy-title" title="Başlığı kopyala">📋</button>
+                        ${content ? `<button type="button" data-copy="${escapeHtml(content)}" class="copy-btn copy-content" title="İçeriği kopyala">📄</button>` : ''}
+                        ${content ? `<button type="button" data-toggle="${nodeId}" class="toggle-btn" id="toggle-${nodeId}">▶ Detaylar</button>` : ''}
                     </div>
                     ${content ? `<div class="content hidden" id="content-${nodeId}">${escapeHtml(content)}</div>` : ''}
                     ${childrenHTML ? `<div class="children">${childrenHTML}</div>` : ''}
@@ -464,30 +464,88 @@ export default function Sidebar() {
     <p class="subtitle">Dışa aktarım tarihi: ${new Date().toLocaleDateString('tr-TR')}</p>
     ${gardensHTML}
     <script>
-        function copyText(text, btn) {
-            navigator.clipboard.writeText(text).then(() => {
-                const original = btn.textContent;
-                btn.classList.add('copied');
-                btn.textContent = '✓';
-                setTimeout(() => {
-                    btn.classList.remove('copied');
-                    btn.textContent = original;
-                }, 1500);
+        // Kopyalama: navigator.clipboard yalnızca güvenli bağlamlarda (https,
+        // localhost) tanımlıdır. Dosya olarak açılan bir HTML'de bulunmadığı
+        // için eski yönteme düşülür; aksi hâlde düğme hiçbir şey yapmıyordu.
+        function panoyaKopyala(metin) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(metin);
+            }
+
+            return new Promise(function (cozumle, reddet) {
+                var alan = document.createElement('textarea');
+                alan.value = metin;
+                alan.setAttribute('readonly', '');
+                alan.style.position = 'fixed';
+                alan.style.top = '-1000px';
+                alan.style.opacity = '0';
+                document.body.appendChild(alan);
+
+                var secim = document.getSelection();
+                var onceki = secim && secim.rangeCount > 0 ? secim.getRangeAt(0) : null;
+
+                alan.select();
+                alan.setSelectionRange(0, alan.value.length);
+
+                var basarili = false;
+                try {
+                    basarili = document.execCommand('copy');
+                } catch (e) {
+                    basarili = false;
+                }
+
+                document.body.removeChild(alan);
+                if (onceki && secim) {
+                    secim.removeAllRanges();
+                    secim.addRange(onceki);
+                }
+
+                if (basarili) {
+                    cozumle();
+                } else {
+                    reddet(new Error('Kopyalanamadı'));
+                }
             });
         }
-        function toggleContent(id) {
-            const content = document.getElementById('content-' + id);
-            const btn = document.getElementById('toggle-' + id);
-            if (content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                btn.classList.add('open');
-                btn.textContent = '▼ Gizle';
-            } else {
-                content.classList.add('hidden');
-                btn.classList.remove('open');
-                btn.textContent = '▶ Detaylar';
-            }
-        }
+
+        document.querySelectorAll('[data-copy]').forEach(function (dugme) {
+            dugme.addEventListener('click', function () {
+                var metin = dugme.getAttribute('data-copy') || '';
+                var eski = dugme.textContent;
+
+                panoyaKopyala(metin).then(function () {
+                    dugme.classList.add('copied');
+                    dugme.textContent = '✓';
+                    setTimeout(function () {
+                        dugme.classList.remove('copied');
+                        dugme.textContent = eski;
+                    }, 1500);
+                }).catch(function () {
+                    dugme.textContent = '✕';
+                    setTimeout(function () {
+                        dugme.textContent = eski;
+                    }, 1500);
+                });
+            });
+        });
+
+        document.querySelectorAll('[data-toggle]').forEach(function (dugme) {
+            dugme.addEventListener('click', function () {
+                var id = dugme.getAttribute('data-toggle');
+                var icerik = document.getElementById('content-' + id);
+                if (!icerik) return;
+
+                if (icerik.classList.contains('hidden')) {
+                    icerik.classList.remove('hidden');
+                    dugme.classList.add('open');
+                    dugme.textContent = '▼ Gizle';
+                } else {
+                    icerik.classList.add('hidden');
+                    dugme.classList.remove('open');
+                    dugme.textContent = '▶ Detaylar';
+                }
+            });
+        });
     </script>
 </body>
 </html>`;
