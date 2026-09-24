@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, TreePine, Leaf, Check, Palette, Scissors, Sprout } from 'lucide-react';
+import { Copy, Pencil, Plus, ChevronDown, X, TreePine, Leaf, Check, Scissors, Sprout } from 'lucide-react';
 import { BRANCH_COLORS, sonrakiRenk } from '@/lib/branchColors';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
@@ -171,8 +171,8 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     role="toolbar"
                     aria-label={`${node.title} araçları`}
                     className={`
-                    absolute bottom-full mb-2 left-1/2 -translate-x-1/2 
-                    flex items-center gap-1 glass p-1.5 rounded-2xl shadow-lift border border-sand-200
+                    absolute bottom-full mb-1 left-1/2 -translate-x-1/2 
+                    flex items-center gap-1 whitespace-nowrap glass p-1 rounded-2xl shadow-lift border border-sand-200
                     transition-all duration-200 z-40
                     after:absolute after:inset-x-0 after:-bottom-3 after:h-3
                     ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
@@ -264,7 +264,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
                         className={`
                             ${DUGME_TABANI}
-                            absolute -bottom-[20px] left-1/2 h-10 w-10 -translate-x-1/2
+                            absolute -bottom-[18px] left-1/2 h-9 w-9 -translate-x-1/2
                             bg-white text-moss-700 border-moss-400 hover:bg-moss-50 hover:border-moss-500
                             ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                             z-30
@@ -275,7 +275,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         <Plus size={20} />
                     </button>
 
-                    {/* Eğer çocukları varsa: Katla / Aç Rozeti
+                    {/* Eğer çocukları varsa: Katla / Aç Rozeti (sağ alt köşe)
                         Seçim gerektirmez: dalları kapatmanın tek yolu bu düğme. */}
                     {hasChildren && (
                         <button
@@ -283,7 +283,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             aria-expanded={isExpanded}
                             className={`
                                 ${DUGME_TABANI}
-                                absolute -bottom-[20px] left-1/2 h-10 w-10 translate-x-[26px]
+                                absolute bottom-0 right-0 h-9 w-9 translate-x-1/2 translate-y-1/2
                                 bg-sand-100 text-bark-800 border-white hover:bg-sand-200
                                 z-30 text-sm font-bold
                             `}
@@ -339,8 +339,8 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     role="toolbar"
                     aria-label={`${node.title} araçları`}
                     className={`
-                    absolute bottom-full mb-2 left-1/2 -translate-x-1/2 
-                    flex items-center gap-1 glass p-1.5 rounded-2xl shadow-lift border border-sand-200
+                    absolute bottom-full mb-1 left-1/2 -translate-x-1/2 
+                    flex items-center gap-1 whitespace-nowrap glass p-1 rounded-2xl shadow-lift border border-sand-200
                     transition-all duration-200 z-30
                     after:absolute after:inset-x-0 after:-bottom-3 after:h-3
                     ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
@@ -354,6 +354,31 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         <Pencil size={17} />
                     </button>
                     <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleNodeType(node.id, resolvedType);
+                        }}
+                        className={ARAC_DUGMESI}
+                        title={isBranchStyle ? 'Yaprağa dönüştür' : 'Dala dönüştür'}
+                        aria-label={isBranchStyle ? 'Yaprağa dönüştür' : 'Dala dönüştür'}
+                    >
+                        {isBranchStyle ? <Leaf size={17} /> : <Sprout size={17} />}
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setGeciciRenk((onceki) => sonrakiRenk(onceki ?? node.color ?? null));
+                        }}
+                        className={`${ARAC_DUGMESI} gap-1.5 px-2`}
+                        title="Rengi değiştir"
+                        aria-label="Rengi değiştir"
+                    >
+                        <span
+                            className="h-4 w-4 rounded-full ring-1 ring-black/15"
+                            style={{ backgroundColor: geciciRenk ?? node.color ?? BRANCH_COLORS[0].value }}
+                        />
+                    </button>
+                    <button
                         onClick={handleCopyTitle}
                         className={ARAC_DUGMESI}
                         title={showTitleCopied ? "Kopyalandı!" : "Başlığı Kopyala"}
@@ -361,6 +386,16 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     >
                         {showTitleCopied ? <Check size={17} className="text-moss-600" /> : <Copy size={17} />}
                     </button>
+                    {onAddSibling && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'right'); }}
+                            className={`${ARAC_DUGMESI} text-clay-700 hover:bg-clay-100`}
+                            title="Yan dal ekle"
+                            aria-label="Yan dal ekle"
+                        >
+                            <Plus size={17} />
+                        </button>
+                    )}
                     <button
                         onClick={togglePruned}
                         className={`${ARAC_DUGMESI} ${
@@ -449,54 +484,15 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     </div>
                 </div>
 
-                {/* DÜĞÜMÜN ÇEVRESİNDEKİ EYLEM DÜĞMELERİ
-                    Kartın köşe ve kenarlarına ortalanır; dokunma alanı
-                    36 piksel olduğu için parmakla rahatça basılır. */}
+                {/* DÜĞÜMÜN ALTINDAKİ EYLEM DÜĞMELERİ
+                    Tip, renk ve diğer eylemler üstteki araç çubuğundadır.
+                    Burada yalnızca büyümenin anahtarı olan "+" ve katla/aç
+                    rozeti kalır; ikisi de bağlantı çizgisinin dışındadır. */}
                 <div
                     role="group"
                     aria-label={`${node.title} eylemleri`}
                     className="pointer-events-none absolute inset-0 z-20"
                 >
-                    {/* TİP DEĞİŞTİRME (SOL ÜST KÖŞE) */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            toggleNodeType(node.id, resolvedType);
-                        }}
-                        className={`
-                            ${DUGME_TABANI}
-                            absolute left-0 top-0 h-9 w-9 -translate-x-1/2 -translate-y-1/2
-                            ${isBranchStyle
-                                ? 'bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400'
-                                : 'bg-white text-clay-600 border-clay-300 hover:bg-clay-50 hover:border-clay-400'
-                            }
-                            ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                        `}
-                        title={isBranchStyle ? 'Yaprağa dönüştür' : 'Dala dönüştür'}
-                        aria-label={isBranchStyle ? 'Yaprağa dönüştür' : 'Dala dönüştür'}
-                    >
-                        {isBranchStyle ? <Leaf size={17} /> : <Sprout size={17} />}
-                    </button>
-
-                    {/* RENK DEĞİŞTİRME (SOL ALT KÖŞE) */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setGeciciRenk((onceki) => sonrakiRenk(onceki ?? node.color ?? null));
-                        }}
-                        className={`
-                            ${DUGME_TABANI}
-                            absolute bottom-0 left-0 h-9 w-9 -translate-x-1/2 translate-y-1/2
-                            border-white/90
-                            ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                        `}
-                        style={{ backgroundColor: geciciRenk ?? node.color ?? BRANCH_COLORS[0].value }}
-                        title="Rengi değiştir"
-                        aria-label="Rengi değiştir"
-                    >
-                        <Palette size={16} className="text-white" />
-                    </button>
-
                     {/* ALT DALA EKLE (ALT ORTA) */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
@@ -512,9 +508,10 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         <Plus size={18} />
                     </button>
 
-                    {/* KATLA / AÇ ROZETİ (ALT ORTA, SAĞA KAYIK)
+                    {/* KATLA / AÇ ROZETİ (SAĞ ALT KÖŞE)
                         Seçim gerektirmez: dalları kapatmanın tek yolu bu düğme.
-                        Bu yüzden tıklanabilirliği her durumda açıktır. */}
+                        Köşede durur; alt ortadaki bağlantı çizgisiyle ve
+                        alttaki dalın araç çubuğuyla çakışmaz. */}
                     {hasChildren && (
                         <button
                             onClick={toggleExpand}
@@ -522,7 +519,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             className={`
                                 ${DUGME_TABANI}
                                 pointer-events-auto
-                                absolute -bottom-[18px] left-1/2 h-9 w-9 translate-x-[22px]
+                                absolute bottom-0 right-0 h-9 w-9 translate-x-1/2 translate-y-1/2
                                 bg-sand-100 text-bark-800 border-white hover:bg-sand-200
                                 text-xs font-bold
                             `}
@@ -530,23 +527,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             aria-label={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
                         >
                             {isExpanded ? <ChevronDown size={18} /> : <span>{node.children.length}</span>}
-                        </button>
-                    )}
-
-                    {/* YAN DAL EKLE (SAĞ KENAR) */}
-                    {onAddSibling && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'right'); }}
-                            className={`
-                                ${DUGME_TABANI}
-                                absolute right-0 top-1/2 h-9 w-9 translate-x-1/2 -translate-y-1/2
-                                bg-white text-clay-600 border-clay-300 hover:bg-clay-50 hover:border-clay-400
-                                ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                            `}
-                            title="Yan dal ekle"
-                            aria-label="Yan dal ekle"
-                        >
-                            <Plus size={18} />
                         </button>
                     )}
                 </div>

@@ -108,8 +108,11 @@
    AĞAÇ (ZİHİN HARİTASI) BAĞLANTI ÇİZGİLERİ
    ========================================================================== */
 
+/* Düğümler arasındaki dikey boşluk. Düğümlerin çevresindeki eylem
+   düğmeleri bu boşluğa taştığı için, iki düğümün düğmeleri çakışmasın
+   diye ölçü düğmelerin yüksekliğine göre seçildi. */
 .tree ul {
-  padding-top: 36px;
+  padding-top: 72px;
   position: relative;
   display: flex;
   justify-content: center;
@@ -174,7 +177,9 @@
   border-radius: 16px 0 0 0;
 }
 
-/* Ebeveynden aşağı inen dikey çizgi */
+/* Ebeveynden aşağı inen dikey çizgi.
+   Uzunluk, listenin üst boşluğuyla aynı olmalı; yoksa çizgi düğüme
+   ulaşmaz veya düğümün içine taşar. */
 .tree ul ul::before {
   content: '';
   position: absolute;
@@ -182,7 +187,7 @@
   left: 50%;
   border-left: 2px solid var(--branch);
   width: 0;
-  height: 36px;
+  height: 72px;
   z-index: 0;
   transition: border-color 0.3s ease;
 }
@@ -190,7 +195,7 @@
 /* Kökten çıkan dallar daha belirgin */
 .tree>ul>li>ul::before {
   border-left-width: 3px;
-  height: 42px;
+  height: 78px;
 }
 
 .tree>ul>li>ul>li::before {
