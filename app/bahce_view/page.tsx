@@ -12,6 +12,8 @@ import { MindTextEditor } from '@/components/editor/MindTextEditor';
 import Sidebar from '@/components/layout/Sidebar';
 import PromptModal from '@/components/ui/PromptModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { hapticTick } from '@/components/mobile/MobileShell';
+import { agacSuruklemesiBasladi, agacSuruklemesiBitti } from '@/lib/canvasGesture';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -20,6 +22,9 @@ import { v4 as uuidv4 } from 'uuid';
  *
  * Konum, ağacın otomatik yerleşimine eklenen bir kaydırma olarak tutulur;
  * böylece diğer ağaçların düzeni bozulmaz. Sürükleme bitince konum kaydedilir.
+ *
+ * Sürükleme başladığında tuval bilgilendirilir; böylece ağaç taşınırken
+ * bahçe de kaymaz ve hareket yalnızca ağaca ait olur.
  */
 function SuruklenebilirAgac({
     x,
@@ -45,6 +50,12 @@ function SuruklenebilirAgac({
         }
     }, [x, y, surukluyor]);
 
+    // Bileşen ekrandan kalkarsa tuvali kilitli bırakma
+    useEffect(() => () => {
+        if (zamanlayici.current) clearTimeout(zamanlayici.current);
+        agacSuruklemesiBitti();
+    }, []);
+
     /** Tuvalin yakınlaştırma oranını okur; sürükleme farkını buna böleriz. */
     const olcekOku = () => {
         const katman = document.querySelector('.tree') as HTMLElement | null;
@@ -68,6 +79,10 @@ function SuruklenebilirAgac({
     const basla = (e: React.PointerEvent) => {
         if (e.pointerType === 'mouse' && e.button !== 0) return;
 
+        // Düğmelere uzun basmak ağacı taşımaya başlatmasın; düğmeler
+        // kendi işlerini yapmaya devam etsin.
+        if ((e.target as HTMLElement).closest('button')) return;
+
         baslangic.current = {
             fareX: e.clientX,
             fareY: e.clientY,
@@ -80,6 +95,9 @@ function SuruklenebilirAgac({
         const hedef = e.currentTarget as HTMLElement;
         zamanlayici.current = setTimeout(() => {
             setSurukluyor(true);
+            // Tuval bu andan sonra kaymaz; hareket yalnızca ağaca aittir.
+            agacSuruklemesiBasladi();
+            void hapticTick();
             try {
                 hedef.setPointerCapture(e.pointerId);
             } catch {
@@ -118,6 +136,8 @@ function SuruklenebilirAgac({
 
         e.stopPropagation();
         setSurukluyor(false);
+        // Tuval yeniden kaydırılabilir.
+        agacSuruklemesiBitti();
 
         const son = fareFarki(e);
         onMove(Math.round(son.x), Math.round(son.y));
@@ -137,12 +157,15 @@ function SuruklenebilirAgac({
                     suruklendi.current = false;
                 }
             }}
-            className={`relative ${surukluyor ? 'z-50' : ''}`}
+            data-agac-alani
+            className={`tree-drag-area relative ${surukluyor ? 'z-50' : ''}`}
             style={{
                 transform: `translate(${kaydirma.x}px, ${kaydirma.y}px)`,
                 touchAction: surukluyor ? 'none' : 'auto',
                 transition: surukluyor ? 'none' : 'transform 0.15s ease-out',
-                cursor: surukluyor ? 'grabbing' : undefined
+                cursor: surukluyor ? 'grabbing' : undefined,
+                // Taşınan ağaç, elin altında olduğu anlaşılsın diye hafifçe öne çıkar
+                filter: surukluyor ? 'drop-shadow(0 12px 18px rgba(41, 37, 30, 0.22))' : undefined
             }}
         >
             {children}

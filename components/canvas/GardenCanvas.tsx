@@ -3,7 +3,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ViewState, Point } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
+import { agacSurukleniyorMu } from '@/lib/canvasGesture';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+
+/** Ağaç üzerinde başlayan dokunuşun tuval kaydırmasına dönüşmesi için
+ *  parmağın aşması gereken mesafe (piksel). */
+const KAYDIRMA_ESIGI = 10;
 
 interface GardenCanvasProps {
     children: React.ReactNode;
@@ -31,6 +36,17 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
 
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    /**
+     * Ağaç üzerinde başlayan dokunuşun başlangıç noktası.
+     *
+     * Böyle bir dokunuşta tuval hemen kaymaz: parmak eşiği aşarsa kaydırmaya
+     * dönüşür, parmak yerinde kalırsa uzun basma sayılır ve ağaç taşınır.
+     */
+    const dugumBaslangicRef = useRef<Point | null>(null);
+
+    /** Dokunuşun bir ağaç gövdesi üzerinde başlayıp başlamadığı. */
+    const agacUzerinde = (hedef: EventTarget | null): boolean =>
+        hedef instanceof Element && Boolean(hedef.closest('.tree-drag-area'));
 
     // Canvas'ı başlangıçta ortala (Eğer kayıtlı veri yoksa)
     useEffect(() => {
@@ -89,6 +105,19 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
     const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.node-content')) return;
 
+        const ikiParmak = 'touches' in e && e.touches.length === 2;
+
+        // Ağaç üzerinde başlayan tek parmak/fare dokunuşu: ne seçim silinir
+        // ne de tuval hemen kaymaya başlar. Önce parmağın niyeti beklenir.
+        if (!ikiParmak && agacUzerinde(e.target)) {
+            dugumBaslangicRef.current = 'touches' in e
+                ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+                : { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY };
+            return;
+        }
+
+        dugumBaslangicRef.current = null;
+
         // Arka plana tıklandığında seçimi kaldır
         setSelectedNode(null);
 
@@ -98,6 +127,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
             if (e.touches.length === 2 && containerRef.current) {
                 setIsPinching(true);
                 setIsDragging(false);
+                dugumBaslangicRef.current = null;
 
                 const distance = getTouchDistance(e.touches);
                 const center = getTouchCenter(e.touches);
@@ -166,8 +196,35 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
         });
     };
 
+    /**
+     * Ağaç üzerinde bekleyen dokunuşu tuval kaydırmasına çevirir.
+     *
+     * Parmak eşiği aşmadıysa hiçbir şey yapılmaz; bu durumda dokunuş uzun
+     * basmaya bırakılır ve ağaç taşınır.
+     */
+    const bekleyeniKaydirmayaCevir = (clientX: number, clientY: number): boolean => {
+        const bekleme = dugumBaslangicRef.current;
+        if (!bekleme) return false;
+        if (Math.hypot(clientX - bekleme.x, clientY - bekleme.y) < KAYDIRMA_ESIGI) return false;
+
+        dugumBaslangicRef.current = null;
+        setIsDragging(true);
+        setLastMousePos({ x: clientX, y: clientY });
+        setViewState(prev => ({
+            ...prev,
+            offset: {
+                x: prev.offset.x + (clientX - bekleme.x),
+                y: prev.offset.y + (clientY - bekleme.y)
+            }
+        }));
+        return true;
+    };
+
     // Mouse/Touch hareket
     const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
+        // Ağaç taşınırken tuval yerinden oynamaz; tek hareket ağaca aittir.
+        if (agacSurukleniyorMu()) return;
+
         // Touch event ise
         if ('touches' in e) {
             // İki parmak - pinch zoom + pan
@@ -180,9 +237,12 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                 return;
             }
             // Tek parmak - sürükleme
-            else if (e.touches.length === 1 && isDragging && !isPinching) {
+            if (e.touches.length === 1) {
                 const clientX = e.touches[0].clientX;
                 const clientY = e.touches[0].clientY;
+
+                if (bekleyeniKaydirmayaCevir(clientX, clientY)) return;
+                if (!isDragging || isPinching) return;
 
                 const deltaX = clientX - lastMousePos.x;
                 const deltaY = clientY - lastMousePos.y;
@@ -195,15 +255,16 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                     }
                 }));
                 setLastMousePos({ x: clientX, y: clientY });
-                return;
             }
+            return;
         }
 
         // Mouse event - sürükleme
-        if (!isDragging) return;
+        const clientX = (e as React.MouseEvent).clientX;
+        const clientY = (e as React.MouseEvent).clientY;
 
-        const clientX = 'clientX' in e ? (e as React.MouseEvent).clientX : 0;
-        const clientY = 'clientY' in e ? (e as React.MouseEvent).clientY : 0;
+        if (bekleyeniKaydirmayaCevir(clientX, clientY)) return;
+        if (!isDragging) return;
 
         const deltaX = clientX - lastMousePos.x;
         const deltaY = clientY - lastMousePos.y;
@@ -220,6 +281,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
 
     // Mouse/Touch bitiş
     const handlePointerUp = () => {
+        dugumBaslangicRef.current = null;
         setIsDragging(false);
         setIsPinching(false);
     };
