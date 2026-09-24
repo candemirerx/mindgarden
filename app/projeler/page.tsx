@@ -53,6 +53,11 @@ function ProjectsPageInner() {
     const [editingTitle, setEditingTitle] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    /**
+     * Geçici renk değişiklikleri. Yalnızca ekranda görünür, kaydedilmez;
+     * sayfa yenilendiğinde renk eski hâline döner.
+     */
+    const [geciciRenkler, setGeciciRenkler] = useState<Record<string, string>>({});
     const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'split' | 'grid'>('split');
@@ -219,10 +224,14 @@ function ProjectsPageInner() {
         router.push(`/editor?id=${gardenId}&nodeId=${nodeId}`);
     };
 
-    /** Dal rengini uygular; null verilirse seviye rengine döner. */
-    const handleSetColor = async (nodeId: string, color: string | null) => {
+    /** Rengi sıradaki renge döndürür; yalnızca ekranda geçerlidir. */
+    const handleCycleColor = (nodeId: string, mevcutRenk: string | null) => {
+        const palet = BRANCH_COLORS.map((c) => c.value);
+        const suankiIndex = mevcutRenk ? palet.indexOf(mevcutRenk) : -1;
+        const sonraki = palet[(suankiIndex + 1) % palet.length];
+
+        setGeciciRenkler((prev) => ({ ...prev, [nodeId]: sonraki }));
         setActiveMenu(null);
-        await setNodeColor(nodeId, color);
     };
 
     const handleSaveTitle = async (nodeId: string, originalContent: string) => {
@@ -326,7 +335,10 @@ function ProjectsPageInner() {
         const isExpanded = searchQuery ? true : expandedNodes.has(item.id);
         const isRoot = depth === 0;
         const isSelected = selectedNodeId === item.id;
-        const levelColor = item.color || getDepthColor(depth - 1);
+        const etkinRenk = geciciRenkler[item.id] ?? item.color ?? null;
+        const gosterItem: TreeItem =
+            etkinRenk === item.color ? item : { ...item, color: etkinRenk };
+        const levelColor = etkinRenk || getDepthColor(depth - 1);
 
         return (
             <div key={item.id} className="w-full">
@@ -349,7 +361,7 @@ function ProjectsPageInner() {
                                     className="flex-shrink-0 rounded-xl transition-transform duration-200 hover:scale-105"
                                     title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                                 >
-                                    {getNodeIcon(item, true, isExpanded)}
+                                    {getNodeIcon(gosterItem, true, isExpanded)}
                                 </button>
 
                                 {hasChildren && (
@@ -421,6 +433,14 @@ function ProjectsPageInner() {
                                     >
                                         {copiedId === `content-${item.id}` ? <Check size={13} /> : <FileText size={13} />}
                                     </button>
+                                    <button
+                                        onClick={() => handleEdit(item.id)}
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg bg-clay-100 text-clay-700 transition-all duration-200 hover:bg-clay-200"
+                                        title="Editörde aç"
+                                        aria-label="Notu editörde aç"
+                                    >
+                                        <Pencil size={13} />
+                                    </button>
 
                                     <div className="relative">
                                         <button
@@ -476,7 +496,7 @@ function ProjectsPageInner() {
                             className="flex-shrink-0 rounded-lg transition-transform duration-200 hover:scale-105"
                             title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                         >
-                            {getNodeIcon(item, false, isExpanded)}
+                            {getNodeIcon(gosterItem, false, isExpanded)}
                         </button>
 
                         {hasChildren && (
@@ -545,6 +565,14 @@ function ProjectsPageInner() {
                             >
                                 {copiedId === `content-${item.id}` ? <Check size={13} /> : <FileText size={13} />}
                             </button>
+                            <button
+                                onClick={() => handleEdit(item.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-clay-100 text-clay-700 transition-all duration-200 hover:bg-clay-200"
+                                title="Editörde aç"
+                                aria-label="Notu editörde aç"
+                            >
+                                <Pencil size={13} />
+                            </button>
 
                             <div className="relative">
                                 <button
@@ -583,14 +611,6 @@ function ProjectsPageInner() {
             <button
                 type="button"
                 role="menuitem"
-                onClick={() => { handleEdit(item.id); setActiveMenu(null); }}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
-            >
-                <Pencil size={15} className="text-moss-600" /> Tam editörde aç
-            </button>
-            <button
-                type="button"
-                role="menuitem"
                 onClick={() => { setEditingNodeId(item.id); setEditingTitle(item.title); setActiveMenu(null); }}
                 className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
             >
@@ -615,44 +635,42 @@ function ProjectsPageInner() {
             </button>
             <div className="my-1 h-px bg-sand-200" />
 
-            {/* Dal rengi seçimi */}
-            <div className="px-3.5 py-2.5">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-sand-500">
-                    Dal rengi
-                </p>
-                <div className="flex flex-wrap items-center gap-1.5">
-                    {BRANCH_COLORS.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            role="menuitem"
-                            onClick={() => handleSetColor(item.id, option.value)}
-                            title={option.name}
-                            aria-label={`${option.name} rengini uygula`}
-                            aria-current={item.color === option.value}
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg ring-2 transition-transform ${
-                                item.color === option.value
-                                    ? 'ring-sand-800'
-                                    : 'ring-transparent hover:scale-110'
-                            }`}
-                            style={{ backgroundColor: option.value }}
-                        >
-                            {item.color === option.value && <Check size={14} className="text-white" />}
-                        </button>
-                    ))}
+            {/* Başlığı kopyala */}
+            <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                    handleCopy(item.title, item.id, 'title');
+                    setActiveMenu(null);
+                }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+            >
+                <Copy size={15} className="text-clay-600" /> Başlığı kopyala
+            </button>
 
-                    <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => handleSetColor(item.id, null)}
-                        aria-label="Dal rengini varsayılana döndür"
-                        className="flex h-8 items-center gap-1.5 rounded-lg border border-sand-300 px-2.5 text-[11px] font-medium text-sand-600 transition-colors hover:bg-sand-100"
-                    >
-                        <RotateCcw size={12} />
-                        Varsayılan
-                    </button>
-                </div>
-            </div>
+            {/* Rengi değiştir: tek seçenek, sıradaki renge geçer (yalnızca ekranda) */}
+            <button
+                type="button"
+                role="menuitem"
+                onClick={() =>
+                    handleCycleColor(
+                        item.id,
+                        geciciRenkler[item.id] ?? item.color ?? null
+                    )
+                }
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+            >
+                <span
+                    className="flex h-4 w-4 items-center justify-center rounded-full ring-1 ring-black/10"
+                    style={{
+                        backgroundColor:
+                            geciciRenkler[item.id] ??
+                            item.color ??
+                            LEVEL_COLORS[0]
+                    }}
+                />
+                Rengi değiştir
+            </button>
 
             <div className="my-1 h-px bg-sand-200" />
 
