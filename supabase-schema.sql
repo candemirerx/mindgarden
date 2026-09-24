@@ -35,6 +35,8 @@ create table nodes (
   position_y real default 0 not null,
   is_expanded boolean default true,
   node_type text default 'auto',
+  color text,
+  is_pruned boolean not null default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   deleted_at timestamp with time zone

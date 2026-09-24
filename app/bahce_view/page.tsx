@@ -188,7 +188,8 @@ function GardenPageInner() {
                 content: node.content,
                 children,
                 isExpanded: node.is_expanded ?? true,
-                nodeType: node.node_type ?? 'auto'
+                nodeType: node.node_type ?? 'auto',
+                isPruned: node.is_pruned ?? false
             };
         };
 
@@ -290,7 +291,8 @@ function GardenPageInner() {
                         title: newNode.content,
                         content: '',
                         children: [],
-                        nodeType: 'auto'
+                        nodeType: 'auto',
+                        isPruned: false
                     };
 
                     // Hangi ağaçta olduğunu bul

@@ -374,6 +374,7 @@ class LocalQuery implements PromiseLike<QueryResult> {
                     throw new Error('Bu bahçeye not ekleme yetkiniz yok');
                 }
                 record.is_expanded = record.is_expanded ?? true;
+                record.is_pruned = record.is_pruned ?? false;
                 db.nodes.push(record as unknown as TreeNode);
             }
             inserted.push(record);
@@ -443,6 +444,7 @@ class LocalQuery implements PromiseLike<QueryResult> {
                     ownedGardenIds.add(String(record.id));
                 } else {
                     record.is_expanded = record.is_expanded ?? true;
+                    record.is_pruned = record.is_pruned ?? false;
                 }
                 collection.push(record);
                 byId.set(record.id, record);

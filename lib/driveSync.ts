@@ -408,6 +408,7 @@ async function normalizeRemotePayload(payload: BackupPayload): Promise<BackupPay
             ...node,
             updated_at: node.updated_at || node.created_at || exportedAt,
             deleted_at: node.deleted_at ?? null,
+            is_pruned: node.is_pruned ?? false,
         }));
 
     return {

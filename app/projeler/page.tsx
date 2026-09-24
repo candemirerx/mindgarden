@@ -7,7 +7,7 @@ import {
     Plus, Trash2, Pencil, Layout, Search,
     MoreHorizontal, X, TreePine, FileText, Copy, Check, Leaf, ArrowLeft,
     Sprout, ChevronRight, ChevronsUpDown, Columns, LayoutGrid, ExternalLink,
-    Calendar, Hash, AlignLeft, Sparkles, BookOpen, RotateCcw
+    Calendar, Hash, AlignLeft, Sparkles, BookOpen, RotateCcw, Scissors
 } from 'lucide-react';
 
 import PromptModal from '@/components/ui/PromptModal';
@@ -23,6 +23,8 @@ interface TreeItem {
     isExpanded: boolean;
     nodeType: 'branch' | 'leaf' | 'auto';
     color: string | null;
+    /** Budanmış not: silinmez, soluk ve üstü çizili gösterilir. */
+    isPruned: boolean;
 }
 
 /**
@@ -35,7 +37,7 @@ function ProjectsPageInner() {
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, addNode, updateNode, deleteNode, toggleNodeExpansion, setNodeColor } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, addNode, updateNode, deleteNode, toggleNodeExpansion, setNodeColor, setNodePruned } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [trees, setTrees] = useState<TreeItem[]>([]);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -64,7 +66,7 @@ function ProjectsPageInner() {
 
             const buildTree = (nodeId: string): TreeItem => {
             const node = nodeList.find(n => n.id === nodeId);
-            if (!node) return { id: nodeId, title: 'Hata', content: '', children: [], isExpanded: true, nodeType: 'auto', color: null };
+            if (!node) return { id: nodeId, title: 'Hata', content: '', children: [], isExpanded: true, nodeType: 'auto', color: null, isPruned: false };
 
             const children = nodeList
                 .filter(n => n.parent_id === nodeId)
@@ -77,7 +79,8 @@ function ProjectsPageInner() {
                 children,
                 isExpanded: node.is_expanded ?? true,
                 nodeType: node.node_type ?? 'auto',
-                color: node.color ?? null
+                color: node.color ?? null,
+                isPruned: node.is_pruned ?? false
             };
         };
 
@@ -225,6 +228,17 @@ function ProjectsPageInner() {
         setActiveMenu(null);
     };
 
+    /**
+     * Notu budama durumuna alır veya bu durumdan çıkarır.
+     *
+     * Budama silme değildir: not ve alt dalları yerinde kalır, yalnızca soluk
+     * ve üstü çizili gösterilir. Bu yüzden kalıcı olarak kaydedilir.
+     */
+    const handleTogglePrune = async (nodeId: string, isPruned: boolean) => {
+        setActiveMenu(null);
+        await setNodePruned(nodeId, !isPruned);
+    };
+
     const handleSaveTitle = async (nodeId: string, originalContent: string) => {
         if (editingTitle.trim()) {
             const lines = originalContent.split('\n');
@@ -341,7 +355,7 @@ function ProjectsPageInner() {
                                 isSelected
                                     ? 'border-moss-500 ring-2 ring-moss-500/15 shadow-lift'
                                     : 'border-sand-200 hover:border-moss-200 hover:shadow-lift'
-                            }`}
+                            } ${item.isPruned ? 'border-dashed' : ''}`}
                         >
                             <div className="flex items-center gap-2.5">
                                 <button
@@ -349,7 +363,7 @@ function ProjectsPageInner() {
                                         e.stopPropagation();
                                         hasChildren ? toggleExpand(item.id) : handleEdit(item.id);
                                     }}
-                                    className="flex-shrink-0 rounded-xl transition-transform duration-200 hover:scale-105"
+                                    className={`flex-shrink-0 rounded-xl transition-transform duration-200 hover:scale-105 ${item.isPruned ? 'opacity-50' : ''}`}
                                     title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                                 >
                                     {getNodeIcon(gosterItem, true, isExpanded)}
@@ -391,10 +405,23 @@ function ProjectsPageInner() {
                                         <div className="flex items-center gap-2">
                                             <span
                                                 onDoubleClick={() => handleEdit(item.id)}
-                                                className="block truncate text-left text-[15px] font-semibold text-sand-900 hover:text-moss-700 transition-colors"
+                                                className={`block truncate text-left text-[15px] font-semibold transition-colors ${
+                                                    item.isPruned
+                                                        ? 'text-sand-400 line-through decoration-sand-400'
+                                                        : 'text-sand-900 hover:text-moss-700'
+                                                }`}
                                             >
                                                 {item.title}
                                             </span>
+                                            {item.isPruned && (
+                                                <span
+                                                    className="flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-500"
+                                                    title="Bu not budandı"
+                                                >
+                                                    <Scissors size={10} />
+                                                    Budandı
+                                                </span>
+                                            )}
                                             {hasChildren && (
                                                 <span className="text-[11px] font-medium text-sand-400">
                                                     ({item.children.length})
@@ -476,7 +503,7 @@ function ProjectsPageInner() {
                                 e.stopPropagation();
                                 hasChildren ? toggleExpand(item.id) : handleEdit(item.id);
                             }}
-                            className="flex-shrink-0 rounded-lg transition-transform duration-200 hover:scale-105"
+                            className={`flex-shrink-0 rounded-lg transition-transform duration-200 hover:scale-105 ${item.isPruned ? 'opacity-50' : ''}`}
                             title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                         >
                             {getNodeIcon(gosterItem, false, isExpanded)}
@@ -518,15 +545,27 @@ function ProjectsPageInner() {
                                 <span
                                     onDoubleClick={() => handleEdit(item.id)}
                                     className={`block truncate text-left text-sm transition-colors duration-200 ${
-                                        isSelected
-                                            ? 'font-semibold text-moss-900'
-                                            : 'font-medium text-sand-700 hover:text-moss-700'
+                                        item.isPruned
+                                            ? 'font-medium text-sand-400 line-through decoration-sand-400'
+                                            : isSelected
+                                                ? 'font-semibold text-moss-900'
+                                                : 'font-medium text-sand-700 hover:text-moss-700'
                                     }`}
                                 >
                                     {item.title}
                                 </span>
                             )}
                         </div>
+
+                        {item.isPruned && (
+                            <span
+                                className="flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-500"
+                                title="Bu not budandı"
+                            >
+                                <Scissors size={10} />
+                                Budandı
+                            </span>
+                        )}
 
                         <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
@@ -645,6 +684,19 @@ function ProjectsPageInner() {
                     }}
                 />
                 Rengi değiştir
+            </button>
+
+            <div className="my-1 h-px bg-sand-200" />
+
+            {/* Budama: notu silmez, soluk ve üstü çizili gösterir */}
+            <button
+                type="button"
+                role="menuitem"
+                onClick={() => handleTogglePrune(item.id, item.isPruned)}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+            >
+                <Scissors size={15} className="text-moss-600" />
+                {item.isPruned ? 'Budamayı geri al' : 'Buda'}
             </button>
 
             <div className="my-1 h-px bg-sand-200" />
@@ -899,8 +951,23 @@ function ProjectsPageInner() {
                                                         {selectedChildren.length} alt dal
                                                     </span>
                                                 )}
+                                                {selectedNode.is_pruned && (
+                                                    <span
+                                                        className="inline-flex items-center gap-1 rounded-full bg-sand-200 px-2.5 py-0.5 text-xs font-semibold text-sand-600"
+                                                        title="Bu not budandı; silinmedi"
+                                                    >
+                                                        <Scissors size={11} />
+                                                        Budandı
+                                                    </span>
+                                                )}
                                             </div>
-                                            <h2 className="font-serif text-2xl lg:text-3xl text-sand-900 tracking-tight">
+                                            <h2
+                                                className={`font-serif text-2xl lg:text-3xl tracking-tight ${
+                                                    selectedNode.is_pruned
+                                                        ? 'text-sand-400 line-through decoration-sand-400'
+                                                        : 'text-sand-900'
+                                                }`}
+                                            >
                                                 {selectedNodeTitle}
                                             </h2>
                                         </div>

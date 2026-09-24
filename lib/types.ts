@@ -27,6 +27,11 @@ export interface TreeNode {
     node_type?: 'branch' | 'leaf' | 'auto';
     /** Kullanıcının seçtiği dal rengi; boşsa seviyeye göre renk kullanılır. */
     color?: string | null;
+    /**
+     * Budanmış not. Silinmez; içerik ve alt dallar yerinde kalır, yalnızca
+     * soluk ve üstü çizili gösterilir. Aynı düğmeyle geri alınabilir.
+     */
+    is_pruned?: boolean;
 }
 
 // Store State Tipi
@@ -56,6 +61,7 @@ export interface StoreState {
     toggleNodeExpansion: (id: string, isExpanded: boolean) => Promise<void>;
     toggleNodeType: (id: string, currentType: 'branch' | 'leaf' | 'auto') => Promise<void>;
     setNodeColor: (id: string, color: string | null) => Promise<void>;
+    setNodePruned: (id: string, isPruned: boolean) => Promise<void>;
 }
 
 // Yeni MindMap yapısı için tipler
@@ -68,6 +74,8 @@ export interface MindNode {
     nodeType?: 'branch' | 'leaf' | 'auto';
     /** Kullanıcının seçtiği renk; boşsa varsayılan renk kullanılır. */
     color?: string | null;
+    /** Budanmış düğüm; soluk ve üstü çizili gösterilir, silinmez. */
+    isPruned?: boolean;
 }
 
 export interface ViewState {

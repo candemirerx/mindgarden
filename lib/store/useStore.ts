@@ -326,4 +326,29 @@ export const useStore = create<StoreState>((set, get) => ({
             console.error('Dal rengi güncellenirken hata:', error);
         }
     },
+
+    /**
+     * Notu budama durumuna alır veya bu durumdan çıkarır.
+     *
+     * Budama bir silme değildir: içerik, alt dallar ve üst bağlantı yerinde
+     * kalır; yalnızca soluk ve üstü çizili gösterilir. Bu yüzden soft-delete
+     * (`deleted_at`) alanına dokunulmaz, ayrı bir bayrak yazılır.
+     */
+    setNodePruned: async (id: string, isPruned: boolean) => {
+        try {
+            const updatedAt = new Date().toISOString();
+            set((state) => ({
+                nodes: state.nodes.map((node) =>
+                    node.id === id ? { ...node, is_pruned: isPruned, updated_at: updatedAt } : node
+                ),
+            }));
+            const { error } = await supabase
+                .from('nodes')
+                .update({ is_pruned: isPruned, updated_at: updatedAt })
+                .eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Budama durumu güncellenirken hata:', error);
+        }
+    },
 }));

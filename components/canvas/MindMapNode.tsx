@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, TreePine, Leaf, Check, Palette } from 'lucide-react';
+import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, TreePine, Leaf, Check, Palette, Scissors } from 'lucide-react';
 import { BRANCH_COLORS, sonrakiRenk } from '@/lib/branchColors';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
@@ -51,7 +51,18 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         setTimeout(() => setShowTitleCopied(false), 1500);
     };
 
-    const { updateNode, selectedNodeId, setSelectedNode, toggleNodeExpansion, toggleNodeType } = useStore();
+    const { updateNode, selectedNodeId, setSelectedNode, toggleNodeExpansion, toggleNodeType, setNodePruned } = useStore();
+
+    /**
+     * Budama: notu silmez, yalnızca soluk ve üstü çizili gösterir.
+     * Aynı düğme ikinci kez kullanıldığında durum geri alınır.
+     */
+    const isPruned = node.isPruned ?? false;
+
+    const togglePruned = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        void setNodePruned(node.id, !isPruned);
+    };
 
     const toggleExpand = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -169,6 +180,19 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             <Plus size={13} />
                             <span>Dal Ekle</span>
                         </button>
+                        <button
+                            onClick={togglePruned}
+                            className={`p-1.5 rounded-xl transition-colors ${
+                                isPruned
+                                    ? 'bg-sand-200/80 text-sand-800 hover:bg-sand-200'
+                                    : 'text-sand-700 hover:bg-sand-200/80 hover:text-sand-900'
+                            }`}
+                            title={isPruned ? 'Budamayı geri al' : 'Buda'}
+                            aria-label={isPruned ? 'Budamayı geri al' : 'Buda'}
+                            aria-pressed={isPruned}
+                        >
+                            <Scissors size={14} />
+                        </button>
                     </div>
 
                     {/* Kök Kartı: Zarif orman yeşili, temiz tipografi */}
@@ -179,12 +203,13 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             px-7 py-6 text-center text-white
                             shadow-lift transition-all duration-200 cursor-pointer
                             ${isSelected ? 'ring-4 ring-moss-500/40 scale-[1.02]' : 'ring-1 ring-moss-950/40 hover:scale-[1.01] hover:shadow-pop'}
+                            ${isPruned ? 'opacity-60' : ''}
                         `}
                     >
                         {/* Kök Düşünce Etiketi */}
                         <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-moss-100 backdrop-blur-sm">
-                            <TreePine size={12} />
-                            <span>Kök Düşünce</span>
+                            {isPruned ? <Scissors size={12} /> : <TreePine size={12} />}
+                            <span>{isPruned ? 'Budandı' : 'Kök Düşünce'}</span>
                         </div>
 
                         {isEditingTitle ? (
@@ -200,7 +225,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             />
                         ) : (
                             <h4
-                                className="cursor-text font-serif text-xl font-semibold tracking-tight text-white transition-opacity hover:opacity-90"
+                                className={`cursor-text font-serif text-xl font-semibold tracking-tight text-white transition-opacity hover:opacity-90 ${isPruned ? 'line-through decoration-2' : ''}`}
                                 onClick={handleTitleClick}
                             >
                                 {node.title}
@@ -308,6 +333,19 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         {showTitleCopied ? <Check size={13} className="text-moss-600" /> : <Copy size={13} />}
                     </button>
                     <button
+                        onClick={togglePruned}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                            isPruned
+                                ? 'bg-sand-200 text-sand-800 hover:bg-sand-300'
+                                : 'text-sand-700 hover:bg-sand-200/80 hover:text-sand-900'
+                        }`}
+                        title={isPruned ? 'Budamayı geri al' : 'Buda'}
+                        aria-label={isPruned ? 'Budamayı geri al' : 'Buda'}
+                        aria-pressed={isPruned}
+                    >
+                        <Scissors size={13} />
+                    </button>
+                    <button
                         onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
                         className="p-1.5 text-berry-600 hover:bg-berry-50 rounded-lg transition-colors"
                         title="Dalı Sil"
@@ -330,6 +368,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             : 'border border-sand-300 hover:border-moss-400'
                         }
                         ${isSelected ? 'ring-4 ring-moss-500/20 scale-[1.03]' : 'hover:scale-[1.02]'}
+                        ${isPruned ? 'opacity-60 border-dashed' : ''}
                     `}
                     style={
                         geciciRenk
@@ -362,11 +401,22 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                 />
                             ) : (
                                 <h4
-                                    className="truncate text-[15px] font-semibold cursor-text text-sand-900"
+                                    className={`truncate text-[15px] font-semibold cursor-text ${
+                                        isPruned ? 'text-sand-400 line-through decoration-sand-400' : 'text-sand-900'
+                                    }`}
                                     onClick={handleTitleClick}
                                 >
                                     {node.title}
                                 </h4>
+                            )}
+                            {isPruned && (
+                                <span
+                                    className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-500"
+                                    title="Bu not budandı"
+                                >
+                                    <Scissors size={9} />
+                                    Budandı
+                                </span>
                             )}
                         </div>
                     </div>
