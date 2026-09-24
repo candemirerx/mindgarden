@@ -1,10 +1,28 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, TreePine, Leaf, Check, Palette, Scissors } from 'lucide-react';
+import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, TreePine, Leaf, Check, Palette, Scissors, Sprout } from 'lucide-react';
 import { BRANCH_COLORS, sonrakiRenk } from '@/lib/branchColors';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
+
+/**
+ * Düğümün çevresindeki yuvarlak eylem düğmelerinin ortak görünümü.
+ *
+ * Dokunma alanı 36 pikseldir; parmakla rahatça basılır. Klavyeyle odaklanınca
+ * belirgin bir halka çıkar, böylece düğmeler yalnızca fareyle değil klavyeyle
+ * de kullanılabilir.
+ */
+const DUGME_TABANI =
+    'flex items-center justify-center rounded-full border-2 shadow-soft ' +
+    'transition-all duration-200 hover:scale-110 active:scale-95 touch-manipulation ' +
+    'outline-none focus-visible:ring-4 focus-visible:ring-moss-500/40';
+
+/** Düğümün üstündeki yüzen araç çubuğunda kullanılan düğme görünümü. */
+const ARAC_DUGMESI =
+    'flex h-9 w-9 items-center justify-center rounded-xl text-sand-700 ' +
+    'transition-colors duration-150 hover:bg-sand-200/80 hover:text-sand-900 ' +
+    'active:scale-95 touch-manipulation outline-none focus-visible:bg-sand-200/80';
 
 interface MindMapNodeProps {
     node: MindNode;
@@ -149,49 +167,51 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                 {/* NOT: after:absolute after:inset-x-0 after:-bottom-3 after:h-3 kısmı, 
                     menü ile düğüm arasında görünmez bir köprü oluşturur. 
                     Böylece fareyi yukarı kaydırırken menü kaybolmaz. */}
-                <div className={`
-                    absolute bottom-full mb-1 left-1/2 -translate-x-1/2 
-                    flex items-center gap-0.5 glass p-1 rounded-xl shadow-lift border border-sand-200
+                <div
+                    role="toolbar"
+                    aria-label={`${node.title} araçları`}
+                    className={`
+                    absolute bottom-full mb-2 left-1/2 -translate-x-1/2 
+                    flex items-center gap-1 glass p-1.5 rounded-2xl shadow-lift border border-sand-200
                     transition-all duration-200 z-40
-                    after:absolute after:inset-x-0 after:-bottom-2 after:h-2
+                    after:absolute after:inset-x-0 after:-bottom-3 after:h-3
                     ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                 `}>
                         <button
                             onClick={(e) => { e.stopPropagation(); onEdit(node); }}
-                            className="p-1.5 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
+                            className={ARAC_DUGMESI}
                             title="Tam Editör"
                             aria-label="Tam Editör"
                         >
-                            <Pencil size={14} />
+                            <Pencil size={17} />
                         </button>
                         <button
                             onClick={handleCopyTitle}
-                            className="p-1.5 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
+                            className={ARAC_DUGMESI}
                             title={showTitleCopied ? "Kopyalandı!" : "Başlığı Kopyala"}
                             aria-label="Başlığı Kopyala"
                         >
-                            {showTitleCopied ? <Check size={14} className="text-moss-600" /> : <Copy size={14} />}
+                            {showTitleCopied ? <Check size={17} className="text-moss-600" /> : <Copy size={17} />}
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-moss-700 hover:bg-moss-100 rounded-xl transition-colors"
-                            title="Yeni Dal Ekle"
+                            className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-moss-700 transition-colors duration-150 hover:bg-moss-100 active:scale-95 touch-manipulation outline-none focus-visible:bg-moss-100"
+                            title="Yeni dal ekle"
+                            aria-label="Yeni dal ekle"
                         >
-                            <Plus size={13} />
+                            <Plus size={16} />
                             <span>Dal Ekle</span>
                         </button>
                         <button
                             onClick={togglePruned}
-                            className={`p-1.5 rounded-xl transition-colors ${
-                                isPruned
-                                    ? 'bg-sand-200/80 text-sand-800 hover:bg-sand-200'
-                                    : 'text-sand-700 hover:bg-sand-200/80 hover:text-sand-900'
+                            className={`${ARAC_DUGMESI} ${
+                                isPruned ? 'bg-sand-200 text-sand-800 hover:bg-sand-300' : ''
                             }`}
                             title={isPruned ? 'Budamayı geri al' : 'Buda'}
                             aria-label={isPruned ? 'Budamayı geri al' : 'Buda'}
                             aria-pressed={isPruned}
                         >
-                            <Scissors size={14} />
+                            <Scissors size={17} />
                         </button>
                     </div>
 
@@ -243,28 +263,34 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     <button
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
                         className={`
-                            absolute -bottom-3 left-1/2 -translate-x-1/2
-                            flex h-6 w-6 items-center justify-center rounded-full
-                            bg-white text-moss-700 border-2 border-moss-400 shadow-soft
-                            transition-all duration-200 hover:scale-110 hover:bg-moss-50 hover:border-moss-500 active:scale-95
+                            ${DUGME_TABANI}
+                            absolute -bottom-[20px] left-1/2 h-10 w-10 -translate-x-1/2
+                            bg-white text-moss-700 border-moss-400 hover:bg-moss-50 hover:border-moss-500
                             ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                             z-30
                         `}
-                        title="Yeni Dal Ekle"
-                        aria-label="Yeni Dal Ekle"
+                        title="Yeni dal ekle"
+                        aria-label="Yeni dal ekle"
                     >
-                        <Plus size={16} />
+                        <Plus size={20} />
                     </button>
 
-                    {/* Eğer çocukları varsa: Katla / Aç Rozeti */}
+                    {/* Eğer çocukları varsa: Katla / Aç Rozeti
+                        Seçim gerektirmez: dalları kapatmanın tek yolu bu düğme. */}
                     {hasChildren && (
                         <button
                             onClick={toggleExpand}
-                            className="absolute -bottom-3 left-1/2 translate-x-4 flex h-6 w-6 items-center justify-center rounded-full bg-sand-100 text-bark-800 border-2 border-white shadow-soft transition-all duration-200 hover:scale-110 hover:bg-sand-200 z-30 text-xs font-bold"
-                            title={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
-                            aria-label={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
+                            aria-expanded={isExpanded}
+                            className={`
+                                ${DUGME_TABANI}
+                                absolute -bottom-[20px] left-1/2 h-10 w-10 translate-x-[26px]
+                                bg-sand-100 text-bark-800 border-white hover:bg-sand-200
+                                z-30 text-sm font-bold
+                            `}
+                            title={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
+                            aria-label={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
                         >
-                            {isExpanded ? <ChevronDown size={14} /> : <span>{node.children.length}</span>}
+                            {isExpanded ? <ChevronDown size={20} /> : <span>{node.children.length}</span>}
                         </button>
                     )}
                 </div>
@@ -309,49 +335,50 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
             >
                 {/* Üst Yüzen Eylem Araç Çubuğu */}
                 {/* Görünmez köprü (after:) ile farenin boşluktan düşmesi engellenir */}
-                <div className={`
-                    absolute bottom-full mb-1 left-1/2 -translate-x-1/2 
-                    flex items-center gap-0.5 glass p-1 rounded-xl shadow-lift border border-sand-200
+                <div
+                    role="toolbar"
+                    aria-label={`${node.title} araçları`}
+                    className={`
+                    absolute bottom-full mb-2 left-1/2 -translate-x-1/2 
+                    flex items-center gap-1 glass p-1.5 rounded-2xl shadow-lift border border-sand-200
                     transition-all duration-200 z-30
-                    after:absolute after:inset-x-0 after:-bottom-2 after:h-2
+                    after:absolute after:inset-x-0 after:-bottom-3 after:h-3
                     ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                 `}>
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(node); }}
-                        className="p-1.5 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-lg transition-colors"
+                        className={ARAC_DUGMESI}
                         title="Metin Editörü"
                         aria-label="Metin Editörü"
                     >
-                        <Pencil size={13} />
+                        <Pencil size={17} />
                     </button>
                     <button
                         onClick={handleCopyTitle}
-                        className="p-1.5 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-lg transition-colors"
-                        title={showTitleCopied ? "Kopyalandı!" : "Kopyala"}
-                        aria-label="Kopyala"
+                        className={ARAC_DUGMESI}
+                        title={showTitleCopied ? "Kopyalandı!" : "Başlığı Kopyala"}
+                        aria-label="Başlığı Kopyala"
                     >
-                        {showTitleCopied ? <Check size={13} className="text-moss-600" /> : <Copy size={13} />}
+                        {showTitleCopied ? <Check size={17} className="text-moss-600" /> : <Copy size={17} />}
                     </button>
                     <button
                         onClick={togglePruned}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                            isPruned
-                                ? 'bg-sand-200 text-sand-800 hover:bg-sand-300'
-                                : 'text-sand-700 hover:bg-sand-200/80 hover:text-sand-900'
+                        className={`${ARAC_DUGMESI} ${
+                            isPruned ? 'bg-sand-200 text-sand-800 hover:bg-sand-300' : ''
                         }`}
                         title={isPruned ? 'Budamayı geri al' : 'Buda'}
                         aria-label={isPruned ? 'Budamayı geri al' : 'Buda'}
                         aria-pressed={isPruned}
                     >
-                        <Scissors size={13} />
+                        <Scissors size={17} />
                     </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
-                        className="p-1.5 text-berry-600 hover:bg-berry-50 rounded-lg transition-colors"
+                        className={`${ARAC_DUGMESI} text-berry-600 hover:bg-berry-50 hover:text-berry-700`}
                         title="Dalı Sil"
                         aria-label="Dalı Sil"
                     >
-                        <X size={13} />
+                        <X size={17} />
                     </button>
                 </div>
 
@@ -422,102 +449,107 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     </div>
                 </div>
 
-                {/* TİP DEĞİŞTİRME BUTONU (SOL KENAR) */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleNodeType(node.id, resolvedType);
-                    }}
-                    className={`
-                        absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2
-                        flex h-5 w-5 items-center justify-center rounded-full
-                        border-2 shadow-soft transition-all duration-200 hover:scale-110 active:scale-95
-                        ${isBranchStyle
-                            ? 'bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400'
-                            : 'bg-white text-clay-600 border-clay-300 hover:bg-clay-50 hover:border-clay-400'
-                        }
-                        ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                        z-20
-                    `}
-                    title={isBranchStyle ? "Yaprağa Dönüştür" : "Dala Dönüştür"}
-                    aria-label={isBranchStyle ? "Yaprağa Dönüştür" : "Dala Dönüştür"}
+                {/* DÜĞÜMÜN ÇEVRESİNDEKİ EYLEM DÜĞMELERİ
+                    Kartın köşe ve kenarlarına ortalanır; dokunma alanı
+                    36 piksel olduğu için parmakla rahatça basılır. */}
+                <div
+                    role="group"
+                    aria-label={`${node.title} eylemleri`}
+                    className="pointer-events-none absolute inset-0 z-20"
                 >
-                    {isBranchStyle ? <Leaf size={11} /> : <Palette size={11} />}
-                </button>
-
-                {/* RENK DEĞİŞTİRME BUTONU (SOL KENAR, TİP BUTONUNUN ALTI) */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setGeciciRenk((onceki) => sonrakiRenk(onceki ?? node.color ?? null));
-                    }}
-                    className={`
-                        absolute left-0 top-1/2 translate-x-[-50%] translate-y-[14px]
-                        flex h-5 w-5 items-center justify-center rounded-full
-                        border-2 border-white shadow-soft transition-all duration-200 hover:scale-110 active:scale-95
-                        ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                        z-20
-                    `}
-                    style={{ backgroundColor: geciciRenk ?? node.color ?? BRANCH_COLORS[0].value }}
-                    title="Rengi değiştir"
-                    aria-label="Rengi değiştir"
-                >
-                    <Palette size={10} className="text-white" />
-                </button>
-
-                {/* Alt Dala Ekle Düğmesi (Aşağı) */}
-                <button
-                    onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                    className={`
-                        absolute -bottom-3 left-1/2 -translate-x-1/2
-                        flex h-5 w-5 items-center justify-center rounded-full
-                        bg-white text-moss-600 border-2 border-moss-300 shadow-soft
-                        transition-all duration-200 hover:scale-110 hover:bg-moss-50 hover:border-moss-400 active:scale-95
-                        ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                        z-20
-                    `}
-                    title="Alt Dal Ekle"
-                    aria-label="Alt Dal Ekle"
-                >
-                    <Plus size={14} />
-                </button>
-
-                {/* Katla / Aç Rozeti (Aşağı, sağa kayık) */}
-                {hasChildren && (
+                    {/* TİP DEĞİŞTİRME (SOL ÜST KÖŞE) */}
                     <button
-                        onClick={toggleExpand}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleNodeType(node.id, resolvedType);
+                        }}
                         className={`
-                            absolute -bottom-3 left-1/2 translate-x-3.5
-                            flex h-5 w-5 items-center justify-center rounded-full
-                            bg-sand-100 text-sand-600 border border-sand-300 shadow-soft
-                            transition-all duration-200 hover:scale-110 hover:bg-sand-200 active:scale-95
-                            z-20 text-[10px] font-bold
-                        `}
-                        title={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
-                        aria-label={isExpanded ? "Dalları Kapat" : "Dalları Aç"}
-                    >
-                        {isExpanded ? <ChevronDown size={14} /> : <span>{node.children.length}</span>}
-                    </button>
-                )}
-
-                {/* Yan Dal Ekle (Sağ Kenar) */}
-                {onAddSibling && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'right'); }}
-                        className={`
-                            absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2
-                            flex h-5 w-5 items-center justify-center rounded-full
-                            bg-white text-clay-600 border-2 border-clay-300 shadow-soft
-                            transition-all duration-200 hover:scale-110 hover:bg-clay-50 hover:border-clay-400 active:scale-95
+                            ${DUGME_TABANI}
+                            absolute left-0 top-0 h-9 w-9 -translate-x-1/2 -translate-y-1/2
+                            ${isBranchStyle
+                                ? 'bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400'
+                                : 'bg-white text-clay-600 border-clay-300 hover:bg-clay-50 hover:border-clay-400'
+                            }
                             ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                            z-20
                         `}
-                        title="Yan Dal Ekle"
-                        aria-label="Yan Dal Ekle"
+                        title={isBranchStyle ? 'Yaprağa dönüştür' : 'Dala dönüştür'}
+                        aria-label={isBranchStyle ? 'Yaprağa dönüştür' : 'Dala dönüştür'}
                     >
-                        <Plus size={14} />
+                        {isBranchStyle ? <Leaf size={17} /> : <Sprout size={17} />}
                     </button>
-                )}
+
+                    {/* RENK DEĞİŞTİRME (SOL ALT KÖŞE) */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setGeciciRenk((onceki) => sonrakiRenk(onceki ?? node.color ?? null));
+                        }}
+                        className={`
+                            ${DUGME_TABANI}
+                            absolute bottom-0 left-0 h-9 w-9 -translate-x-1/2 translate-y-1/2
+                            border-white/90
+                            ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                        `}
+                        style={{ backgroundColor: geciciRenk ?? node.color ?? BRANCH_COLORS[0].value }}
+                        title="Rengi değiştir"
+                        aria-label="Rengi değiştir"
+                    >
+                        <Palette size={16} className="text-white" />
+                    </button>
+
+                    {/* ALT DALA EKLE (ALT ORTA) */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
+                        className={`
+                            ${DUGME_TABANI}
+                            absolute -bottom-[18px] left-1/2 h-9 w-9 -translate-x-1/2
+                            bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400
+                            ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                        `}
+                        title="Alt dal ekle"
+                        aria-label="Alt dal ekle"
+                    >
+                        <Plus size={18} />
+                    </button>
+
+                    {/* KATLA / AÇ ROZETİ (ALT ORTA, SAĞA KAYIK)
+                        Seçim gerektirmez: dalları kapatmanın tek yolu bu düğme.
+                        Bu yüzden tıklanabilirliği her durumda açıktır. */}
+                    {hasChildren && (
+                        <button
+                            onClick={toggleExpand}
+                            aria-expanded={isExpanded}
+                            className={`
+                                ${DUGME_TABANI}
+                                pointer-events-auto
+                                absolute -bottom-[18px] left-1/2 h-9 w-9 translate-x-[22px]
+                                bg-sand-100 text-bark-800 border-white hover:bg-sand-200
+                                text-xs font-bold
+                            `}
+                            title={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
+                            aria-label={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
+                        >
+                            {isExpanded ? <ChevronDown size={18} /> : <span>{node.children.length}</span>}
+                        </button>
+                    )}
+
+                    {/* YAN DAL EKLE (SAĞ KENAR) */}
+                    {onAddSibling && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'right'); }}
+                            className={`
+                                ${DUGME_TABANI}
+                                absolute right-0 top-1/2 h-9 w-9 translate-x-1/2 -translate-y-1/2
+                                bg-white text-clay-600 border-clay-300 hover:bg-clay-50 hover:border-clay-400
+                                ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                            `}
+                            title="Yan dal ekle"
+                            aria-label="Yan dal ekle"
+                        >
+                            <Plus size={18} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {hasChildren && isExpanded && (
