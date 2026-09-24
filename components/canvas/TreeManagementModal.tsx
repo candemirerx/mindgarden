@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, X, Pencil, Trash2 } from 'lucide-react';
+import { Settings, X, Pencil, Trash2, ArrowLeft } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { MindNode } from '@/lib/types';
 
@@ -44,30 +44,30 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="relative w-full h-full md:h-[90vh] md:max-w-4xl bg-gradient-to-br from-sand-50 via-clay-50/30 to-sand-50 md:rounded-3xl shadow-pop overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm md:p-4">
+            <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-gradient-to-br from-sand-50 via-clay-50/30 to-sand-50 shadow-pop md:h-[90vh] md:max-w-4xl md:rounded-3xl">
                 {/* Header */}
-                <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-sand-200 px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-clay-100 flex items-center justify-center">
-                            <Settings className="text-clay-600" size={20} />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-sand-800">Ağaç Yönetimi</h2>
-                            <p className="text-xs text-sand-500">Ağaçlarınızı düzenleyin veya silin</p>
-                        </div>
-                    </div>
+                <div className="flex flex-shrink-0 items-center gap-3 border-b border-sand-200 bg-white/80 px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-md md:px-6 md:py-4">
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-sand-100 rounded-full transition-colors"
-                        title="Kapat"
+                        aria-label="Ağaç yönetiminden geri dön"
+                        className="-ml-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sand-600 transition-colors hover:bg-sand-100"
                     >
-                        <X size={24} className="text-sand-600" />
+                        <ArrowLeft size={22} />
                     </button>
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-clay-100">
+                            <Settings className="text-clay-600" size={20} />
+                        </div>
+                        <div className="min-w-0">
+                            <h2 className="truncate text-lg font-bold text-sand-800 md:text-xl">Ağaç Yönetimi</h2>
+                            <p className="truncate text-xs text-sand-500">Ağaçlarınızı düzenleyin veya silin</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto h-[calc(100%-80px)]">
+                <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] md:p-6">
                     {trees.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                             <div className="w-20 h-20 rounded-full bg-sand-100 flex items-center justify-center mb-4">
