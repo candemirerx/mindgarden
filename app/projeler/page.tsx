@@ -415,14 +415,6 @@ function ProjectsPageInner() {
 
                                 <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                                     <button
-                                        onClick={() => handleCopy(item.title, item.id, 'title')}
-                                        className={`flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200 ${copiedId === `title-${item.id}` ? 'bg-moss-600 text-white' : 'bg-clay-100 text-clay-700 hover:bg-clay-200'}`}
-                                        title="Başlığı kopyala"
-                                        aria-label="Başlığı kopyala"
-                                    >
-                                        {copiedId === `title-${item.id}` ? <Check size={13} /> : <Copy size={13} />}
-                                    </button>
-                                    <button
                                         onClick={() => {
                                             const c = item.content.split('\n').slice(1).join('\n').trim();
                                             handleCopy(c || item.title, item.id, 'content');
@@ -546,14 +538,6 @@ function ProjectsPageInner() {
                         </div>
 
                         <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <button
-                                onClick={() => handleCopy(item.title, item.id, 'title')}
-                                className={`flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200 ${copiedId === `title-${item.id}` ? 'bg-moss-600 text-white' : 'bg-clay-100 text-clay-700 hover:bg-clay-200'}`}
-                                title="Başlığı kopyala"
-                                aria-label="Başlığı kopyala"
-                            >
-                                {copiedId === `title-${item.id}` ? <Check size={13} /> : <Copy size={13} />}
-                            </button>
                             <button
                                 onClick={() => {
                                     const c = item.content.split('\n').slice(1).join('\n').trim();
