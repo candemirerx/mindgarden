@@ -262,18 +262,18 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex flex-shrink-0 items-center justify-between border-b border-white/10 px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-8 sm:py-5">
-                    <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-white flex items-center gap-3">
-                        <Sparkles size={20} className="text-moss-400" />
-                        Tercihler & Ayarlar
-                    </h2>
+                <div className="flex flex-shrink-0 items-center gap-3 border-b border-white/10 px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6 sm:py-5">
                     <button
                         onClick={onClose}
-                        aria-label="Ayarları kapat"
-                        className="rounded-lg p-2 text-sand-400 transition-colors hover:bg-white/10 hover:text-white"
+                        aria-label="Ayarlardan geri dön"
+                        className="-ml-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-sand-400 transition-colors hover:bg-white/10 hover:text-white"
                     >
-                        <X size={20} />
+                        <ArrowLeft size={20} />
                     </button>
+                    <h2 className="flex min-w-0 items-center gap-3 text-lg font-semibold tracking-tight text-white sm:text-xl">
+                        <Sparkles size={20} className="flex-shrink-0 text-moss-400" />
+                        <span className="truncate">Tercihler & Ayarlar</span>
+                    </h2>
                 </div>
 
                 {/* Body: Split Layout */}
