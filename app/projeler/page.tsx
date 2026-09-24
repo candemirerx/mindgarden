@@ -13,6 +13,7 @@ import {
 import PromptModal from '@/components/ui/PromptModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
+import { BRANCH_COLORS, sonrakiRenk } from '@/lib/branchColors';
 
 interface TreeItem {
     id: string;
@@ -28,16 +29,6 @@ interface TreeItem {
  * Seviye anahtarı: her derinlik kendi rengiyle işaretlenir.
  */
 const LEVEL_COLORS = ['#306C47', '#C9841B', '#4A7C8C', '#8A6A9E', '#B5626F'];
-
-/** Kullanıcının dal için seçebileceği renkler. */
-const BRANCH_COLORS: Array<{ name: string; value: string }> = [
-    { name: 'Yosun yeşili', value: '#306C47' },
-    { name: 'Bal köşe', value: '#C9841B' },
-    { name: 'Deniz mavisi', value: '#4A7C8C' },
-    { name: 'Lavanta', value: '#8A6A9E' },
-    { name: 'Gül kurusu', value: '#B5626F' },
-    { name: 'Kahve', value: '#875948' }
-];
 
 function ProjectsPageInner() {
     const searchParams = useSearchParams();

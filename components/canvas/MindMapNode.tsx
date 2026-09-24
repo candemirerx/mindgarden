@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Copy, Pencil, Plus, ChevronDown, ChevronRight, X, TreePine, Leaf, Check, Palette } from 'lucide-react';
+import { BRANCH_COLORS, sonrakiRenk } from '@/lib/branchColors';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 
@@ -28,6 +29,8 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     const [editedTitle, setEditedTitle] = useState(node.title);
     const [isMobile, setIsMobile] = useState(false);
     const [showTitleCopied, setShowTitleCopied] = useState(false);
+    /** Yalnizca ekranda gecerli renk; kaydedilmez, yenilenince eski haline doner. */
+    const [geciciRenk, setGeciciRenk] = useState<string | null>(null);
 
     const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -328,6 +331,11 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         }
                         ${isSelected ? 'ring-4 ring-moss-500/20 scale-[1.03]' : 'hover:scale-[1.02]'}
                     `}
+                    style={
+                        geciciRenk
+                            ? { borderColor: geciciRenk, borderWidth: '2px' }
+                            : undefined
+                    }
                 >
                     <div className="flex items-center gap-2">
                         {isBranchStyle ? (
@@ -385,6 +393,26 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     aria-label={isBranchStyle ? "Yaprağa Dönüştür" : "Dala Dönüştür"}
                 >
                     {isBranchStyle ? <Leaf size={11} /> : <Palette size={11} />}
+                </button>
+
+                {/* RENK DEĞİŞTİRME BUTONU (SOL KENAR, TİP BUTONUNUN ALTI) */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setGeciciRenk((onceki) => sonrakiRenk(onceki ?? node.color ?? null));
+                    }}
+                    className={`
+                        absolute left-0 top-1/2 translate-x-[-50%] translate-y-[14px]
+                        flex h-5 w-5 items-center justify-center rounded-full
+                        border-2 border-white shadow-soft transition-all duration-200 hover:scale-110 active:scale-95
+                        ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                        z-20
+                    `}
+                    style={{ backgroundColor: geciciRenk ?? node.color ?? BRANCH_COLORS[0].value }}
+                    title="Rengi değiştir"
+                    aria-label="Rengi değiştir"
+                >
+                    <Palette size={10} className="text-white" />
                 </button>
 
                 {/* Alt Dala Ekle Düğmesi (Aşağı) */}

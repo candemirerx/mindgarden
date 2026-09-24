@@ -66,6 +66,8 @@ export interface MindNode {
     children: MindNode[];
     isExpanded?: boolean;
     nodeType?: 'branch' | 'leaf' | 'auto';
+    /** Kullanıcının seçtiği renk; boşsa varsayılan renk kullanılır. */
+    color?: string | null;
 }
 
 export interface ViewState {
