@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense, useState, useCallback } from 'react';
+import { useEffect, Suspense, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Sprout, Settings, List, TreePine } from 'lucide-react';
@@ -15,12 +15,147 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * Bir ağacı uzun basıp sürükleyerek bahçede istenen konuma taşımaya yarar.
+ *
+ * Konum, ağacın otomatik yerleşimine eklenen bir kaydırma olarak tutulur;
+ * böylece diğer ağaçların düzeni bozulmaz. Sürükleme bitince konum kaydedilir.
+ */
+function SuruklenebilirAgac({
+    x,
+    y,
+    onMove,
+    children
+}: {
+    x: number;
+    y: number;
+    onMove: (x: number, y: number) => void;
+    children: React.ReactNode;
+}) {
+    const [kaydirma, setKaydirma] = useState({ x, y });
+    const [surukluyor, setSurukluyor] = useState(false);
+    const baslangic = useRef({ fareX: 0, fareY: 0, kayX: 0, kayY: 0, olcek: 1 });
+    const zamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const suruklendi = useRef(false);
+
+    // Konum dışarıdan değişirse (senkron vb.) ve o an sürükleme yoksa uygula
+    useEffect(() => {
+        if (!surukluyor) {
+            setKaydirma({ x, y });
+        }
+    }, [x, y, surukluyor]);
+
+    /** Tuvalin yakınlaştırma oranını okur; sürükleme farkını buna böleriz. */
+    const olcekOku = () => {
+        const katman = document.querySelector('.tree') as HTMLElement | null;
+        if (!katman) return 1;
+        try {
+            const donusum = new DOMMatrixReadOnly(getComputedStyle(katman).transform);
+            return donusum.a || 1;
+        } catch {
+            return 1;
+        }
+    };
+
+    const fareFarki = (e: React.PointerEvent) => {
+        const { fareX, fareY, kayX, kayY, olcek } = baslangic.current;
+        return {
+            x: kayX + (e.clientX - fareX) / olcek,
+            y: kayY + (e.clientY - fareY) / olcek
+        };
+    };
+
+    const basla = (e: React.PointerEvent) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+        baslangic.current = {
+            fareX: e.clientX,
+            fareY: e.clientY,
+            kayX: kaydirma.x,
+            kayY: kaydirma.y,
+            olcek: olcekOku()
+        };
+        suruklendi.current = false;
+
+        const hedef = e.currentTarget as HTMLElement;
+        zamanlayici.current = setTimeout(() => {
+            setSurukluyor(true);
+            try {
+                hedef.setPointerCapture(e.pointerId);
+            } catch {
+                // yakalama desteklenmiyorsa sorun değil
+            }
+        }, 350);
+    };
+
+    const hareket = (e: React.PointerEvent) => {
+        if (!surukluyor) {
+            // Parmak erken kayarsa uzun basma iptal olur, tuval kaydırması devam eder
+            if (
+                zamanlayici.current &&
+                Math.hypot(
+                    e.clientX - baslangic.current.fareX,
+                    e.clientY - baslangic.current.fareY
+                ) > 8
+            ) {
+                clearTimeout(zamanlayici.current);
+                zamanlayici.current = null;
+            }
+            return;
+        }
+
+        e.stopPropagation();
+        suruklendi.current = true;
+        setKaydirma(fareFarki(e));
+    };
+
+    const bitir = (e: React.PointerEvent) => {
+        if (zamanlayici.current) {
+            clearTimeout(zamanlayici.current);
+            zamanlayici.current = null;
+        }
+        if (!surukluyor) return;
+
+        e.stopPropagation();
+        setSurukluyor(false);
+
+        const son = fareFarki(e);
+        onMove(Math.round(son.x), Math.round(son.y));
+    };
+
+    return (
+        <li
+            onPointerDown={basla}
+            onPointerMove={hareket}
+            onPointerUp={bitir}
+            onPointerCancel={bitir}
+            onClickCapture={(e) => {
+                // Sürüklemeden sonra oluşan tıklamayı yut; düğüm seçilmesin
+                if (suruklendi.current) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    suruklendi.current = false;
+                }
+            }}
+            className={`relative ${surukluyor ? 'z-50' : ''}`}
+            style={{
+                transform: `translate(${kaydirma.x}px, ${kaydirma.y}px)`,
+                touchAction: surukluyor ? 'none' : 'auto',
+                transition: surukluyor ? 'none' : 'transform 0.15s ease-out',
+                cursor: surukluyor ? 'grabbing' : undefined
+            }}
+        >
+            {children}
+        </li>
+    );
+}
+
 function GardenPageInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, deleteNode: deleteNodeFromStore } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
@@ -368,14 +503,22 @@ function GardenPageInner() {
                     {mindRoots.length > 0 ? (
                         <ul className="flex gap-20">
                             {mindRoots.map((root) => (
-                                <MindMapNode
+                                <SuruklenebilirAgac
                                     key={root.id}
-                                    node={root}
-                                    onAddChild={handleAddChild}
-                                    onDelete={handleDeleteNode}
-                                    onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
-                                    depth={0}
-                                />
+                                    x={nodes.find((n) => n.id === root.id)?.position_x ?? 0}
+                                    y={nodes.find((n) => n.id === root.id)?.position_y ?? 0}
+                                    onMove={(x, y) => {
+                                        void updateNodePosition(root.id, x, y);
+                                    }}
+                                >
+                                    <MindMapNode
+                                        node={root}
+                                        onAddChild={handleAddChild}
+                                        onDelete={handleDeleteNode}
+                                        onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
+                                        depth={0}
+                                    />
+                                </SuruklenebilirAgac>
                             ))}
                         </ul>
                     ) : (
