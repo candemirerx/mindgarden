@@ -5,7 +5,11 @@
  * anahtarı gerektirmezler. AI makroları gibi açılıp kapatılabilir, silinebilir;
  * kapatılan veya silinen araç editörde yer kaplamaz.
  */
-export type ToolKind = 'sirali-ad' | 'numaralandir' | 'bosluk-sadelestir';
+export type ToolKind =
+    | 'sirali-ad'
+    | 'icerikten-dal'
+    | 'numaralandir'
+    | 'bosluk-sadelestir';
 
 export interface AppTool {
     id: string;
@@ -20,9 +24,19 @@ export interface AppTool {
 }
 
 export const TOOLS_KEY = 'nb-tools';
+/** Araç listesinde değişiklik olduğunda artar; eski kayıtlara yeni araçlar eklenir. */
+export const TOOLS_VERSION = 2;
+const TOOLS_VERSION_KEY = 'nb-tools-version';
 
-/** Silinen aracı geri getirmek için kullanılan varsayılan liste. */
+/** Kayıtlı aracı geri getirmek için kullanılan varsayılan liste. */
 export const DEFAULT_TOOLS: AppTool[] = [
+    {
+        id: 'icerikten-baslik',
+        title: 'İçerikten Dal Oluştur',
+        subtitle: 'Notun satırlarını alt dal yapar: her satır bir dal olur.',
+        kind: 'icerikten-dal',
+        enabled: true
+    },
     {
         id: 'sirali-ad',
         title: 'Sıralı Ad',
@@ -46,6 +60,20 @@ export const DEFAULT_TOOLS: AppTool[] = [
     }
 ];
 
+/** Araçların ayarlardaki grupları: sekmenin düzenli görünmesi için. */
+export const TOOL_GROUPS: Array<{ baslik: string; aciklama: string; turler: ToolKind[] }> = [
+    {
+        baslik: 'Ağaç yapısı araçları',
+        aciklama: 'Ağacınızı elle kurmadan hızlıca dallandırır.',
+        turler: ['icerikten-dal', 'sirali-ad']
+    },
+    {
+        baslik: 'Metin düzenleme araçları',
+        aciklama: 'Notun metnini yapay zekâ olmadan düzenler.',
+        turler: ['numaralandir', 'bosluk-sadelestir']
+    }
+];
+
 /** Kayıtlı araçları döner; hiç kayıt yoksa varsayılanları döner. */
 export function readTools(): AppTool[] {
     if (typeof window === 'undefined') return DEFAULT_TOOLS;
@@ -57,7 +85,12 @@ export function readTools(): AppTool[] {
         const parsed = JSON.parse(stored);
         if (!Array.isArray(parsed)) return DEFAULT_TOOLS;
 
-        const gecerliTurler: ToolKind[] = ['sirali-ad', 'numaralandir', 'bosluk-sadelestir'];
+        const gecerliTurler: ToolKind[] = [
+            'sirali-ad',
+            'icerikten-dal',
+            'numaralandir',
+            'bosluk-sadelestir'
+        ];
         const valid = parsed.filter(
             (item): item is AppTool =>
                 !!item &&
@@ -66,11 +99,27 @@ export function readTools(): AppTool[] {
                 gecerliTurler.includes(item.kind)
         );
 
-        return valid.map((item) => ({
+        let liste = valid.map((item) => ({
             ...item,
             subtitle: typeof item.subtitle === 'string' ? item.subtitle : '',
             enabled: item.enabled !== false
         }));
+
+        // Eski sürümde kaydedilmiş liste: sonradan eklenen araçlar yoktur.
+        // Bir kez varsayılanlara bakıp eksikleri ekleriz; silinen araçların
+        // yeniden belirmemesi için sürüm damgası kullanılır.
+        const kayitliSurum = Number(localStorage.getItem(TOOLS_VERSION_KEY) ?? '1');
+        if (kayitliSurum < TOOLS_VERSION) {
+            const olanlar = new Set(liste.map((item) => item.id));
+            const eksikler = DEFAULT_TOOLS.filter((item) => !olanlar.has(item.id));
+            if (eksikler.length > 0) {
+                liste = [...liste, ...eksikler];
+                localStorage.setItem(TOOLS_KEY, JSON.stringify(liste));
+            }
+            localStorage.setItem(TOOLS_VERSION_KEY, String(TOOLS_VERSION));
+        }
+
+        return liste;
     } catch {
         // Bozuk kayıt: varsayılanlara düşeriz.
         return DEFAULT_TOOLS;
@@ -109,7 +158,33 @@ export function siraliAd(parentId: string | null, nodes: Array<{ parent_id: stri
 
 /** Aracın notun metnini değiştirip değiştirmediği. */
 export function metniDegistirir(kind: ToolKind): boolean {
-    return kind !== 'sirali-ad';
+    return kind !== 'sirali-ad' && kind !== 'icerikten-dal';
+}
+
+/**
+ * "İçerikten Dal Oluştur" için kullanılacak satırları çıkarır.
+ *
+ * Boş satırlar atılır, uç boşluklar silinir; aynı satır iki kez yazılmışsa
+ * tek sayılır. Çok uzun satırlar dal adına sığması için kısaltılır.
+ */
+export function iceriktenDallar(metin: string, uzunlukSiniri = 80): string[] {
+    const gorulen = new Set<string>();
+    const dallar: string[] = [];
+
+    for (const satir of metin.split('\n')) {
+        const temiz = satir.trim();
+        if (!temiz) continue;
+
+        const ad =
+            temiz.length > uzunlukSiniri
+                ? `${temiz.slice(0, uzunlukSiniri).trimEnd()}…`
+                : temiz;
+        if (gorulen.has(ad)) continue;
+
+        gorulen.add(ad);
+        dallar.push(ad);
+    }
+    return dallar;
 }
 
 /**

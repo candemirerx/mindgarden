@@ -3,12 +3,12 @@
 import { useEffect, Suspense, useState, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, Hash, ListOrdered, Eraser } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, Hash, ListOrdered, Eraser, ListTree } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
 import { readEnabledMacros } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
-import { readEnabledTools, aracMetniniUygula, metniDegistirir, siraliAd } from '@/lib/tools';
+import { readEnabledTools, aracMetniniUygula, siraliAd, iceriktenDallar } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
 import { splitIntoChunks } from '@/lib/aiChunks';
 import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl } from '@/lib/aiProvider';
@@ -172,11 +172,47 @@ function EditorPageInner() {
     /**
      * Yerel araçları çalıştırır.
      *
-     * "Sıralı ad" yeni bir alt dal açar; diğerleri notun metnini düzenler.
-     * Metni değiştiren araçlar, tıpkı yapay zekâ sonucu gibi önce öneri
-     * olarak uygulanır: kullanıcı onaylamadan kaydedilmez.
+     * "İçerikten Dal Oluştur" notun satırlarını alt dal yapar; "Sıralı Ad"
+     * yeni bir alt dal açar. Diğerleri notun metnini düzenler ve tıpkı
+     * yapay zekâ sonucu gibi önce öneri olarak uygulanır: kullanıcı
+     * onaylamadan kaydedilmez.
      */
     const runTool = async (tool: AppTool) => {
+        if (tool.kind === 'icerikten-dal') {
+            if (!gardenId || !nodeId) {
+                alert('Bu araç için önce bir not açık olmalı.');
+                return;
+            }
+
+            const satirlar = iceriktenDallar(content);
+            if (satirlar.length === 0) {
+                alert('Notun içeriğinde dala dönüşecek bir satır bulunamadı.');
+                return;
+            }
+
+            // Aynı adla dal zaten varsa tekrar oluşturmamak için
+            const mevcutAdlar = new Set(
+                nodes
+                    .filter((n) => n.parent_id === nodeId)
+                    .map((n) => n.content.split('\n')[0].trim())
+            );
+            const yeniler = satirlar.filter((ad) => !mevcutAdlar.has(ad));
+
+            if (yeniler.length === 0) {
+                alert('Bu satırlar zaten dal olarak var.');
+                return;
+            }
+
+            let olusturulan = 0;
+            for (const ad of yeniler) {
+                const olusan = await addNode(gardenId, ad, nodeId, { x: 0, y: 0 });
+                if (olusan) olusturulan += 1;
+            }
+
+            alert(`${olusturulan} alt dal oluşturuldu.`);
+            return;
+        }
+
         if (tool.kind === 'sirali-ad') {
             if (!gardenId || !nodeId) {
                 alert('Bu araç için önce bir not açık olmalı.');
@@ -649,7 +685,9 @@ function EditorPageInner() {
                                                 : 'bg-white text-sand-700 shadow-soft ring-1 ring-sand-200 hover:bg-moss-50 hover:text-moss-800 hover:ring-moss-300'
                                         }`}
                                     >
-                                        {tool.kind === 'sirali-ad' ? (
+                                        {tool.kind === 'icerikten-dal' ? (
+                                            <ListTree size={14} />
+                                        ) : tool.kind === 'sirali-ad' ? (
                                             <Hash size={14} />
                                         ) : tool.kind === 'numaralandir' ? (
                                             <ListOrdered size={14} />

@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2, Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2, Wrench, Hash, ListOrdered, Eraser } from 'lucide-react';
+import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2, Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2, Wrench, Hash, ListOrdered, Eraser, ListTree } from 'lucide-react';
 import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
 import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
 import { readAiMacros, saveAiMacros, createMacro, DEFAULT_MACROS, SPELLCHECK_MACRO_ID } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
-import { readTools, saveTools, DEFAULT_TOOLS } from '@/lib/tools';
+import { readTools, saveTools, DEFAULT_TOOLS, TOOL_GROUPS } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
 import {
     PROVIDER_IDS,
@@ -756,107 +756,133 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
 
                         {activeTab === 'tools' && (
                             <div className="max-w-2xl animate-fade-in pb-8">
-                                <div className="mb-6 sm:mb-8">
-                                    <h3 className="text-xl sm:text-2xl font-semibold text-sand-900 mb-2">Araçlar</h3>
-                                    <p className="text-xs sm:text-sm text-sand-500 leading-relaxed">
-                                        Yapay zekâ gerektirmeyen yerel işler. Metin editöründe AI satırının altında simgelerle görünürler; buradan açıp kapatabilir veya silebilirsiniz. Kapalı araçlar editörde yer kaplamaz.
-                                    </p>
+                                <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div className="flex items-start gap-3">
+                                        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-moss-100 text-moss-700">
+                                            <Wrench size={20} />
+                                        </span>
+                                        <div>
+                                            <h3 className="text-xl sm:text-2xl font-semibold text-sand-900 mb-1">Araçlar</h3>
+                                            <p className="text-xs sm:text-sm text-sand-500 leading-relaxed">
+                                                Yapay zekâ gerektirmeyen yerel işler. Editörde AI satırının altında görünürler.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="flex-shrink-0 self-start rounded-full border border-moss-500/30 bg-moss-500/10 px-3 py-1 text-xs font-semibold text-moss-700">
+                                        {enabledToolCount} / {toolList.length} etkin
+                                    </span>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="text-[11px] font-medium uppercase tracking-wider text-sand-500">
-                                            {enabledToolCount} / {toolList.length} araç etkin
-                                        </span>
-                                        {toolList.length < DEFAULT_TOOLS.length && (
-                                            <button
-                                                type="button"
-                                                onClick={handleResetTools}
-                                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-sand-500 transition-colors hover:bg-sand-50 hover:text-sand-700"
-                                            >
-                                                <RotateCcw size={12} />
-                                                Varsayılanları geri getir
-                                            </button>
-                                        )}
+                                {toolList.length === 0 ? (
+                                    <div className="rounded-2xl border border-dashed border-sand-300 bg-sand-50/60 p-8 text-center">
+                                        <p className="text-sm font-medium text-sand-700">Tüm araçlar silindi</p>
+                                        <p className="mt-1 text-xs text-sand-500">
+                                            Aşağıdaki düğmeyle varsayılan araçları geri getirebilirsiniz.
+                                        </p>
                                     </div>
-
-                                    <div className="space-y-2">
-                                        {toolList.length === 0 && (
-                                            <p className="rounded-xl border border-dashed border-sand-300 px-4 py-6 text-center text-xs text-sand-500">
-                                                Tüm araçlar silindi. Varsayılanları geri getirebilirsiniz.
-                                            </p>
-                                        )}
-
-                                        {toolList.map((tool) => {
-                                            const isOn = tool.enabled !== false;
-                                            const aracIkonu =
-                                                tool.kind === 'sirali-ad'
-                                                    ? <Hash size={16} />
-                                                    : tool.kind === 'numaralandir'
-                                                        ? <ListOrdered size={16} />
-                                                        : <Eraser size={16} />;
+                                ) : (
+                                    <div className="space-y-7">
+                                        {TOOL_GROUPS.map((grup) => {
+                                            const gruptakiler = toolList.filter((tool) => grup.turler.includes(tool.kind));
+                                            if (gruptakiler.length === 0) return null;
 
                                             return (
-                                                <div
-                                                    key={tool.id}
-                                                    className="flex items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 px-3 py-2.5"
-                                                >
-                                                    <span
-                                                        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${
-                                                            isOn ? 'bg-moss-100 text-moss-700' : 'bg-sand-100 text-sand-400'
-                                                        }`}
-                                                        aria-hidden
-                                                    >
-                                                        {aracIkonu}
-                                                    </span>
+                                                <section key={grup.baslik}>
+                                                    <div className="mb-2.5">
+                                                        <h4 className="text-sm font-semibold text-sand-900">{grup.baslik}</h4>
+                                                        <p className="text-[11px] text-sand-500">{grup.aciklama}</p>
+                                                    </div>
 
-                                                    <span className="min-w-0 flex-1">
-                                                        <span
-                                                            className={`block truncate text-sm font-medium ${
-                                                                isOn ? 'text-sand-800' : 'text-sand-500 line-through'
-                                                            }`}
-                                                        >
-                                                            {tool.title}
-                                                        </span>
-                                                        <span className="mt-0.5 block text-[11px] leading-snug text-sand-500">
-                                                            {tool.subtitle || 'Açıklama yok'}
-                                                        </span>
-                                                    </span>
+                                                    <div className="space-y-2.5">
+                                                        {gruptakiler.map((tool) => {
+                                                            const isOn = tool.enabled !== false;
+                                                            const aracIkonu =
+                                                                tool.kind === 'icerikten-dal' ? <ListTree size={18} />
+                                                                : tool.kind === 'sirali-ad' ? <Hash size={18} />
+                                                                : tool.kind === 'numaralandir' ? <ListOrdered size={18} />
+                                                                : <Eraser size={18} />;
 
-                                                    <button
-                                                        type="button"
-                                                        role="switch"
-                                                        aria-checked={isOn}
-                                                        aria-label={`${tool.title} aracını ${isOn ? 'kapat' : 'aç'}`}
-                                                        onClick={() => handleToggleTool(tool.id)}
-                                                        className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
-                                                            isOn ? 'bg-moss-600' : 'bg-sand-300'
-                                                        }`}
-                                                    >
-                                                        <span
-                                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                                                                isOn ? 'left-[22px]' : 'left-0.5'
-                                                            }`}
-                                                        />
-                                                    </button>
+                                                            return (
+                                                                <div
+                                                                    key={tool.id}
+                                                                    className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-colors sm:px-4 ${
+                                                                        isOn
+                                                                            ? 'border-sand-200 bg-white shadow-soft'
+                                                                            : 'border-sand-100 bg-sand-50/60'
+                                                                    }`}
+                                                                >
+                                                                    <span
+                                                                        className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
+                                                                            isOn
+                                                                                ? 'bg-moss-100 text-moss-700 ring-1 ring-moss-200'
+                                                                                : 'bg-sand-100 text-sand-400'
+                                                                        }`}
+                                                                        aria-hidden
+                                                                    >
+                                                                        {aracIkonu}
+                                                                    </span>
 
-                                                    <button
-                                                        type="button"
-                                                        aria-label={`${tool.title} aracını sil`}
-                                                        onClick={() => handleDeleteTool(tool.id)}
-                                                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sand-400 transition-colors hover:bg-berry-500/10 hover:text-berry-600"
-                                                    >
-                                                        <Trash2 size={15} />
-                                                    </button>
-                                                </div>
+                                                                    <span className="min-w-0 flex-1">
+                                                                        <span
+                                                                            className={`block text-sm font-semibold ${
+                                                                                isOn ? 'text-sand-900' : 'text-sand-400 line-through'
+                                                                            }`}
+                                                                        >
+                                                                            {tool.title}
+                                                                        </span>
+                                                                        <span className="mt-0.5 block text-[11px] leading-snug text-sand-500">
+                                                                            {tool.subtitle || 'Açıklama yok'}
+                                                                        </span>
+                                                                    </span>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        role="switch"
+                                                                        aria-checked={isOn}
+                                                                        aria-label={`${tool.title} aracını ${isOn ? 'kapat' : 'aç'}`}
+                                                                        onClick={() => handleToggleTool(tool.id)}
+                                                                        className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+                                                                            isOn ? 'bg-moss-600' : 'bg-sand-300'
+                                                                        }`}
+                                                                    >
+                                                                        <span
+                                                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                                                                                isOn ? 'left-[22px]' : 'left-0.5'
+                                                                            }`}
+                                                                        />
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        aria-label={`${tool.title} aracını sil`}
+                                                                        onClick={() => handleDeleteTool(tool.id)}
+                                                                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-sand-400 transition-colors hover:bg-berry-500/10 hover:text-berry-600"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </section>
                                             );
                                         })}
                                     </div>
+                                )}
 
-                                    <p className="text-[11px] leading-relaxed text-sand-500">
-                                        Araçlar cihazınızda çalışır: internete çıkmaz, API anahtarı kullanmaz. Metni değiştiren araçların sonucu önce öneri olarak uygulanır; Onayla demeden kaydedilmez.
-                                    </p>
-                                </div>
+                                {toolList.length < DEFAULT_TOOLS.length && (
+                                    <button
+                                        type="button"
+                                        onClick={handleResetTools}
+                                        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-sand-300 px-4 py-3 text-sm font-medium text-sand-500 transition-colors hover:border-moss-500/50 hover:text-moss-700"
+                                    >
+                                        <RotateCcw size={15} /> Silinen araçları geri getir
+                                    </button>
+                                )}
+
+                                <p className="mt-5 text-[11px] leading-relaxed text-sand-500">
+                                    Araçlar cihazınızda çalışır: internete çıkmaz, API anahtarı kullanmaz. Metni değiştiren araçların sonucu önce öneri olarak uygulanır; Onayla demeden kaydedilmez.
+                                </p>
                             </div>
                         )}
 
