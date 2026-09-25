@@ -44,9 +44,13 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
      */
     const dugumBaslangicRef = useRef<Point | null>(null);
 
-    /** Dokunuşun bir ağaç gövdesi üzerinde başlayıp başlamadığı. */
-    const agacUzerinde = (hedef: EventTarget | null): boolean =>
-        hedef instanceof Element && Boolean(hedef.closest('.tree-drag-area'));
+    /** Dokunuşun bir düğüm kartının üzerinde başlayıp başlamadığı.
+     *
+     *  Yalnızca kartın kendisi "düğüm" sayılır; ağacın kapladığı alanın
+     *  geri kalanı (dallar arasındaki boşluklar) tuvalden sayılır. Aksi
+     *  hâlde boşluğa dokunmak seçimi kaldırmıyordu. */
+    const dugumUzerinde = (hedef: EventTarget | null): boolean =>
+        hedef instanceof Element && Boolean(hedef.closest('.dugum-karti'));
 
     // Canvas'ı başlangıçta ortala (Eğer kayıtlı veri yoksa)
     useEffect(() => {
@@ -109,7 +113,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
 
         // Ağaç üzerinde başlayan tek parmak/fare dokunuşu: ne seçim silinir
         // ne de tuval hemen kaymaya başlar. Önce parmağın niyeti beklenir.
-        if (!ikiParmak && agacUzerinde(e.target)) {
+        if (!ikiParmak && dugumUzerinde(e.target)) {
             dugumBaslangicRef.current = 'touches' in e
                 ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
                 : { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY };
@@ -118,7 +122,8 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
 
         dugumBaslangicRef.current = null;
 
-        // Arka plana tıklandığında seçimi kaldır
+        // Tuvalin boş bir yerine dokunuldu: seçim kalkar, düğümün araç
+        // çubuğu ekrandan gider.
         setSelectedNode(null);
 
         // Touch event ise
@@ -362,7 +367,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
     return (
         <div
             ref={containerRef}
-            className={`w-full h-full overflow-hidden relative bg-paper cursor-grab ${isDragging ? 'cursor-grabbing' : ''} touch-none`}
+            className={`w-full h-full overflow-hidden relative bg-paper cursor-grab select-none ${isDragging ? 'cursor-grabbing' : ''} touch-none`}
             onMouseDown={handlePointerDown}
             onMouseMove={handlePointerMove}
             onMouseUp={handlePointerUp}

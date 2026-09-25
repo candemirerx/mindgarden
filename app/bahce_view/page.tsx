@@ -83,6 +83,11 @@ function SuruklenebilirAgac({
         // kendi işlerini yapmaya devam etsin.
         if ((e.target as HTMLElement).closest('button')) return;
 
+        // Ağaç yalnızca bir düğüm kartından tutularak taşınır. Tuvalin boş
+        // bir yerine uzun basmak ağacı kaldırmaz; o dokunuş tuvali kaydırır
+        // ve seçimi kaldırır.
+        if (!(e.target as HTMLElement).closest('.dugum-karti')) return;
+
         baslangic.current = {
             fareX: e.clientX,
             fareY: e.clientY,

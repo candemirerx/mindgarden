@@ -218,7 +218,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     {/* Kök Kartı: Zarif orman yeşili, temiz tipografi */}
                     <div
                         className={`
-                            relative z-20 flex min-w-[220px] max-w-[340px] flex-col items-center justify-center
+                            dugum-karti relative z-20 flex min-w-[220px] max-w-[340px] flex-col items-center justify-center
                             rounded-3xl bg-gradient-to-br from-moss-700 via-moss-800 to-moss-900
                             px-7 py-6 text-center text-white
                             shadow-lift transition-all duration-200 cursor-pointer
@@ -240,7 +240,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                 onChange={(e) => setEditedTitle(e.target.value)}
                                 onKeyDown={handleTitleKeyDown}
                                 onBlur={handleSaveTitle}
-                                className="w-full rounded-xl border border-white/40 bg-white/20 px-3 py-1 text-center font-serif text-xl font-semibold tracking-tight text-white outline-none ring-2 ring-white/40"
+                                className="w-full rounded-xl border border-white/40 bg-white/20 px-3 py-1 text-center font-serif text-xl font-semibold tracking-tight text-white outline-none ring-2 ring-white/40 select-text"
                                 onClick={(e) => e.stopPropagation()}
                             />
                         ) : (
@@ -422,7 +422,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     Yaprak: Standart ince border ve açık yeşil yaprak ikonu */}
                 <div
                     className={`
-                        node-content relative z-10 flex cursor-pointer flex-col justify-center
+                        node-content dugum-karti relative z-10 flex cursor-pointer flex-col justify-center
                         min-w-[140px] max-w-[280px] px-4 py-3 rounded-2xl bg-white text-sand-900
                         transition-all duration-200 ease-smooth shadow-soft hover:shadow-card
                         ${isBranchStyle
@@ -458,7 +458,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                     onChange={(e) => setEditedTitle(e.target.value)}
                                     onKeyDown={handleTitleKeyDown}
                                     onBlur={handleSaveTitle}
-                                    className="w-full rounded-md border border-moss-400 bg-sand-50 px-2 py-0.5 text-sm font-semibold outline-none ring-2 ring-moss-500/20"
+                                    className="w-full rounded-md border border-moss-400 bg-sand-50 px-2 py-0.5 text-sm font-semibold outline-none ring-2 ring-moss-500/20 select-text"
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             ) : (
