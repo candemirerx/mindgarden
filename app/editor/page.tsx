@@ -3,11 +3,13 @@
 import { useEffect, Suspense, useState, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, Hash, ListOrdered, Eraser } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
 import { readEnabledMacros } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
+import { readEnabledTools, aracMetniniUygula, metniDegistirir, siraliAd } from '@/lib/tools';
+import type { AppTool } from '@/lib/tools';
 import { splitIntoChunks } from '@/lib/aiChunks';
 import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl } from '@/lib/aiProvider';
 import { Capacitor } from '@capacitor/core';
@@ -18,7 +20,7 @@ function EditorPageInner() {
     const gardenId = searchParams.get('id') || '';
     const nodeId = searchParams.get('nodeId') || '';
 
-    const { nodes, updateNode, fetchNodes } = useStore();
+    const { nodes, updateNode, fetchNodes, addNode } = useStore();
     const [content, setContent] = useState('');
     const [title, setTitle] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -27,6 +29,7 @@ function EditorPageInner() {
     const [isSpellChecking, setIsSpellChecking] = useState(false);
     const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
     const [macros, setMacros] = useState<AiMacro[]>([]);
+    const [araclar, setAraclar] = useState<AppTool[]>([]);
     const [activeMacroId, setActiveMacroId] = useState<string | null>(null);
     const [runningLength, setRunningLength] = useState(0);
     /** Etkin sağlayıcı için anahtar tanımlı mı? Tanımlı değilse istek gönderilmez. */
@@ -162,8 +165,44 @@ function EditorPageInner() {
     // Kapalı veya boş makrolar araç çubuğunda yer kaplamaz.
     useEffect(() => {
         setMacros(readEnabledMacros());
+        setAraclar(readEnabledTools());
         setAnahtarVar(readProviderKey(readActiveProvider()).trim().length > 0);
     }, []);
+
+    /**
+     * Yerel araçları çalıştırır.
+     *
+     * "Sıralı ad" yeni bir alt dal açar; diğerleri notun metnini düzenler.
+     * Metni değiştiren araçlar, tıpkı yapay zekâ sonucu gibi önce öneri
+     * olarak uygulanır: kullanıcı onaylamadan kaydedilmez.
+     */
+    const runTool = async (tool: AppTool) => {
+        if (tool.kind === 'sirali-ad') {
+            if (!gardenId || !nodeId) {
+                alert('Bu araç için önce bir not açık olmalı.');
+                return;
+            }
+
+            const ad = siraliAd(nodeId, nodes);
+            const olusan = await addNode(gardenId, ad, nodeId, { x: 0, y: 0 });
+            if (!olusan) {
+                alert('Yeni dal eklenemedi.');
+                return;
+            }
+            alert(`"${ad}" adıyla yeni bir dal eklendi.`);
+            return;
+        }
+
+        const yeni = aracMetniniUygula(tool.kind, content);
+        if (yeni === content) {
+            alert(`"${tool.title}" metinde bir değişiklik yapmadı.`);
+            return;
+        }
+
+        // Onay istenmez değişiklik sayılmaz; kullanıcı Onayla derse kaydedilir.
+        setPendingSpellCheck({ original: content, corrected: yeni });
+        setContent(yeni);
+    };
 
     // Makro çalıştırma
     const runMacro = async (macro: AiMacro) => {
@@ -577,6 +616,53 @@ function EditorPageInner() {
                         </div>
                     )}
                 </div>
+
+                {/* Araçlar satırı: yapay zekâ gerektirmeyen yerel işler.
+                    AI'nın hemen altında ince bir satır olarak durur; simgesi
+                    gösterir, adı nadiren yazılır. Kapalı araçlar burada
+                    yer kaplamaz. */}
+                {araclar.length > 0 && (
+                    <div className="flex items-center gap-2 border-t border-sand-200 bg-sand-50/70 px-4 py-1.5 sm:px-6">
+                        <span
+                            className="flex flex-shrink-0 items-center gap-1 text-[11px] font-medium text-sand-500"
+                            title="Yerel araçlar: yapay zekâ kullanmadan çalışır"
+                            aria-label="Araçlar"
+                        >
+                            <Wrench size={12} />
+                            <span className="hidden sm:inline">Araçlar</span>
+                        </span>
+
+                        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5">
+                            {araclar.map((tool) => {
+                                const sonucHazir = pendingSpellCheck !== null;
+                                return (
+                                    <button
+                                        key={tool.id}
+                                        type="button"
+                                        onClick={() => void runTool(tool)}
+                                        disabled={sonucHazir}
+                                        title={tool.subtitle || tool.title}
+                                        aria-label={tool.title}
+                                        className={`flex flex-shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-all ${
+                                            sonucHazir
+                                                ? 'bg-sand-100 text-sand-400 cursor-not-allowed'
+                                                : 'bg-white text-sand-700 shadow-soft ring-1 ring-sand-200 hover:bg-moss-50 hover:text-moss-800 hover:ring-moss-300'
+                                        }`}
+                                    >
+                                        {tool.kind === 'sirali-ad' ? (
+                                            <Hash size={14} />
+                                        ) : tool.kind === 'numaralandir' ? (
+                                            <ListOrdered size={14} />
+                                        ) : (
+                                            <Eraser size={14} />
+                                        )}
+                                        <span className="whitespace-nowrap text-xs font-medium">{tool.title}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </header>
 
             {/* Editor Area */}

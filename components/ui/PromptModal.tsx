@@ -12,6 +12,11 @@ interface PromptModalProps {
     initialValue?: string;
     confirmText?: string;
     cancelText?: string;
+    /**
+     * Boş değerle onaylamaya izin verir. Sıralı ad aracı açıkken ad
+     * yazmadan da dal eklenebilsin diye kullanılır.
+     */
+    allowEmpty?: boolean;
     onConfirm: (value: string) => void;
     onCancel: () => void;
 }
@@ -24,6 +29,7 @@ export default function PromptModal({
     initialValue = '',
     confirmText = 'Tamam',
     cancelText = 'İptal',
+    allowEmpty = false,
     onConfirm,
     onCancel
 }: PromptModalProps) {
@@ -60,12 +66,12 @@ export default function PromptModal({
                 onCancel();
             } else if (e.key === 'Enter') {
                 e.preventDefault();
-                if (value.trim()) onConfirm(value.trim());
+                if (allowEmpty || value.trim()) onConfirm(value.trim());
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, value, onConfirm, onCancel]);
+    }, [isOpen, value, onConfirm, onCancel, allowEmpty]);
 
     if (!isOpen) return null;
 
@@ -102,9 +108,9 @@ export default function PromptModal({
                     </button>
                     <button
                         onClick={() => {
-                            if (value.trim()) onConfirm(value.trim());
+                            if (allowEmpty || value.trim()) onConfirm(value.trim());
                         }}
-                        disabled={!value.trim()}
+                        disabled={!allowEmpty && !value.trim()}
                         className="rounded-xl bg-moss-600 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all hover:bg-moss-700 disabled:opacity-50"
                     >
                         {confirmText}

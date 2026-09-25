@@ -14,6 +14,7 @@ import PromptModal from '@/components/ui/PromptModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { hapticTick } from '@/components/mobile/MobileShell';
 import { agacSuruklemesiBasladi, agacSuruklemesiBitti } from '@/lib/canvasGesture';
+import { siraliAdEtkin, siraliAd } from '@/lib/tools';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -190,7 +191,7 @@ function GardenPageInner() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // Modals state
-    const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
+    const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
     const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, title: string, description: string, isDanger?: boolean, onConfirm: () => void}>({isOpen: false, title: '', description: '', onConfirm: () => {}});
 
     const currentGarden = gardens.find((g: any) => g.id === gardenId);
@@ -250,13 +251,16 @@ function GardenPageInner() {
 
     // Yeni root node (ağaç) oluştur
     const handleCreateRoot = () => {
+        const adIzinli = siraliAdEtkin();
         setPromptConfig({
             isOpen: true,
             title: 'Yeni Ağaç Ekle',
-            placeholder: 'Ağaç adı girin...',
+            placeholder: adIzinli ? 'Adını girin (boş bırakılırsa sıra numarası verilir)...' : 'Ağaç adı girin...',
+            allowEmpty: adIzinli,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                await addNode(gardenId, title, null, { x: 0, y: 0 });
+                const ad = title || siraliAd(null, nodes);
+                await addNode(gardenId, ad, null, { x: 0, y: 0 });
             }
         });
     };
@@ -304,14 +308,18 @@ function GardenPageInner() {
     const handleAddChild = (parentId: string, direction: 'left' | 'right' = 'right') => {
         if (mindRoots.length === 0) return;
 
+        const adIzinli = siraliAdEtkin();
         setPromptConfig({
             isOpen: true,
             title: 'Dal Ekle',
-            placeholder: 'Dal adı girin...',
+            placeholder: adIzinli ? 'Adını girin (boş bırakılırsa sıra numarası verilir)...' : 'Dal adı girin...',
+            allowEmpty: adIzinli,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
+                // Sıralı ad aracı açıkken boş ad, seviyedeki sıra numarasına dönüşür.
+                const ad = title || siraliAd(parentId, nodes);
                 // Supabase'e kaydet ve gerçek node'u al
-                const newNode = await addNode(gardenId, title, parentId, { x: 0, y: 0 });
+                const newNode = await addNode(gardenId, ad, parentId, { x: 0, y: 0 });
 
                 if (newNode) {
                     const newMindNode: MindNode = {
@@ -604,6 +612,7 @@ function GardenPageInner() {
                 isOpen={promptConfig.isOpen}
                 title={promptConfig.title}
                 placeholder={promptConfig.placeholder}
+                allowEmpty={promptConfig.allowEmpty}
                 onConfirm={promptConfig.onConfirm}
                 onCancel={() => setPromptConfig(prev => ({ ...prev, isOpen: false }))}
             />
