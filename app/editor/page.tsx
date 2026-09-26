@@ -3,13 +3,15 @@
 import { useEffect, Suspense, useState, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, Hash, ListOrdered, Eraser, ListTree } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, Hash, ListOrdered, Eraser, Type } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
 import { readEnabledMacros } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
-import { readEnabledTools, aracMetniniUygula, siraliAd, iceriktenDallar } from '@/lib/tools';
+import { readEnabledTools, aracMetniniUygula, siraliAd, iceriktenBaslik } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
+import { bolumAcik } from '@/lib/uiPrefs';
+import { dinle } from '@/lib/degisim';
 import { splitIntoChunks } from '@/lib/aiChunks';
 import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl } from '@/lib/aiProvider';
 import { Capacitor } from '@capacitor/core';
@@ -27,9 +29,18 @@ function EditorPageInner() {
     const [hasChanges, setHasChanges] = useState(false);
     const [showCopied, setShowCopied] = useState(false);
     const [isSpellChecking, setIsSpellChecking] = useState(false);
-    const [pendingSpellCheck, setPendingSpellCheck] = useState<{ original: string; corrected: string } | null>(null);
+    const [pendingSpellCheck, setPendingSpellCheck] = useState<{
+        original: string;
+        corrected: string;
+        /** Başlık aracı: Onayla derse geçer, Geri Al derse eski başlığa döner. */
+        orijinalBaslik?: string;
+        yeniBaslik?: string;
+    } | null>(null);
     const [macros, setMacros] = useState<AiMacro[]>([]);
     const [araclar, setAraclar] = useState<AppTool[]>([]);
+    /** Ayarlardan kapatılan bölümler editörde hiç görünmez. */
+    const [yapayZekaAcik, setYapayZekaAcik] = useState(true);
+    const [araclarAcik, setAraclarAcik] = useState(true);
     const [activeMacroId, setActiveMacroId] = useState<string | null>(null);
     const [runningLength, setRunningLength] = useState(0);
     /** Etkin sağlayıcı için anahtar tanımlı mı? Tanımlı değilse istek gönderilmez. */
@@ -162,54 +173,67 @@ function EditorPageInner() {
     };
 
     // Ayarlarda etkin bırakılan AI makroları (imla düzeltme dahil).
-    // Kapalı veya boş makrolar araç çubuğunda yer kaplamaz.
+    // Kapalı veya boş makrolar araç çubuğunda yer kaplamaz. Ayarlar
+    // modalında yapılan değişiklikler burada anında görünür.
     useEffect(() => {
-        setMacros(readEnabledMacros());
-        setAraclar(readEnabledTools());
+        const tazele = () => {
+            setMacros(readEnabledMacros());
+            setAraclar(readEnabledTools());
+            setYapayZekaAcik(bolumAcik('yapayzeka'));
+            setAraclarAcik(bolumAcik('araclar'));
+        };
+        tazele();
         setAnahtarVar(readProviderKey(readActiveProvider()).trim().length > 0);
+
+        const birak1 = dinle('makrolar', tazele);
+        const birak2 = dinle('araclar', tazele);
+        const birak3 = dinle('bolumler', tazele);
+
+        // Sayfa arkada kalıp geri geldiğinde (uygulama değiştirmek, ekranı
+        // açmak) ayarlar değişmiş olabilir; listeleri tazeleriz.
+        const gorunurluk = () => {
+            if (document.visibilityState === 'visible') tazele();
+        };
+        document.addEventListener('visibilitychange', gorunurluk);
+        window.addEventListener('focus', tazele);
+
+        return () => {
+            birak1();
+            birak2();
+            birak3();
+            document.removeEventListener('visibilitychange', gorunurluk);
+            window.removeEventListener('focus', tazele);
+        };
     }, []);
 
     /**
      * Yerel araçları çalıştırır.
      *
-     * "İçerikten Dal Oluştur" notun satırlarını alt dal yapar; "Sıralı Ad"
-     * yeni bir alt dal açar. Diğerleri notun metnini düzenler ve tıpkı
-     * yapay zekâ sonucu gibi önce öneri olarak uygulanır: kullanıcı
-     * onaylamadan kaydedilmez.
+     * "İçerikten Başlık" mevcut notun başlığını içerikten üretip önerir;
+     * "Sıralı Ad" yeni bir alt dal açar. Diğerleri notun metnini düzenler.
+     * Değişiklik yapan her araç, tıpkı yapay zekâ sonucu gibi önce öneri
+     * olarak uygulanır: kullanıcı onaylamadan kaydedilmez.
      */
     const runTool = async (tool: AppTool) => {
-        if (tool.kind === 'icerikten-dal') {
-            if (!gardenId || !nodeId) {
-                alert('Bu araç için önce bir not açık olmalı.');
+        if (tool.kind === 'icerikten-baslik') {
+            const aday = iceriktenBaslik(content);
+            if (!aday) {
+                alert('İçerikte başlık olacak anlamlı bir kelime bulunamadı.');
+                return;
+            }
+            if (aday === title.trim()) {
+                alert('Önerilen başlık mevcut başlıkla aynı.');
                 return;
             }
 
-            const satirlar = iceriktenDallar(content);
-            if (satirlar.length === 0) {
-                alert('Notun içeriğinde dala dönüşecek bir satır bulunamadı.');
-                return;
-            }
-
-            // Aynı adla dal zaten varsa tekrar oluşturmamak için
-            const mevcutAdlar = new Set(
-                nodes
-                    .filter((n) => n.parent_id === nodeId)
-                    .map((n) => n.content.split('\n')[0].trim())
-            );
-            const yeniler = satirlar.filter((ad) => !mevcutAdlar.has(ad));
-
-            if (yeniler.length === 0) {
-                alert('Bu satırlar zaten dal olarak var.');
-                return;
-            }
-
-            let olusturulan = 0;
-            for (const ad of yeniler) {
-                const olusan = await addNode(gardenId, ad, nodeId, { x: 0, y: 0 });
-                if (olusan) olusturulan += 1;
-            }
-
-            alert(`${olusturulan} alt dal oluşturuldu.`);
+            // Başlık önce öneri olarak gösterilir; Onayla derse kaydedilir.
+            setPendingSpellCheck({
+                original: content,
+                corrected: content,
+                orijinalBaslik: title,
+                yeniBaslik: aday
+            });
+            setTitle(aday);
             return;
         }
 
@@ -399,6 +423,9 @@ function EditorPageInner() {
     const handleRejectSpellCheck = () => {
         if (pendingSpellCheck) {
             setContent(pendingSpellCheck.original);
+            if (pendingSpellCheck.orijinalBaslik !== undefined) {
+                setTitle(pendingSpellCheck.orijinalBaslik);
+            }
         }
         setPendingSpellCheck(null);
     };
@@ -567,7 +594,10 @@ function EditorPageInner() {
                     </div>
                 </div>
 
-                {/* AI Toolbar */}
+                {/* AI Toolbar — ayarlardan kapatılabilir. Onay bekleyen bir
+                    sonuç varsa bölüm kapalı olsa da gösterilir, yoksa
+                    kullanıcı Onayla/Geri Al düğmelerini göremezdi. */}
+                {(yapayZekaAcik || pendingSpellCheck !== null) && (
                 <div className="flex items-center gap-2 border-t border-sand-200 bg-gradient-to-r from-clay-50 to-clay-50 px-4 py-2 sm:px-6">
                     <span className="mr-1 flex-shrink-0 text-xs font-medium text-clay-600">AI</span>
 
@@ -652,12 +682,13 @@ function EditorPageInner() {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Araçlar satırı: yapay zekâ gerektirmeyen yerel işler.
                     AI'nın hemen altında ince bir satır olarak durur; simgesi
-                    gösterir, adı nadiren yazılır. Kapalı araçlar burada
-                    yer kaplamaz. */}
-                {araclar.length > 0 && (
+                    gösterir, adı nadiren yazılır. Kapalı veya silinmiş araçlar
+                    burada yer kaplamaz; bölüm ayarlardan tümüyle kapatılabilir. */}
+                {araclarAcik && araclar.length > 0 && (
                     <div className="flex items-center gap-2 border-t border-sand-200 bg-sand-50/70 px-4 py-1.5 sm:px-6">
                         <span
                             className="flex flex-shrink-0 items-center gap-1 text-[11px] font-medium text-sand-500"
@@ -679,22 +710,22 @@ function EditorPageInner() {
                                         disabled={sonucHazir}
                                         title={tool.subtitle || tool.title}
                                         aria-label={tool.title}
-                                        className={`flex flex-shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-all ${
+                                        className={`flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                                             sonucHazir
-                                                ? 'bg-sand-100 text-sand-400 cursor-not-allowed'
-                                                : 'bg-white text-sand-700 shadow-soft ring-1 ring-sand-200 hover:bg-moss-50 hover:text-moss-800 hover:ring-moss-300'
+                                                ? 'bg-sand-200 text-sand-400 cursor-not-allowed'
+                                                : 'bg-moss-600 text-white shadow-soft hover:bg-moss-700 hover:shadow'
                                         }`}
                                     >
-                                        {tool.kind === 'icerikten-dal' ? (
-                                            <ListTree size={14} />
+                                        {tool.kind === 'icerikten-baslik' ? (
+                                            <Type size={16} />
                                         ) : tool.kind === 'sirali-ad' ? (
-                                            <Hash size={14} />
+                                            <Hash size={16} />
                                         ) : tool.kind === 'numaralandir' ? (
-                                            <ListOrdered size={14} />
+                                            <ListOrdered size={16} />
                                         ) : (
-                                            <Eraser size={14} />
+                                            <Eraser size={16} />
                                         )}
-                                        <span className="whitespace-nowrap text-xs font-medium">{tool.title}</span>
+                                        <span className="whitespace-nowrap">{tool.title}</span>
                                     </button>
                                 );
                             })}

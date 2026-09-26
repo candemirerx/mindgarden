@@ -5,9 +5,11 @@
  * anahtarı gerektirmezler. AI makroları gibi açılıp kapatılabilir, silinebilir;
  * kapatılan veya silinen araç editörde yer kaplamaz.
  */
+import { bildir } from './degisim';
+
 export type ToolKind =
+    | 'icerikten-baslik'
     | 'sirali-ad'
-    | 'icerikten-dal'
     | 'numaralandir'
     | 'bosluk-sadelestir';
 
@@ -25,16 +27,16 @@ export interface AppTool {
 
 export const TOOLS_KEY = 'nb-tools';
 /** Araç listesinde değişiklik olduğunda artar; eski kayıtlara yeni araçlar eklenir. */
-export const TOOLS_VERSION = 2;
+export const TOOLS_VERSION = 3;
 const TOOLS_VERSION_KEY = 'nb-tools-version';
 
 /** Kayıtlı aracı geri getirmek için kullanılan varsayılan liste. */
 export const DEFAULT_TOOLS: AppTool[] = [
     {
         id: 'icerikten-baslik',
-        title: 'İçerikten Dal Oluştur',
-        subtitle: 'Notun satırlarını alt dal yapar: her satır bir dal olur.',
-        kind: 'icerikten-dal',
+        title: 'İçerikten Başlık',
+        subtitle: 'İçerikten 1-2 kelimelik başlık üretir ve mevcut başlığı değiştirir.',
+        kind: 'icerikten-baslik',
         enabled: true
     },
     {
@@ -63,9 +65,14 @@ export const DEFAULT_TOOLS: AppTool[] = [
 /** Araçların ayarlardaki grupları: sekmenin düzenli görünmesi için. */
 export const TOOL_GROUPS: Array<{ baslik: string; aciklama: string; turler: ToolKind[] }> = [
     {
+        baslik: 'Başlık araçları',
+        aciklama: 'Nota uygun kısa başlığı elle yazmadan üretir.',
+        turler: ['icerikten-baslik']
+    },
+    {
         baslik: 'Ağaç yapısı araçları',
         aciklama: 'Ağacınızı elle kurmadan hızlıca dallandırır.',
-        turler: ['icerikten-dal', 'sirali-ad']
+        turler: ['sirali-ad']
     },
     {
         baslik: 'Metin düzenleme araçları',
@@ -86,8 +93,8 @@ export function readTools(): AppTool[] {
         if (!Array.isArray(parsed)) return DEFAULT_TOOLS;
 
         const gecerliTurler: ToolKind[] = [
+            'icerikten-baslik',
             'sirali-ad',
-            'icerikten-dal',
             'numaralandir',
             'bosluk-sadelestir'
         ];
@@ -129,6 +136,8 @@ export function readTools(): AppTool[] {
 export function saveTools(tools: AppTool[]): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(TOOLS_KEY, JSON.stringify(tools));
+    // Editör açıkken değişiklik anında görünsün.
+    bildir('araclar');
 }
 
 /**
@@ -156,35 +165,54 @@ export function siraliAd(parentId: string | null, nodes: Array<{ parent_id: stri
     return String(kardesSayisi + 1);
 }
 
-/** Aracın notun metnini değiştirip değiştirmediği. */
-export function metniDegistirir(kind: ToolKind): boolean {
-    return kind !== 'sirali-ad' && kind !== 'icerikten-dal';
-}
+/** Başlık üretirken sayılmayacak yaygın kelimeler. */
+const DURAK_KELIMELER = new Set([
+    'bir', 'bu', 'şu', 'o', 've', 'veya', 'ile', 'için', 'ama', 'fakat', 'lakin',
+    'çok', 'daha', 'en', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 'gibi',
+    'kadar', 'olarak', 'ise', 'ya', 'ne', 'her', 'tüm', 'bütün', 'var', 'yok',
+    'sonra', 'önce', 'göre', 'hem', 'yani', 'çünkü', 'eğer', 'böyle', 'şöyle',
+    'ancak', 'yine', 'zaten', 'oldu', 'olur', 'olan', 'olacak', 'the', 'and'
+]);
 
 /**
- * "İçerikten Dal Oluştur" için kullanılacak satırları çıkarır.
+ * Notun içeriğinden kısa bir başlık üretir.
  *
- * Boş satırlar atılır, uç boşluklar silinir; aynı satır iki kez yazılmışsa
- * tek sayılır. Çok uzun satırlar dal adına sığması için kısaltılır.
+ * En sık geçen 1-2 anlamlı kelimeyi seçer; durak kelimeleri ve iki
+ * harften kısa parçaları saymaz. Nadiren içerik zorunlu kılarsa üçüncü
+ * kelime de eklenebilir. Uygun kelime yoksa null döner.
  */
-export function iceriktenDallar(metin: string, uzunlukSiniri = 80): string[] {
-    const gorulen = new Set<string>();
-    const dallar: string[] = [];
+export function iceriktenBaslik(metin: string, enCokKelime = 2): string | null {
+    const hepsi = metin.match(/[\p{L}\p{N}]+/gu) ?? [];
+    const kucuk = hepsi.map((k) => k.toLocaleLowerCase('tr'));
 
-    for (const satir of metin.split('\n')) {
-        const temiz = satir.trim();
-        if (!temiz) continue;
+    const frekans = new Map<string, { sayi: number; ilk: number }>();
+    kucuk.forEach((kelime, sira) => {
+        if (kelime.length < 3 || DURAK_KELIMELER.has(kelime)) return;
+        const mevcut = frekans.get(kelime);
+        if (mevcut) mevcut.sayi += 1;
+        else frekans.set(kelime, { sayi: 1, ilk: sira });
+    });
 
-        const ad =
-            temiz.length > uzunlukSiniri
-                ? `${temiz.slice(0, uzunlukSiniri).trimEnd()}…`
-                : temiz;
-        if (gorulen.has(ad)) continue;
+    if (frekans.size === 0) return null;
 
-        gorulen.add(ad);
-        dallar.push(ad);
-    }
-    return dallar;
+    const sirali = [...frekans.entries()].sort(
+        (a, b) => b[1].sayi - a[1].sayi || a[1].ilk - b[1].ilk
+    );
+    const adet = Math.min(enCokKelime, sirali.length);
+
+    // Kelimelerin metindeki ilk geçtiği büyük/küçük hali korunur.
+    const orijinalBicim = new Map<string, string>();
+    hepsi.forEach((kelime) => {
+        const anahtar = kelime.toLocaleLowerCase('tr');
+        if (!orijinalBicim.has(anahtar)) orijinalBicim.set(anahtar, kelime);
+    });
+
+    const baslik = sirali
+        .slice(0, adet)
+        .map(([anahtar]) => orijinalBicim.get(anahtar) ?? anahtar)
+        .join(' ');
+
+    return baslik.charAt(0).toLocaleUpperCase('tr') + baslik.slice(1);
 }
 
 /**

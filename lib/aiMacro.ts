@@ -7,6 +7,8 @@
  * basıldığında notun metni o makronun göreviyle birlikte kullanıcının kendi API
  * anahtarıyla seçtiği sağlayıcıya gönderilir ve dönen cevap nota yazılır.
  */
+import { bildir } from './degisim';
+
 export interface AiMacro {
     id: string;
     /** Kutunun üstünde görünen ad. */
@@ -154,6 +156,8 @@ export function readAiMacros(): AiMacro[] {
 export function saveAiMacros(macros: AiMacro[]): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(AI_MACROS_KEY, JSON.stringify(macros));
+    // Editör açıkken değişiklik anında görünsün.
+    bildir('makrolar');
 }
 
 export function createMacro(): AiMacro {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2, Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2, Wrench, Hash, ListOrdered, Eraser, ListTree } from 'lucide-react';
+import { X, Sparkles, Database, Check, RefreshCw, Key, ChevronDown, HardDriveDownload, UploadCloud, Loader2, Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2, Wrench, Hash, ListOrdered, Eraser, Type } from 'lucide-react';
 import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
 import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
@@ -9,6 +9,8 @@ import { readAiMacros, saveAiMacros, createMacro, DEFAULT_MACROS, SPELLCHECK_MAC
 import type { AiMacro } from '@/lib/aiMacro';
 import { readTools, saveTools, DEFAULT_TOOLS, TOOL_GROUPS } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
+import { bolumAcik, bolumAcikliginiAyarla } from '@/lib/uiPrefs';
+import type { Bolum } from '@/lib/uiPrefs';
 import {
     PROVIDER_IDS,
     PROVIDER_LABELS,
@@ -56,6 +58,9 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     const [macroList, setMacroList] = useState<AiMacro[]>([]);
     const [macroDraft, setMacroDraft] = useState<AiMacro | null>(null);
     const [toolList, setToolList] = useState<AppTool[]>([]);
+    /** Editör bölümlerinin görünürlüğü; ayarlardan kapatılabilir. */
+    const [yapayZekaAcik, setYapayZekaAcik] = useState(true);
+    const [araclarAcik, setAraclarAcik] = useState(true);
     const [isSaved, setIsSaved] = useState(false);
     
     // Google Drive (kolay senkron) durumu
@@ -146,6 +151,8 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
             setMacroList(readAiMacros());
             setMacroDraft(null);
             setToolList(readTools());
+            setYapayZekaAcik(bolumAcik('yapayzeka'));
+            setAraclarAcik(bolumAcik('araclar'));
             setAutoSync(isAutoSyncEnabled());
             setLastSync(lastSyncTime());
         }
@@ -284,6 +291,13 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
     };
 
     const enabledToolCount = toolList.filter((item) => item.enabled !== false).length;
+
+    /** Editördeki bir bölümü tümüyle gösterir/gizler. */
+    const handleBolumDegistir = (bolum: Bolum, acik: boolean) => {
+        bolumAcikliginiAyarla(bolum, acik);
+        if (bolum === 'yapayzeka') setYapayZekaAcik(acik);
+        else setAraclarAcik(acik);
+    };
 
     if (!isOpen) return null;
 
@@ -568,6 +582,35 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                         Metin editöründe imla düzeltmenin yanında görünen kutuları buradan yönetin. Kapatılan veya silinen makrolar editörde yer kaplamaz.
                                     </p>
                                 </div>
+
+                                {/* Bölümün tamamını gizleme */}
+                                <div className="mb-6 flex items-center gap-3 rounded-2xl border border-sand-200 bg-sand-50 p-3.5">
+                                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-clay-100 text-clay-700">
+                                        <Wand2 size={18} />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-sm font-semibold text-sand-900">Yapay zekâ bölümünü editörde göster</span>
+                                        <span className="mt-0.5 block text-[11px] leading-snug text-sand-500">
+                                            Kapalıyken AI satırı ve makro kutuları editörde hiç görünmez.
+                                        </span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={yapayZekaAcik}
+                                        aria-label={`Yapay zekâ bölümünü ${yapayZekaAcik ? 'gizle' : 'göster'}`}
+                                        onClick={() => handleBolumDegistir('yapayzeka', !yapayZekaAcik)}
+                                        className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+                                            yapayZekaAcik ? 'bg-moss-600' : 'bg-sand-300'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                                                yapayZekaAcik ? 'left-[22px]' : 'left-0.5'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
                                         {/* AI Makroları */}
                                         <div className="space-y-3">
                                             {macroDraft ? (
@@ -773,6 +816,35 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                     </span>
                                 </div>
 
+                                {/* Bölümün tamamını gizleme */}
+                                <div className="mb-6 flex items-center gap-3 rounded-2xl border border-sand-200 bg-sand-50 p-3.5">
+                                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-moss-100 text-moss-700">
+                                        <Wrench size={18} />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-sm font-semibold text-sand-900">Araçlar bölümünü editörde göster</span>
+                                        <span className="mt-0.5 block text-[11px] leading-snug text-sand-500">
+                                            Kapalıyken araç satırı ve düğmeleri editörde hiç görünmez.
+                                        </span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={araclarAcik}
+                                        aria-label={`Araçlar bölümünü ${araclarAcik ? 'gizle' : 'göster'}`}
+                                        onClick={() => handleBolumDegistir('araclar', !araclarAcik)}
+                                        className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+                                            araclarAcik ? 'bg-moss-600' : 'bg-sand-300'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                                                araclarAcik ? 'left-[22px]' : 'left-0.5'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
+
                                 {toolList.length === 0 ? (
                                     <div className="rounded-2xl border border-dashed border-sand-300 bg-sand-50/60 p-8 text-center">
                                         <p className="text-sm font-medium text-sand-700">Tüm araçlar silindi</p>
@@ -797,7 +869,7 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                                         {gruptakiler.map((tool) => {
                                                             const isOn = tool.enabled !== false;
                                                             const aracIkonu =
-                                                                tool.kind === 'icerikten-dal' ? <ListTree size={18} />
+                                                                tool.kind === 'icerikten-baslik' ? <Type size={18} />
                                                                 : tool.kind === 'sirali-ad' ? <Hash size={18} />
                                                                 : tool.kind === 'numaralandir' ? <ListOrdered size={18} />
                                                                 : <Eraser size={18} />;
