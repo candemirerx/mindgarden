@@ -11,6 +11,7 @@ import { readTools, saveTools, DEFAULT_TOOLS, TOOL_GROUPS } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
 import { bolumAcik, bolumAcikliginiAyarla } from '@/lib/uiPrefs';
 import type { Bolum } from '@/lib/uiPrefs';
+import DataSection from './DataSection';
 import {
     PROVIDER_IDS,
     PROVIDER_LABELS,
@@ -37,7 +38,7 @@ interface ModelSettingsModalProps {
 type ProviderType = 'gemini' | 'openai' | 'anthropic' | 'custom';
 
 export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsModalProps) {
-    const [activeTab, setActiveTab] = useState<'models' | 'macros' | 'tools' | 'sync'>('models');
+    const [activeTab, setActiveTab] = useState<'models' | 'macros' | 'tools' | 'sync' | 'data'>('models');
     
     // AI Ayarları
     const [provider, setProvider] = useState<ProviderType>('gemini');
@@ -372,6 +373,17 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                         >
                             <Database size={16} />
                             Senkronizasyon
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('data')}
+                            className={`flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                                activeTab === 'data'
+                                ? 'bg-sand-100 text-sand-900'
+                                : 'text-sand-500 hover:bg-sand-50 hover:text-sand-700'
+                            }`}
+                        >
+                            <HardDriveDownload size={16} />
+                            Veri Yönetimi
                         </button>
                     </div>
 
@@ -955,6 +967,23 @@ export default function ModelSettingsModal({ isOpen, onClose }: ModelSettingsMod
                                 <p className="mt-5 text-[11px] leading-relaxed text-sand-500">
                                     Araçlar cihazınızda çalışır: internete çıkmaz, API anahtarı kullanmaz. Metni değiştiren araçların sonucu önce öneri olarak uygulanır; Onayla demeden kaydedilmez.
                                 </p>
+                            </div>
+                        )}
+
+                        {activeTab === 'data' && (
+                            <div className="max-w-2xl animate-fade-in pb-8">
+                                <div className="mb-6 sm:mb-8 flex items-start gap-3">
+                                    <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-clay-100 text-clay-700">
+                                        <Database size={20} />
+                                    </span>
+                                    <div>
+                                        <h3 className="text-xl sm:text-2xl font-semibold text-sand-900 mb-1">Veri Yönetimi</h3>
+                                        <p className="text-xs sm:text-sm text-sand-500 leading-relaxed">
+                                            Notlarınızı JSON, HTML veya PDF olarak dışa aktarın; JSON yedeğini geri yükleyin.
+                                        </p>
+                                    </div>
+                                </div>
+                                <DataSection />
                             </div>
                         )}
 
