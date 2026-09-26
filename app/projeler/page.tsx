@@ -165,15 +165,21 @@ function ProjectsPageInner() {
     };
 
     const handleAddRoot = () => {
+        // Ad her zaman boş bırakılabilir; sıra numarası aracı kapalıysa
+        // anlaşılır bir varsayılan ad verilir. Böylece ekleme asla çıkmaza
+        // girmez.
         const adIzinli = siraliAdEtkin();
+        const varsayilan = 'Yeni Ağaç';
         setPromptConfig({
             isOpen: true,
             title: 'Yeni Ağaç Ekle',
-            placeholder: adIzinli ? 'Adını girin (boş bırakılırsa sıra numarası verilir)...' : 'Ağaç adı girin...',
-            allowEmpty: adIzinli,
+            placeholder: adIzinli
+                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
+                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || siraliAd(null, nodes);
+                const ad = title || (adIzinli ? siraliAd(null, nodes) : varsayilan);
                 const created = await addNode(gardenId, ad, null, { x: 0, y: 0 });
                 if (created) setSelectedNodeId(created.id);
             }
@@ -183,14 +189,17 @@ function ProjectsPageInner() {
     const handleAddChild = (parentId: string, hasChildren: boolean) => {
         setActiveMenu(null);
         const adIzinli = siraliAdEtkin();
+        const varsayilan = hasChildren ? 'Yeni Dal' : 'Yeni Yaprak';
         setPromptConfig({
             isOpen: true,
             title: hasChildren ? 'Yeni Dal Ekle' : 'Yeni Yaprak Ekle',
-            placeholder: adIzinli ? 'Adını girin (boş bırakılırsa sıra numarası verilir)...' : 'Adını girin...',
-            allowEmpty: adIzinli,
+            placeholder: adIzinli
+                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
+                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || siraliAd(parentId, nodes);
+                const ad = title || (adIzinli ? siraliAd(parentId, nodes) : varsayilan);
                 const created = await addNode(gardenId, ad, parentId, { x: 0, y: 0 });
 
                 if (!expandedNodes.has(parentId)) {

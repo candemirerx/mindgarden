@@ -184,7 +184,7 @@ function GardenPageInner() {
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned, setSelectedNode } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
@@ -251,15 +251,20 @@ function GardenPageInner() {
 
     // Yeni root node (ağaç) oluştur
     const handleCreateRoot = () => {
+        // Ad her zaman boş bırakılabilir; sıra numarası aracı kapalıysa
+        // anlaşılır bir varsayılan ad verilir.
         const adIzinli = siraliAdEtkin();
+        const varsayilan = 'Yeni Ağaç';
         setPromptConfig({
             isOpen: true,
             title: 'Yeni Ağaç Ekle',
-            placeholder: adIzinli ? 'Adını girin (boş bırakılırsa sıra numarası verilir)...' : 'Ağaç adı girin...',
-            allowEmpty: adIzinli,
+            placeholder: adIzinli
+                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
+                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || siraliAd(null, nodes);
+                const ad = title || (adIzinli ? siraliAd(null, nodes) : varsayilan);
                 await addNode(gardenId, ad, null, { x: 0, y: 0 });
             }
         });
@@ -309,15 +314,18 @@ function GardenPageInner() {
         if (mindRoots.length === 0) return;
 
         const adIzinli = siraliAdEtkin();
+        const varsayilan = 'Yeni Dal';
         setPromptConfig({
             isOpen: true,
             title: 'Dal Ekle',
-            placeholder: adIzinli ? 'Adını girin (boş bırakılırsa sıra numarası verilir)...' : 'Dal adı girin...',
-            allowEmpty: adIzinli,
+            placeholder: adIzinli
+                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
+                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
                 // Sıralı ad aracı açıkken boş ad, seviyedeki sıra numarasına dönüşür.
-                const ad = title || siraliAd(parentId, nodes);
+                const ad = title || (adIzinli ? siraliAd(parentId, nodes) : varsayilan);
                 // Supabase'e kaydet ve gerçek node'u al
                 const newNode = await addNode(gardenId, ad, parentId, { x: 0, y: 0 });
 
@@ -347,6 +355,10 @@ function GardenPageInner() {
                         newRoots[treeIndex] = newTree;
                         setMindRoots(newRoots);
                     }
+
+                    // Odak yeni dala geçsin: seçili olduğu için eylem
+                    // düğmeleri hemen çevresinde görünür.
+                    setSelectedNode(newNode.id);
                 }
             }
         });
