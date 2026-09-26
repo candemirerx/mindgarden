@@ -184,7 +184,7 @@ function GardenPageInner() {
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
@@ -450,6 +450,45 @@ function GardenPageInner() {
         setMindRoots(prev => prev.filter(t => t.id !== treeId));
     };
 
+    /**
+     * Düğüm tipini dala/yaprağa çevirir.
+     *
+     * Ağaç yönetiminden çağrılır; ağaç ağacı yeniden kurulduğu için ekran
+     * kendiliğinden güncellenir.
+     */
+    const handleToggleNodeType = async (nodeId: string, currentType: 'branch' | 'leaf' | 'auto') => {
+        const sonraki = currentType === 'auto' ? 'branch' : currentType === 'branch' ? 'leaf' : 'auto';
+        await toggleNodeType(nodeId, currentType);
+        setMindRoots((onceki) =>
+            onceki.map((kok) => modifyNode(kok, nodeId, (dugum) => ({ ...dugum, nodeType: sonraki })))
+        );
+    };
+
+    /** Düğümü budama durumuna alır veya geri alır. */
+    const handleTogglePrune = async (nodeId: string, isPruned: boolean) => {
+        await setNodePruned(nodeId, !isPruned);
+        setMindRoots((onceki) =>
+            onceki.map((kok) => modifyNode(kok, nodeId, (dugum) => ({ ...dugum, isPruned: !isPruned })))
+        );
+    };
+
+    /**
+     * Düğümü doğrudan siler.
+     *
+     * Ağaç yönetimi kendi onay penceresini gösterdiği için burada ikinci
+     * bir onay istenmez.
+     */
+    const handleDeleteNodeDirect = async (nodeId: string) => {
+        await deleteNodeFromStore(nodeId);
+        setMindRoots((onceki) => {
+            const kokIndeksi = onceki.findIndex((kok) => kok.id === nodeId);
+            if (kokIndeksi !== -1) return onceki.filter((_, i) => i !== kokIndeksi);
+            return onceki
+                .map((kok) => deleteNodeRecursive(kok, nodeId))
+                .filter((kok): kok is MindNode => kok !== null);
+        });
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sand-50 via-clay-50/30 to-sand-50">
@@ -552,7 +591,6 @@ function GardenPageInner() {
                                     <MindMapNode
                                         node={root}
                                         onAddChild={handleAddChild}
-                                        onDelete={handleDeleteNode}
                                         onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
                                         depth={0}
                                     />
@@ -603,6 +641,9 @@ function GardenPageInner() {
                 trees={mindRoots}
                 onRenameTree={handleRenameTree}
                 onDeleteTree={handleDeleteTree}
+                onToggleType={handleToggleNodeType}
+                onTogglePrune={handleTogglePrune}
+                onDeleteNode={handleDeleteNodeDirect}
             />
 
             {/* Sidebar */}

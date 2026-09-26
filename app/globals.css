@@ -112,7 +112,7 @@
    düğmeleri bu boşluğa taştığı için, iki düğümün düğmeleri çakışmasın
    diye ölçü düğmelerin yüksekliğine göre seçildi. */
 .tree ul {
-  padding-top: 72px;
+  padding-top: 80px;
   position: relative;
   display: flex;
   justify-content: center;
@@ -187,7 +187,7 @@
   left: 50%;
   border-left: 2px solid var(--branch);
   width: 0;
-  height: 72px;
+  height: 80px;
   z-index: 0;
   transition: border-color 0.3s ease;
 }
@@ -195,7 +195,7 @@
 /* Kökten çıkan dallar daha belirgin */
 .tree>ul>li>ul::before {
   border-left-width: 3px;
-  height: 78px;
+  height: 86px;
 }
 
 .tree>ul>li>ul>li::before {

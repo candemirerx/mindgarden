@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Pencil, Plus, ChevronDown, X, TreePine, Leaf, Check, Scissors, Sprout } from 'lucide-react';
-import { BRANCH_COLORS, sonrakiRenk } from '@/lib/branchColors';
+import { Copy, Pencil, Plus, ChevronDown, TreePine, Leaf, Check, Scissors } from 'lucide-react';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 
@@ -18,9 +17,11 @@ const DUGME_TABANI =
     'transition-all duration-200 hover:scale-110 active:scale-95 touch-manipulation ' +
     'outline-none focus-visible:ring-4 focus-visible:ring-moss-500/40';
 
-/** Düğümün üstündeki yüzen araç çubuğunda kullanılan düğme görünümü. */
+/** Düğümün üstündeki yüzen araç çubuğunda kullanılan düğme görünümü.
+ *  40 piksel: parmakla rahat basılır. Düğüm çevresindeki seçenek sayısı
+ *  azaltıldığı için kalanlar daha büyük ve belirgin tutulur. */
 const ARAC_DUGMESI =
-    'flex h-9 w-9 items-center justify-center rounded-xl text-sand-700 ' +
+    'flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 ' +
     'transition-colors duration-150 hover:bg-sand-200/80 hover:text-sand-900 ' +
     'active:scale-95 touch-manipulation outline-none focus-visible:bg-sand-200/80';
 
@@ -28,7 +29,6 @@ interface MindMapNodeProps {
     node: MindNode;
     onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
     onAddSibling?: (siblingId: string, direction: 'left' | 'right') => void;
-    onDelete: (nodeId: string) => void;
     onEdit: (node: MindNode) => void;
     depth: number;
 }
@@ -37,7 +37,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     node,
     onAddChild,
     onAddSibling,
-    onDelete,
     onEdit,
     depth
 }) => {
@@ -46,9 +45,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(node.title);
     const [isMobile, setIsMobile] = useState(false);
-    const [showTitleCopied, setShowTitleCopied] = useState(false);
-    /** Yalnizca ekranda gecerli renk; kaydedilmez, yenilenince eski haline doner. */
-    const [geciciRenk, setGeciciRenk] = useState<string | null>(null);
+    const [showContentCopied, setShowContentCopied] = useState(false);
 
     const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,14 +59,20 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    const handleCopyTitle = (e: React.MouseEvent) => {
+    /**
+     * Notun gövdesini kopyalar; gövde boşsa başlığa düşer.
+     * Kullanıcı notun içeriğini tek dokunuşla alabilsin diye araç
+     * çubuğunda tutulur.
+     */
+    const handleCopyContent = (e: React.MouseEvent) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(node.title);
-        setShowTitleCopied(true);
-        setTimeout(() => setShowTitleCopied(false), 1500);
+        const govde = node.content.split('\n').slice(1).join('\n').trim();
+        navigator.clipboard.writeText(govde || node.title);
+        setShowContentCopied(true);
+        setTimeout(() => setShowContentCopied(false), 1500);
     };
 
-    const { updateNode, selectedNodeId, setSelectedNode, toggleNodeExpansion, toggleNodeType, setNodePruned } = useStore();
+    const { updateNode, selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
 
     /**
      * Budama: notu silmez, yalnızca soluk ve üstü çizili gösterir.
@@ -180,26 +183,26 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         <button
                             onClick={(e) => { e.stopPropagation(); onEdit(node); }}
                             className={ARAC_DUGMESI}
-                            title="Tam Editör"
-                            aria-label="Tam Editör"
+                            title="Metin editörünü aç"
+                            aria-label="Metin editörünü aç"
                         >
-                            <Pencil size={17} />
+                            <Pencil size={18} />
                         </button>
                         <button
-                            onClick={handleCopyTitle}
+                            onClick={handleCopyContent}
                             className={ARAC_DUGMESI}
-                            title={showTitleCopied ? "Kopyalandı!" : "Başlığı Kopyala"}
-                            aria-label="Başlığı Kopyala"
+                            title={showContentCopied ? 'Kopyalandı!' : 'İçeriği kopyala'}
+                            aria-label="İçeriği kopyala"
                         >
-                            {showTitleCopied ? <Check size={17} className="text-moss-600" /> : <Copy size={17} />}
+                            {showContentCopied ? <Check size={18} className="text-moss-600" /> : <Copy size={18} />}
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                            className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-moss-700 transition-colors duration-150 hover:bg-moss-100 active:scale-95 touch-manipulation outline-none focus-visible:bg-moss-100"
-                            title="Yeni dal ekle"
-                            aria-label="Yeni dal ekle"
+                            className="flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-moss-700 transition-colors duration-150 hover:bg-moss-100 active:scale-95 touch-manipulation outline-none focus-visible:bg-moss-100"
+                            title="Alt dal ekle"
+                            aria-label="Alt dal ekle"
                         >
-                            <Plus size={16} />
+                            <Plus size={18} />
                             <span>Dal Ekle</span>
                         </button>
                         <button
@@ -211,7 +214,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             aria-label={isPruned ? 'Budamayı geri al' : 'Buda'}
                             aria-pressed={isPruned}
                         >
-                            <Scissors size={17} />
+                            <Scissors size={18} />
                         </button>
                     </div>
 
@@ -303,7 +306,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                 node={child}
                                 onAddChild={onAddChild}
                                 onAddSibling={(siblingId, direction) => onAddChild(node.id, direction)}
-                                onDelete={onDelete}
                                 onEdit={onEdit}
                                 depth={depth + 1}
                             />
@@ -333,7 +335,10 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={handleNodeClick}
             >
-                {/* Üst Yüzen Eylem Araç Çubuğu */}
+                {/* Üst Yüzen Eylem Araç Çubuğu
+                    Yalnızca sık kullanılan dört eylem burada: metin editörü,
+                    içeriği kopyala, yan dal ekle ve buda. Tip değiştirme,
+                    renk, başlığı kopyalama ve silme Ağaç Yönetimi'ndedir. */}
                 {/* Görünmez köprü (after:) ile farenin boşluktan düşmesi engellenir */}
                 <div
                     role="toolbar"
@@ -348,43 +353,18 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(node); }}
                         className={ARAC_DUGMESI}
-                        title="Metin Editörü"
-                        aria-label="Metin Editörü"
+                        title="Metin editörünü aç"
+                        aria-label="Metin editörünü aç"
                     >
-                        <Pencil size={17} />
+                        <Pencil size={18} />
                     </button>
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            toggleNodeType(node.id, resolvedType);
-                        }}
+                        onClick={handleCopyContent}
                         className={ARAC_DUGMESI}
-                        title={isBranchStyle ? 'Yaprağa dönüştür' : 'Dala dönüştür'}
-                        aria-label={isBranchStyle ? 'Yaprağa dönüştür' : 'Dala dönüştür'}
+                        title={showContentCopied ? 'Kopyalandı!' : 'İçeriği kopyala'}
+                        aria-label="İçeriği kopyala"
                     >
-                        {isBranchStyle ? <Leaf size={17} /> : <Sprout size={17} />}
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setGeciciRenk((onceki) => sonrakiRenk(onceki ?? node.color ?? null));
-                        }}
-                        className={`${ARAC_DUGMESI} gap-1.5 px-2`}
-                        title="Rengi değiştir"
-                        aria-label="Rengi değiştir"
-                    >
-                        <span
-                            className="h-4 w-4 rounded-full ring-1 ring-black/15"
-                            style={{ backgroundColor: geciciRenk ?? node.color ?? BRANCH_COLORS[0].value }}
-                        />
-                    </button>
-                    <button
-                        onClick={handleCopyTitle}
-                        className={ARAC_DUGMESI}
-                        title={showTitleCopied ? "Kopyalandı!" : "Başlığı Kopyala"}
-                        aria-label="Başlığı Kopyala"
-                    >
-                        {showTitleCopied ? <Check size={17} className="text-moss-600" /> : <Copy size={17} />}
+                        {showContentCopied ? <Check size={18} className="text-moss-600" /> : <Copy size={18} />}
                     </button>
                     {onAddSibling && (
                         <button
@@ -393,7 +373,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             title="Yan dal ekle"
                             aria-label="Yan dal ekle"
                         >
-                            <Plus size={17} />
+                            <Plus size={18} />
                         </button>
                     )}
                     <button
@@ -405,15 +385,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         aria-label={isPruned ? 'Budamayı geri al' : 'Buda'}
                         aria-pressed={isPruned}
                     >
-                        <Scissors size={17} />
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
-                        className={`${ARAC_DUGMESI} text-berry-600 hover:bg-berry-50 hover:text-berry-700`}
-                        title="Dalı Sil"
-                        aria-label="Dalı Sil"
-                    >
-                        <X size={17} />
+                        <Scissors size={18} />
                     </button>
                 </div>
 
@@ -432,11 +404,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         ${isSelected ? 'ring-4 ring-moss-500/20 scale-[1.03]' : 'hover:scale-[1.02]'}
                         ${isPruned ? 'opacity-60 border-dashed' : ''}
                     `}
-                    style={
-                        geciciRenk
-                            ? { borderColor: geciciRenk, borderWidth: '2px' }
-                            : undefined
-                    }
                 >
                     <div className="flex items-center gap-2">
                         {isBranchStyle ? (
@@ -485,7 +452,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                 </div>
 
                 {/* DÜĞÜMÜN ALTINDAKİ EYLEM DÜĞMELERİ
-                    Tip, renk ve diğer eylemler üstteki araç çubuğundadır.
                     Burada yalnızca büyümenin anahtarı olan "+" ve katla/aç
                     rozeti kalır; ikisi de bağlantı çizgisinin dışındadır. */}
                 <div
@@ -498,14 +464,14 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
                         className={`
                             ${DUGME_TABANI}
-                            absolute -bottom-[18px] left-1/2 h-9 w-9 -translate-x-1/2
+                            absolute -bottom-[20px] left-1/2 h-10 w-10 -translate-x-1/2
                             bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400
                             ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                         `}
-                        title="Alt dal ekle"
-                        aria-label="Alt dal ekle"
+                        title="Alt dal veya yaprak ekle"
+                        aria-label="Alt dal veya yaprak ekle"
                     >
-                        <Plus size={18} />
+                        <Plus size={20} />
                     </button>
 
                     {/* KATLA / AÇ ROZETİ (SAĞ ALT KÖŞE)
@@ -519,14 +485,14 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             className={`
                                 ${DUGME_TABANI}
                                 pointer-events-auto
-                                absolute bottom-0 right-0 h-9 w-9 translate-x-1/2 translate-y-1/2
+                                absolute bottom-0 right-0 h-10 w-10 translate-x-1/2 translate-y-1/2
                                 bg-sand-100 text-bark-800 border-white hover:bg-sand-200
-                                text-xs font-bold
+                                text-sm font-bold
                             `}
                             title={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
                             aria-label={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
                         >
-                            {isExpanded ? <ChevronDown size={18} /> : <span>{node.children.length}</span>}
+                            {isExpanded ? <ChevronDown size={20} /> : <span>{node.children.length}</span>}
                         </button>
                     )}
                 </div>
@@ -540,7 +506,6 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             node={child}
                             onAddChild={onAddChild}
                             onAddSibling={(siblingId) => onAddChild(node.id, 'right')}
-                            onDelete={onDelete}
                             onEdit={onEdit}
                             depth={depth + 1}
                         />
