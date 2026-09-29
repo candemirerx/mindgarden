@@ -1,8 +1,9 @@
 /**
  * Arayüz tercihleri: editördeki bölümlerin gösterilip gösterilmeyeceği.
  *
- * Kullanıcı ayarlardan "Yapay zekâ" veya "Araçlar" bölümünü kapatabilir;
- * kapalı bölüm metin editöründe hiç görünmez, böylece arayüz sade kalır.
+ * Uygulama sade bir yazı ekranıyla açılsın diye "Yapay zekâ" ve "Araçlar"
+ * bölümleri varsayılan olarak kapalıdır. Kullanıcı bunları Ayarlar →
+ * Düzenleme araçları bölümünden açar; kapalı bölüm editörde hiç görünmez.
  */
 import { bildir } from './degisim';
 
@@ -13,10 +14,10 @@ const ANAHTARLAR: Record<Bolum, string> = {
     araclar: 'nb-tools-section'
 };
 
-/** Bölüm açık mı? Kayıt yoksa açıktır. */
+/** Bölüm açık mı? Kayıt yoksa kapalıdır; editör sade açılır. */
 export function bolumAcik(bolum: Bolum): boolean {
-    if (typeof window === 'undefined') return true;
-    return localStorage.getItem(ANAHTARLAR[bolum]) !== '0';
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(ANAHTARLAR[bolum]) === '1';
 }
 
 export function bolumAcikliginiAyarla(bolum: Bolum, acik: boolean): void {

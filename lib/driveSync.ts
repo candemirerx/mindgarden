@@ -376,17 +376,162 @@ function chooseWinner(local: SyncRow | undefined, remote: SyncRow | undefined): 
     return JSON.stringify(remote) > JSON.stringify(local) ? remote : local;
 }
 
-function reconcile(localRows: SyncRow[], remoteRows: SyncRow[]): SyncRow[] {
-    const localById = new Map(localRows.filter((row) => row.id).map((row) => [row.id, row]));
-    const remoteById = new Map(remoteRows.filter((row) => row.id).map((row) => [row.id, row]));
+/** İçerik alanları: çakışmada kullanıcıya kayıp yaşatmayacak şekilde ele alınır. */
+const ICERIK_ALANLARI = ['title', 'content', 'name'];
+
+/**
+ * Üç yönlü birleştirme.
+ *
+ * Tek bir `updated_at` alanına bakmak, yalnızca görünümü (aç/kapat, renk,
+ * konum) değiştiren bir cihazın diğer cihazdaki daha yeni not metnini
+ * ezmesine yol açıyordu. Bunun yerine her alan, son eşitlenen sürüme (temel)
+ * göre ayrı ayrı karşılaştırılır: yalnızca bir taraf değiştirdiyse o değer
+ * alınır; iki taraf da değiştirdiyse daha yeni satırın değeri kazanır ve
+ * içerik alanlarında çakışma bildirilir.
+ */
+function ucYonluBirlestir(
+    base: SyncRow | undefined,
+    local: SyncRow | undefined,
+    remote: SyncRow | undefined
+): { row: SyncRow | undefined; catisma: boolean } {
+    if (!local) return { row: remote, catisma: false };
+    if (!remote) return { row: local, catisma: false };
+
+    const localDeleted = Boolean(local.deleted_at);
+    const remoteDeleted = Boolean(remote.deleted_at);
+
+    // Silme tombstone'u eski canlı kopyalardan daima üstündür (mevcut sözleşme).
+    if (localDeleted !== remoteDeleted) {
+        return { row: localDeleted ? local : remote, catisma: false };
+    }
+
+    if (!base) {
+        // Temel sürüm yoksa (ilk senkron) alan bazlı karşılaştırma yapılamaz;
+        // yine de iki tarafın içeriği farklıysa kaybeden sürüm çatışma kopyası
+        // olarak saklanır, böylece metin sessizce kaybolmaz.
+        const winner = chooseWinner(local, remote);
+        const kaybeden = winner === local ? remote : local;
+        const icerikFarkli =
+            Boolean(winner) &&
+            Boolean(kaybeden) &&
+            !winner?.deleted_at &&
+            !kaybeden?.deleted_at &&
+            ICERIK_ALANLARI.some(
+                (alan) => JSON.stringify(local[alan]) !== JSON.stringify(remote[alan])
+            );
+        return { row: winner, catisma: icerikFarkli };
+    }
+
+    const localTime = effectiveTime(local, '');
+    const remoteTime = effectiveTime(remote, '');
+    const yeni = remoteTime > localTime ? remote : local;
+
+    const sonuc: SyncRow = { ...yeni };
+    let catisma = false;
+
+    const alanlar = new Set([...Object.keys(local), ...Object.keys(remote)]);
+    for (const alan of alanlar) {
+        if (alan === 'created_at') continue;
+
+        const temelDeger = JSON.stringify(base[alan]);
+        const yerelDeger = JSON.stringify(local[alan]);
+        const uzakDeger = JSON.stringify(remote[alan]);
+
+        if (yerelDeger === uzakDeger) continue;
+
+        const yerelDegisti = yerelDeger !== temelDeger;
+        const uzakDegisti = uzakDeger !== temelDeger;
+
+        if (yerelDegisti && !uzakDegisti) {
+            sonuc[alan] = local[alan];
+        } else if (uzakDegisti && !yerelDegisti) {
+            sonuc[alan] = remote[alan];
+        } else if (ICERIK_ALANLARI.includes(alan)) {
+            // İki cihaz da aynı içerik alanını değiştirdi: daha yeni olan kazanır,
+            // kaybeden sürüm çağıran tarafta çatışma kopyası olarak saklanır.
+            sonuc[alan] = yeni[alan];
+            catisma = true;
+        } else {
+            // Görünüm/tercih alanı: sessiz veri kaybı yok, daha yeni değer kalır.
+            sonuc[alan] = yeni[alan];
+        }
+    }
+
+    sonuc.updated_at = yeni.updated_at;
+    return { row: sonuc, catisma };
+}
+
+/** Silinen kayıtta not içeriği tutulmaz; yalnızca asgari tombstone kalır. */
+const SILINEN_ICERIK_ALANLARI = ['title', 'content', 'name'];
+
+function tombstoneSadelestir(row: SyncRow): SyncRow {
+    if (!row.deleted_at) return row;
+    const temiz: SyncRow = { ...row };
+    for (const alan of SILINEN_ICERIK_ALANLARI) {
+        if (alan in temiz) temiz[alan] = null;
+    }
+    return temiz;
+}
+
+function rowHaritasi(rows: SyncRow[]): Map<string, SyncRow> {
+    return new Map(rows.filter((row) => row.id).map((row) => [row.id, row]));
+}
+
+interface BirlestirmeSonucu {
+    rows: SyncRow[];
+    catismalar: SyncRow[];
+}
+
+function reconcile(
+    localRows: SyncRow[],
+    remoteRows: SyncRow[],
+    baseRows: SyncRow[] = []
+): BirlestirmeSonucu {
+    const localById = rowHaritasi(localRows);
+    const remoteById = rowHaritasi(remoteRows);
+    const baseById = rowHaritasi(baseRows);
     const ids = new Set([...localById.keys(), ...remoteById.keys()]);
     const rows: SyncRow[] = [];
+    const catismalar: SyncRow[] = [];
 
     for (const id of ids) {
-        const winner = chooseWinner(localById.get(id), remoteById.get(id));
-        if (winner) rows.push(winner);
+        const local = localById.get(id);
+        const remote = remoteById.get(id);
+        const { row, catisma } = ucYonluBirlestir(baseById.get(id), local, remote);
+        if (!row) continue;
+
+        rows.push(tombstoneSadelestir(row));
+
+        if (catisma) {
+            // Kaybeden sürüm ayrı bir kopya olarak saklanır: içerik sessizce
+            // kaybolmaz, kullanıcı düzenleyip birleştirebilir.
+            const kaybeden = row === local ? remote : local;
+            if (
+                kaybeden &&
+                !kaybeden.deleted_at &&
+                (kaybeden.content || kaybeden.title || kaybeden.name)
+            ) {
+                catismalar.push({
+                    ...kaybeden,
+                    id: catismaKopyaId(kaybeden.id),
+                    title: kaybeden.title ? kaybeden.title + ' (çatışma kopyası)' : kaybeden.title,
+                    name: kaybeden.name ? kaybeden.name + ' (çatışma kopyası)' : kaybeden.name,
+                });
+            }
+        }
     }
-    return rows;
+
+    rows.push(...catismalar);
+    return { rows, catismalar };
+}
+
+/** Çatışma kopyası için çakışmayan bir kimlik üretir. */
+function catismaKopyaId(kaynakId: string): string {
+    const rastgele =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    return kaynakId.slice(0, 8) + '-catisma-' + rastgele.slice(0, 8);
 }
 
 async function normalizeRemotePayload(payload: BackupPayload): Promise<BackupPayload> {
@@ -448,16 +593,109 @@ async function refreshVisibleStore(): Promise<void> {
 /* Senkron işlemleri                                                  */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Temel sürüm (üç yönlü birleştirme için) ve eşitleme kuyruğu         */
+/* ------------------------------------------------------------------ */
+
+const BASE_SNAPSHOT_KEY = 'nb-drive-base-v1';
+
+interface TemelSnapshot {
+    gardens: SyncRow[];
+    nodes: SyncRow[];
+}
+
+/**
+ * Son eşitlenen sürümün kopyası.
+ *
+ * Alan bazlı birleştirme için gerekir: bir alanın hangi cihazda değiştiğini
+ * anlamak, yalnızca iki satırın son hâlini karşılaştırmakla mümkün değildir.
+ */
+function temelOku(): TemelSnapshot {
+    if (typeof localStorage === 'undefined') return { gardens: [], nodes: [] };
+    try {
+        const raw = localStorage.getItem(BASE_SNAPSHOT_KEY);
+        if (!raw) return { gardens: [], nodes: [] };
+        const parsed = JSON.parse(raw);
+        return {
+            gardens: Array.isArray(parsed?.gardens) ? parsed.gardens : [],
+            nodes: Array.isArray(parsed?.nodes) ? parsed.nodes : [],
+        };
+    } catch {
+        return { gardens: [], nodes: [] };
+    }
+}
+
+function temelYaz(snapshot: TemelSnapshot): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+        localStorage.setItem(
+            BASE_SNAPSHOT_KEY,
+            JSON.stringify({ gardens: snapshot.gardens, nodes: snapshot.nodes })
+        );
+    } catch {
+        // Kota hatası: alan bazlı birleştirme bir sonraki başarılı eşitlemede
+        // yeniden kurulur; veri kaybı olmaz.
+    }
+}
+
+let kuyrukCalisiyor: Promise<unknown> | null = null;
+let yenidenGerekli = false;
+/** Birleştirmenin kendi yazımı sürerken store olayları yeni koşu tetiklemesin. */
+let uygulamaAsamasi = false;
+
+/**
+ * Yerel veri değiştiğinde çağrılır.
+ *
+ * Bir iş sürerken gelen değişiklik kaybolmaz: bayrak işaretlenir ve kuyruk
+ * aynı iş bitince bir kez daha koşar.
+ */
+function veriDegisti(): void {
+    if (uygulamaAsamasi) return;
+    yenidenGerekli = true;
+}
+
+/**
+ * Eşitleme işlerini tek sıraya alır (hesap başına tek çalışan kuyruk).
+ *
+ * Birleştirme hem manuel düğmelerden hem otomatik yedeklemeden çağrılabildiği
+ * için, aynı anda iki birleştirmenin birbirinin üzerine yazmasını engeller.
+ */
+export async function senkronKuyrugu<T>(is: () => Promise<T>): Promise<T> {
+    if (kuyrukCalisiyor) {
+        yenidenGerekli = true;
+        return (await kuyrukCalisiyor) as T;
+    }
+
+    const calisma = (async (): Promise<T> => {
+        let sonuc: T | undefined;
+        do {
+            yenidenGerekli = false;
+            sonuc = await is();
+        } while (yenidenGerekli);
+        return sonuc as T;
+    })();
+
+    kuyrukCalisiyor = calisma;
+    try {
+        return await calisma;
+    } finally {
+        kuyrukCalisiyor = null;
+    }
+}
+
 /** Yerel veriyi Drive'a yazar (manuel buton veya otomatik). */
 export async function uploadBackup(token: string): Promise<{ exportedAt: string; count: number }> {
     const base = await collectLocalData();
     const payload: BackupPayload = {
         ...base,
+        gardens: base.gardens.map(tombstoneSadelestir),
+        nodes: base.nodes.map(tombstoneSadelestir),
         exportedAt: new Date().toISOString(),
         device: Capacitor.isNativePlatform() ? 'android' : 'web',
     };
     await writeBackup(token, payload);
     localStorage.setItem(LAST_SYNC_KEY, payload.exportedAt);
+    temelYaz({ gardens: payload.gardens, nodes: payload.nodes });
     return {
         exportedAt: payload.exportedAt,
         count: payload.gardens.length + payload.nodes.length,
@@ -484,11 +722,18 @@ async function writePayloadToLocal(
         onProgress?.('Cihaza yazılıyor…');
         const remote = await normalizeRemotePayload(payload);
         const local = await collectLocalData();
-        const gardens = reconcile(local.gardens, remote.gardens);
-        const nodes = reconcile(local.nodes, remote.nodes);
-        await checkedUpsert('gardens', gardens);
-        await checkedUpsert('nodes', nodes);
-        await refreshVisibleStore();
+        const temel = temelOku();
+        const gardens = reconcile(local.gardens, remote.gardens, temel.gardens);
+        const nodes = reconcile(local.nodes, remote.nodes, temel.nodes);
+        uygulamaAsamasi = true;
+        try {
+            await checkedUpsert('gardens', gardens.rows);
+            await checkedUpsert('nodes', nodes.rows);
+            temelYaz({ gardens: gardens.rows, nodes: nodes.rows });
+            await refreshVisibleStore();
+        } finally {
+            uygulamaAsamasi = false;
+        }
         return { gardens: remote.gardens.length, nodes: remote.nodes.length };
     } finally {
         merging = false;
@@ -500,43 +745,62 @@ async function writePayloadToLocal(
  * eski canlı kopyalardan daima üstündür. Sonuç cihaza ve Drive'a yazılır.
  */
 export async function mergeSync(token: string): Promise<{ gardens: number; nodes: number; merged: boolean }> {
-    const downloaded = await downloadBackup(token);
-    if (!downloaded) {
-        const res = await uploadBackup(token);
-        return { gardens: res.count, nodes: 0, merged: false };
-    }
-
-    const remote = await normalizeRemotePayload(downloaded);
-    const local = await collectLocalData();
-    const gardens = reconcile(local.gardens, remote.gardens);
-    const nodes = reconcile(local.nodes, remote.nodes);
-    const localGardenById = new Map(local.gardens.map((row) => [row.id, row]));
-    const localNodeById = new Map(local.nodes.map((row) => [row.id, row]));
-    const changedGardens = gardens.filter((row) => JSON.stringify(localGardenById.get(row.id)) !== JSON.stringify(row));
-    const changedNodes = nodes.filter((row) => JSON.stringify(localNodeById.get(row.id)) !== JSON.stringify(row));
-
-    merging = true;
-    try {
-        await checkedUpsert('gardens', gardens);
-        await checkedUpsert('nodes', nodes);
-
+    return senkronKuyrugu(async () => {
+        // Hesap kimliği işin başında sabitlenir: iş sürerken hesap değişirse
+        // sonuç yeni hesaba yazılmaz (eski iş yeni oturuma uygulanmaz).
         const ownerId = await activeSessionUserId();
-        const payload: BackupPayload = {
-            app: 'notbahcesi',
-            version: 2,
-            ownerId,
-            gardens,
-            nodes,
-            exportedAt: new Date().toISOString(),
-            device: Capacitor.isNativePlatform() ? 'android' : 'web',
-        };
-        await writeBackup(token, payload);
-        localStorage.setItem(LAST_SYNC_KEY, payload.exportedAt);
-        await refreshVisibleStore();
-        return { gardens: changedGardens.length, nodes: changedNodes.length, merged: true };
-    } finally {
-        merging = false;
-    }
+
+        const downloaded = await downloadBackup(token);
+        if (!downloaded) {
+            const res = await uploadBackup(token);
+            return { gardens: res.count, nodes: 0, merged: false };
+        }
+
+        const remote = await normalizeRemotePayload(downloaded);
+        const local = await collectLocalData();
+        const temel = temelOku();
+
+        const gardens = reconcile(local.gardens, remote.gardens, temel.gardens);
+        const nodes = reconcile(local.nodes, remote.nodes, temel.nodes);
+
+        const localGardenById = rowHaritasi(local.gardens);
+        const localNodeById = rowHaritasi(local.nodes);
+        const changedGardens = gardens.rows.filter(
+            (row) => JSON.stringify(localGardenById.get(row.id)) !== JSON.stringify(row)
+        );
+        const changedNodes = nodes.rows.filter(
+            (row) => JSON.stringify(localNodeById.get(row.id)) !== JSON.stringify(row)
+        );
+
+        if ((await activeSessionUserId()) !== ownerId) {
+            throw new Error('Senkron sırasında hesap değişti; sonuçlar uygulanmadı.');
+        }
+
+        merging = true;
+        uygulamaAsamasi = true;
+        try {
+            await checkedUpsert('gardens', gardens.rows);
+            await checkedUpsert('nodes', nodes.rows);
+
+            const payload: BackupPayload = {
+                app: 'notbahcesi',
+                version: 2,
+                ownerId,
+                gardens: gardens.rows.map(tombstoneSadelestir),
+                nodes: nodes.rows.map(tombstoneSadelestir),
+                exportedAt: new Date().toISOString(),
+                device: Capacitor.isNativePlatform() ? 'android' : 'web',
+            };
+            await writeBackup(token, payload);
+            localStorage.setItem(LAST_SYNC_KEY, payload.exportedAt);
+            temelYaz({ gardens: gardens.rows, nodes: nodes.rows });
+            await refreshVisibleStore();
+            return { gardens: changedGardens.length, nodes: changedNodes.length, merged: true };
+        } finally {
+            uygulamaAsamasi = false;
+            merging = false;
+        }
+    });
 }
 
 /** Uygulama açılışında çağrılır: otomatik senkron açıksa birleştirme yapar. */
@@ -575,8 +839,13 @@ export function initDriveAutoSync(store: typeof useStore): void {
     autoSyncInitialized = true;
     storeRef = store;
 
-    store.subscribe((state) => {
-        if (merging) return;
+    store.subscribe((state, prevState) => {
+        // Yalnızca kalıcı veriyi etkileyen değişiklikler yeni eşitleme ister;
+        // seçim veya yan panel gibi gezinme hareketleri ağ isteği üretmez.
+        if (prevState && (prevState.gardens !== state.gardens || prevState.nodes !== state.nodes)) {
+            veriDegisti();
+        }
+        if (uygulamaAsamasi) return;
         if (!isAutoSyncEnabled() || !isSignedInWithGoogle()) return;
 
         if (uploadTimer) clearTimeout(uploadTimer);

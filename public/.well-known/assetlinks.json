@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.notbahcesi.app",
+      "sha256_cert_fingerprints": [
+        "3B:19:EC:C2:B5:C0:E0:CF:12:64:B2:BC:75:F6:B9:CE:18:C7:C5:4A:BC:1C:AF:ED:CA:33:A0:1F:25:69:F0:90"
+      ]
+    }
+  }
+]

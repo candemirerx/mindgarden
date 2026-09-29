@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="my_images" path="." />
-    <cache-path name="my_cache_images" path="." />
+    <!--
+      Paylaşılan tek dosya grubu: veri yedekleri (JSON/DOCX/PDF) Belgeler
+      klasörüne yazılıp paylaşılır. Tüm harici depolamayı açmak yerine
+      yalnızca kullanılan klasörler paylaşıma açılır.
+    -->
+    <external-path name="belgeler" path="Documents/" />
+    <cache-path name="onbellek" path="." />
 </paths>

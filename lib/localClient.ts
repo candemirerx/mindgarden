@@ -73,23 +73,68 @@ function readDatabase(): LocalDatabase {
                 migrated = true;
                 return { ...garden, user_id: userId };
             });
-            if (migrated) writeDatabase(db);
+            if (migrated) {
+                try {
+                    writeDatabase(db);
+                } catch {
+                    // Göç yazılamadı; okuma yine de sürer.
+                }
+            }
         }
 
         return db;
     } catch {
+        // Bozuk JSON: sessizce boş veritabanı gibi davranıp üzerine yazmak yerine
+        // içeriği karantinaya alırız.
+        try {
+            const raw = storage()?.getItem(DB_KEY);
+            if (raw) karantinayaAl(raw);
+        } catch {
+            // Okunamıyorsa yapılacak bir şey yok.
+        }
         return { gardens: [], nodes: [] };
     }
 }
 
 function writeDatabase(db: LocalDatabase): void {
     const store = storage();
-    if (!store) return;
+    if (!store) throw new Error('Yerel depolama kullanılamıyor.');
     try {
         store.setItem(DB_KEY, JSON.stringify(db));
-    } catch {
-        // Kota dolu olabilir; sessizce yut, veri kaybı UI'da görünür.
+    } catch (error) {
+        // Kota dolu ya da depolama erişimi engelli. Bu bir başarısızlıktır ve
+        // çağırana bildirilmelidir; eskiden sessizce yutulduğu için kullanıcı
+        // kaydettiğini sanıyordu.
+        throw new Error(
+            'Kayıt cihaza yazılamadı: ' +
+                (error instanceof Error ? error.message : 'bilinmeyen depolama hatası'),
+        );
     }
+}
+
+/** Bozuk yerel veri ayrıldığında kullanıcıya gösterilebilecek uyarı. */
+let localVeriUyarisi: string | null = null;
+
+export function localDataWarning(): string | null {
+    return localVeriUyarisi;
+}
+
+/**
+ * Okunamayan yerel veriyi silmek yerine ayrı bir anahtara taşır; böylece
+ * kullanıcı verisi kurtarılabilir kalır ve üzerine sessizce yazılmaz.
+ */
+function karantinayaAl(raw: string): void {
+    const store = storage();
+    if (store) {
+        try {
+            store.setItem(DB_KEY + '-bozuk-' + Date.now(), raw);
+        } catch {
+            // Yer yoksa karantina kopyası yazılamaz; asıl kayıt zaten bozuk.
+        }
+    }
+    localVeriUyarisi =
+        'Yerel veri dosyası okunamadı; bozuk kopya ayrı olarak saklandı. ' +
+        'Notlarınız görünmüyorsa uygulamayı kapatıp destek ile iletişime geçin.';
 }
 
 /* ------------------------------------------------------------------ */
@@ -190,6 +235,53 @@ export function signInAsGuest(): LocalSession {
     writeLocalSession(session);
     emit('SIGNED_IN', session);
     return session;
+}
+
+/** Bulut modundaki RLS davranışını taklit eder: herkes yalnızca kendi verisini görür. */
+type AktarimOzeti = { bahce: number; not: number };
+
+/**
+ * Misafir oturumunda oluşturulan bahçeleri, hesaba geçişte yeni sahibe aktarır.
+ *
+ * Yalnızca bu cihazdaki misafir kayıtları taşınır; başka bir hesabın verisi
+ * asla birleştirilmez. Yazma tek geçişte yapılır: yazma başarısız olursa veri
+ * değişmemiş kalır ve çağıran taraf girişi iptal edip kullanıcıya haber verir.
+ * Böylece "giriş yapınca notlarım kayboldu" durumu oluşmaz.
+ */
+function misafirVerisiniAktar(yeniKullaniciId: string): AktarimOzeti {
+    const onceki = readLocalSession();
+    const misafirId = userIdFor(GUEST_EMAIL);
+
+    // Yalnızca misafirden gerçek bir hesaba geçişte taşıma yapılır.
+    if (!onceki || onceki.user.id !== misafirId || yeniKullaniciId === misafirId) {
+        return { bahce: 0, not: 0 };
+    }
+
+    const db = readDatabase();
+    const tasinacak = db.gardens.filter((garden) => garden.user_id === misafirId);
+    if (tasinacak.length === 0) return { bahce: 0, not: 0 };
+
+    const idler = new Set(tasinacak.map((garden) => garden.id));
+    const notSayisi = db.nodes.filter((node) => idler.has(String(node.garden_id ?? ''))).length;
+
+    writeDatabase({
+        gardens: db.gardens.map((garden) =>
+            garden.user_id === misafirId ? { ...garden, user_id: yeniKullaniciId } : garden
+        ),
+        nodes: db.nodes,
+    });
+
+    return { bahce: tasinacak.length, not: notSayisi };
+}
+
+/** Aktarım başarısız olduğunda giriş iptal edilir ve kullanıcıya açıkça söylenir. */
+function aktarimHatasi(hata: unknown): { message: string } {
+    return {
+        message:
+            'Misafir notlarınız hesaba aktarılamadı, bu yüzden giriş yapılmadı. ' +
+            'Notlarınız silinmedi; tekrar deneyebilirsiniz. ' +
+            (hata instanceof Error ? `(${hata.message})` : ''),
+    };
 }
 
 /** Bulut modundaki RLS davranışını taklit eder: herkes yalnızca kendi verisini görür. */
@@ -398,6 +490,7 @@ class LocalQuery implements PromiseLike<QueryResult> {
             if (patch.updated_at === undefined) {
                 row.updated_at = new Date().toISOString();
             }
+            if (row.deleted_at) temizleSilinenIcerik(row);
         }
 
         writeDatabase(db);
@@ -432,6 +525,7 @@ class LocalQuery implements PromiseLike<QueryResult> {
                 if (!scopedIds.has(row.id)) continue;
                 Object.assign(existing, row);
                 existing.updated_at = existing.updated_at ?? existing.created_at ?? now;
+                if (existing.deleted_at) temizleSilinenIcerik(existing);
             } else {
                 const record: Row = {
                     created_at: now,
@@ -473,6 +567,18 @@ function from(table: Table): LocalQuery {
     return new LocalQuery(table, 'select');
 }
 
+/**
+ * Silinen kaydın not içeriği cihazda tutulmaz.
+ *
+ * Eşitleme yalnızca tombstone (kimlik + silme damgası) taşır; yerel kayıtta da
+ * metin bırakmak, kullanıcıya verilen "veri silindi" açıklamasıyla çelişirdi.
+ */
+function temizleSilinenIcerik(row: Row): void {
+    for (const alan of ['title', 'content', 'name']) {
+        if (alan in row) row[alan] = null;
+    }
+}
+
 /* ------------------------------------------------------------------ */
 /* Genel istemci                                                      */
 /* ------------------------------------------------------------------ */
@@ -505,10 +611,17 @@ export const localClient = {
             if (!email || !password) {
                 return { data: { session: null, user: null }, error: { message: 'E-posta ve şifre gerekli' } };
             }
-            const session: LocalSession = { user: buildUser(email), access_token: createId() };
+            const user = buildUser(email);
+            let aktarim: AktarimOzeti;
+            try {
+                aktarim = misafirVerisiniAktar(user.id);
+            } catch (hata) {
+                return { data: { session: null, user: null }, error: aktarimHatasi(hata) };
+            }
+            const session: LocalSession = { user, access_token: createId() };
             writeLocalSession(session);
             emit('SIGNED_IN', session);
-            return { data: { session, user: session.user }, error: null };
+            return { data: { session, user: session.user, aktarim }, error: null };
         },
 
         async signUp({ email, password }: { email: string; password: string }) {
@@ -516,10 +629,17 @@ export const localClient = {
                 return { data: { session: null, user: null }, error: { message: 'E-posta ve şifre gerekli' } };
             }
             // Yerel modda e-posta doğrulaması yok; kayıt doğrudan oturum açar.
-            const session: LocalSession = { user: buildUser(email), access_token: createId() };
+            const user = buildUser(email);
+            let aktarim: AktarimOzeti;
+            try {
+                aktarim = misafirVerisiniAktar(user.id);
+            } catch (hata) {
+                return { data: { session: null, user: null }, error: aktarimHatasi(hata) };
+            }
+            const session: LocalSession = { user, access_token: createId() };
             writeLocalSession(session);
             emit('SIGNED_IN', session);
-            return { data: { session, user: session.user }, error: null };
+            return { data: { session, user: session.user, aktarim }, error: null };
         },
 
         async signOut() {
@@ -545,9 +665,16 @@ export const localClient = {
             if (!profile.email) {
                 return { data: { session: null, user: null }, error: { message: 'Google profili okunamadı' } };
             }
+            const kullaniciId = userIdFor(profile.email.toLowerCase());
+            let aktarim: AktarimOzeti;
+            try {
+                aktarim = misafirVerisiniAktar(kullaniciId);
+            } catch (hata) {
+                return { data: { session: null, user: null }, error: aktarimHatasi(hata) };
+            }
             const session: LocalSession = {
                 user: {
-                    id: userIdFor(profile.email.toLowerCase()),
+                    id: kullaniciId,
                     email: profile.email,
                     user_metadata: {
                         full_name: profile.name || profile.email.split('@')[0],
@@ -559,7 +686,7 @@ export const localClient = {
             };
             writeLocalSession(session);
             emit('SIGNED_IN', session);
-            return { data: { session, user: session.user }, error: null };
+            return { data: { session, user: session.user, aktarim }, error: null };
         },
 
         async exchangeCodeForSession() {

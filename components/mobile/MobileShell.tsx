@@ -27,6 +27,8 @@ export function useMobileShell(): boolean {
             try {
                 const { App } = await import('@capacitor/app');
                 const listener = await App.addListener('backButton', () => {
+                    // Tam ekran ayarlar kendi bölüm → liste → kapat sırasını yönetir.
+                    if (document.querySelector('[data-settings-screen]')) return;
                     if (window.history.length > 1) {
                         window.history.back();
                     } else {
@@ -98,7 +100,7 @@ export function OfflineOverlay({ onRetry }: { onRetry?: () => void }) {
                     <button
                         onClick={() => { void hapticTick(); onRetry(); }}
                         aria-label="Bağlantıyı yeniden dene"
-                        className="rounded-lg p-2 text-clay-700 transition-colors hover:bg-clay-100"
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-clay-700 transition-colors hover:bg-clay-100"
                     >
                         <RefreshCw size={17} />
                     </button>

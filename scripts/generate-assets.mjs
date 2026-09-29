@@ -1,5 +1,5 @@
 /**
- * Uygulama ikonlarını uygulamanın kendi görsel diliyle (ağaç + yosun yeşili
+ * Uygulama ikonlarını uygulamanın kendi görsel diliyle (filizli defter + yosun yeşili
  * gradyanı) üretir. Çalıştırmak için: node scripts/generate-assets.mjs
  *
  * Üretilenler:
@@ -18,11 +18,6 @@ const MOSS_700 = '#275939';
 const MOSS_900 = '#1B3A28';
 const MOSS_50 = '#F0F7EF';
 
-/** lucide-react "tree-pine" çizimi (24x24 tuval). */
-const TREE_PATHS = [
-    'm17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z',
-    'M12 22v-3'
-];
 
 function gradientDefs(id) {
     return `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
@@ -31,23 +26,26 @@ function gradientDefs(id) {
     </linearGradient>`;
 }
 
-/** Ağaç grubunu tuvalin ortasına, verilen oranda yerleştirir. */
-function treeGroup(size, ratio, stroke = 2) {
-    const scale = (size * ratio) / 24;
-    const offset = size / 2 - 12 * scale;
-    return `<g transform="translate(${offset},${offset}) scale(${scale})" fill="none"
-        stroke="${MOSS_50}" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">
-      ${TREE_PATHS.map((d) => `<path d="${d}"/>`).join('')}
+/** GardenMark bileşenindeki filizli defteri simge tuvaline yerleştirir. */
+function gardenMarkGroup(size, ratio) {
+    const scale = (size * ratio) / 40;
+    const offset = size / 2 - 20 * scale;
+    return `<g transform="translate(${offset},${offset}) scale(${scale})" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 33C15 29 9 29 5 30V13C10 12 16 14 20 18C24 14 30 12 35 13V30C29 29 24 30 20 33Z" fill="${MOSS_50}" fill-opacity=".12"/>
+      <path d="M20 33C15 29 9 29 5 30V13C10 12 16 14 20 18C24 14 30 12 35 13V30C29 29 24 30 20 33ZM20 19V33" stroke="${MOSS_50}" stroke-width="2.2"/>
+      <path d="M20 21V12C20 7 24 4 30 4C30 10 26 13 20 12Z" fill="#D4E9B5"/>
+      <path d="M20 16C13 16 10 12 11 7C16 7 20 10 20 16Z" fill="#9DCB9B"/>
+      <path d="M10 22L15 24M25 24L30 22" stroke="${MOSS_50}" stroke-width="1.6" opacity=".6"/>
     </g>`;
 }
 
-/** Tam ikon: yuvarlatılmış kare + ağaç. */
+/** Tam ikon: yuvarlatılmış kare ve filizli defter. */
 function fullIconSvg(size, { round = false, ratio = 0.5 } = {}) {
     const radius = round ? size / 2 : size * 0.22;
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <defs>${gradientDefs('g')}</defs>
     <rect width="${size}" height="${size}" rx="${radius}" fill="url(#g)"/>
-    ${treeGroup(size, ratio)}
+    ${gardenMarkGroup(size, ratio)}
   </svg>`;
 }
 
@@ -59,10 +57,10 @@ function backgroundSvg(size) {
   </svg>`;
 }
 
-/** Adaptif ikon ön planı: saydam zemin üzerinde ortalanmış ağaç. */
+/** Adaptif ikon ön planı: güvenli alan içinde filizli defter. */
 function foregroundSvg(size) {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    ${treeGroup(size, 0.66, 1.8)}
+    ${gardenMarkGroup(size, 0.64, 1.8)}
   </svg>`;
 }
 
@@ -110,7 +108,7 @@ written.push(
         `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
           <defs>${gradientDefs('g')}</defs>
           <rect width="512" height="512" fill="url(#g)"/>
-          ${treeGroup(512, 0.62)}
+          ${gardenMarkGroup(512, 0.62)}
         </svg>`,
         join(ROOT, 'store/play-icon-512.png')
     )

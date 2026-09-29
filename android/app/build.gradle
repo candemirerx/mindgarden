@@ -15,8 +15,8 @@ android {
         applicationId "com.notbahcesi.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 40
-        versionName "2.1.6"
+        versionCode 45
+        versionName "2.2.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -39,7 +39,10 @@ android {
             if (hasReleaseSigning) {
                 signingConfig signingConfigs.release
             }
-            minifyEnabled false
+            // R8: sınıf adlarını gizler, kullanılmayan kodu atar. Capacitor ve
+            // Play Services kendi kurallarını getirir; ek kurallar
+            // proguard-rules.pro içinde.
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

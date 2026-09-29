@@ -41,7 +41,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
                     <button
                         onClick={onClose}
                         aria-label="Kapat"
-                        className="rounded-xl p-2 text-sand-500 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-700"
+                        title="Kapat"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-700"
                     >
                         <X size={20} />
                     </button>

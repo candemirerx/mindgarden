@@ -7,6 +7,7 @@ const activeOnly = <T extends { deleted_at?: string | null }>(rows: T[] | null |
 
 export const useStore = create<StoreState>((set, get) => ({
     gardens: [],
+    gardenTreeCounts: null,
     currentGardenId: null,
     nodes: [],
     selectedNodeId: null,
@@ -17,7 +18,14 @@ export const useStore = create<StoreState>((set, get) => ({
     setSelectedNode: (id: string | null) => set({ selectedNodeId: id }),
     toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
     setSidebarOpen: (open: boolean) => set({ isSidebarOpen: open }),
-    resetData: () => set({ gardens: [], nodes: [], currentGardenId: null, selectedNodeId: null }),
+    resetData: () =>
+        set({
+            gardens: [],
+            gardenTreeCounts: null,
+            nodes: [],
+            currentGardenId: null,
+            selectedNodeId: null,
+        }),
 
     addGarden: async (name: string): Promise<{ success: boolean; error?: string }> => {
         try {
@@ -72,15 +80,18 @@ export const useStore = create<StoreState>((set, get) => ({
     deleteGarden: async (id: string) => {
         try {
             const deletedAt = new Date().toISOString();
+            // Silinen kaydın not metni tutulmaz; kullanıcıya verilen "veri silindi"
+            // açıklamasıyla uyumlu olması için içerik aynı güncellemede boşaltılır.
+            // Alanlar not null olduğu için boş dize yazılır (bkz. supabase-schema.sql).
             const nodeResult = await supabase
                 .from('nodes')
-                .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                .update({ deleted_at: deletedAt, updated_at: deletedAt, content: '' })
                 .eq('garden_id', id);
             if (nodeResult.error) throw nodeResult.error;
 
             const gardenResult = await supabase
                 .from('gardens')
-                .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                .update({ deleted_at: deletedAt, updated_at: deletedAt, name: '' })
                 .eq('id', id);
             if (gardenResult.error) throw gardenResult.error;
 
@@ -92,6 +103,13 @@ export const useStore = create<StoreState>((set, get) => ({
                     (node) => node.garden_id === id && node.id === state.selectedNodeId
                 ) ? null : state.selectedNodeId,
             }));
+            // Silinen bahçenin ağaç sayımı listede kalmasın.
+            const kalanSayilar = get().gardenTreeCounts;
+            if (kalanSayilar && id in kalanSayilar) {
+                const yeniSayilar = { ...kalanSayilar };
+                delete yeniSayilar[id];
+                set({ gardenTreeCounts: yeniSayilar });
+            }
         } catch (error) {
             console.error('Bahçe silinirken hata:', error);
         }
@@ -101,17 +119,51 @@ export const useStore = create<StoreState>((set, get) => ({
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
         try {
-            const { data, error } = await supabase
-                .from('gardens')
-                .select('*')
-                .is('deleted_at', null)
-                .order('created_at', { ascending: false })
-                .abortSignal(controller.signal);
-            if (error) throw error;
-            set({ gardens: activeOnly(data as Garden[]) });
+            /*
+             * Bahçe listesiyle birlikte her bahçedeki ağaç sayısını da çekeriz:
+             * ana ekrandaki kartlarda küçük bir rozet olarak gösteriliyor. Kök
+             * düğümler (parent_id boş olanlar) bir ağacın tepesidir; bu yüzden
+             * yalnızca üç hafif sütun isteyip sayımı burada yaparız. Tek ek istek
+             * tüm bahçeleri kapsar.
+             */
+            const [gardensResult, nodesResult] = await Promise.all([
+                supabase
+                    .from('gardens')
+                    .select('*')
+                    .is('deleted_at', null)
+                    .order('created_at', { ascending: false })
+                    .abortSignal(controller.signal),
+                supabase
+                    .from('nodes')
+                    .select('id,garden_id,parent_id')
+                    .is('deleted_at', null)
+                    .abortSignal(controller.signal),
+            ]);
+            if (gardensResult.error) throw gardensResult.error;
+
+            // Sayım alınamazsa liste yine de gösterilir; rozet çizilmez.
+            let counts: Record<string, number> | null = null;
+            if (nodesResult.error) {
+                console.warn('Ağaç sayıları hesaplanamadı:', nodesResult.error.message);
+            } else {
+                const sayilar: Record<string, number> = {};
+                for (const row of (nodesResult.data ?? []) as Array<{
+                    garden_id?: string | null;
+                    parent_id?: string | null;
+                }>) {
+                    if (!row.garden_id || row.parent_id) continue;
+                    sayilar[row.garden_id] = (sayilar[row.garden_id] ?? 0) + 1;
+                }
+                counts = sayilar;
+            }
+
+            set({
+                gardens: activeOnly(gardensResult.data as Garden[]),
+                gardenTreeCounts: counts,
+            });
         } catch (error) {
             console.error('Bahçeler yüklenirken hata:', error);
-            set({ gardens: [] });
+            set({ gardens: [], gardenTreeCounts: null });
         } finally {
             clearTimeout(timeoutId);
         }
@@ -208,7 +260,7 @@ export const useStore = create<StoreState>((set, get) => ({
             const deletedAt = new Date().toISOString();
             const { error } = await supabase
                 .from('nodes')
-                .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                .update({ deleted_at: deletedAt, updated_at: deletedAt, content: '' })
                 .in('id', Array.from(doomed));
             if (error) throw error;
 
@@ -309,21 +361,34 @@ export const useStore = create<StoreState>((set, get) => ({
      * Dalın rengini kaydeder. Yerel durum önce güncellenir; böylece renk
      * seçimi her modda anında görünür, kalıcılık hatası kullanıcıyı kesmez.
      */
-    setNodeColor: async (id: string, color: string | null) => {
+    /**
+     * Dal rengini kalıcı olarak kaydeder.
+     *
+     * Ekranda anında görünmesi için iyimser güncelleme yapılır; yazma
+     * başarısız olursa eski hâle dönülür ve `false` döner. Böylece ekranda
+     * "kaydedilmiş gibi görünen ama kaydedilmemiş" bir renk kalmaz; renk
+     * sayfa değişince kendiliğinden değişmiş gibi görünmez.
+     */
+    setNodeColor: async (id: string, color: string | null): Promise<boolean> => {
+        const oncekiDugumler = get().nodes;
+        const updatedAt = new Date().toISOString();
+        set((state) => ({
+            nodes: state.nodes.map((node) =>
+                node.id === id ? { ...node, color, updated_at: updatedAt } : node
+            ),
+        }));
+
         try {
-            const updatedAt = new Date().toISOString();
-            set((state) => ({
-                nodes: state.nodes.map((node) =>
-                    node.id === id ? { ...node, color, updated_at: updatedAt } : node
-                ),
-            }));
             const { error } = await supabase
                 .from('nodes')
                 .update({ color, updated_at: updatedAt })
                 .eq('id', id);
             if (error) throw error;
+            return true;
         } catch (error) {
             console.error('Dal rengi güncellenirken hata:', error);
+            set({ nodes: oncekiDugumler });
+            return false;
         }
     },
 

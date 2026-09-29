@@ -8,11 +8,144 @@
 
 @layer base {
   :root {
+    /* --- Renk ölçekleri (açık tema) ------------------------------------
+       Bileşenler Tailwind sınıflarıyla çalışır (bg-sand-100, text-bark-900).
+       Ölçekler burada RGB üçlüsü olarak durur; koyu temada (.dark) aynı
+       adlar ters çevrilir, böylece tema tek yerden değişir. */
+    --sand-50: 251 249 246;
+    --sand-100: 246 243 238;
+    --sand-200: 234 229 222;
+    --sand-300: 218 211 201;
+    --sand-400: 173 163 150;
+    --sand-500: 124 114 104;
+    --sand-600: 91 83 72;
+    --sand-700: 70 63 54;
+    --sand-800: 44 37 29;
+    --sand-900: 30 24 19;
+    --sand-950: 13 10 7;
+    --moss-50: 240 247 239;
+    --moss-100: 222 237 218;
+    --moss-200: 187 220 193;
+    --moss-300: 145 195 157;
+    --moss-400: 100 163 120;
+    --moss-500: 68 130 91;
+    --moss-600: 48 108 71;
+    --moss-700: 39 89 57;
+    --moss-800: 32 71 47;
+    --moss-900: 27 58 40;
+    --moss-950: 12 33 22;
+    --bark-50: 250 246 243;
+    --bark-100: 242 233 226;
+    --bark-200: 228 210 197;
+    --bark-300: 208 179 160;
+    --bark-400: 183 142 117;
+    --bark-500: 161 112 90;
+    --bark-600: 135 89 72;
+    --bark-700: 110 71 59;
+    --bark-800: 91 60 51;
+    --bark-900: 76 52 45;
+    --bark-950: 41 27 23;
+    --clay-50: 253 248 233;
+    --clay-100: 250 237 201;
+    --clay-200: 244 220 148;
+    --clay-300: 238 194 92;
+    --clay-400: 224 166 50;
+    --clay-500: 201 132 27;
+    --clay-600: 170 104 20;
+    --clay-700: 140 82 16;
+    --clay-800: 115 64 15;
+    --clay-900: 95 52 16;
+    --clay-950: 54 28 9;
+    --berry-50: 252 243 241;
+    --berry-100: 251 227 224;
+    --berry-200: 247 203 199;
+    --berry-300: 239 166 160;
+    --berry-400: 227 117 109;
+    --berry-500: 214 74 68;
+    --berry-600: 190 47 43;
+    --berry-700: 156 41 38;
+    --berry-800: 127 39 35;
+    --berry-900: 106 36 32;
+    --berry-950: 58 21 18;
+    /* Kart, panel ve modal yüzeyi (bg-white) */
+    --surface: 255 255 255;
     /* Uygulama zemini - sıcak kağıt tonu (sand-100 ile aynı) */
     --paper: #f6f3ee;
     /* Ağaç dalları */
     --branch: #b9a88f; /* Kum/ahşap karışımı tek, temiz bir dal rengi */
     --branch-hover: #64a378;
+    color-scheme: light;
+  }
+
+  /*
+   * Koyu tema. Renk ölçekleri bilinçli olarak ters çevrilir: açık temada
+   * zemin olan tonlar koyulaşır, metin olan tonlar aydınlanır. Metin/zemin
+   * kontrastları WCAG AA (>= 4.5:1) olacak şekilde seçildi.
+   */
+  .dark {
+    --sand-50: 20 17 14;
+    --sand-100: 26 22 18;
+    --sand-200: 36 31 26;
+    --sand-300: 52 45 39;
+    /* Koyu zeminde ikincil metin ve simgeler WCAG AA'yı geçsin diye bu iki
+       ölçek yukarı çekildi (kâğıt/zemin/moss-100 üzerinde):
+       sand-400 4,6-5,6:1 · sand-500 5,8-7,0:1. Açık tema değerleri aynı. */
+    --sand-400: 150 138 124;
+    --sand-500: 168 156 141;
+    --sand-600: 176 163 149;
+    --sand-700: 201 189 176;
+    --sand-800: 222 213 202;
+    --sand-900: 237 231 222;
+    --sand-950: 245 241 234;
+    --moss-50: 15 28 19;
+    --moss-100: 22 40 26;
+    --moss-200: 33 58 38;
+    --moss-300: 46 81 55;
+    --moss-400: 61 107 73;
+    --moss-500: 95 176 122;
+    --moss-600: 127 199 150;
+    --moss-700: 163 217 180;
+    --moss-800: 198 232 207;
+    --moss-900: 226 243 230;
+    --moss-950: 241 249 243;
+    --bark-50: 25 19 16;
+    --bark-100: 36 26 21;
+    --bark-200: 50 36 29;
+    --bark-300: 69 51 39;
+    --bark-400: 107 78 60;
+    --bark-500: 169 130 101;
+    --bark-600: 195 156 125;
+    --bark-700: 212 178 150;
+    --bark-800: 226 200 178;
+    --bark-900: 237 220 203;
+    --bark-950: 243 234 225;
+    --clay-50: 36 26 11;
+    --clay-100: 51 36 13;
+    --clay-200: 74 52 16;
+    --clay-300: 107 74 20;
+    --clay-400: 150 112 28;
+    --clay-500: 199 154 42;
+    --clay-600: 224 166 50;
+    --clay-700: 237 193 104;
+    --clay-800: 245 215 148;
+    --clay-900: 250 232 196;
+    --clay-950: 253 245 228;
+    --berry-50: 42 18 16;
+    --berry-100: 58 24 21;
+    --berry-200: 85 33 29;
+    --berry-300: 122 46 41;
+    --berry-400: 168 64 56;
+    --berry-500: 208 106 97;
+    --berry-600: 227 117 109;
+    --berry-700: 238 154 147;
+    --berry-800: 243 189 184;
+    --berry-900: 248 218 214;
+    --berry-950: 252 239 237;
+    --surface: 36 31 26;
+    --paper: #14110e;
+    --branch: #7b6a54;
+    --branch-hover: #7fc796;
+    color-scheme: dark;
   }
 
   * {
@@ -44,7 +177,7 @@
 
   body {
     background-color: var(--paper);
-    color: theme('colors.bark.950');
+    color: rgb(var(--bark-950));
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -61,14 +194,14 @@
 
   /* Klavye kullanıcıları için görünür odak; fare tıklamasında çıkmaz. */
   :focus-visible {
-    outline: 2px solid theme('colors.moss.500');
+    outline: 2px solid rgb(var(--moss-500));
     outline-offset: 2px;
     border-radius: 4px;
   }
 
   ::selection {
-    background-color: theme('colors.moss.200');
-    color: theme('colors.moss.900');
+    background-color: rgb(var(--moss-200));
+    color: rgb(var(--moss-900));
   }
 
   /* Sayı girişlerindeki okları gizle */
@@ -76,6 +209,22 @@
   input[type='number']::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+  }
+
+  /*
+   * Hareket azaltma tercihi (WCAG 2.3.3): kullanıcı işletim sisteminde
+   * animasyonları kapattıysa CSS geçiş ve animasyonları etkisizleşir.
+   * framer-motion animasyonları için bkz. components/ui/KokAyarlari.tsx.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -93,14 +242,14 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: theme('colors.sand.400');
+  background: rgb(var(--sand-400));
   border-radius: 9999px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: theme('colors.sand.500');
+  background: rgb(var(--sand-500));
   background-clip: content-box;
 }
 
@@ -232,7 +381,7 @@
 
   /* Cam yüzey - modal ve yüzen paneller */
   .glass {
-    background-color: rgba(255, 255, 255, 0.82);
+    background-color: rgb(var(--surface) / 0.85);
     backdrop-filter: blur(16px) saturate(160%);
     -webkit-backdrop-filter: blur(16px) saturate(160%);
   }
@@ -243,6 +392,18 @@
 
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+
+  /*
+   * Yatay kaydırılan şeritler (editördeki AI makroları ve araçlar satırı):
+   * sağ kenardaki solma, içeriğin devam ettiğini gösterir. Kaydırma
+   * çubuğu gizlense bile kullanıcı şeridin kaydırılabilir olduğunu anlar.
+   */
+  .serit-kaydirma {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
   }
 }
 
@@ -315,5 +476,21 @@
   .chip-clay {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
            text-xs font-semibold bg-clay-100 text-clay-800;
+  }
+
+  /* --- Açılır menü öğeleri -------------------------------------------- */
+  /*
+   * Menü öğeleri (AnchoredDropdown) farklı ekranlarda ayrı ayrı yazılıyor;
+   * odak halkası tek yerden verilir ki klavyeyle gezen kullanıcı hangi
+   * satırda olduğunu her menüde aynı biçimde görsün.
+   */
+  [role="menu"] [role="menuitem"]:focus-visible {
+    outline: none;
+    background-color: rgb(var(--sand-100));
+    box-shadow: inset 0 0 0 2px rgb(var(--moss-600) / 0.45);
+  }
+
+  [role="menu"] [role="menuitem"][aria-checked="true"] {
+    background-color: rgb(var(--moss-600) / 0.12);
   }
 }

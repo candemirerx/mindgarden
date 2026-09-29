@@ -1,0 +1,29 @@
+.garden-page > header { flex-shrink: 0; }
+.garden-page button:focus-visible, .garden-page [role=button]:focus-visible { outline: 3px solid rgb(var(--moss-500)); outline-offset: 4px; }
+.garden-page .tree ul { gap: 0; filter: none; }
+.garden-page .tree > ul { gap: 56px; padding-top: 0; }
+.garden-page .tree li { padding-inline: 24px; }
+.garden-page .tree > ul > li { padding: 0; }
+.garden-page .tree li::before, .garden-page .tree li::after { border-color: rgb(var(--sand-400)); }
+.garden-page .tree li:last-child::before { border-right-width: 2px; }
+.garden-page .tree ul ul::before { border-color: rgb(var(--sand-400)); }
+.garden-page .tree .dugum-karti { border-radius: 14px; box-shadow: 0 3px 12px rgb(var(--sand-950) / .06); }
+.garden-page .tree .node-content { min-width: 164px; min-height: 56px; border-width: 1px; }
+.garden-page .tree .node-content:hover { border-color: rgb(var(--moss-500)); }
+.garden-page .tree [role=toolbar].pointer-events-none,
+.garden-page .tree button.pointer-events-none { visibility: hidden; }
+.garden-page .tree li:hover::before, .garden-page .tree li:hover::after, .garden-page .tree li:hover > ul::before { border-color: rgb(var(--moss-500)); }
+.garden-controls { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 40; display: flex; align-items: center; gap: 2px; padding: 4px; border: 1px solid rgb(var(--sand-300)); border-radius: 16px; background: rgb(var(--surface) / .96); box-shadow: 0 4px 24px rgb(var(--sand-950) / .12); }
+.garden-controls button { display: flex; align-items: center; justify-content: center; min-width: 44px; height: 44px; padding: 0 8px; border-radius: 11px; color: rgb(var(--sand-800)); touch-action: manipulation; }
+.garden-controls button:hover { background: rgb(var(--moss-50)); color: rgb(var(--moss-700)); }
+.garden-controls button:disabled { opacity: .4; cursor: not-allowed; }
+.garden-controls .garden-fit { background: rgb(var(--moss-50)); color: rgb(var(--moss-700)); }
+.garden-hint { position: absolute; left: 16px; bottom: 28px; color: rgb(var(--sand-500)); font-size: 11px; pointer-events: none; }
+@media (max-width: 767px) {
+  /* Bazı Android WebView sürümleri üç tuşlu gezinmede env() için 0 döndürür. */
+  .garden-controls { bottom: calc(12px + max(48px, env(safe-area-inset-bottom, 0px))); }
+  .garden-hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .garden-page .tree, .garden-page .tree * { transition: none !important; }
+}

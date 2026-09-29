@@ -11,6 +11,23 @@ const ROOT = process.cwd();
 const PAKET = join(ROOT, 'play-store-paketi');
 const BELGELER = join(PAKET, 'belgeler');
 
+/*
+ * Sürüm bilgisi belgeye elle yazılmaz; tek kaynaktan (kaynak kod) okunur.
+ * Böylece üretilen başlangıç sayfası ile derleme aynı sürümü gösterir.
+ */
+const SURUM = /APP_VERSION\s*=\s*'([^']+)'/.exec(
+    await readFile(join(ROOT, 'lib/config.ts'), 'utf8')
+)?.[1];
+const SURUM_KODU = /(?:^|\s)versionCode\s+(\d+)/m.exec(
+    await readFile(join(ROOT, 'android/app/build.gradle'), 'utf8')
+)?.[1];
+
+if (!SURUM || !SURUM_KODU) {
+    throw new Error(
+        'Sürüm bilgisi okunamadı: lib/config.ts (APP_VERSION) ve android/app/build.gradle (versionCode) denetlenmeli.'
+    );
+}
+
 const esc = (s) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -248,7 +265,8 @@ const aciklamalar = {
     '02-kullanim-kilavuzu.html': 'Uygulamayı nasıl kullanacağın',
     '03-magaza-metinleri.html': 'Mağazaya kopyalanacak açıklama metinleri',
     '04-veri-guvenligi.html': 'Veri güvenliği formu cevapları',
-    '05-yeni-surum.html': 'Yeni sürüm çıkarırken yapılacaklar'
+    '05-yeni-surum.html': 'Yeni sürüm çıkarırken yapılacaklar',
+    '06-guncelleme-adimlari.html': 'Web sitesi ve Play Store güncelleme adımları'
 };
 
 const kartlar = uretilen
@@ -272,12 +290,12 @@ const basla = `<!DOCTYPE html>
 <body>
 <div class="icerik">
 <h1>Not Bahçesi — Play Store Paketi</h1>
-<p>Sürüm <strong>1.7.0</strong> · Paket adı <strong>com.notbahcesi.app</strong></p>
+<p>Sürüm <strong>${SURUM}</strong> (kod ${SURUM_KODU}) · Paket adı <strong>com.notbahcesi.app</strong> · Hedef API 36</p>
 <p>Aşağıdaki belgelerden başla. Yükleme rehberi sırayla ilerlemen için yazıldı.</p>
 ${kartlar}
 <h2>Klasörde neler var</h2>
 <ul>
-<li><strong>uygulama/not-bahcesi-1.7.0.aab</strong> — Play Console'a yüklenecek dosya</li>
+<li><strong>uygulama/not-bahcesi-${SURUM}.aab</strong> — Play Console'a yüklenecek dosya</li>
 <li><strong>gorseller/</strong> — mağaza ikonu, öne çıkan görsel ve ekran görüntüleri</li>
 <li><strong>belgeler/</strong> — yukarıdaki kılavuzlar (Markdown ve HTML sürümleri)</li>
 </ul>

@@ -1,9 +1,15 @@
 'use client';
+import './studio.css';
 
 import { useEffect, Suspense, useState, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, Hash, ListOrdered, Eraser, Type } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles } from 'lucide-react';
+import RemoteEditorTools from '@/components/editor/RemoteEditorTools';
+import KisayolPanosu from '@/components/editor/KisayolPanosu';
+import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
+import { remotePrefs } from '@/lib/remoteTools';
+import type { RemoteMode } from '@/lib/remoteTools';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
 import { readEnabledMacros } from '@/lib/aiMacro';
@@ -16,6 +22,46 @@ import { splitIntoChunks } from '@/lib/aiChunks';
 import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl } from '@/lib/aiProvider';
 import { Capacitor } from '@capacitor/core';
 
+/**
+ * Yerel taslak: uygulama kapanırken veya arka plana atılırken kayıt yetişmese
+ * bile kullanıcının son yazdığı metin cihazda kalır.
+ */
+const TASLAK_ONEK = 'nb-taslak-';
+
+function taslakYaz(nodeId: string, title: string, content: string): void {
+    if (typeof window === 'undefined' || !nodeId) return;
+    try {
+        localStorage.setItem(
+            TASLAK_ONEK + nodeId,
+            JSON.stringify({ title, content, zaman: Date.now() })
+        );
+    } catch {
+        // Kota dolu olabilir; taslak yazılamazsa kayıt yolu devrede.
+    }
+}
+
+function taslakSil(nodeId: string): void {
+    if (typeof window === 'undefined' || !nodeId) return;
+    try {
+        localStorage.removeItem(TASLAK_ONEK + nodeId);
+    } catch {
+        // yoksay
+    }
+}
+
+function taslakOku(nodeId: string): { title: string; content: string } | null {
+    if (typeof window === 'undefined' || !nodeId) return null;
+    try {
+        const raw = localStorage.getItem(TASLAK_ONEK + nodeId);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { title?: unknown; content?: unknown };
+        if (typeof parsed.title !== 'string' || typeof parsed.content !== 'string') return null;
+        return { title: parsed.title, content: parsed.content };
+    } catch {
+        return null;
+    }
+}
+
 function EditorPageInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -24,6 +70,15 @@ function EditorPageInner() {
 
     const { nodes, updateNode, fetchNodes, addNode } = useStore();
     const [content, setContent] = useState('');
+    const [remoteMode, setRemoteMode] = useState<RemoteMode>('write');
+    const [remoteToolPrefs, setRemoteToolPrefs] = useState(remotePrefs);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    /** Ayar penceresi istenen bölümde açılabilsin: kısayol panosu doğrudan makrolara gider. */
+    const [settingsBolumu, setSettingsBolumu] = useState<'home' | 'tools'>('home');
+    const [focusMode, setFocusMode] = useState(false);
+    const [toolTab, setToolTab] = useState<'tools' | 'ai'>('tools');
+    /** Ayar penceresi kapanınca odak bu düğmeye döner. */
+    const ayarDugmesiRef = useRef<HTMLButtonElement>(null);
     const [title, setTitle] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
@@ -39,8 +94,8 @@ function EditorPageInner() {
     const [macros, setMacros] = useState<AiMacro[]>([]);
     const [araclar, setAraclar] = useState<AppTool[]>([]);
     /** Ayarlardan kapatılan bölümler editörde hiç görünmez. */
-    const [yapayZekaAcik, setYapayZekaAcik] = useState(true);
-    const [araclarAcik, setAraclarAcik] = useState(true);
+    const [yapayZekaAcik, setYapayZekaAcik] = useState(false);
+    const [araclarAcik, setAraclarAcik] = useState(false);
     const [activeMacroId, setActiveMacroId] = useState<string | null>(null);
     const [runningLength, setRunningLength] = useState(0);
     /** Etkin sağlayıcı için anahtar tanımlı mı? Tanımlı değilse istek gönderilmez. */
@@ -50,7 +105,17 @@ function EditorPageInner() {
     const [autoSave, setAutoSave] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [loadedNodeKey, setLoadedNodeKey] = useState<string | null>(null);
-    const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, onConfirm?: () => void}>({ isOpen: false });
+    const [confirmConfig, setConfirmConfig] = useState<{
+        isOpen: boolean;
+        onConfirm?: () => void;
+        baslik?: string;
+        aciklama?: string;
+        onayMetni?: string;
+    }>({ isOpen: false });
+    /** Yazma başarısız olduğunda kullanıcıya gösterilir; sessiz kayıp olmaz. */
+    const [kayitHatasi, setKayitHatasi] = useState<string | null>(null);
+    /** AI isteği sürerken belge değiştiyse sonuç doğrudan uygulanmaz. */
+    const [aiCakisma, setAiCakisma] = useState<{ corrected: string } | null>(null);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -58,8 +123,36 @@ function EditorPageInner() {
     const loadingNodeKeyRef = useRef<string | null>(null);
     /** İçeriği hangi not için yüklediğimizi tutar; kaydetme sonrası ezmeyi önler. */
     const loadedContentNodeRef = useRef<string | null>(null);
+    /** Belge revizyonu: her metin/başlık değişiminde artar. */
+    const revizyonRef = useRef(0);
+    /** Ekran kapanırken senkron okunabilen güncel değerler. */
+    const canliRef = useRef({
+        nodeId: '',
+        title: '',
+        content: '',
+        hasChanges: false,
+        taslakYazilabilir: false
+    });
+    const saveRef = useRef<() => Promise<boolean>>(async () => true);
 
     const currentNode = nodes.find(n => n.id === nodeId);
+    const resultPending = pendingSpellCheck !== null || aiCakisma !== null;
+    const activeToolTab = resultPending ? 'ai' : toolTab === 'tools'
+        ? (araclarAcik ? 'tools' : 'ai') : (yapayZekaAcik ? 'ai' : 'tools');
+
+    // Uzun notlarda ve ekran döndürüldüğünde tek kaydırma yüzeyi korunur.
+    useEffect(() => {
+        const field = textareaRef.current;
+        if (!field) return;
+        const resize = () => {
+            field.style.height = 'auto';
+            field.style.height = `${field.scrollHeight}px`;
+        };
+        resize();
+        window.addEventListener('resize', resize);
+        return () => window.removeEventListener('resize', resize);
+    }, [content, remoteMode, focusMode]);
+
 
     // Editör sayfası Sidebar içermez; otomatik Drive yedeklemesini burada da başlat.
     useEffect(() => {
@@ -102,20 +195,62 @@ function EditorPageInner() {
         loadedContentNodeRef.current = currentNode.id;
 
         const lines = currentNode.content.split('\n');
-        setTitle(lines[0] || '');
+        const kayitliBaslik = lines[0] || '';
+        const kayitliIcerik = lines.slice(1).join('\n');
+
+        // Cihazda kalan taslak kaydedilenden farklıysa geri yüklenir: uygulama
+        // kapanırken ya da kayıt başarısız olduğunda yazı kaybolmaz.
+        const taslak = taslakOku(currentNode.id);
+        if (taslak && (taslak.title !== kayitliBaslik || taslak.content !== kayitliIcerik)) {
+            revizyonRef.current += 1;
+            setTitle(taslak.title);
+            setContent(taslak.content);
+            setHasChanges(true);
+            return;
+        }
+        if (taslak) taslakSil(currentNode.id);
+
+        setTitle(kayitliBaslik);
         // Kırpma yapılmaz: kullanıcının bıraktığı boşluklar ve satır düzeni korunur.
-        setContent(lines.slice(1).join('\n'));
+        setContent(kayitliIcerik);
     }, [currentNode]);
 
-    // Kaydetme fonksiyonu
-    const saveContent = useCallback(async () => {
-        if (!hasChanges) return;
+    /**
+     * Notu kaydeder ve gerçekten kaydedilip kaydedilmediğini döner.
+     *
+     * Revizyon numarası sayesinde kayıt sürerken yazılan yeni metin "temiz"
+     * sayılmaz; başarısız kayıtta ise belge kirli kalır ve taslak yazılır.
+     */
+    const saveContent = useCallback(async (): Promise<boolean> => {
+        if (!hasChanges) return true;
+        const rev = revizyonRef.current;
+        const baslik = title;
+        const icerik = content;
         setIsSaving(true);
-        const fullContent = `${title}\n${content}`;
-        await updateNode(nodeId, fullContent);
-        setHasChanges(false);
-        setLastSaved(new Date());
-        setIsSaving(false);
+        try {
+            const sonuc = await (updateNode(nodeId, `${baslik}\n${icerik}`) as Promise<unknown>);
+            const hata = (sonuc as { error?: string } | null | undefined)?.error;
+            if (hata) {
+                setKayitHatasi(String(hata));
+                taslakYaz(nodeId, baslik, icerik);
+                return false;
+            }
+            if (revizyonRef.current === rev) {
+                setHasChanges(false);
+                taslakSil(nodeId);
+            }
+            setKayitHatasi(null);
+            setLastSaved(new Date());
+            return true;
+        } catch (error) {
+            setKayitHatasi(
+                error instanceof Error ? error.message : 'Not kaydedilemedi.'
+            );
+            taslakYaz(nodeId, baslik, icerik);
+            return false;
+        } finally {
+            setIsSaving(false);
+        }
     }, [title, content, nodeId, updateNode, hasChanges]);
 
     // Otomatik kaydetme
@@ -127,7 +262,7 @@ function EditorPageInner() {
             }
             // 1.5 saniye sonra kaydet
             autoSaveTimeoutRef.current = setTimeout(() => {
-                saveContent();
+                void saveContent();
             }, 1500);
         }
 
@@ -137,6 +272,49 @@ function EditorPageInner() {
             }
         };
     }, [autoSave, hasChanges, title, content, saveContent]);
+
+    // Canlı değerler: sayfa kapanırken (cleanup) senkron erişim gerekir.
+    useEffect(() => {
+        canliRef.current = {
+            nodeId,
+            title,
+            content,
+            hasChanges,
+            // Onay bekleyen AI önizlemesi kullanıcı verisi değildir; taslağa yazılmaz.
+            taslakYazilabilir: pendingSpellCheck === null && aiCakisma === null
+        };
+    }, [nodeId, title, content, hasChanges, pendingSpellCheck, aiCakisma]);
+
+    useEffect(() => {
+        saveRef.current = saveContent;
+    }, [saveContent]);
+
+    /**
+     * Uygulama arka plana atıldığında, sekme kapatıldığında veya editörden
+     * çıkıldığında bekleyen değişiklikler kaybolmaz: taslak senkron yazılır ve
+     * kayıt hemen tetiklenir. Android geri tuşu bu sayede veri kaybettirmez.
+     */
+    useEffect(() => {
+        const bekleyeniKurtar = () => {
+            const canli = canliRef.current;
+            if (!canli.nodeId || !canli.hasChanges || !canli.taslakYazilabilir) return;
+            taslakYaz(canli.nodeId, canli.title, canli.content);
+            void saveRef.current();
+        };
+        const gorunurluk = () => {
+            if (document.visibilityState === 'hidden') bekleyeniKurtar();
+        };
+
+        document.addEventListener('visibilitychange', gorunurluk);
+        window.addEventListener('pagehide', bekleyeniKurtar);
+        window.addEventListener('beforeunload', bekleyeniKurtar);
+        return () => {
+            document.removeEventListener('visibilitychange', gorunurluk);
+            window.removeEventListener('pagehide', bekleyeniKurtar);
+            window.removeEventListener('beforeunload', bekleyeniKurtar);
+            bekleyeniKurtar();
+        };
+    }, []);
 
     const handleSave = async () => {
         await saveContent();
@@ -148,28 +326,65 @@ function EditorPageInner() {
         setTimeout(() => setShowCopied(false), 2000);
     };
 
+    /** Metin değişimini tek yerden işler: revizyon sayacı ve kirli durumu birlikte güncellenir. */
+    const icerikDegistir = useCallback((yeni: string) => {
+        revizyonRef.current += 1;
+        setContent(yeni);
+        setHasChanges(true);
+    }, []);
+
+    const baslikDegistir = useCallback((yeni: string) => {
+        revizyonRef.current += 1;
+        setTitle(yeni);
+        setHasChanges(true);
+    }, []);
+
+    /** Onaylı çıkış: bekleyen kayıt tamamlanır, başarısız olsa da taslak korunur. */
+    const cikisiTamamla = async () => {
+        setConfirmConfig({ isOpen: false });
+        await saveContent();
+        router.back();
+    };
+
     const handleClose = () => {
-        if (hasChanges && !autoSave) {
+        if (!hasChanges) {
+            router.back();
+            return;
+        }
+        if (!autoSave) {
+            // Otomatik kaydetme kapalıyken kullanıcı bilinçli karar verir.
             setConfirmConfig({
                 isOpen: true,
-                onConfirm: () => {
-                    setConfirmConfig({ isOpen: false });
-                    router.back();
-                }
+                baslik: 'Kaydedilmemiş değişiklikler',
+                aciklama: 'Çıkmadan önce son değişiklikleriniz kaydedilir.',
+                onayMetni: 'Kaydet ve çık',
+                onConfirm: () => { void cikisiTamamla(); }
             });
-        } else {
-            router.back();
+            return;
         }
+        void (async () => {
+            const kaydedildi = await saveContent();
+            if (kaydedildi) {
+                router.back();
+                return;
+            }
+            // Kayıt başarısız: kullanıcıya bildir; son yazdıkları taslakta duruyor.
+            setConfirmConfig({
+                isOpen: true,
+                baslik: 'Not kaydedilemedi',
+                aciklama: 'Yazdıklarınız cihazda taslak olarak saklandı; notu yeniden açtığınızda geri gelecek.',
+                onayMetni: 'Yine de çık',
+                onConfirm: () => { setConfirmConfig({ isOpen: false }); router.back(); }
+            });
+        })();
     };
 
     const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setContent(e.target.value);
-        setHasChanges(true);
+        icerikDegistir(e.target.value);
     };
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTitle(e.target.value);
-        setHasChanges(true);
+        baslikDegistir(e.target.value);
     };
 
     // Ayarlarda etkin bırakılan AI makroları (imla düzeltme dahil).
@@ -181,13 +396,18 @@ function EditorPageInner() {
             setAraclar(readEnabledTools());
             setYapayZekaAcik(bolumAcik('yapayzeka'));
             setAraclarAcik(bolumAcik('araclar'));
+            setRemoteToolPrefs(remotePrefs());
+            // Anahtar/sağlayıcı durumu da tazelenir; ayarlarda anahtar eklenince
+            // makro düğmeleri sayfa yeniden açılmadan etkinleşir.
+            setAnahtarVar(readProviderKey(readActiveProvider()).trim().length > 0);
         };
         tazele();
-        setAnahtarVar(readProviderKey(readActiveProvider()).trim().length > 0);
 
         const birak1 = dinle('makrolar', tazele);
         const birak2 = dinle('araclar', tazele);
         const birak3 = dinle('bolumler', tazele);
+        const birak4 = dinle('remote-prefs', tazele);
+        const birak5 = dinle('ai-tercih', tazele);
 
         // Sayfa arkada kalıp geri geldiğinde (uygulama değiştirmek, ekranı
         // açmak) ayarlar değişmiş olabilir; listeleri tazeleriz.
@@ -201,10 +421,18 @@ function EditorPageInner() {
             birak1();
             birak2();
             birak3();
+            birak4();
+            birak5();
             document.removeEventListener('visibilitychange', gorunurluk);
             window.removeEventListener('focus', tazele);
         };
     }, []);
+    useEffect(() => {
+        if (remoteMode === 'mouse' && (!araclarAcik || !remoteToolPrefs.enabledTools.mouse)) setRemoteMode('write');
+        /* Kısayol panosunda geri düğmesi yok; panoyu açan satır görünmez olursa
+           (araç sekmesi değişir, odak modu açılır) nota dönülür. */
+        if (remoteMode === 'shortcuts' && (!araclarAcik || !remoteToolPrefs.enabledTools.shortcuts || focusMode || activeToolTab !== 'tools')) setRemoteMode('write');
+    }, [remoteMode, araclarAcik, remoteToolPrefs.enabledTools.mouse, remoteToolPrefs.enabledTools.shortcuts, focusMode, activeToolTab]);
 
     /**
      * Yerel araçları çalıştırır.
@@ -284,7 +512,7 @@ function EditorPageInner() {
         if (!readProviderKey(readActiveProvider()).trim()) {
             alert(
                 'Yapay zekâ özelliği için önce bir sağlayıcı ve API anahtarı tanımlamalısınız.\n\n' +
-                    'Ayarlar → Model, API ve Senkronizasyon → Model Ayarları bölümünden ' +
+                    'Ayarlar → Yapay zekâ bölümünden ' +
                     'sağlayıcıyı seçip kendi API anahtarınızı girin.'
             );
             return;
@@ -293,6 +521,9 @@ function EditorPageInner() {
         setIsSpellChecking(true);
         setActiveMacroId(macro.id);
         setRunningLength(textToCheck.length);
+
+        // İstek sürerken belge değişirse sonuç körlemesine uygulanmaz.
+        const istekRevizyonu = revizyonRef.current;
 
         // İstemcinin girdiği ayarları al
         // Etkin sağlayıcı ve yalnızca ona ait anahtar/model kullanılır
@@ -391,19 +622,21 @@ function EditorPageInner() {
                 return;
             }
 
-            setPendingSpellCheck({ original: content, corrected: '' });
+            const yeniIcerik = hasSelection
+                ? content.substring(0, selectionStart) +
+                  correctedText +
+                  content.substring(selectionEnd)
+                : correctedText;
 
-            if (hasSelection) {
-                const newContent =
-                    content.substring(0, selectionStart) +
-                    correctedText +
-                    content.substring(selectionEnd);
-                setPendingSpellCheck({ original: content, corrected: newContent });
-                setContent(newContent);
-            } else {
-                setPendingSpellCheck({ original: content, corrected: correctedText });
-                setContent(correctedText);
+            if (istekRevizyonu !== revizyonRef.current) {
+                // Kullanıcı beklerken yazdı: önizleme yerine açık karar istenir.
+                setAiCakisma({ corrected: yeniIcerik });
+                return;
             }
+
+            setPendingSpellCheck({ original: content, corrected: yeniIcerik });
+            setContent(yeniIcerik);
+            revizyonRef.current += 1;
         } catch (error: any) {
             console.error('AI makro hatası:', error);
             alert(error.message || `"${macro.title}" makrosu çalıştırılamadı.`);
@@ -416,8 +649,20 @@ function EditorPageInner() {
     };
 
     const handleAcceptSpellCheck = () => {
+        revizyonRef.current += 1;
         setHasChanges(true);
         setPendingSpellCheck(null);
+    };
+
+    /** Kullanıcı, beklerken yazdıklarının üzerine yazılmasını bilerek kabul etti. */
+    const aiSonucunuUygula = () => {
+        if (!aiCakisma) return;
+        const yeni = aiCakisma.corrected;
+        setAiCakisma(null);
+        const eski = content;
+        revizyonRef.current += 1;
+        setContent(yeni);
+        setPendingSpellCheck({ original: eski, corrected: yeni });
     };
 
     const handleRejectSpellCheck = () => {
@@ -502,31 +747,81 @@ function EditorPageInner() {
     };
 
     return (
-        <div className="min-h-screen bg-sand-200 flex flex-col">
+        <div className={`writing-studio min-h-screen flex flex-col ${focusMode ? 'writing-studio--focused' : ''}`}>
+            {kayitHatasi && (
+                <div
+                    role="alert"
+                    className="flex items-start gap-2 border-b border-berry-200 bg-berry-50 px-4 py-2 text-sm text-berry-800 sm:px-6"
+                >
+                    <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+                    <span className="min-w-0 flex-1">
+                        Not kaydedilemedi: {kayitHatasi} Yazdıklarınız cihazda taslak olarak korunuyor.
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => setKayitHatasi(null)}
+                        aria-label="Kayıt uyarısını kapat"
+                        className="-mr-1 rounded-lg p-1 text-berry-700 transition-colors hover:bg-berry-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berry-300"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
             {/* Header */}
-            <header className="bg-white border-b border-sand-300 pt-[env(safe-area-inset-top,0px)]">
-                <div className="flex items-center justify-between px-4 sm:px-6 py-3">
+            <header className="studio-header bg-white border-b border-sand-200 pt-[env(safe-area-inset-top,0px)]">
+                <div className="studio-topbar flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <button
                             onClick={handleClose}
-                            className="p-2 hover:bg-sand-100 rounded-lg transition-colors"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-sand-100"
                             title="Geri Dön"
+                            aria-label="Geri dön"
                         >
                             <ArrowLeft size={20} className="text-sand-600" />
                         </button>
-                        <div className="min-w-0 flex-1">
+                        <div className="studio-tabs" role="tablist" aria-label="Araç bölümü">
+                            {([{ id: 'tools', label: 'Araçlar', Icon: Wrench, visible: araclarAcik, disabled: resultPending },
+                                { id: 'ai', label: 'Yapay zekâ', Icon: Sparkles, visible: yapayZekaAcik, disabled: false }] as const).filter(tab => tab.visible).map(({ id, label, Icon, disabled }) => (
+                                <button key={id} id={`studio-tab-${id}`} type="button" role="tab"
+                                    aria-label={label} title={label} aria-selected={activeToolTab === id}
+                                    aria-controls={`studio-panel-${id}`} disabled={disabled}
+                                    tabIndex={activeToolTab === id ? 0 : -1}
+                                    onClick={() => { setToolTab(id); setFocusMode(false); }}
+                                    onKeyDown={event => {
+                                        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                                        event.preventDefault();
+                                        const next = event.key === 'Home' ? 'tools' : event.key === 'End' ? 'ai' : id === 'tools' ? 'ai' : 'tools';
+                                        const button = document.getElementById(`studio-tab-${next}`) as HTMLButtonElement | null;
+                                        if (button && !button.disabled) { button.click(); button.focus(); }
+                                    }}
+                                    className={`studio-tab ${activeToolTab === id ? 'studio-tab--active' : ''}`}>
+                                    <Icon size={19} aria-hidden="true" />
+                                </button>
+                            ))}
+                        </div>
+                        <div className="studio-heading min-w-0 flex-1">
+                            <span className="studio-eyebrow">NOT BAHÇESİ / YAZI ATÖLYESİ</span>
                             <h1 className="text-base sm:text-lg font-semibold text-sand-800 truncate">
                                 {title || 'Başlıksız Not'}
                             </h1>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="studio-actions flex shrink-0 items-center justify-end gap-1 sm:gap-2">
+                        <button ref={ayarDugmesiRef} onClick={() => { setSettingsBolumu('home'); setSettingsOpen(true); }} className="flex h-11 w-11 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40" title="Ayarlar" aria-label="Ayarları aç"><Settings size={20} /></button>
+                        <button type="button" onClick={() => setFocusMode(value => !value)}
+                            aria-label={focusMode ? 'Araçları göster' : 'Odak modunu aç'} aria-pressed={focusMode}
+                            title={focusMode ? 'Araçları göster' : 'Odak modu'}
+                            className={`studio-focus flex h-11 w-11 items-center justify-center rounded-xl ${focusMode ? 'bg-moss-100 text-moss-700' : 'text-sand-600 hover:bg-sand-100'}`}>
+                            {focusMode ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
+                        </button>
                         {/* Kopyala */}
                         <button
                             onClick={handleCopy}
-                            className={`p-2.5 rounded-lg transition-all ${showCopied ? 'bg-moss-100 text-moss-600' : 'text-sand-500 hover:bg-sand-100 hover:text-sand-700'}`}
+                            data-studio-copy
+                            className={`flex h-11 w-11 items-center justify-center rounded-lg transition-all ${showCopied ? 'bg-moss-100 text-moss-600' : 'text-sand-600 hover:bg-sand-100 hover:text-sand-700'}`}
                             title="İçeriği Kopyala"
+                            aria-label="İçeriği kopyala"
                         >
                             {showCopied ? <Check size={20} /> : <Copy size={20} />}
                         </button>
@@ -535,14 +830,19 @@ function EditorPageInner() {
                         <div className="relative" ref={exportMenuRef}>
                             <button
                                 onClick={() => setShowExportMenu(!showExportMenu)}
-                                className="p-2.5 text-sand-500 hover:bg-sand-100 hover:text-sand-700 rounded-lg transition-colors"
+                                className="flex h-11 w-11 items-center justify-center rounded-lg text-sand-600 transition-colors hover:bg-sand-100 hover:text-sand-700"
                                 title="Dışa Aktar"
+                                aria-label="Dışa aktar"
                             >
                                 <Download size={20} />
                             </button>
 
                             {showExportMenu && (
                                 <div className="absolute right-0 top-full mt-1 bg-white border border-sand-200 rounded-xl shadow-lift py-1.5 min-w-[150px] z-50">
+                                    <button onClick={() => { void handleCopy(); setShowExportMenu(false); }}
+                                        className="studio-menu-copy w-full px-4 py-2.5 text-left text-sm text-sand-700 hover:bg-sand-50">
+                                        İçeriği kopyala
+                                    </button>
                                     <button
                                         onClick={handleExportPDF}
                                         className="w-full px-4 py-2.5 text-left text-sm text-sand-700 hover:bg-sand-50 transition-colors"
@@ -560,31 +860,21 @@ function EditorPageInner() {
                         </div>
 
                         {/* Ayırıcı */}
-                        <div className="h-6 w-px bg-sand-200 mx-1" />
+                        <div className="hidden h-6 w-px bg-sand-200 sm:block" />
 
                         {/* Otomatik Kaydet Toggle + Kaydet Butonu */}
                         <div className="flex flex-col items-center gap-0.5">
-                            {/* Otomatik kaydet checkbox */}
-                            <label className="flex items-center gap-1 cursor-pointer" title="Otomatik Kaydet">
-                                <input
-                                    type="checkbox"
-                                    checked={autoSave}
-                                    onChange={(e) => setAutoSave(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-sand-300 text-moss-600 focus:ring-moss-500 focus:ring-offset-0 cursor-pointer"
-                                />
-                                <span className="text-[10px] text-sand-500">Oto</span>
-                            </label>
-
                             {/* Kaydet butonu */}
                             <button
                                 onClick={handleSave}
                                 disabled={!hasChanges || isSaving || autoSave}
-                                className={`p-2 rounded-lg transition-all ${
+                                aria-label="Notu kaydet"
+                                className={`flex h-11 w-11 items-center justify-center rounded-lg transition-all ${
                                     isSaving
                                         ? 'bg-moss-100 text-moss-600'
                                         : hasChanges && !autoSave
                                             ? 'bg-moss-600 hover:bg-moss-700 text-white'
-                                            : 'bg-sand-100 text-sand-400 cursor-not-allowed'
+                                            : 'bg-sand-100 text-sand-600 cursor-not-allowed'
                                 }`}
                                 title={autoSave ? 'Otomatik kaydetme açık' : 'Kaydet'}
                             >
@@ -594,18 +884,46 @@ function EditorPageInner() {
                     </div>
                 </div>
 
+                <div className="studio-tools" aria-label="Düzenleme araçları">
                 {/* AI Toolbar — ayarlardan kapatılabilir. Onay bekleyen bir
                     sonuç varsa bölüm kapalı olsa da gösterilir, yoksa
                     kullanıcı Onayla/Geri Al düğmelerini göremezdi. */}
-                {(yapayZekaAcik || pendingSpellCheck !== null) && (
-                <div className="flex items-center gap-2 border-t border-sand-200 bg-gradient-to-r from-clay-50 to-clay-50 px-4 py-2 sm:px-6">
-                    <span className="mr-1 flex-shrink-0 text-xs font-medium text-clay-600">AI</span>
+                {((yapayZekaAcik && !focusMode && activeToolTab === 'ai') || resultPending) && (
+                <div id="studio-panel-ai" role="tabpanel" aria-labelledby="studio-tab-ai" className="studio-tool-row studio-ai flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
+                    <span className="studio-tool-label text-clay-700" title="Yapay zekâ"><Sparkles size={16} /><span>Yardımcı</span></span>
 
-                    {pendingSpellCheck ? (
+                    {aiCakisma ? (
                         <div
-                            className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5"
+                            className="serit-kaydirma flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5"
+                            role="alert"
+                            tabIndex={0}
+                        >
+                            <span className="flex-shrink-0 text-xs font-medium text-berry-700">
+                                Siz beklerken metin değişti:
+                            </span>
+                            <button
+                                onClick={aiSonucunuUygula}
+                                aria-label="Yapay zekâ sonucunu yine de uygula"
+                                className="flex min-h-[40px] flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-clay-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-clay-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay-400"
+                            >
+                                <Check size={16} />
+                                Yine de uygula
+                            </button>
+                            <button
+                                onClick={() => setAiCakisma(null)}
+                                aria-label="Yapay zekâ sonucunu at ve yazmaya devam et"
+                                className="flex min-h-[40px] flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-sand-300 bg-white px-3 text-sm font-semibold text-sand-700 transition-colors hover:bg-sand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sand-400"
+                            >
+                                <X size={16} />
+                                Vazgeç
+                            </button>
+                        </div>
+                    ) : pendingSpellCheck ? (
+                        <div
+                            className="serit-kaydirma flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5"
                             role="group"
                             aria-label="Yapay zekâ sonucu"
+                            tabIndex={0}
                         >
                             <span
                                 role="status"
@@ -631,7 +949,12 @@ function EditorPageInner() {
                             </button>
                         </div>
                     ) : (
-                        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
+                        <div
+                            className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5"
+                            role="group"
+                            aria-label="Yapay zekâ makroları"
+                            tabIndex={0}
+                        >
                             {macros.map((macro) => {
                                 const isRunning = isSpellChecking && activeMacroId === macro.id;
                                 const isDisabled = isSpellChecking || !content.trim() || !anahtarVar;
@@ -643,10 +966,10 @@ function EditorPageInner() {
                                         onClick={() => runMacro(macro)}
                                         disabled={isDisabled}
                                         title={macro.subtitle || macro.title}
-                                        className={`flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                                        className={`flex flex-shrink-0 items-center gap-1.5 min-h-[44px] rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
                                             isDisabled
-                                                ? 'bg-sand-200 text-sand-400 cursor-not-allowed'
-                                                : 'bg-clay-600 text-white shadow-soft hover:bg-clay-700 hover:shadow'
+                                                ? 'bg-sand-200 text-sand-700 cursor-not-allowed'
+                                                : 'bg-clay-50 text-clay-800 hover:bg-clay-100'
                                         }`}
                                     >
                                         {isRunning ? (
@@ -668,14 +991,14 @@ function EditorPageInner() {
                             })}
 
                             {macros.length === 0 && (
-                                <span className="text-xs text-sand-500">
+                                <span className="text-xs text-sand-600">
                                     Makro bulunamadı. Ayarlardan makro ekleyin.
                                 </span>
                             )}
 
                             {!anahtarVar && (
                                 <span className="whitespace-nowrap text-xs text-sand-600">
-                                    Yapay zekâ için Ayarlar → Model Ayarları bölümünden
+                                    Yapay zekâ için Ayarlar → Yapay zekâ bölümünden
                                     sağlayıcı ve API anahtarı ekleyin.
                                 </span>
                             )}
@@ -688,18 +1011,22 @@ function EditorPageInner() {
                     AI'nın hemen altında ince bir satır olarak durur; simgesi
                     gösterir, adı nadiren yazılır. Kapalı veya silinmiş araçlar
                     burada yer kaplamaz; bölüm ayarlardan tümüyle kapatılabilir. */}
-                {araclarAcik && araclar.length > 0 && (
-                    <div className="flex items-center gap-2 border-t border-sand-200 bg-sand-50/70 px-4 py-1.5 sm:px-6">
+                {!focusMode && activeToolTab === 'tools' && araclarAcik && (
+                    <div id="studio-panel-tools" role="tabpanel" aria-labelledby="studio-tab-tools" className="studio-tool-row flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
                         <span
-                            className="flex flex-shrink-0 items-center gap-1 text-[11px] font-medium text-sand-500"
+                            className="studio-tool-label text-moss-700"
                             title="Yerel araçlar: yapay zekâ kullanmadan çalışır"
-                            aria-label="Araçlar"
                         >
-                            <Wrench size={12} />
+                            <Wrench size={14} aria-hidden="true" />
                             <span className="hidden sm:inline">Araçlar</span>
                         </span>
 
-                        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5">
+                        <div
+                            className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5"
+                            role="group"
+                            aria-label="Yerel araçlar"
+                            tabIndex={0}
+                        >
                             {araclar.map((tool) => {
                                 const sonucHazir = pendingSpellCheck !== null;
                                 return (
@@ -710,10 +1037,10 @@ function EditorPageInner() {
                                         disabled={sonucHazir}
                                         title={tool.subtitle || tool.title}
                                         aria-label={tool.title}
-                                        className={`flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                                        className={`flex flex-shrink-0 items-center gap-1.5 min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                                             sonucHazir
-                                                ? 'bg-sand-200 text-sand-400 cursor-not-allowed'
-                                                : 'bg-moss-600 text-white shadow-soft hover:bg-moss-700 hover:shadow'
+                                                ? 'bg-sand-200 text-sand-700 cursor-not-allowed'
+                                                : 'bg-moss-50 text-moss-800 hover:bg-moss-100'
                                         }`}
                                     >
                                         {tool.kind === 'icerikten-baslik' ? (
@@ -729,59 +1056,78 @@ function EditorPageInner() {
                                     </button>
                                 );
                             })}
+                            <RemoteEditorTools placement="toolbar" content={content} mode={remoteMode} onModeChange={setRemoteMode}
+                                onContentChange={icerikDegistir} />
                         </div>
                     </div>
                 )}
+                </div>
             </header>
 
+            {/* Çalışma alanı: <main> landmark'ı her modda bulunmalı. */}
+            <main className="flex min-h-0 flex-1 flex-col">
+            {remoteMode === 'mouse' && <RemoteEditorTools placement="surface" content={content} mode={remoteMode} onModeChange={setRemoteMode}
+                onContentChange={icerikDegistir} />}
+
+            {/* Kısayollar: makro panosu; notu değiştirmez. */}
+            {remoteMode === 'shortcuts' && <KisayolPanosu onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
+
             {/* Editor Area */}
-            <main className="flex-1 overflow-auto py-4 sm:py-6">
-                <div className="max-w-4xl mx-auto px-4 sm:px-0">
-                    <div className="bg-white shadow-card min-h-[600px] sm:min-h-[842px] rounded-lg sm:rounded-none">
+            {(remoteMode === 'write' || remoteMode === 'dictation') && (<div className="studio-workspace flex-1 py-4 sm:py-8">
+                <div className="mx-auto w-full max-w-4xl px-3 sm:px-6">
+                    <div className="studio-paper bg-white">
+                        <div className="studio-paper-label"><BookOpen size={15} /><span>Düşüncelerine yer aç</span><span className="ml-auto">{focusMode ? 'Odak modu' : 'Not defteri'}</span></div>
                         {/* Başlık */}
-                        <div className="border-b border-sand-200 px-6 sm:px-12 pt-6 pb-4">
+                        <div className="studio-title border-b border-sand-200 px-5 sm:px-12 pt-6 sm:pt-10 pb-5">
                             <input
                                 type="text"
                                 value={title}
                                 onChange={handleTitleChange}
-                                placeholder="Başlık"
-                                className="w-full text-xl font-semibold text-sand-800 outline-none placeholder:text-sand-300"
+                                placeholder="Notuna bir başlık ver…"
+                                aria-label="Not başlığı"
+                                className="w-full bg-transparent text-2xl sm:text-3xl font-semibold tracking-tight text-sand-900 outline-none placeholder:text-sand-400"
                             />
                         </div>
 
                         {/* İçerik */}
-                        <div className="px-6 sm:px-12 py-6">
+                        <div className="px-5 sm:px-12 py-5 sm:py-7">
                             <textarea
                                 ref={textareaRef}
                                 value={content}
                                 onChange={handleContentChange}
-                                placeholder="İçeriğinizi buraya yazın..."
-                                className="w-full min-h-[500px] sm:min-h-[600px] resize-none outline-none text-sand-700 text-base leading-relaxed placeholder:text-sand-300"
-                                autoFocus
+                                placeholder="Bir düşünce, bir fikir, bir başlangıç…"
+                                aria-label="Not içeriği"
+                                className="studio-text w-full resize-none overflow-hidden bg-transparent outline-none text-sand-800 text-base placeholder:text-sand-400"
                             />
                         </div>
                     </div>
                 </div>
+                </div>
+            )}
             </main>
 
             {/* Footer */}
-            <footer className="bg-white border-t border-sand-300 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6">
-                <div className="flex items-center justify-between text-xs text-sand-500">
-                    <span>
-                        {isSaving ? (
+            <footer className="studio-footer bg-white border-t border-sand-200 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6">
+                <div className="flex items-center justify-between text-xs text-sand-600">
+                    <span role="status" className="studio-save-status">
+                        {kayitHatasi ? 'Kayıt başarısız · taslak korundu' : isSaving ? (
                             <span className="flex items-center gap-1">
                                 <Loader2 size={12} className="animate-spin" />
                                 Kaydediliyor...
                             </span>
                         ) : autoSave ? (
-                            formatLastSaved() || 'Otomatik kaydetme açık'
+                            hasChanges ? 'Kaydedilmeyi bekliyor…' : formatLastSaved() || 'Otomatik kaydetme açık'
                         ) : hasChanges ? (
                             '● Kaydedilmemiş değişiklikler'
                         ) : (
                             'Kaydedildi'
                         )}
                     </span>
-                    <div className="flex items-center gap-4 sm:gap-6">
+                    <div className="flex items-center gap-3 sm:gap-6">
+                        <label className="studio-autosave flex min-h-[44px] cursor-pointer items-center gap-2" title="Otomatik kaydet">
+                            <input type="checkbox" checked={autoSave} onChange={e => setAutoSave(e.target.checked)} aria-label="Otomatik kaydetmeyi aç/kapat" className="h-4 w-4 accent-moss-600" />
+                            <span>Otomatik<span className="hidden sm:inline"> kayıt</span></span>
+                        </label>
                         <span>{content.split(/\s+/).filter(w => w.length > 0).length} kelime</span>
                         <span className="hidden sm:inline">{content.length} karakter</span>
                     </div>
@@ -790,13 +1136,22 @@ function EditorPageInner() {
 
             <ConfirmModal
                 isOpen={confirmConfig.isOpen}
-                title="Kaydedilmemiş değişiklikler"
-                description="Kaydetmeden çıkarsan yaptığın son değişiklikler kaybolacak."
-                confirmText="Yine de çık"
+                title={confirmConfig.baslik || 'Kaydedilmemiş değişiklikler'}
+                description={confirmConfig.aciklama || 'Kaydetmeden çıkarsan yaptığın son değişiklikler kaybolacak.'}
+                confirmText={confirmConfig.onayMetni || 'Yine de çık'}
                 cancelText="Düzenlemeye devam et"
                 isDanger
                 onCancel={() => setConfirmConfig({ isOpen: false })}
                 onConfirm={() => confirmConfig.onConfirm?.()}
+            />
+            <ModelSettingsModal
+                isOpen={settingsOpen}
+                initialSection={settingsBolumu}
+                onClose={() => {
+                    setSettingsOpen(false);
+                    // Odak, pencereyi açan düğmeye döner (WCAG 2.4.3).
+                    requestAnimationFrame(() => ayarDugmesiRef.current?.focus());
+                }}
             />
         </div>
     );

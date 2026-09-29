@@ -1,7 +1,10 @@
 ext {
     minSdkVersion = 22
-    compileSdkVersion = 35  // <-- BUNU 35 YAP
-    targetSdkVersion = 35   // <-- BUNU 35 YAP
+    // Google Play, 31 Ağustos 2026'dan sonra yüklenen yeni uygulama ve
+    // güncellemelerde Android 16 (API 36) hedefi zorunlu tutuyor.
+    // Bkz. https://developer.android.com/google/play/requirements/target-sdk
+    compileSdkVersion = 36
+    targetSdkVersion = 36
     androidxActivityVersion = '1.8.0'
     androidxAppCompatVersion = '1.6.1'
     androidxCoordinatorLayoutVersion = '1.2.0'

@@ -1,4 +1,5 @@
 'use client';
+import './garden.css';
 
 import { useEffect, Suspense, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -14,6 +15,7 @@ import PromptModal from '@/components/ui/PromptModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { hapticTick } from '@/components/mobile/MobileShell';
 import { agacSuruklemesiBasladi, agacSuruklemesiBitti } from '@/lib/canvasGesture';
+import { sonrakiRenk } from '@/lib/branchColors';
 import { siraliAdEtkin, siraliAd } from '@/lib/tools';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -184,7 +186,7 @@ function GardenPageInner() {
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned, setSelectedNode } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned, setNodeColor, setSelectedNode } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
@@ -485,6 +487,24 @@ function GardenPageInner() {
     };
 
     /**
+     * Dal rengini sıradaki renge çevirip kaydeder.
+     *
+     * Ağaç yönetiminden çağrılır. Renk notun kendi kaydına yazıldığı için
+     * pencere kapanıp açıldığında da seçim korunur; kaydedilemezse ekranda
+     * eski renk kalır ve çağırana `false` döner.
+     */
+    const handleCycleNodeColor = async (nodeId: string, mevcutRenk: string | null) => {
+        const sonraki = sonrakiRenk(mevcutRenk);
+        const kaydedildi = await setNodeColor(nodeId, sonraki);
+        if (kaydedildi) {
+            setMindRoots((onceki) =>
+                onceki.map((kok) => modifyNode(kok, nodeId, (dugum) => ({ ...dugum, color: sonraki })))
+            );
+        }
+        return kaydedildi;
+    };
+
+    /**
      * Düğümü doğrudan siler.
      *
      * Ağaç yönetimi kendi onay penceresini gösterdiği için burada ikinci
@@ -516,12 +536,12 @@ function GardenPageInner() {
 
     if (!currentGarden) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-paper p-6">
+            <main className="flex min-h-screen items-center justify-center bg-paper p-6">
                 <div className="rounded-3xl border border-sand-200 bg-white p-10 text-center shadow-lift">
                     <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-clay-100 text-clay-700">
                         <TreePine size={28} />
                     </span>
-                    <h2 className="text-xl text-sand-900">Bahçe bulunamadı</h2>
+                    <h1 className="text-xl text-sand-900">Bahçe bulunamadı</h1>
                     <p className="mt-1.5 text-sm text-sand-600">
                         Bu bahçe silinmiş ya da artık erişilebilir değil.
                     </p>
@@ -533,12 +553,12 @@ function GardenPageInner() {
                         <span>Ana Sayfaya Dön</span>
                     </button>
                 </div>
-            </div>
+            </main>
         );
     }
 
     return (
-        <div className="h-screen flex flex-col">
+        <div className="garden-page h-[100dvh] flex flex-col overflow-hidden">
             {/* Header - Mobil Responsive */}
             <header className="relative z-40 flex h-[calc(3.5rem+env(safe-area-inset-top,0px))] items-center justify-between gap-3 border-b border-sand-200 bg-white/85 px-3 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md md:h-[calc(4rem+env(safe-area-inset-top,0px))] md:px-6">
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 md:gap-2">
@@ -546,13 +566,13 @@ function GardenPageInner() {
                         onClick={() => router.push('/')}
                         aria-label="Ana sayfa"
                         title="Ana Sayfa"
-                        className="flex-shrink-0 rounded-xl p-2 text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800 touch-manipulation"
+                        className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800 touch-manipulation"
                     >
                         <ArrowLeft size={20} />
                     </button>
                     <div className="min-w-0 flex-1">
                         <h1 className="truncate text-base text-sand-900 md:text-lg">{currentGarden.name}</h1>
-                        <p className="hidden text-xs text-sand-500 sm:block">
+                        <p className="hidden text-xs text-sand-600 sm:block">
                             {mindRoots.length > 0 ? `${mindRoots.length} ağaç` : 'Henüz ağaç yok'}
                         </p>
                     </div>
@@ -561,9 +581,9 @@ function GardenPageInner() {
                 <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
                     <button
                         onClick={() => router.push(`/projeler?id=${gardenId}`)}
-                        aria-label="Projeler"
-                        title="Projeler (liste görünümü)"
-                        className="flex-shrink-0 rounded-xl p-2 text-clay-700 transition-colors duration-200 hover:bg-clay-50"
+                        aria-label="Liste"
+                        title="Liste (hiyerarşik liste görünümü)"
+                        className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-clay-700 transition-colors duration-200 hover:bg-clay-50"
                     >
                         <List size={19} />
                     </button>
@@ -571,14 +591,15 @@ function GardenPageInner() {
                         onClick={() => setIsSettingsOpen(true)}
                         aria-label="Ayarlar"
                         title="Ayarlar"
-                        className="flex-shrink-0 rounded-xl p-2 text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
+                        className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
                     >
                         <Settings size={19} />
                     </button>
                     <button
                         onClick={handleCreateRoot}
                         title="Yeni ağaç ekle"
-                        className="btn btn-primary ml-1 px-3 py-2 text-xs md:px-4 md:text-sm"
+                        aria-label="Yeni ağaç ekle"
+                        className="btn btn-primary ml-1 min-h-[44px] px-3 text-xs md:px-4 md:text-sm"
                     >
                         <Sprout size={16} />
                         <span className="hidden sm:inline">Ağaç Ekle</span>
@@ -586,8 +607,8 @@ function GardenPageInner() {
                 </div>
             </header>
 
-            {/* Canvas */}
-            <div className="flex-1 relative overflow-hidden">
+            {/* Tuval */}
+            <main className="flex-1 min-h-0 relative overflow-hidden">
                 <GardenCanvas gardenId={gardenId} initialViewState={currentGarden.view_state}>
                     {mindRoots.length > 0 ? (
                         <ul className="flex gap-20">
@@ -628,7 +649,7 @@ function GardenPageInner() {
                         </div>
                     )}
                 </GardenCanvas>
-            </div>
+            </main>
 
             {/* Editor Modal */}
             <Modal
@@ -655,6 +676,7 @@ function GardenPageInner() {
                 onDeleteTree={handleDeleteTree}
                 onToggleType={handleToggleNodeType}
                 onTogglePrune={handleTogglePrune}
+                onCycleColor={handleCycleNodeColor}
                 onDeleteNode={handleDeleteNodeDirect}
             />
 

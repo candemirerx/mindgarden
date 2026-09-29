@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { MindNode } from '@/lib/types';
-import { BRANCH_COLORS, sonrakiRenk } from '@/lib/branchColors';
+import { BRANCH_COLORS } from '@/lib/branchColors';
 
 /** Listede gösterilecek düğüm satırı; ağaç düzleştirilerek çizilir. */
 interface DugumSatiri {
@@ -49,6 +49,8 @@ interface TreeManagementModalProps {
     /** Düğüm eylemleri; canvas'taki kısayollar kaldırıldığı için burada. */
     onToggleType: (nodeId: string, currentType: 'branch' | 'leaf' | 'auto') => void;
     onTogglePrune: (nodeId: string, isPruned: boolean) => void;
+    /** Dal rengini sıradaki renge çevirip kaydeder; kaydedilemezse `false` döner. */
+    onCycleColor: (nodeId: string, mevcutRenk: string | null) => Promise<boolean>;
     onDeleteNode: (nodeId: string) => void;
 }
 
@@ -60,6 +62,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     onDeleteTree,
     onToggleType,
     onTogglePrune,
+    onCycleColor,
     onDeleteNode
 }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,8 +70,8 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string; dugumMu: boolean } | null>(null);
     const [acikAgaclar, setAcikAgaclar] = useState<Set<string>>(new Set());
     const [kopyalanan, setKopyalanan] = useState<string | null>(null);
-    /** Renk değişikliği yalnızca ekranda geçerlidir; kaydedilmez. */
-    const [geciciRenkler, setGeciciRenkler] = useState<Record<string, string>>({});
+    /** Renk kaydedilemezse kullanıcı sessiz kalmaz. */
+    const [renkHatasi, setRenkHatasi] = useState('');
 
     if (!isOpen) return null;
 
@@ -101,7 +104,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm md:p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bark-950/50 backdrop-blur-sm md:p-4">
             <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-gradient-to-br from-sand-50 via-clay-50/30 to-sand-50 shadow-pop md:h-[90vh] md:max-w-4xl md:rounded-3xl">
                 {/* Header */}
                 <div className="flex flex-shrink-0 items-center gap-3 border-b border-sand-200 bg-white/80 px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-md md:px-6 md:py-4">
@@ -208,7 +211,6 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                             dugum.nodeType === 'branch' ||
                                                             (dugum.nodeType === 'auto' && dugum.derinlik === 1);
                                                         const renk =
-                                                            geciciRenkler[dugum.id] ??
                                                             dugum.color ??
                                                             BRANCH_COLORS[0].value;
 
@@ -256,17 +258,22 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                                     {dalMi ? <Leaf size={17} /> : <Sprout size={17} />}
                                                                 </button>
 
-                                                                {/* Renk (yalnızca ekranda) */}
+                                                                {/* Dal rengi: kaydedilir, sonraki renge geçer */}
                                                                 <button
-                                                                    onClick={() => {
-                                                                        setGeciciRenkler((onceki) => ({
-                                                                            ...onceki,
-                                                                            [dugum.id]: sonrakiRenk(onceki[dugum.id] ?? dugum.color ?? null)
-                                                                        }));
+                                                                    onClick={async () => {
+                                                                        const kaydedildi = await onCycleColor(
+                                                                            dugum.id,
+                                                                            dugum.color ?? null
+                                                                        );
+                                                                        setRenkHatasi(
+                                                                            kaydedildi
+                                                                                ? ''
+                                                                                : 'Dal rengi kaydedilemedi. Bağlantınızı kontrol edip yeniden deneyin.'
+                                                                        );
                                                                     }}
                                                                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-sand-100"
-                                                                    title="Rengi değiştir"
-                                                                    aria-label="Rengi değiştir"
+                                                                    title="Dal rengini değiştir"
+                                                                    aria-label="Dal rengini değiştir"
                                                                 >
                                                                     <span
                                                                         className="h-5 w-5 rounded-full ring-1 ring-black/15"
@@ -315,9 +322,14 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                     })}
                                                 </div>
 
-                                                <p className="mt-3 px-1 text-[11px] leading-relaxed text-sand-500">
-                                                    Renk değişikliği yalnızca ekranda geçerlidir; pencereyi kapatıp açtığınızda eski renge döner.
+                                                <p className="mt-3 px-1 text-xs leading-relaxed text-sand-600">
+                                                    Dal rengi notun kendisine kaydedilir; pencereyi kapatıp açtığınızda da seçtiğiniz renk korunur.
                                                 </p>
+                                                {renkHatasi && (
+                                                    <p role="alert" className="mt-2 px-1 text-xs font-medium text-berry-600">
+                                                        {renkHatasi}
+                                                    </p>
+                                                )}
                                             </div>
                                         )}
                                     </div>

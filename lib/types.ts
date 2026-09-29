@@ -37,6 +37,11 @@ export interface TreeNode {
 // Store State Tipi
 export interface StoreState {
     gardens: Garden[];
+    /**
+     * Bahçe başına kök ağaç sayısı (ana ekrandaki rozet için). `null` ise
+     * sayımlar henüz alınmadı ya da alınamadı; bu durumda rozet gösterilmez.
+     */
+    gardenTreeCounts: Record<string, number> | null;
     currentGardenId: string | null;
     nodes: TreeNode[];
     selectedNodeId: string | null;
@@ -60,7 +65,8 @@ export interface StoreState {
     updateGardenViewState: (id: string, viewState: { x: number; y: number; zoom: number }) => Promise<void>;
     toggleNodeExpansion: (id: string, isExpanded: boolean) => Promise<void>;
     toggleNodeType: (id: string, currentType: 'branch' | 'leaf' | 'auto') => Promise<void>;
-    setNodeColor: (id: string, color: string | null) => Promise<void>;
+    /** Rengi kaydeder; yazma başarısız olursa `false` döner ve ekran geri alınır. */
+    setNodeColor: (id: string, color: string | null) => Promise<boolean>;
     setNodePruned: (id: string, isPruned: boolean) => Promise<void>;
 }
 

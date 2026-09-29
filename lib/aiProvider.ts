@@ -5,6 +5,8 @@
  * anahtar diğerlerini etkilemez. Kullanıcı hazır sağlayıcılarda da model adını
  * elle değiştirebilir.
  */
+import { bildir } from './degisim';
+
 export type ProviderType = 'gemini' | 'openai' | 'anthropic' | 'custom';
 
 export const PROVIDER_IDS: ProviderType[] = ['gemini', 'openai', 'anthropic', 'custom'];
@@ -61,6 +63,7 @@ export function readActiveProvider(): ProviderType {
 export function saveActiveProvider(provider: ProviderType): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(PROVIDER_KEY, provider);
+    bildir('ai-tercih');
 }
 
 /** Sağlayıcının anahtarını döner; eski tek anahtar varsa etkin sağlayıcıya taşır. */
@@ -78,6 +81,9 @@ export function readProviderKey(provider: ProviderType): string {
             localStorage.getItem(LEGACY_KEY) || localStorage.getItem(LEGACY_GEMINI_KEY);
         if (legacy) {
             localStorage.setItem(keyStorageKey(provider), legacy);
+            // Taşıma tek seferliktir: eski alanlar hemen silinir. Aksi hâlde
+            // kullanıcı anahtarı sildiğinde bir sonraki okumada geri geliyordu.
+            eskiAnahtarlariSil();
             return legacy;
         }
     }
@@ -94,6 +100,16 @@ export function saveProviderKey(provider: ProviderType, key: string): void {
     } else {
         localStorage.removeItem(keyStorageKey(provider));
     }
+    // Silme işlemi kalıcı olsun: eski ortak anahtar alanları da temizlenir.
+    if (!trimmed) eskiAnahtarlariSil();
+    bildir('ai-tercih');
+}
+
+/** Eski sürümlerin ortak anahtar alanlarını kaldırır. */
+function eskiAnahtarlariSil(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(LEGACY_KEY);
+    localStorage.removeItem(LEGACY_GEMINI_KEY);
 }
 
 /** Sağlayıcının modelini döner; boşsa varsayılan model kullanılır. */
@@ -118,6 +134,7 @@ export function saveProviderModel(provider: ProviderType, model: string): void {
     } else {
         localStorage.removeItem(modelStorageKey(provider));
     }
+    bildir('ai-tercih');
 }
 
 function modelListStorageKey(provider: ProviderType): string {

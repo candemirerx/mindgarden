@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Pencil, Plus, ChevronDown, TreePine, Leaf, Check, Scissors } from 'lucide-react';
+import { Copy, Pencil, Plus, ChevronDown, TreePine, Leaf, Check, Scissors, GitBranch } from 'lucide-react';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 
@@ -21,7 +21,7 @@ const DUGME_TABANI =
  *  40 piksel: parmakla rahat basılır. Düğüm çevresindeki seçenek sayısı
  *  azaltıldığı için kalanlar daha büyük ve belirgin tutulur. */
 const ARAC_DUGMESI =
-    'flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 ' +
+    'flex h-11 w-11 items-center justify-center rounded-xl text-sand-700 ' +
     'transition-colors duration-150 hover:bg-sand-200/80 hover:text-sand-900 ' +
     'active:scale-95 touch-manipulation outline-none focus-visible:bg-sand-200/80';
 
@@ -159,9 +159,9 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     // =========================================================================
     if (depth === 0) {
         return (
-            <li>
+            <div>
                 <div
-                    className="relative flex flex-col items-center group"
+                    className="relative mx-auto flex w-fit flex-col items-center group"
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
                     onClick={handleNodeClick}
@@ -220,6 +220,15 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
 
                     {/* Kök Kartı: Zarif orman yeşili, temiz tipografi */}
                     <div
+                        role={isEditingTitle ? undefined : 'button'}
+                        tabIndex={isEditingTitle ? -1 : 0}
+                        aria-label={node.title}
+                        aria-pressed={isSelected}
+                        onKeyDown={event => {
+                            if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+                            event.preventDefault();
+                            if (isSelected) onEdit(node); else setSelectedNode(node.id);
+                        }}
                         className={`
                             dugum-karti relative z-20 flex min-w-[220px] max-w-[340px] flex-col items-center justify-center
                             rounded-3xl bg-gradient-to-br from-moss-700 via-moss-800 to-moss-900
@@ -230,7 +239,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         `}
                     >
                         {/* Kök Düşünce Etiketi */}
-                        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-moss-100 backdrop-blur-sm">
+                        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium text-moss-100 backdrop-blur-sm">
                             {isPruned ? <Scissors size={12} /> : <TreePine size={12} />}
                             <span>{isPruned ? 'Budandı' : 'Kök Düşünce'}</span>
                         </div>
@@ -247,12 +256,12 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                 onClick={(e) => e.stopPropagation()}
                             />
                         ) : (
-                            <h4
-                                className={`cursor-text font-serif text-xl font-semibold tracking-tight text-white transition-opacity hover:opacity-90 ${isPruned ? 'line-through decoration-2' : ''}`}
+                            <span
+                                className={`block cursor-text font-serif text-xl font-semibold tracking-tight text-white transition-opacity hover:opacity-90 ${isPruned ? 'line-through decoration-2' : ''}`}
                                 onClick={handleTitleClick}
                             >
                                 {node.title}
-                            </h4>
+                            </span>
                         )}
 
                         {hasChildren && (
@@ -267,7 +276,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
                         className={`
                             ${DUGME_TABANI}
-                            absolute -bottom-[18px] left-1/2 h-9 w-9 -translate-x-1/2
+                            absolute -bottom-[22px] left-1/2 h-11 w-11 -translate-x-1/2
                             bg-white text-moss-700 border-moss-400 hover:bg-moss-50 hover:border-moss-500
                             ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                             z-30
@@ -286,7 +295,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             aria-expanded={isExpanded}
                             className={`
                                 ${DUGME_TABANI}
-                                absolute bottom-0 right-0 h-9 w-9 translate-x-1/2 translate-y-1/2
+                                absolute bottom-0 right-0 h-11 w-11 translate-x-1/2 translate-y-1/2
                                 bg-sand-100 text-bark-800 border-white hover:bg-sand-200
                                 z-30 text-sm font-bold
                             `}
@@ -312,7 +321,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         ))}
                     </ul>
                 )}
-            </li>
+            </div>
         );
     }
 
@@ -393,6 +402,15 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     Dal: Kalın border ve dolgulu amber (clay) filiz ikonu
                     Yaprak: Standart ince border ve açık yeşil yaprak ikonu */}
                 <div
+                    role={isEditingTitle ? undefined : 'button'}
+                    tabIndex={isEditingTitle ? -1 : 0}
+                    aria-label={node.title}
+                    aria-pressed={isSelected}
+                    onKeyDown={event => {
+                        if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+                        event.preventDefault();
+                        if (isSelected) onEdit(node); else setSelectedNode(node.id);
+                    }}
                     className={`
                         node-content dugum-karti relative z-10 flex cursor-pointer flex-col justify-center
                         min-w-[140px] max-w-[280px] px-4 py-3 rounded-2xl bg-white text-sand-900
@@ -408,7 +426,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     <div className="flex items-center gap-2">
                         {isBranchStyle ? (
                             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-clay-500 text-white flex-shrink-0">
-                                <Plus size={14} />
+                                <GitBranch size={14} />
                             </span>
                         ) : (
                             <span className="flex h-5 w-5 items-center justify-center rounded-md bg-moss-100 text-moss-700 flex-shrink-0">
@@ -429,18 +447,18 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             ) : (
-                                <h4
-                                    className={`truncate text-[15px] font-semibold cursor-text ${
-                                        isPruned ? 'text-sand-400 line-through decoration-sand-400' : 'text-sand-900'
+                                <span
+                                    className={`block truncate text-[15px] font-semibold cursor-text ${
+                                        isPruned ? 'text-sand-600 line-through decoration-sand-600' : 'text-sand-900'
                                     }`}
                                     onClick={handleTitleClick}
                                 >
                                     {node.title}
-                                </h4>
+                                </span>
                             )}
                             {isPruned && (
                                 <span
-                                    className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-500"
+                                    className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-xs font-semibold text-sand-600"
                                     title="Bu not budandı"
                                 >
                                     <Scissors size={9} />
@@ -464,7 +482,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
                         className={`
                             ${DUGME_TABANI}
-                            absolute -bottom-[20px] left-1/2 h-10 w-10 -translate-x-1/2
+                            absolute -bottom-[22px] left-1/2 h-11 w-11 -translate-x-1/2
                             bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400
                             ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
                         `}
@@ -485,7 +503,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                             className={`
                                 ${DUGME_TABANI}
                                 pointer-events-auto
-                                absolute bottom-0 right-0 h-10 w-10 translate-x-1/2 translate-y-1/2
+                                absolute bottom-0 right-0 h-11 w-11 translate-x-1/2 translate-y-1/2
                                 bg-sand-100 text-bark-800 border-white hover:bg-sand-200
                                 text-sm font-bold
                             `}

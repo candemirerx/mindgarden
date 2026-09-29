@@ -1,13 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!--
+      Bilgisayar araçları (PC panosu / Kablosuz Bellek kartı) yerel ağda düz
+      HTTP ile çalışabildiği ve Android, IP aralığı için kural yazmaya izin
+      vermediği için temel yapılandırma cleartext'e izin verir. HTTPS
+      kullanan bilinen servisler aşağıda açıkça reddedilir.
+    -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-    <domain-config cleartextTrafficPermitted="true">
+    <!-- Bu alan adlarında şifresiz trafik kesinlikle yasak. -->
+    <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">supabase.co</domain>
         <domain includeSubdomains="true">mindgarden-neon.vercel.app</domain>
-        <domain includeSubdomains="true">zojnjnyjavftnscbnikv.supabase.co</domain>
+        <domain includeSubdomains="true">vercel.app</domain>
+        <domain includeSubdomains="true">googleapis.com</domain>
+        <domain includeSubdomains="true">google.com</domain>
+        <domain includeSubdomains="true">gstatic.com</domain>
+        <domain includeSubdomains="true">openai.com</domain>
+        <domain includeSubdomains="true">anthropic.com</domain>
     </domain-config>
 </network-security-config>

@@ -35,6 +35,12 @@ export const API_ENDPOINTS = {
     chat: `${API_BASE_URL}/api/chat`,
 };
 
+/**
+ * Uygulama sürümü. Android tarafındaki `versionName` ile aynı tutulur
+ * (android/app/build.gradle) ve Ayarlar → Hakkında bölümünde gösterilir.
+ */
+export const APP_VERSION = '2.2.1';
+
 // Supabase URL'leri için de aynı mantık
 export const getApiUrl = (path: string): string => {
     const base = API_BASE_URL || '';

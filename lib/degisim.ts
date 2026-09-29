@@ -6,7 +6,13 @@
  * anında görünmesi gerekir. Tarayıcı sekmesi içinde küçük bir yayın kanalı
  * yeterlidir; aynı sekmedeki tüm dinleyiciler haberdar olur.
  */
-export type DegisimKonusu = 'araclar' | 'makrolar' | 'bolumler';
+export type DegisimKonusu =
+    | 'araclar'
+    | 'makrolar'
+    | 'bolumler'
+    | 'remote-prefs'
+    /** Sağlayıcı/anahtar/model tercihleri değişti. */
+    | 'ai-tercih';
 
 const dinleyiciler = new Map<DegisimKonusu, Set<() => void>>();
 

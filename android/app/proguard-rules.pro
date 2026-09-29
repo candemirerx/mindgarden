@@ -19,3 +19,22 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# --- Not Bahçesi ---------------------------------------------------------
+# Capacitor köprüsü sınıf adıyla yüklenir; R8 bunları silmemeli.
+-keep public class * extends com.getcapacitor.Plugin { *; }
+-keep class com.notbahcesi.app.** { *; }
+
+# WebView köprüsü: JS'e açılan metotlar korunmalı.
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Google ile giriş yansıma kullanır (play-services-auth kendi kurallarını
+# getirmiyor); oturum sınıfları korunur.
+-keep class com.google.android.gms.** { *; }
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.android.gms.**
+
+# Hata ayıklamada okunabilir iz ve serileştirme alanları.
+-keepattributes Signature,*Annotation*,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable

@@ -13,7 +13,7 @@ import {
 import PromptModal from '@/components/ui/PromptModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
-import { BRANCH_COLORS, sonrakiRenk } from '@/lib/branchColors';
+import { sonrakiRenk } from '@/lib/branchColors';
 import { siraliAdEtkin, siraliAd } from '@/lib/tools';
 
 interface TreeItem {
@@ -47,11 +47,6 @@ function ProjectsPageInner() {
     const [editingTitle, setEditingTitle] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
-    /**
-     * Geçici renk değişiklikleri. Yalnızca ekranda görünür, kaydedilmez;
-     * sayfa yenilendiğinde renk eski hâline döner.
-     */
-    const [geciciRenkler, setGeciciRenkler] = useState<Record<string, string>>({});
     const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'split' | 'grid'>('split');
@@ -59,6 +54,8 @@ function ProjectsPageInner() {
     // Modals state
     const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
     const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, title: string, description: string, isDanger?: boolean, onConfirm: () => void}>({isOpen: false, title: '', description: '', onConfirm: () => {}});
+    /** Ekleme başarısız olduğunda kullanıcıyı sessiz bırakmamak için. */
+    const [hata, setHata] = useState('');
 
     const currentGarden = gardens.find(g => g.id === gardenId);
 
@@ -181,7 +178,16 @@ function ProjectsPageInner() {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
                 const ad = title || (adIzinli ? siraliAd(null, nodes) : varsayilan);
                 const created = await addNode(gardenId, ad, null, { x: 0, y: 0 });
-                if (created) setSelectedNodeId(created.id);
+                if (created) {
+                    setHata('');
+                    setSelectedNodeId(created.id);
+                } else {
+                    setHata(
+                        gardenId
+                            ? 'Ağaç eklenemedi. Bağlantınızı kontrol edip yeniden deneyin.'
+                            : 'Bahçe bulunamadı. Liste görünümünden bir bahçe seçip yeniden deneyin.'
+                    );
+                }
             }
         });
     };
@@ -208,7 +214,12 @@ function ProjectsPageInner() {
                     setExpandedNodes(newExpanded);
                     await toggleNodeExpansion(parentId, true);
                 }
-                if (created) setSelectedNodeId(created.id);
+                if (created) {
+                    setHata('');
+                    setSelectedNodeId(created.id);
+                } else {
+                    setHata('Dal eklenemedi. Bağlantınızı kontrol edip yeniden deneyin.');
+                }
             }
         });
     };
@@ -234,14 +245,21 @@ function ProjectsPageInner() {
         router.push(`/editor?id=${gardenId}&nodeId=${nodeId}`);
     };
 
-    /** Rengi sıradaki renge döndürür; yalnızca ekranda geçerlidir. */
-    const handleCycleColor = (nodeId: string, mevcutRenk: string | null) => {
-        const palet = BRANCH_COLORS.map((c) => c.value);
-        const suankiIndex = mevcutRenk ? palet.indexOf(mevcutRenk) : -1;
-        const sonraki = palet[(suankiIndex + 1) % palet.length];
-
-        setGeciciRenkler((prev) => ({ ...prev, [nodeId]: sonraki }));
+    /**
+     * Dal rengini sıradaki renge çevirir ve kaydeder.
+     *
+     * Renk, notun kendi kaydında saklanır; ekran değişse ya da uygulama
+     * kapansa da seçim korunur. Kaydedilemezse kullanıcıya görünür bir uyarı
+     * çıkar ve renk eski hâline döner (bkz. setNodeColor).
+     */
+    const handleCycleColor = async (nodeId: string, mevcutRenk: string | null) => {
         setActiveMenu(null);
+        const kaydedildi = await setNodeColor(nodeId, sonrakiRenk(mevcutRenk));
+        setHata(
+            kaydedildi
+                ? ''
+                : 'Dal rengi kaydedilemedi. Bağlantınızı kontrol edip yeniden deneyin.'
+        );
     };
 
     /**
@@ -356,9 +374,8 @@ function ProjectsPageInner() {
         const isExpanded = searchQuery ? true : expandedNodes.has(item.id);
         const isRoot = depth === 0;
         const isSelected = selectedNodeId === item.id;
-        const etkinRenk = geciciRenkler[item.id] ?? item.color ?? null;
-        const gosterItem: TreeItem =
-            etkinRenk === item.color ? item : { ...item, color: etkinRenk };
+        // Renk artık düğümün kendi kaydından gelir; geçici katman yok.
+        const etkinRenk = item.color ?? null;
         const levelColor = etkinRenk || getDepthColor(depth - 1);
 
         return (
@@ -382,7 +399,7 @@ function ProjectsPageInner() {
                                     className={`flex-shrink-0 rounded-xl transition-transform duration-200 hover:scale-105 ${item.isPruned ? 'opacity-50' : ''}`}
                                     title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                                 >
-                                    {getNodeIcon(gosterItem, true, isExpanded)}
+                                    {getNodeIcon(item, true, isExpanded)}
                                 </button>
 
                                 {hasChildren && (
@@ -393,7 +410,7 @@ function ProjectsPageInner() {
                                         }}
                                         aria-label={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
                                         aria-expanded={isExpanded}
-                                        className="flex-shrink-0 rounded-md p-0.5 text-sand-500 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
+                                        className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
                                     >
                                         <ChevronRight
                                             size={16}
@@ -423,7 +440,7 @@ function ProjectsPageInner() {
                                                 onDoubleClick={() => handleEdit(item.id)}
                                                 className={`block truncate text-left text-[15px] font-semibold transition-colors ${
                                                     item.isPruned
-                                                        ? 'text-sand-400 line-through decoration-sand-400'
+                                                        ? 'text-sand-600 line-through decoration-sand-600'
                                                         : 'text-sand-900 hover:text-moss-700'
                                                 }`}
                                             >
@@ -431,7 +448,7 @@ function ProjectsPageInner() {
                                             </span>
                                             {item.isPruned && (
                                                 <span
-                                                    className="flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-500"
+                                                    className="flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-600"
                                                     title="Bu not budandı"
                                                 >
                                                     <Scissors size={10} />
@@ -439,7 +456,7 @@ function ProjectsPageInner() {
                                                 </span>
                                             )}
                                             {hasChildren && (
-                                                <span className="text-[11px] font-medium text-sand-400">
+                                                <span className="text-[11px] font-medium text-sand-600">
                                                     ({item.children.length})
                                                 </span>
                                             )}
@@ -472,7 +489,7 @@ function ProjectsPageInner() {
                                         <button
                                             ref={(element) => { menuButtonRefs.current[item.id] = element; }}
                                             onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)}
-                                            className="flex h-11 w-11 items-center justify-center rounded-xl text-sand-500 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
+                                            className="flex h-11 w-11 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
                                             aria-label={`${item.title} seçenekleri`}
                                             aria-expanded={activeMenu === item.id}
                                             aria-haspopup="menu"
@@ -522,7 +539,7 @@ function ProjectsPageInner() {
                             className={`flex-shrink-0 rounded-lg transition-transform duration-200 hover:scale-105 ${item.isPruned ? 'opacity-50' : ''}`}
                             title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                         >
-                            {getNodeIcon(gosterItem, false, isExpanded)}
+                            {getNodeIcon(item, false, isExpanded)}
                         </button>
 
                         {hasChildren && (
@@ -533,7 +550,7 @@ function ProjectsPageInner() {
                                 }}
                                 aria-label={isExpanded ? 'Dalları kapat' : 'Dalları aç'}
                                 aria-expanded={isExpanded}
-                                className="flex-shrink-0 rounded p-0.5 text-sand-600 transition-colors duration-200 hover:bg-white hover:text-sand-800"
+                                className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded text-sand-600 transition-colors duration-200 hover:bg-white hover:text-sand-800"
                             >
                                 <ChevronRight
                                     size={15}
@@ -562,7 +579,7 @@ function ProjectsPageInner() {
                                     onDoubleClick={() => handleEdit(item.id)}
                                     className={`block truncate text-left text-sm transition-colors duration-200 ${
                                         item.isPruned
-                                            ? 'font-medium text-sand-400 line-through decoration-sand-400'
+                                            ? 'font-medium text-sand-600 line-through decoration-sand-600'
                                             : isSelected
                                                 ? 'font-semibold text-moss-900'
                                                 : 'font-medium text-sand-700 hover:text-moss-700'
@@ -575,7 +592,7 @@ function ProjectsPageInner() {
 
                         {item.isPruned && (
                             <span
-                                className="flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-500"
+                                className="flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-600"
                                 title="Bu not budandı"
                             >
                                 <Scissors size={10} />
@@ -608,7 +625,7 @@ function ProjectsPageInner() {
                                 <button
                                     ref={(element) => { menuButtonRefs.current[item.id] = element; }}
                                     onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)}
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl text-sand-500 transition-colors duration-200 hover:bg-white hover:text-sand-800"
+                                    className="flex h-10 w-10 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-white hover:text-sand-800"
                                     aria-label={`${item.title} seçenekleri`}
                                     aria-expanded={activeMenu === item.id}
                                     aria-haspopup="menu"
@@ -642,7 +659,7 @@ function ProjectsPageInner() {
                 type="button"
                 role="menuitem"
                 onClick={() => { setEditingNodeId(item.id); setEditingTitle(item.title); setActiveMenu(null); }}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
             >
                 <FileText size={15} className="text-clay-600" /> Yeniden adlandır
             </button>
@@ -651,7 +668,7 @@ function ProjectsPageInner() {
                 type="button"
                 role="menuitem"
                 onClick={() => handleAddChild(item.id, hasChildren)}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
             >
                 {hasChildren ? (
                     <>
@@ -673,33 +690,26 @@ function ProjectsPageInner() {
                     handleCopy(item.title, item.id, 'title');
                     setActiveMenu(null);
                 }}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
             >
                 <Copy size={15} className="text-clay-600" /> Başlığı kopyala
             </button>
 
-            {/* Rengi değiştir: tek seçenek, sıradaki renge geçer (yalnızca ekranda) */}
+            {/* Dal rengi: her dokunuşta sıradaki renge geçer ve kaydedilir. */}
             <button
                 type="button"
                 role="menuitem"
-                onClick={() =>
-                    handleCycleColor(
-                        item.id,
-                        geciciRenkler[item.id] ?? item.color ?? null
-                    )
-                }
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+                onClick={() => handleCycleColor(item.id, item.color ?? null)}
+                aria-label="Dal rengini değiştir"
+                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
             >
                 <span
                     className="flex h-4 w-4 items-center justify-center rounded-full ring-1 ring-black/10"
-                    style={{
-                        backgroundColor:
-                            geciciRenkler[item.id] ??
-                            item.color ??
-                            LEVEL_COLORS[0]
-                    }}
+                    style={{ backgroundColor: item.color ?? LEVEL_COLORS[0] }}
+                    aria-hidden
                 />
-                Rengi değiştir
+                Dal rengi
+                <span className="ml-auto text-xs font-normal text-sand-600">değiştir</span>
             </button>
 
             <div className="my-1 h-px bg-sand-200" />
@@ -709,7 +719,7 @@ function ProjectsPageInner() {
                 type="button"
                 role="menuitem"
                 onClick={() => handleTogglePrune(item.id, item.isPruned)}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
             >
                 <Scissors size={15} className="text-moss-600" />
                 {item.isPruned ? 'Budamayı geri al' : 'Buda'}
@@ -721,7 +731,7 @@ function ProjectsPageInner() {
                 type="button"
                 role="menuitem"
                 onClick={() => handleDelete(item.id)}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
+                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
             >
                 <Trash2 size={15} /> Sil
             </button>
@@ -773,7 +783,7 @@ function ProjectsPageInner() {
                                 onClick={() => router.push('/')}
                                 aria-label="Ana sayfa"
                                 title="Ana Sayfa"
-                                className="rounded-xl p-2 text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
+                                className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
                             >
                                 <ArrowLeft size={21} />
                             </button>
@@ -781,7 +791,7 @@ function ProjectsPageInner() {
                                 <h1 className="truncate text-lg font-semibold text-sand-900">
                                     {currentGarden?.name || 'Bahçe'}
                                 </h1>
-                                <p className="text-xs text-sand-500">
+                                <p className="text-xs text-sand-600">
                                     {trees.length} ağaç · {countAllNodes(trees)} düşünce
                                 </p>
                             </div>
@@ -789,33 +799,34 @@ function ProjectsPageInner() {
 
                         {/* Orta: Arama */}
                         <div className="relative order-last w-full lg:order-none lg:w-auto lg:max-w-md lg:flex-1">
-                            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sand-400" />
+                            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sand-600" />
                             <input
                                 type="text"
                                 placeholder="Düşüncelerde ara…"
+                                aria-label="Düşüncelerde ara"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="input h-10 pl-10 pr-10 text-sm"
+                                className="input h-11 pl-10 pr-11 text-sm"
                             />
                             {searchQuery && (
                                 <button
                                     onClick={() => setSearchQuery('')}
                                     aria-label="Aramayı temizle"
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-sand-400 hover:bg-sand-200 hover:text-sand-700"
+                                    className="absolute right-1.5 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-sand-600 hover:bg-sand-200 hover:text-sand-700"
                                 >
                                     <X size={15} />
                                 </button>
                             )}
                         </div>
 
-                        {/* Sağ Eylemler: Görünüm Seçici, Canvas, Yeni Ağaç */}
+                        {/* Sağ Eylemler: Görünüm Seçici, Tuval, Yeni Ağaç */}
                         <div className="ml-auto flex flex-shrink-0 items-center gap-2">
                             {/* Görünüm geçiş düğmesi (sadece geniş ekranlarda) */}
                             <div className="hidden lg:flex items-center rounded-xl border border-sand-200 bg-sand-100 p-0.5">
                                 <button
                                     onClick={() => setViewMode('split')}
                                     title="İki Bölmeli Görünüm (Gezgin + Not Detayı)"
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                                    className={`flex min-h-[44px] items-center gap-1.5 px-3 text-xs font-semibold rounded-lg transition-all ${
                                         viewMode === 'split'
                                             ? 'bg-white text-sand-900 shadow-soft'
                                             : 'text-sand-600 hover:text-sand-900'
@@ -827,7 +838,7 @@ function ProjectsPageInner() {
                                 <button
                                     onClick={() => setViewMode('grid')}
                                     title="Pano / Kartlar Görünümü"
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                                    className={`flex min-h-[44px] items-center gap-1.5 px-3 text-xs font-semibold rounded-lg transition-all ${
                                         viewMode === 'grid'
                                             ? 'bg-white text-sand-900 shadow-soft'
                                             : 'text-sand-600 hover:text-sand-900'
@@ -840,14 +851,18 @@ function ProjectsPageInner() {
 
                             <button
                                 onClick={() => router.push(`/bahce_view?id=${gardenId}`)}
-                                className="btn btn-secondary h-10 px-4 text-sm"
+                                title="Tuval görünümü"
+                                aria-label="Tuval görünümü"
+                                className="btn btn-secondary h-11 px-4 text-sm"
                             >
                                 <Layout size={16} />
-                                <span className="hidden sm:inline">Canvas</span>
+                                <span className="hidden sm:inline">Tuval</span>
                             </button>
                             <button
                                 onClick={handleAddRoot}
-                                className="btn btn-primary h-10 px-4 text-sm"
+                                title="Yeni ağaç ekle"
+                                aria-label="Yeni ağaç ekle"
+                                className="btn btn-primary h-11 px-4 text-sm"
                             >
                                 <Plus size={16} />
                                 <span className="hidden sm:inline">Yeni Ağaç</span>
@@ -859,6 +874,22 @@ function ProjectsPageInner() {
 
             {/* Content Area */}
             <main className="flex-1 relative mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
+                {hata && (
+                    <div
+                        role="alert"
+                        className="mb-4 flex items-start gap-2 rounded-2xl border border-berry-200 bg-berry-50 px-4 py-3 text-sm text-berry-800"
+                    >
+                        <span className="flex-1 break-words">{hata}</span>
+                        <button
+                            type="button"
+                            onClick={() => setHata('')}
+                            aria-label="Uyarıyı kapat"
+                            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-berry-100"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                )}
                 {trees.length === 0 ? (
                     <div className="py-16 text-center md:py-24">
                         <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-moss-100 text-moss-700">
@@ -933,11 +964,11 @@ function ProjectsPageInner() {
                             {selectedNode ? (
                                 <div className="rounded-3xl border border-sand-200 bg-white p-7 shadow-card flex flex-col gap-6">
                                     {/* Ekmek Kırıntısı (Hiyerarşi Yolu) */}
-                                    <div className="flex items-center gap-1.5 flex-wrap text-xs text-sand-500 border-b border-sand-100 pb-3.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap text-xs text-sand-600 border-b border-sand-100 pb-3.5">
                                         <span className="text-moss-700 font-medium">Bahçe</span>
                                         {breadcrumbs.map((crumb, idx) => (
                                             <div key={crumb.id} className="flex items-center gap-1.5">
-                                                <ChevronRight size={13} className="text-sand-400" />
+                                                <ChevronRight size={13} className="text-sand-600" />
                                                 <button
                                                     onClick={() => setSelectedNodeId(crumb.id)}
                                                     className={`hover:underline truncate max-w-[160px] ${
@@ -981,7 +1012,7 @@ function ProjectsPageInner() {
                                             <h2
                                                 className={`font-serif text-2xl lg:text-3xl tracking-tight ${
                                                     selectedNode.is_pruned
-                                                        ? 'text-sand-400 line-through decoration-sand-400'
+                                                        ? 'text-sand-600 line-through decoration-sand-600'
                                                         : 'text-sand-900'
                                                 }`}
                                             >
@@ -1005,10 +1036,10 @@ function ProjectsPageInner() {
                                                 {selectedNodeBody}
                                             </div>
                                         ) : (
-                                            <div className="flex flex-col items-center justify-center py-8 text-center text-sand-500">
-                                                <BookOpen size={28} className="text-sand-400 mb-2 opacity-70" />
+                                            <div className="flex flex-col items-center justify-center py-8 text-center text-sand-600">
+                                                <BookOpen size={28} className="text-sand-600 mb-2 opacity-70" />
                                                 <p className="text-sm font-medium">Bu nota henüz açıklama veya metin eklenmemiş.</p>
-                                                <p className="text-xs text-sand-400 mt-1">
+                                                <p className="text-xs text-sand-600 mt-1">
                                                     Düşüncelerinizi genişletmek için tam editörü açabilirsiniz.
                                                 </p>
                                                 <button
@@ -1052,7 +1083,7 @@ function ProjectsPageInner() {
                                                                 {child.content.split('\n')[0] || 'Başlıksız'}
                                                             </span>
                                                         </div>
-                                                        <ChevronRight size={15} className="text-sand-400 group-hover:text-moss-600 flex-shrink-0" />
+                                                        <ChevronRight size={15} className="text-sand-600 group-hover:text-moss-600 flex-shrink-0" />
                                                     </button>
                                                 ))}
                                             </div>
@@ -1060,7 +1091,7 @@ function ProjectsPageInner() {
                                     )}
 
                                     {/* İstatistik & Bilgi Çubuğu */}
-                                    <div className="flex items-center justify-between pt-3 border-t border-sand-200 text-xs text-sand-500">
+                                    <div className="flex items-center justify-between pt-3 border-t border-sand-200 text-xs text-sand-600">
                                         <div className="flex items-center gap-4">
                                             <span className="flex items-center gap-1">
                                                 <AlignLeft size={13} />
@@ -1102,22 +1133,22 @@ function ProjectsPageInner() {
                                     </div>
                                     <div>
                                         <h3 className="font-serif text-2xl text-sand-900">Bahçe Genel Bakış</h3>
-                                        <p className="text-sm text-sand-500 mt-1 max-w-md mx-auto">
+                                        <p className="text-sm text-sand-600 mt-1 max-w-md mx-auto">
                                             Sol taraftaki ağaç gezgininden bir nota tıklayarak içeriğini doğrudan bu panelde okuyabilir, önizleyebilir veya düzenleyebilirsiniz.
                                         </p>
                                     </div>
 
                                     <div className="grid grid-cols-3 gap-3 max-w-md mx-auto text-left">
                                         <div className="p-3.5 rounded-2xl border border-sand-200 bg-sand-50/70">
-                                            <p className="text-xs text-sand-500">Ağaç</p>
+                                            <p className="text-xs text-sand-600">Ağaç</p>
                                             <p className="text-xl font-bold text-sand-900 mt-0.5">{trees.length}</p>
                                         </div>
                                         <div className="p-3.5 rounded-2xl border border-sand-200 bg-sand-50/70">
-                                            <p className="text-xs text-sand-500">Toplam Not</p>
+                                            <p className="text-xs text-sand-600">Toplam Not</p>
                                             <p className="text-xl font-bold text-sand-900 mt-0.5">{countAllNodes(trees)}</p>
                                         </div>
                                         <div className="p-3.5 rounded-2xl border border-sand-200 bg-sand-50/70">
-                                            <p className="text-xs text-sand-500">Görünüm</p>
+                                            <p className="text-xs text-sand-600">Görünüm</p>
                                             <p className="text-sm font-bold text-moss-700 mt-1">Bölmeli</p>
                                         </div>
                                     </div>
@@ -1128,7 +1159,7 @@ function ProjectsPageInner() {
                                             className="btn btn-secondary px-4 py-2 text-sm"
                                         >
                                             <Layout size={15} />
-                                            <span>Sonsuz Canvas Tuvalini Aç</span>
+                                            <span>Sonsuz Tuvali Aç</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1149,6 +1180,6 @@ function ProjectsPageInner() {
     );
 }
 
-export default function ProjelerPage() {
+export default function ListeGorunumuPage() {
   return <Suspense fallback={<div>Yükleniyor...</div>}><ProjectsPageInner /></Suspense>;
 }

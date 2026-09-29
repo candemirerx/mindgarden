@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, Sprout } from 'lucide-react';
+import { APP_VERSION } from '@/lib/config';
 
 export const metadata = {
     title: 'Gizlilik Politikası - Not Bahçesi',
@@ -9,10 +10,10 @@ export const metadata = {
 export default function PrivacyPage() {
     return (
         <div className="min-h-screen bg-paper">
-            <div className="mx-auto max-w-2xl px-6 py-12">
+            <main className="mx-auto max-w-2xl break-words px-6 py-12">
                 <Link
                     href="/"
-                    className="mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-colors hover:text-sand-900"
+                    className="mb-10 inline-flex min-h-[44px] items-center gap-2 text-sm text-sand-600 transition-colors hover:text-sand-900"
                 >
                     <ArrowLeft size={16} />
                     Ana Sayfaya Dön
@@ -27,7 +28,7 @@ export default function PrivacyPage() {
 
                 <div className="space-y-6 rounded-3xl border border-sand-200 bg-white p-8 text-sm leading-relaxed text-sand-700 shadow-card">
                     <p>
-                        <strong>Son güncelleme:</strong> 20 Eylül 2026
+                        <strong>Son güncelleme:</strong> 28 Eylül 2026
                     </p>
 
                     <section className="space-y-2">
@@ -40,6 +41,12 @@ export default function PrivacyPage() {
                         <p>
                             Google ile giriş yaptığınızda hesabınızın <strong>e-posta adresi, adı ve profil fotoğrafı</strong>
                             yerel oturum bilgisi olarak cihazınızda saklanır.
+                        </p>
+                        <p>
+                            Android uygulamasında <strong>otomatik bulut yedeklemesi kapalıdır</strong>: işletim sistemi
+                            notlarınızı Google hesabınıza yedeklemez. Bu nedenle uygulamayı cihazdan kaldırdığınızda
+                            yerel notlar da silinir; saklamak istediğiniz notları JSON olarak dışa aktarabilir veya
+                            Google Drive senkronizasyonunu kullanabilirsiniz.
                         </p>
                     </section>
 
@@ -70,26 +77,54 @@ export default function PrivacyPage() {
                         <h2 className="text-lg font-semibold text-sand-900">4. Veri Paylaşımı</h2>
                         <p>
                             Notlarınızı satmayız veya reklam amacıyla kullanmayız. Yalnızca sizin başlattığınız Drive
-                            senkronizasyonu ve yapay zekâ işlemleri kapsamında gerekli veriler, bu politikada açıklanan
+                            senkronizasyonu, bilgisayar araçları ve yapay zekâ işlemleri kapsamında gerekli veriler, bu politikada açıklanan
                             hizmet sağlayıcılara iletilir. Uygulama içinde izleme veya reklam çerezi kullanılmaz.
                         </p>
                     </section>
 
                     <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">5. Çocukların Gizliliği</h2>
+                        <h2 className="text-lg font-semibold text-sand-900">5. Bilgisayar Araçları ve Dikte</h2>
+                        <p>
+                            Bilgisayara yazma ve PC panosuna gönderme yalnız sizin düğmeye basmanızla editör metnini seçtiğiniz
+                            Kablosuz Bellek kartına veya kendi bilgisayarınızda çalıştırdığınız pano yardımcısına yerel ağ/Bluetooth
+                            üzerinden iletir. Bağlantı adresleri ve yardımcı program anahtarı bu cihazın yerel deposunda tutulur;
+                            bu iletişim açık HTTP kullanıyorsa ağ üzerinde şifrelenmez. Yalnız güvenilen yerel ağ kullanın.
+                        </p>
+                        <p>
+                            BLE tarama için Yakındaki Cihazlar izni (eski Android sürümlerinde konum izni) gerekir; konum bilgisi
+                            uygulama tarafından kaydedilmez. Dikte başlatıldığında mikrofon/sistem konuşma tanıma hizmeti açılır.
+                            Sesin işlenmesi seçili Android konuşma hizmetinin çevrim içi veya çevrim dışı ayarlarına bağlıdır;
+                            uygulama ham ses kaydı saklamaz. Tanınan metin yalnız sizin notunuza eklenir.
+                        </p>
+                    </section>
+
+                    <section className="space-y-2">
+                        <h2 className="text-lg font-semibold text-sand-900">6. Çocukların Gizliliği</h2>
                         <p>
                             Uygulama 13 yaş altı çocuklardan bilinçli olarak veri toplamaz.
                         </p>
                     </section>
 
                     <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">6. İletişim</h2>
+                        <h2 className="text-lg font-semibold text-sand-900">7. İletişim</h2>
                         <p>
                             Gizlilik ile ilgili sorularınız için: <strong>candemirerx@gmail.com</strong>
                         </p>
                     </section>
+
+                    <p className="border-t border-sand-200 pt-6 text-xs text-sand-600">
+                        Bu politika Not Bahçesi sürüm {APP_VERSION} için geçerlidir. Verilerinizi
+                        silmek için{' '}
+                        <Link
+                            href="/veri-silme"
+                            className="font-semibold text-clay-800 underline decoration-clay-400 underline-offset-2"
+                        >
+                            veri silme talebi
+                        </Link>{' '}
+                        sayfasına bakabilirsiniz.
+                    </p>
                 </div>
-            </div>
+            </main>
         </div>
     );
 }

@@ -35,9 +35,22 @@ export default function PromptModal({
 }: PromptModalProps) {
     const [value, setValue] = React.useState(initialValue);
     const inputRef = useRef<HTMLInputElement>(null);
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const oncesiOdakRef = useRef<HTMLElement | null>(null);
 
     // Klavye açıldığında kutunun görünür alanda kalmasını sağlar
     const keyboardInset = useKeyboardInset(isOpen);
+
+    // Kapanınca odak, pencereyi açan öğeye döner; aksi hâlde klavye
+    // kullanıcısı belgenin başına savrulur.
+    useEffect(() => {
+        if (!isOpen) return;
+        oncesiOdakRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        return () => {
+            oncesiOdakRef.current?.focus?.();
+        };
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen) {
@@ -67,6 +80,21 @@ export default function PromptModal({
             } else if (e.key === 'Enter') {
                 e.preventDefault();
                 if (allowEmpty || value.trim()) onConfirm(value.trim());
+            } else if (e.key === 'Tab') {
+                // Odağı diyalog içinde tut; Tab ile arka plandaki arayüze kaçmasın.
+                const odaklanabilirler = dialogRef.current?.querySelectorAll<HTMLElement>(
+                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                );
+                if (!odaklanabilirler || odaklanabilirler.length === 0) return;
+                const ilk = odaklanabilirler[0];
+                const son = odaklanabilirler[odaklanabilirler.length - 1];
+                if (e.shiftKey && document.activeElement === ilk) {
+                    e.preventDefault();
+                    son.focus();
+                } else if (!e.shiftKey && document.activeElement === son) {
+                    e.preventDefault();
+                    ilk.focus();
+                }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -77,16 +105,20 @@ export default function PromptModal({
 
     return (
         <div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-bark-950/40 p-4 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-bark-950/45 p-4 backdrop-blur-sm animate-fade-in"
             style={{ paddingBottom: keyboardInset ? keyboardInset + 16 : undefined }}
             onClick={onCancel}
         >
-            <div 
-                className="w-full max-w-sm max-h-full overflow-y-auto rounded-[24px] bg-white p-6 shadow-pop animate-scale-in"
+            <div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="istem-basligi"
+                className="w-full max-w-sm max-h-full overflow-y-auto rounded-2xl bg-white p-6 shadow-pop animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
-                <h3 className="text-xl font-semibold text-sand-900 mb-1">{title}</h3>
-                {description && <p className="text-sm text-sand-500 mb-4">{description}</p>}
+                <h3 id="istem-basligi" className="mb-1 text-lg font-semibold text-sand-900">{title}</h3>
+                {description && <p className="mb-4 text-sm leading-relaxed text-sand-600">{description}</p>}
                 
                 <div className={description ? "" : "mt-4"}>
                     <input
@@ -95,14 +127,14 @@ export default function PromptModal({
                         value={value}
                         onChange={e => setValue(e.target.value)}
                         placeholder={placeholder}
-                        className="w-full rounded-xl border border-moss-400 bg-sand-50 px-4 py-3 text-base text-sand-900 outline-none ring-4 ring-moss-500/10 focus:border-moss-500 transition-all"
+                        className="w-full rounded-xl border border-sand-300 bg-white px-4 py-3 text-base text-sand-900 outline-none transition-colors duration-200 placeholder:text-sand-400 focus:border-moss-500 focus:ring-4 focus:ring-moss-500/10"
                     />
                 </div>
 
                 <div className="mt-6 flex items-center justify-end gap-2.5">
                     <button
                         onClick={onCancel}
-                        className="rounded-xl px-4 py-2.5 text-sm font-semibold text-sand-600 hover:bg-sand-100 transition-colors"
+                        className="btn btn-ghost min-h-[44px] px-4 py-2.5 text-sm"
                     >
                         {cancelText}
                     </button>
@@ -111,7 +143,7 @@ export default function PromptModal({
                             if (allowEmpty || value.trim()) onConfirm(value.trim());
                         }}
                         disabled={!allowEmpty && !value.trim()}
-                        className="rounded-xl bg-moss-600 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all hover:bg-moss-700 disabled:opacity-50"
+                        className="btn btn-primary min-h-[44px] px-5 py-2.5 text-sm"
                     >
                         {confirmText}
                     </button>

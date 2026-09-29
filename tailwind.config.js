@@ -5,6 +5,21 @@ module.exports = {
         './components/**/*.{js,ts,jsx,tsx,mdx}',
         './lib/**/*.{js,ts,jsx,tsx,mdx}',
     ],
+    /*
+     * Koyu tema: .dark sınıfı <html> üzerine eklenir; renkler CSS
+     * değişkenlerinden gelir (app/globals.css). Böylece bileşenlerde tek bir
+     * dark: varyantı yazmadan tüm arayüz tema değiştirir.
+     */
+    darkMode: 'class',
+    /*
+     * Dokunmatik cihazlarda `hover:` stilleri yapışıp kalıyordu: bir bahçe
+     * kartına dokununca ağaç simgesi yeşile dönüyor ve başka bir yere
+     * dokunana kadar öyle kalıyordu. Bu bayrak hover stillerini yalnızca
+     * gerçek fare/kalem olan cihazlarda devreye sokar (Tailwind 3.4+).
+     */
+    future: {
+        hoverOnlyWhenSupported: true,
+    },
     theme: {
         extend: {
             /**
@@ -14,75 +29,77 @@ module.exports = {
              * görsel olarak güvenli.
              */
             colors: {
+                /* Kart/panel yüzeyi (bg-white, text-white) */
+                white: 'rgb(var(--surface) / <alpha-value>)',
                 /* Sıcak nötr - stone'un ısıtılmış karşılığı */
                 sand: {
-                    50: '#FBF9F6',
-                    100: '#F6F3EE',
-                    200: '#EAE5DE',
-                    300: '#DAD3C9',
-                    400: '#ADA396',
-                    500: '#7C7268',
-                    600: '#5B5348',
-                    700: '#463F36',
-                    800: '#2C251D',
-                    900: '#1E1813',
-                    950: '#0D0A07',
+                    50: 'rgb(var(--sand-50) / <alpha-value>)',
+                    100: 'rgb(var(--sand-100) / <alpha-value>)',
+                    200: 'rgb(var(--sand-200) / <alpha-value>)',
+                    300: 'rgb(var(--sand-300) / <alpha-value>)',
+                    400: 'rgb(var(--sand-400) / <alpha-value>)',
+                    500: 'rgb(var(--sand-500) / <alpha-value>)',
+                    600: 'rgb(var(--sand-600) / <alpha-value>)',
+                    700: 'rgb(var(--sand-700) / <alpha-value>)',
+                    800: 'rgb(var(--sand-800) / <alpha-value>)',
+                    900: 'rgb(var(--sand-900) / <alpha-value>)',
+                    950: 'rgb(var(--sand-950) / <alpha-value>)',
                 },
                 /* Birincil yeşil - emerald'ın toprak tonlu karşılığı */
                 moss: {
-                    50: '#F0F7EF',
-                    100: '#DEEDDA',
-                    200: '#BBDCC1',
-                    300: '#91C39D',
-                    400: '#64A378',
-                    500: '#44825B',
-                    600: '#306C47',
-                    700: '#275939',
-                    800: '#20472F',
-                    900: '#1B3A28',
-                    950: '#0C2116',
+                    50: 'rgb(var(--moss-50) / <alpha-value>)',
+                    100: 'rgb(var(--moss-100) / <alpha-value>)',
+                    200: 'rgb(var(--moss-200) / <alpha-value>)',
+                    300: 'rgb(var(--moss-300) / <alpha-value>)',
+                    400: 'rgb(var(--moss-400) / <alpha-value>)',
+                    500: 'rgb(var(--moss-500) / <alpha-value>)',
+                    600: 'rgb(var(--moss-600) / <alpha-value>)',
+                    700: 'rgb(var(--moss-700) / <alpha-value>)',
+                    800: 'rgb(var(--moss-800) / <alpha-value>)',
+                    900: 'rgb(var(--moss-900) / <alpha-value>)',
+                    950: 'rgb(var(--moss-950) / <alpha-value>)',
                 },
                 /* Kahve - ağaç kabuğu; eski arayüzün ana rengi */
                 bark: {
-                    50: '#FAF6F3',
-                    100: '#F2E9E2',
-                    200: '#E4D2C5',
-                    300: '#D0B3A0',
-                    400: '#B78E75',
-                    500: '#A1705A',
-                    600: '#875948',
-                    700: '#6E473B',
-                    800: '#5B3C33',
-                    900: '#4C342D',
-                    950: '#291B17',
+                    50: 'rgb(var(--bark-50) / <alpha-value>)',
+                    100: 'rgb(var(--bark-100) / <alpha-value>)',
+                    200: 'rgb(var(--bark-200) / <alpha-value>)',
+                    300: 'rgb(var(--bark-300) / <alpha-value>)',
+                    400: 'rgb(var(--bark-400) / <alpha-value>)',
+                    500: 'rgb(var(--bark-500) / <alpha-value>)',
+                    600: 'rgb(var(--bark-600) / <alpha-value>)',
+                    700: 'rgb(var(--bark-700) / <alpha-value>)',
+                    800: 'rgb(var(--bark-800) / <alpha-value>)',
+                    900: 'rgb(var(--bark-900) / <alpha-value>)',
+                    950: 'rgb(var(--bark-950) / <alpha-value>)',
                 },
                 /* Amber - toprak/bal vurgusu; amber'ın yumuşatılmış karşılığı */
                 clay: {
-                    50: '#FDF8E9',
-                    100: '#FAEDC9',
-                    200: '#F4DC94',
-                    300: '#EEC25C',
-                    400: '#E0A632',
-                    500: '#C9841B',
-                    600: '#AA6814',
-                    700: '#8C5210',
-                    800: '#73400F',
-                    900: '#5F3410',
-                    950: '#361C09',
+                    50: 'rgb(var(--clay-50) / <alpha-value>)',
+                    100: 'rgb(var(--clay-100) / <alpha-value>)',
+                    200: 'rgb(var(--clay-200) / <alpha-value>)',
+                    300: 'rgb(var(--clay-300) / <alpha-value>)',
+                    400: 'rgb(var(--clay-400) / <alpha-value>)',
+                    500: 'rgb(var(--clay-500) / <alpha-value>)',
+                    600: 'rgb(var(--clay-600) / <alpha-value>)',
+                    700: 'rgb(var(--clay-700) / <alpha-value>)',
+                    800: 'rgb(var(--clay-800) / <alpha-value>)',
+                    900: 'rgb(var(--clay-900) / <alpha-value>)',
+                    950: 'rgb(var(--clay-950) / <alpha-value>)',
                 },
                 /* Kırmızı - silme ve hata; red'in sıcak karşılığı */
                 berry: {
-                    50: '#FCF3F1',
-                    100: '#FBE3E0',
-                    200: '#F7CBC7',
-                    300: '#EFA6A0',
-                    400: '#E3756D',
-                    500: '#D64A44',
-                    600: '#BE2F2B',
-                    700: '#9C2926',
-                    800: '#7F2723',
-                    900: '#6A2420',
-                    950: '#3A1512',
+                    50: 'rgb(var(--berry-50) / <alpha-value>)',
+                    100: 'rgb(var(--berry-100) / <alpha-value>)',
+                    200: 'rgb(var(--berry-200) / <alpha-value>)',
+                    300: 'rgb(var(--berry-300) / <alpha-value>)',
+                    400: 'rgb(var(--berry-400) / <alpha-value>)',
+                    500: 'rgb(var(--berry-500) / <alpha-value>)',
+                    600: 'rgb(var(--berry-600) / <alpha-value>)',
+                    700: 'rgb(var(--berry-700) / <alpha-value>)',
+                    800: 'rgb(var(--berry-800) / <alpha-value>)',
+                    900: 'rgb(var(--berry-900) / <alpha-value>)',
+                    950: 'rgb(var(--berry-950) / <alpha-value>)',
                 },
             },
             fontFamily: {

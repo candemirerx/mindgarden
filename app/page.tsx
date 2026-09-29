@@ -7,6 +7,7 @@ import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { signInAsGuest } from '@/lib/localClient';
 import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock, Pencil, Settings } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
+import GardenMark from '@/components/ui/GardenMark';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
 import type { User } from '@supabase/supabase-js';
@@ -18,6 +19,7 @@ const Sidebar = lazy(() => import('@/components/layout/Sidebar'));
 // Garden kartını ayrı component olarak memoize et
 const GardenCard = memo(function GardenCard({
     garden,
+    treeCount,
     isEditing,
     editingName,
     isMenuOpen,
@@ -33,6 +35,8 @@ const GardenCard = memo(function GardenCard({
     formatDate
 }: {
     garden: Garden;
+    /** Bahçedeki kök ağaç sayısı; `null` ise sayım alınamadı (rozet çizilmez). */
+    treeCount: number | null;
     isEditing: boolean;
     editingName: string;
     isMenuOpen: boolean;
@@ -59,7 +63,7 @@ const GardenCard = memo(function GardenCard({
                     {isEditing ? (
                         <div className="flex min-w-0 flex-1 items-center gap-3">
                             <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-moss-100 text-moss-700">
-                                <TreePine size={21} />
+                                <GardenMark size={29} />
                             </span>
                             <input
                                 type="text"
@@ -81,14 +85,14 @@ const GardenCard = memo(function GardenCard({
                             className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-moss-500/15"
                         >
                             <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-moss-100 text-moss-700 transition-colors duration-200 group-hover:bg-moss-600 group-hover:text-white">
-                                <TreePine size={21} />
+                                <GardenMark size={29} />
                             </span>
-                            <h3
+                            <h2
                                 className="truncate text-base font-semibold text-sand-900 transition-colors duration-200 group-hover:text-moss-700"
                                 title={garden.name}
                             >
                                 {garden.name}
-                            </h3>
+                            </h2>
                         </button>
                     )}
 
@@ -106,7 +110,7 @@ const GardenCard = memo(function GardenCard({
                             className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-200 ${
                                 isMenuOpen
                                     ? 'bg-sand-200 text-sand-700'
-                                    : 'text-sand-500 hover:bg-sand-100 hover:text-sand-700'
+                                    : 'text-sand-600 hover:bg-sand-100 hover:text-sand-700'
                             }`}
                         >
                             <MoreHorizontal size={19} />
@@ -123,7 +127,7 @@ const GardenCard = memo(function GardenCard({
                                 type="button"
                                 role="menuitem"
                                 onClick={onEdit}
-                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+                                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
                             >
                                 <Pencil size={15} className="text-clay-600" />
                                 <span>Yeniden adlandır</span>
@@ -133,7 +137,7 @@ const GardenCard = memo(function GardenCard({
                                 type="button"
                                 role="menuitem"
                                 onClick={onDelete}
-                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
+                                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
                             >
                                 <Trash2 size={15} />
                                 <span>Bahçeyi sil</span>
@@ -142,32 +146,54 @@ const GardenCard = memo(function GardenCard({
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={onOpenGarden}
-                    className="mb-5 flex w-fit items-center gap-1.5 rounded-md text-xs text-sand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-moss-500/15"
-                >
-                    <Clock size={13} />
-                    <span>{formatDate(garden.created_at)}</span>
-                </button>
+                <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <button
+                        type="button"
+                        onClick={onOpenGarden}
+                        className="flex min-h-[44px] w-fit items-center gap-1.5 rounded-md text-xs text-sand-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-moss-500/15"
+                    >
+                        <Clock size={13} aria-hidden />
+                        <span>{formatDate(garden.created_at)}</span>
+                    </button>
 
-                {/* Eylemler - kartın altına yaslanır */}
+                    {/* Bahçedeki ağaç (kök not) sayısı; yalnızca sayım alındıysa görünür. */}
+                    {treeCount !== null && (
+                        <span
+                            className="chip-moss"
+                            title={
+                                treeCount === 0
+                                    ? 'Bu bahçede henüz ağaç yok'
+                                    : `Bu bahçede ${treeCount} ağaç var`
+                            }
+                        >
+                            <TreePine size={12} aria-hidden />
+                            <span>{treeCount === 0 ? 'Ağaç yok' : `${treeCount} ağaç`}</span>
+                        </span>
+                    )}
+                </div>
+
+                {/*
+                 * Eylemler - kartın altına yaslanır. İki görünüm eşit ağırlıkta
+                 * tutulur: aynı düğme stili, ayrım yalnızca ikonun renginde.
+                 * Önceden biri dolu yeşil (birincil), diğeri soluk kalıyordu ve
+                 * hiyerarşi yanlış okunuyordu.
+                 */}
                 <div className="mt-auto flex gap-2.5">
                     <button
                         type="button"
                         onClick={onOpenProjects}
-                        className="btn btn-secondary flex-1 px-3 py-2.5 text-sm"
+                        className="btn btn-secondary min-h-[44px] flex-1 px-3 py-2.5 text-sm"
                     >
-                        <FolderTree size={16} />
-                        <span>Projeler</span>
+                        <FolderTree size={16} className="text-clay-700" aria-hidden />
+                        <span>Liste</span>
                     </button>
                     <button
                         type="button"
                         onClick={onOpenCanvas}
-                        className="btn btn-primary flex-1 px-3 py-2.5 text-sm"
+                        className="btn btn-secondary min-h-[44px] flex-1 px-3 py-2.5 text-sm"
                     >
-                        <Layout size={16} />
-                        <span>Canvas</span>
+                        <Layout size={16} className="text-moss-700" aria-hidden />
+                        <span>Tuval</span>
                     </button>
                 </div>
             </div>
@@ -177,7 +203,8 @@ const GardenCard = memo(function GardenCard({
 
 export default function HomePage() {
     const router = useRouter();
-    const { gardens, fetchGardens, deleteGarden, updateGardenName, toggleSidebar } = useStore();
+    const { gardens, gardenTreeCounts, fetchGardens, deleteGarden, updateGardenName, setSidebarOpen } = useStore();
+    const [settingsEntry, setSettingsEntry] = useState<'home' | 'account'>('home');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
@@ -291,13 +318,14 @@ export default function HomePage() {
                 <header className="mb-8 flex flex-col gap-5 md:mb-10 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-3.5">
                         <button
-                            onClick={toggleSidebar}
+                            onClick={() => { setSettingsEntry('home'); setSidebarOpen(true); }}
                             title="Ayarlar"
                             aria-label="Ayarları aç"
+                            aria-haspopup="dialog"
                             className="group relative flex-shrink-0 rounded-2xl transition-transform duration-200 active:scale-95"
                         >
                             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-moss-700 to-moss-900 shadow-lift md:h-16 md:w-16">
-                                <TreePine className="text-moss-50" size={30} />
+                                <GardenMark className="text-moss-50" size={38} />
                             </span>
                             <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-sand-100 bg-clay-500">
                                 <Settings size={10} className="text-white" />
@@ -339,7 +367,7 @@ export default function HomePage() {
                         <div className="py-12 md:py-20">
                             <div className="mx-auto max-w-md rounded-3xl border border-sand-200 bg-white p-10 text-center shadow-lift">
                                 <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-moss-100 text-moss-700">
-                                    <TreePine size={32} />
+                                    <GardenMark size={40} />
                                 </span>
                                 <h2 className="text-2xl text-sand-900">Hoş geldiniz</h2>
                                 <p className="mt-2 text-base text-sand-600">
@@ -347,7 +375,7 @@ export default function HomePage() {
                                 </p>
                                 <div className="mt-7 flex flex-col items-stretch justify-center gap-2.5 sm:flex-row sm:items-center">
                                     <button
-                                        onClick={toggleSidebar}
+                                        onClick={() => { setSettingsEntry('account'); setSidebarOpen(true); }}
                                         className="btn btn-primary px-6 py-3"
                                     >
                                         <LogIn size={19} />
@@ -370,7 +398,7 @@ export default function HomePage() {
                         <div className="py-12 md:py-20">
                             <div className="mx-auto max-w-md rounded-3xl border border-sand-200 bg-white p-10 text-center shadow-lift">
                                 <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-clay-100 text-clay-700">
-                                    <TreePine size={32} />
+                                    <GardenMark size={40} />
                                 </span>
                                 <h2 className="text-2xl text-sand-900">Bahçeniz boş</h2>
                                 <p className="mt-2 text-base text-sand-600">
@@ -391,6 +419,7 @@ export default function HomePage() {
                                 <GardenCard
                                     key={garden.id}
                                     garden={garden}
+                                    treeCount={gardenTreeCounts ? gardenTreeCounts[garden.id] ?? 0 : null}
                                     isEditing={editingGardenId === garden.id}
                                     editingName={editingName}
                                     isMenuOpen={openMenuId === garden.id}
@@ -435,7 +464,7 @@ export default function HomePage() {
             />
 
             <Suspense fallback={null}>
-                <Sidebar />
+                <Sidebar initialSection={settingsEntry} />
             </Suspense>
         </div>
     );

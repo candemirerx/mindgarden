@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ViewState, Point } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 import { agacSurukleniyorMu } from '@/lib/canvasGesture';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ZoomIn, ZoomOut, Scan } from 'lucide-react';
 
 /** Ağaç üzerinde başlayan dokunuşun tuval kaydırmasına dönüşmesi için
  *  parmağın aşması gereken mesafe (piksel). */
@@ -338,35 +338,63 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
         };
     }, [viewState]);
 
-    const handleZoomIn = useCallback(() => {
-        setViewState(prev => ({
-            ...prev,
-            scale: Math.min(4, +(prev.scale * 1.2).toFixed(2))
-        }));
+    const zoomAtCenter = useCallback((factor: number, absolute = false) => {
+        const bounds = containerRef.current?.getBoundingClientRect();
+        if (!bounds) return;
+        setViewState(prev => {
+            const scale = Math.min(4, Math.max(0.1, absolute ? factor : prev.scale * factor));
+            const center = { x: bounds.width / 2, y: bounds.height / 2 };
+            return { scale, offset: {
+                x: center.x - (center.x - prev.offset.x) * scale / prev.scale,
+                y: center.y - (center.y - prev.offset.y) * scale / prev.scale
+            } };
+        });
     }, []);
-
-    const handleZoomOut = useCallback(() => {
-        setViewState(prev => ({
-            ...prev,
-            scale: Math.max(0.2, +(prev.scale / 1.2).toFixed(2))
-        }));
-    }, []);
+    const handleZoomIn = useCallback(() => zoomAtCenter(1.2), [zoomAtCenter]);
+    const handleZoomOut = useCallback(() => zoomAtCenter(1 / 1.2), [zoomAtCenter]);
 
     const handleResetView = useCallback(() => {
-        if (containerRef.current) {
-            const { width, height } = containerRef.current.getBoundingClientRect();
-            setViewState({
-                scale: 1,
-                offset: { x: width / 2 - 120, y: height / 4 }
-            });
-        } else {
-            setViewState({ scale: 1, offset: { x: 0, y: 0 } });
-        }
-    }, []);
+        const container = containerRef.current;
+        const cards = contentRef.current?.querySelectorAll<HTMLElement>('.dugum-karti');
+        if (!container || !cards?.length) return;
+        const bounds = container.getBoundingClientRect();
+        const rects = Array.from(cards, card => card.getBoundingClientRect());
+        const left = (Math.min(...rects.map(r => r.left)) - bounds.left - viewState.offset.x) / viewState.scale;
+        const top = (Math.min(...rects.map(r => r.top)) - bounds.top - viewState.offset.y) / viewState.scale;
+        const width = (Math.max(...rects.map(r => r.right)) - Math.min(...rects.map(r => r.left))) / viewState.scale;
+        const height = (Math.max(...rects.map(r => r.bottom)) - Math.min(...rects.map(r => r.top))) / viewState.scale;
+        const controls = container.querySelector('.garden-controls')?.getBoundingClientRect();
+        const usableHeight = Math.max(80, (controls ? controls.top - bounds.top : bounds.height - 80) - 32);
+        const scale = Math.min(1, Math.max(0.1, Math.min((bounds.width - 64) / Math.max(1, width), (usableHeight - 48) / Math.max(1, height))));
+        setViewState({ scale, offset: {
+            x: (bounds.width - width * scale) / 2 - left * scale,
+            y: 24 + (usableHeight - 48 - height * scale) / 2 - top * scale
+        } });
+    }, [viewState]);
 
     return (
         <div
             ref={containerRef}
+            role="region"
+            aria-label="Düşünce tuvali"
+            aria-describedby="garden-keyboard-help"
+            tabIndex={0}
+            onKeyDown={event => {
+                if (event.target !== event.currentTarget) return;
+                if (['+', '=', '-', '0', 'f', 'F'].includes(event.key)) {
+                    event.preventDefault();
+                    if (event.key === '-') handleZoomOut();
+                    else if (event.key === '0') zoomAtCenter(1, true);
+                    else if (event.key.toLowerCase() === 'f') handleResetView();
+                    else handleZoomIn();
+                }
+                const delta: Record<string, Point> = { ArrowLeft: { x: 48, y: 0 }, ArrowRight: { x: -48, y: 0 }, ArrowUp: { x: 0, y: 48 }, ArrowDown: { x: 0, y: -48 } };
+                if (delta[event.key]) {
+                    event.preventDefault();
+                    const move = delta[event.key];
+                    setViewState(prev => ({ ...prev, offset: { x: prev.offset.x + move.x, y: prev.offset.y + move.y } }));
+                }
+            }}
             className={`w-full h-full overflow-hidden relative bg-paper cursor-grab select-none ${isDragging ? 'cursor-grabbing' : ''} touch-none`}
             onMouseDown={handlePointerDown}
             onMouseMove={handlePointerMove}
@@ -382,7 +410,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                 className="pointer-events-none absolute inset-0"
                 style={{
                     backgroundImage:
-                        'radial-gradient(circle, rgba(91, 60, 51, 0.16) 1.2px, transparent 1.2px)',
+                        'radial-gradient(circle, rgb(var(--sand-400) / .22) 1px, transparent 1px)',
                     backgroundSize: `${Math.max(20, 28 * viewState.scale)}px ${Math.max(20, 28 * viewState.scale)}px`,
                     backgroundPosition: `${viewState.offset.x}px ${viewState.offset.y}px`,
                 }}
@@ -400,9 +428,12 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
             </div>
 
             {/* Yüzen Tuval Kontrolleri (Canvas HUD) */}
-            <div className="absolute bottom-5 right-5 z-40 flex items-center gap-1.5 glass rounded-2xl p-1.5 shadow-pop border border-sand-200">
+            <p id="garden-keyboard-help" className="sr-only">Kaydırmak için sürükleyin veya yön tuşlarını kullanın. Artı ve eksi yakınlaştırır, 0 gerçek boyuta getirir, F tüm notları ekrana sığdırır.</p>
+            <span className="garden-hint" aria-hidden="true">Sürükle · Yakınlaştır · Düşüncelerini bağla</span>
+            <div className="garden-controls" role="group" aria-label="Tuval görünümü">
                 <button
                     onClick={handleZoomOut}
+                    disabled={viewState.scale <= 0.1}
                     className="p-2 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
                     title="Uzaklaştır"
                     aria-label="Uzaklaştır"
@@ -410,7 +441,8 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                     <ZoomOut size={16} />
                 </button>
                 <button
-                    onClick={() => setViewState(prev => ({ ...prev, scale: 1 }))}
+                    onClick={() => zoomAtCenter(1, true)}
+                    aria-label={`Yakınlaştırma yüzde ${Math.round(viewState.scale * 100)}. Yüzde 100 yap`}
                     className="px-2.5 py-1 text-xs font-semibold text-sand-800 hover:bg-sand-200/80 rounded-lg transition-colors min-w-[50px] text-center"
                     title="Ölçeği %100 yap"
                 >
@@ -418,6 +450,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                 </button>
                 <button
                     onClick={handleZoomIn}
+                    disabled={viewState.scale >= 4}
                     className="p-2 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
                     title="Yakınlaştır"
                     aria-label="Yakınlaştır"
@@ -427,11 +460,11 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                 <div className="h-5 w-px bg-sand-300 mx-0.5" />
                 <button
                     onClick={handleResetView}
-                    className="p-2 text-sand-700 hover:bg-sand-200/80 hover:text-sand-900 rounded-xl transition-colors"
-                    title="Ağacı Ortala"
-                    aria-label="Ağacı Ortala"
+                    className="garden-fit"
+                    title="Tüm notları ekrana sığdır (F)"
+                    aria-label="Tüm notları ekrana sığdır"
                 >
-                    <RotateCcw size={15} />
+                    <Scan size={19} />
                 </button>
             </div>
         </div>

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 import { DEFAULT_INSTRUCTION } from '@/lib/aiMacro';
 
 /**
@@ -12,45 +14,279 @@ export const runtime = 'nodejs';
 /** Sağlayıcıya gönderilebilecek en uzun metin. */
 const MAX_TEXT_LENGTH = 20000;
 
+/** İstek gövdesinin üst sınırı; JSON ayrıştırmadan önce uygulanır. */
+const MAX_BODY_BYTES = 64 * 1024;
+
+/** İzin verilen sağlayıcılar. */
+const SAGLAYICILAR = new Set(['gemini', 'openai', 'anthropic', 'custom']);
+
+/* ---------------------------------------------------------------- */
+/* Hız sınırı (örnek başına, en iyi çaba)                            */
+/* ---------------------------------------------------------------- */
+
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+// Uzun notlar sağlayıcıya birden çok parça hâlinde gönderilebiliyor; sınır bu
+// yüzden cömert tutulur. Amaç meşru kullanımı engellemek değil, tek bir
+// istemcinin uç noktayı toplu çağrı için kullanmasını önlemek.
+const RATE_LIMIT_MAX = 120;
+const istekSayaci = new Map<string, { sayi: number; pencere: number }>();
+
+function istemciAdresi(request: NextRequest): string {
+    const xff = request.headers.get('x-forwarded-for');
+    if (xff) return xff.split(',')[0].trim() || 'bilinmeyen';
+    return request.headers.get('x-real-ip') ?? 'bilinmeyen';
+}
+
+/** Pencere içindeki istek sayısı sınırı aştıysa true döner. */
+function hizSiniriAsildi(request: NextRequest): boolean {
+    const simdi = Date.now();
+    const anahtar = istemciAdresi(request);
+
+    // Belleğin sınırsız büyümesini engellemek için eski pencereleri at.
+    if (istekSayaci.size > 5000) {
+        for (const [k, v] of istekSayaci) {
+            if (simdi - v.pencere > RATE_LIMIT_WINDOW_MS) istekSayaci.delete(k);
+        }
+    }
+
+    const kayit = istekSayaci.get(anahtar);
+    if (!kayit || simdi - kayit.pencere > RATE_LIMIT_WINDOW_MS) {
+        istekSayaci.set(anahtar, { sayi: 1, pencere: simdi });
+        return false;
+    }
+
+    kayit.sayi += 1;
+    return kayit.sayi > RATE_LIMIT_MAX;
+}
+
+/* ---------------------------------------------------------------- */
+/* Oturum doğrulama                                                  */
+/* ---------------------------------------------------------------- */
+
+const OTURUM_DOGRULAMA_TIMEOUT_MS = 5000;
+
+/**
+ * İsteğin doğrulanmış bir Supabase oturumuna ait olup olmadığını söyler.
+ *
+ * Sunucudaki ücretli sağlayıcı anahtarı yalnızca doğrulanmış oturumlarda
+ * kullanılır; aksi hâlde uç nokta üçüncü kişilere açık bir ücretsiz geçit
+ * hâline gelir.
+ */
+async function hasVerifiedSession(request: NextRequest): Promise<boolean> {
+    const auth = request.headers.get('authorization');
+    if (!auth || !auth.toLowerCase().startsWith('bearer ')) return false;
+
+    const token = auth.slice(7).trim();
+    if (!token) return false;
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !anonKey) return false;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), OTURUM_DOGRULAMA_TIMEOUT_MS);
+
+    try {
+        const res = await fetch(supabaseUrl.replace(/\/+$/, '') + '/auth/v1/user', {
+            headers: { apikey: anonKey, Authorization: 'Bearer ' + token },
+            redirect: 'manual',
+            signal: controller.signal
+        });
+        return res.ok;
+    } catch {
+        return false;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+/**
+ * İstek gövdesini boyut sınırıyla okur ve JSON olarak ayrıştırır.
+ * Ayrıştırmadan önce sınır uygulanır; böylece çok büyük gövde ayrıştırılmaz.
+ */
+async function readJsonBody(
+    request: NextRequest
+): Promise<{ veri: Record<string, unknown> } | { hata: string; status: number }> {
+    const bildirilenBoyut = Number(request.headers.get('content-length') ?? '0');
+    if (Number.isFinite(bildirilenBoyut) && bildirilenBoyut > MAX_BODY_BYTES) {
+        return { hata: 'İstek gövdesi çok büyük.', status: 413 };
+    }
+
+    const raw = await request.text();
+    if (raw.length > MAX_BODY_BYTES) {
+        return { hata: 'İstek gövdesi çok büyük.', status: 413 };
+    }
+
+    try {
+        const veri = JSON.parse(raw);
+        if (!veri || typeof veri !== 'object' || Array.isArray(veri)) {
+            return { hata: 'İstek gövdesi geçersiz.', status: 400 };
+        }
+        return { veri: veri as Record<string, unknown> };
+    } catch {
+        return { hata: 'İstek gövdesi geçersiz JSON.', status: 400 };
+    }
+}
+
 /**
  * Yerel/özel ağ hedeflerini tespit eder. Özel sağlayıcı adresi sunucu
  * tarafından çağrıldığı için bu adreslerin canlıda engellenmesi gerekir.
  */
+function isPrivateIPv4(ip: string): boolean {
+    const parts = ip.split('.').map(Number);
+    if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) {
+        return true; // çözümlenemeyen adres güvenli sayılmaz
+    }
+
+    const [a, b, c] = parts;
+
+    return (
+        a === 0 ||                                  // 0.0.0.0/8
+        a === 10 ||                                 // 10/8
+        a === 127 ||                                // loopback
+        (a === 100 && b >= 64 && b <= 127) ||       // CGNAT 100.64/10
+        (a === 169 && b === 254) ||                 // link-local
+        (a === 172 && b >= 16 && b <= 31) ||        // 172.16/12
+        (a === 192 && b === 0 && c === 0) ||        // 192.0.0/24
+        (a === 192 && b === 168) ||                 // 192.168/16
+        (a === 198 && (b === 18 || b === 19)) ||    // benchmark
+        a >= 224                                    // multicast ve rezerve
+    );
+}
+
+/** IPv6 adresini sekiz 16 bitlik gruba çözer; çözümlenemezse null döner. */
+function ipv6Gruplari(ip: string): number[] | null {
+    let adres = ip.toLowerCase().split('%')[0];
+
+    // Sonda gömülü IPv4 varsa (::ffff:127.0.0.1) iki hex grubuna çevir.
+    const sonIkiNokta = adres.lastIndexOf(':');
+    if (adres.includes('.')) {
+        const ipv4 = adres.slice(sonIkiNokta + 1).split('.').map(Number);
+        if (ipv4.length !== 4 || ipv4.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
+            return null;
+        }
+        const ust = ((ipv4[0] << 8) | ipv4[1]).toString(16);
+        const alt = ((ipv4[2] << 8) | ipv4[3]).toString(16);
+        adres = adres.slice(0, sonIkiNokta + 1) + ust + ':' + alt;
+    }
+
+    const parcalar = adres.split('::');
+    if (parcalar.length > 2) return null;
+
+    const sol = parcalar[0] ? parcalar[0].split(':') : [];
+    const sag = parcalar.length === 2 && parcalar[1] ? parcalar[1].split(':') : [];
+
+    let gruplar: string[];
+    if (parcalar.length === 2) {
+        const eksik = 8 - sol.length - sag.length;
+        if (eksik < 0) return null;
+        gruplar = [...sol, ...new Array(eksik).fill('0'), ...sag];
+    } else {
+        gruplar = sol;
+    }
+
+    if (gruplar.length !== 8) return null;
+
+    const sayilar = gruplar.map((g) => parseInt(g || '0', 16));
+    if (sayilar.some((n) => !Number.isInteger(n) || n < 0 || n > 0xffff)) return null;
+    return sayilar;
+}
+
+/** Gömülü IPv4'ü son iki gruptan çıkarır. */
+function gomuluIpv4(g: number[]): string {
+    return [g[6] >> 8, g[6] & 0xff, g[7] >> 8, g[7] & 0xff].join('.');
+}
+
+/**
+ * IPv4-eşlemeli (::ffff:7f00:1), IPv4-uyumlu, NAT64, 6to4 gömülü adresler ile
+ * özel/ayrılmış IPv6 aralıklarını yakalar.
+ */
+function isPrivateIPv6(ip: string): boolean {
+    const g = ipv6Gruplari(ip);
+    if (!g) return true; // çözümlenemeyen adres güvenli sayılmaz
+
+    if (g.every((n) => n === 0)) return true;                            // ::
+    if (g.slice(0, 7).every((n) => n === 0) && g[7] === 1) return true;  // ::1
+
+    // ::/96 (IPv4-uyumlu) ve ::ffff:0:0/96 (IPv4-eşlemeli)
+    if (g.slice(0, 5).every((n) => n === 0) && (g[5] === 0 || g[5] === 0xffff)) {
+        return isPrivateIPv4(gomuluIpv4(g));
+    }
+
+    // 64:ff9b::/96 NAT64
+    if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((n) => n === 0)) {
+        return isPrivateIPv4(gomuluIpv4(g));
+    }
+
+    // 2002::/16 (6to4) içindeki IPv4
+    if (g[0] === 0x2002) {
+        return isPrivateIPv4([g[1] >> 8, g[1] & 0xff, g[2] >> 8, g[2] & 0xff].join('.'));
+    }
+
+    if ((g[0] & 0xfe00) === 0xfc00) return true;  // fc00::/7 unique local
+    if ((g[0] & 0xffc0) === 0xfe80) return true;  // fe80::/10 link-local
+    if ((g[0] & 0xff00) === 0xff00) return true;  // ff00::/8 multicast
+
+    return false;
+}
+
+function isPrivateAddress(host: string): boolean {
+    const tur = isIP(host);
+    if (tur === 4) return isPrivateIPv4(host);
+    if (tur === 6) return isPrivateIPv6(host);
+    return false;
+}
+
 function isPrivateHost(hostname: string): boolean {
-    const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    const host = hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase();
 
     if (
         host === 'localhost' ||
         host.endsWith('.localhost') ||
         host.endsWith('.local') ||
-        host.endsWith('.internal')
+        host.endsWith('.internal') ||
+        host.endsWith('.home.arpa')
     ) {
         return true;
     }
 
-    // IPv6 sabit adresleri (yalnızca gerçek IPv6 gösterimlerinde)
-    if (host.includes(':')) {
-        return (
-            host === '::1' ||
-            host.startsWith('fc') ||
-            host.startsWith('fd') ||
-            host.startsWith('fe80:')
-        );
+    return isPrivateAddress(host);
+}
+
+/**
+ * Özel sağlayıcı adresinin gerçekten genel bir HTTPS hedefi olduğunu doğrular.
+ *
+ * Metinsel alan adı kontrolü tek başına yetmez: ad özel bir IP'ye çözülebilir
+ * (DNS rebinding) veya IPv4-eşlemeli IPv6 gibi gösterimlerle filtre atlatılabilir.
+ * Bu yüzden alan adının tüm A/AAAA kayıtları ayrı ayrı denetlenir.
+ */
+async function assertPublicProviderUrl(endpoint: URL): Promise<void> {
+    if (endpoint.protocol !== 'https:') {
+        throw new ProviderError(400, 'Özel sağlayıcı adresi HTTPS kullanmalıdır.');
     }
 
-    const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-    if (!ipv4) return false;
+    const host = endpoint.hostname.replace(/^\[|\]$/g, '');
+    if (isPrivateHost(host)) {
+        throw new ProviderError(400, 'Özel sağlayıcı adresi genel bir alan adı olmalıdır.');
+    }
+    if (isIP(host)) return;
 
-    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+    let adresler: Array<{ address: string }>;
+    try {
+        adresler = await lookup(host, { all: true, verbatim: true });
+    } catch {
+        throw new ProviderError(400, 'Özel sağlayıcı adresinin alan adı çözümlenemedi.');
+    }
 
-    return (
-        a === 0 ||
-        a === 10 ||
-        a === 127 ||
-        (a === 169 && b === 254) ||
-        (a === 172 && b >= 16 && b <= 31) ||
-        (a === 192 && b === 168)
-    );
+    if (adresler.length === 0) {
+        throw new ProviderError(400, 'Özel sağlayıcı adresinin alan adı çözümlenemedi.');
+    }
+
+    for (const adres of adresler) {
+        if (isPrivateAddress(adres.address)) {
+            throw new ProviderError(400, 'Özel sağlayıcı adresi genel bir adrese çözümlenmelidir.');
+        }
+    }
 }
 
 /**
@@ -116,14 +352,29 @@ async function fetchProvider(
 
 async function handleSpellcheckRequest(request: NextRequest) {
     try {
-        const {
-            text,
-            clientApiKey,
-            provider = 'gemini',
-            customUrl,
-            customModel,
-            macro
-        } = await request.json();
+        if (hizSiniriAsildi(request)) {
+            return NextResponse.json(
+                { error: 'Çok fazla istek gönderildi. Lütfen birkaç dakika sonra tekrar deneyin.' },
+                { status: 429 }
+            );
+        }
+
+        const govde = await readJsonBody(request);
+        if ('hata' in govde) {
+            return NextResponse.json({ error: govde.hata }, { status: govde.status });
+        }
+
+        const girdi = govde.veri;
+        const text = typeof girdi.text === 'string' ? girdi.text : '';
+        const clientApiKey = typeof girdi.clientApiKey === 'string' ? girdi.clientApiKey : '';
+        const provider = typeof girdi.provider === 'string' && girdi.provider ? girdi.provider : 'gemini';
+        const customUrl = typeof girdi.customUrl === 'string' ? girdi.customUrl : '';
+        const customModel = typeof girdi.customModel === 'string' ? girdi.customModel : '';
+        const macro = typeof girdi.macro === 'string' ? girdi.macro : '';
+
+        if (!SAGLAYICILAR.has(provider)) {
+            return NextResponse.json({ error: 'Bilinmeyen yapay zekâ sağlayıcısı.' }, { status: 400 });
+        }
 
         // Kullanıcı hazır sağlayıcılarda da model adını elle girebilir;
         // boş bırakılırsa sağlayıcının varsayılan modeli kullanılır.
@@ -150,11 +401,29 @@ async function handleSpellcheckRequest(request: NextRequest) {
             );
         }
 
-        const apiKey = clientApiKey || (provider === 'gemini' ? process.env.GEMINI_API_KEY : undefined);
+        // Sunucudaki ortak anahtar yalnızca doğrulanmış oturumlarda (veya
+        // AI_ALLOW_SERVER_KEY ile açıkça izin verilmişse) kullanılır. Aksi hâlde
+        // kimliği doğrulanmamış istekler ücretli anahtarı tüketir; uç nokta
+        // herkese açık bir geçide dönüşür.
+        const sunucuAnahtariKullanilabilir =
+            process.env.AI_ALLOW_SERVER_KEY === 'true' ||
+            (provider === 'gemini' && (await hasVerifiedSession(request)));
+
+        const apiKey =
+            clientApiKey ||
+            (provider === 'gemini' && sunucuAnahtariKullanilabilir
+                ? process.env.GEMINI_API_KEY
+                : undefined);
+
         if (!apiKey) {
             return NextResponse.json(
-                { error: 'API anahtarı bulunamadı. Lütfen Ayarlar bölümünden bir Model Provider ekleyin.' },
-                { status: 400 }
+                {
+                    error:
+                        'Bu istek için API anahtarı bulunamadı. Ayarlar → Yapay Zekâ bölümünden ' +
+                        'kendi sağlayıcı anahtarınızı ekleyin; uygulamanın ortak anahtarı yalnızca ' +
+                        'oturum açmış kullanıcılara açıktır.'
+                },
+                { status: 401 }
             );
         }
 
@@ -274,14 +543,20 @@ ${text}`;
                 return NextResponse.json({ error: 'Özel sağlayıcı adresi HTTP veya HTTPS kullanmalıdır.' }, { status: 400 });
             }
 
-            // Canlı sunucuda adres sunucu tarafından çağrıldığı için yerel/özel ağ
-            // hedeflerini engelleriz (SSRF koruması). Yerel geliştirmede kendi
-            // makinedeki bir modele bağlanabilmek için serbest bırakılır.
-            if (process.env.NODE_ENV === 'production' && isPrivateHost(endpoint.hostname)) {
-                return NextResponse.json(
-                    { error: 'Özel sağlayıcı adresi genel bir alan adı olmalıdır.' },
-                    { status: 400 }
-                );
+            // Canlı sunucuda adres sunucu tarafından çağrıldığı için SSRF
+            // koruması uygularız: HTTPS zorunlu, alan adının tüm A/AAAA
+            // kayıtları genel bir adrese çözümlenmeli ve yönlendirmeler
+            // izlenmez. Yerel geliştirmede kendi makinedeki bir modele
+            // bağlanabilmek serbest bırakılır.
+            if (process.env.NODE_ENV === 'production') {
+                try {
+                    await assertPublicProviderUrl(endpoint);
+                } catch (error) {
+                    if (error instanceof ProviderError) {
+                        return NextResponse.json({ error: error.detail }, { status: error.status });
+                    }
+                    throw error;
+                }
             }
 
             const basliklar = {
@@ -308,6 +583,7 @@ ${text}`;
                 {
                     method: 'POST',
                     headers: basliklar,
+                    redirect: 'manual',
                     body: JSON.stringify({
                         ...temelGovde,
                         enable_thinking: false,
@@ -318,16 +594,31 @@ ${text}`;
                 'Özel sağlayıcı'
             );
 
+            if (response.status >= 300 && response.status < 400) {
+                throw new ProviderError(
+                    400,
+                    'Özel sağlayıcı adresi yönlendirme yanıtı verdi; güvenlik nedeniyle izlenmedi.'
+                );
+            }
+
             if (response.status === 400) {
                 response = await fetchProvider(
                     endpoint,
                     {
                         method: 'POST',
                         headers: basliklar,
+                        redirect: 'manual',
                         body: JSON.stringify(temelGovde)
                     },
                     'Özel sağlayıcı'
                 );
+
+                if (response.status >= 300 && response.status < 400) {
+                    throw new ProviderError(
+                        400,
+                        'Özel sağlayıcı adresi yönlendirme yanıtı verdi; güvenlik nedeniyle izlenmedi.'
+                    );
+                }
             }
 
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
@@ -341,11 +632,17 @@ ${text}`;
         // model adı mı, kota mı olduğunu görebilsin.
         if (error instanceof ProviderError) {
             console.error('Spellcheck provider error:', error.status, error.detail);
+            // 4xx: isteğin kendisi geçersiz (yönlendirme, özel adres, geçersiz
+            // hedef). Bunu sağlayıcı hatası gibi 502'ye indirgemeyiz.
+            const durum = error.status >= 400 && error.status < 500 ? error.status : 502;
             return NextResponse.json(
                 {
-                    error: `Sağlayıcı isteği reddetti (HTTP ${error.status}). ${error.detail}`
+                    error:
+                        durum === 502
+                            ? 'Sağlayıcı isteği reddetti (HTTP ' + error.status + '). ' + error.detail
+                            : error.detail
                 },
-                { status: 502 }
+                { status: durum }
             );
         }
 

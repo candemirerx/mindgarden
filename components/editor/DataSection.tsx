@@ -16,13 +16,27 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
 import { Capacitor } from '@capacitor/core';
+import {
+    YEDEK_EN_BUYUK_BAYT,
+    dugumSeviyeleri,
+    yedegiDogrula,
+    type YedekBahce,
+    type YedekDugum,
+} from '@/lib/yedekDogrula';
+
+/** İçe aktarma sırasında yazılan kayıtların kimlikleri (geri alma için). */
+type YazilanKayitlar = { bahceIds: string[]; dugumIds: string[] };
 
 export default function DataSection() {
     const { gardens, fetchGardens } = useStore();
 
     // İçe aktarma state'leri
     const [showImportOptions, setShowImportOptions] = useState(false);
-    const [importData, setImportData] = useState<{ gardens: any[]; nodes: any[] } | null>(null);
+    const [importData, setImportData] = useState<{
+        bahceler: YedekBahce[];
+        dugumler: YedekDugum[];
+        uyarilar: string[];
+    } | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -400,7 +414,7 @@ export default function DataSection() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            color: #1c1917; 
+            color: #1e1813; 
             line-height: 1.6;
             font-size: 11pt;
         }
@@ -408,16 +422,16 @@ export default function DataSection() {
             text-align: center; 
             margin-bottom: 30px; 
             padding-bottom: 20px; 
-            border-bottom: 2px solid #16a34a;
+            border-bottom: 2px solid #275939;
         }
         .header h1 { 
-            color: #16a34a; 
+            color: #275939; 
             font-size: 24pt; 
             margin-bottom: 5px;
             font-weight: 600;
         }
         .header .date { 
-            color: #78716c; 
+            color: #7c7268; 
             font-size: 10pt; 
         }
         .garden { 
@@ -425,12 +439,12 @@ export default function DataSection() {
             page-break-inside: avoid;
         }
         .garden h2 { 
-            color: #16a34a; 
+            color: #275939; 
             font-size: 14pt; 
             margin-bottom: 12px;
             padding: 8px 12px;
-            background: #f0fdf4;
-            border-left: 4px solid #16a34a;
+            background: #f0f7ef;
+            border-left: 4px solid #275939;
             border-radius: 0 8px 8px 0;
         }
         .node { 
@@ -446,32 +460,32 @@ export default function DataSection() {
             gap: 8px;
         }
         .bullet { 
-            color: #16a34a; 
+            color: #306c47; 
             font-size: 8pt;
             margin-top: 4px;
         }
         .node.root .bullet { font-size: 10pt; }
         .title-text { 
             font-weight: 600; 
-            color: #1c1917;
+            color: #1e1813;
         }
         .node.root .title-text { 
             font-size: 12pt;
-            color: #166534;
+            color: #20472f;
         }
         .node-content { 
             margin-left: 18px; 
             margin-top: 4px;
             padding: 8px 12px;
-            background: #fafaf9;
+            background: #fbf9f6;
             border-radius: 6px;
-            color: #57534e;
+            color: #5b5348;
             font-size: 10pt;
             white-space: pre-wrap;
-            border-left: 2px solid #e7e5e4;
+            border-left: 2px solid #eae5de;
         }
         .empty { 
-            color: #a8a29e; 
+            color: #ada396; 
             font-style: italic; 
             padding: 10px;
         }
@@ -721,19 +735,45 @@ export default function DataSection() {
         if (!kullaniciId) return;
 
         try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-
-            if (!data.gardens || !data.nodes) {
-                throw new Error('Geçersiz dosya formatı');
+            // Boyut sınırı: çok büyük dosyalar tarayıcıyı kilitler.
+            if (file.size > YEDEK_EN_BUYUK_BAYT) {
+                alert(
+                    `Dosya çok büyük (${Math.round(file.size / (1024 * 1024))} MB). ` +
+                        `En fazla ${Math.round(YEDEK_EN_BUYUK_BAYT / (1024 * 1024))} MB boyutunda bir yedek içe aktarılabilir.`
+                );
+                return;
             }
 
-            setImportData(data);
+            const text = await file.text();
+            let ham: unknown;
+            try {
+                ham = JSON.parse(text);
+            } catch {
+                alert('Dosya okunamadı: geçerli bir JSON yedeği değil.');
+                return;
+            }
+
+            // Doğrulama burada yapılır; hiçbir şey yazılmadan önce dosya tümüyle
+            // denetlenir, bu yüzden bozuk yedek mevcut notları etkilemez.
+            const dogrulama = yedegiDogrula(ham);
+            if (!dogrulama.ok) {
+                alert('Yedek doğrulanamadı, hiçbir şey değiştirilmedi:\n\n' + dogrulama.hata);
+                return;
+            }
+
+            setImportData({
+                bahceler: dogrulama.bahceler,
+                dugumler: dogrulama.dugumler,
+                uyarilar: dogrulama.uyarilar,
+            });
             setShowImportOptions(true);
             setShowExportOptions(false); // Diğerini kapat
         } catch (error) {
             console.error('File read error:', error);
-            alert('Dosya okunamadı. Geçerli bir JSON dosyası seçtiğinizden emin olun.');
+            alert(
+                'Dosya okunamadı. Geçerli bir JSON dosyası seçtiğinizden emin olun. ' +
+                    (error instanceof Error ? error.message : '')
+            );
         } finally {
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
@@ -749,8 +789,11 @@ export default function DataSection() {
         setShowImportOptions(false);
         setIsImporting(true);
 
+        let yazilanlar: YazilanKayitlar | null = null;
         try {
-            // Mevcut bahçeleri al
+            // Önce mevcut bahçelerin kimlikleri okunur (hiçbir şey yazılmaz),
+            // sonra yedek yazılır; eski kayıtlar ancak yedek başarıyla
+            // yazıldıktan sonra silinir. Böylece hata olursa kullanıcı verisiz kalmaz.
             const { data: existingGardens, error: existingError } = await supabase
                 .from('gardens')
                 .select('id')
@@ -758,30 +801,36 @@ export default function DataSection() {
                 .is('deleted_at', null);
             if (existingError) throw existingError;
 
+            yazilanlar = await importGardenData(importData);
+
             // Silme bilgisini Drive senkronuna taşıyabilmek için kayıtları tombstone yap.
-            if (existingGardens && existingGardens.length > 0) {
-                const gardenIds = existingGardens.map(g => g.id);
+            const gardenIds = (existingGardens ?? []).map(g => g.id);
+            if (gardenIds.length > 0) {
                 const deletedAt = new Date().toISOString();
                 const nodeResult = await supabase
                     .from('nodes')
-                    .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                    .update({ deleted_at: deletedAt, updated_at: deletedAt, content: '' })
                     .in('garden_id', gardenIds);
                 if (nodeResult.error) throw nodeResult.error;
                 const gardenResult = await supabase
                     .from('gardens')
-                    .update({ deleted_at: deletedAt, updated_at: deletedAt })
+                    .update({ deleted_at: deletedAt, updated_at: deletedAt, name: '' })
                     .in('id', gardenIds);
                 if (gardenResult.error) throw gardenResult.error;
             }
-
-            // Yeni verileri ekle
-            await importGardenData(importData);
 
             alert('Veriler başarıyla değiştirildi!');
             await fetchGardens();
         } catch (error) {
             console.error('Import replace error:', error);
-            alert('İçe aktarma sırasında hata oluştu.');
+            // Yarım kalan aktarımı geri al: yalnızca yeni eklenen kayıtlar silinir,
+            // kullanıcının eski notlarına dokunulmaz.
+            await yazilanlariGeriAl(yazilanlar);
+            await fetchGardens();
+            alert(
+                'İçe aktarma tamamlanamadı; mevcut verileriniz korundu. ' +
+                    (error instanceof Error ? error.message : '')
+            );
         } finally {
             setIsImporting(false);
             setImportData(null);
@@ -796,39 +845,80 @@ export default function DataSection() {
         setShowImportOptions(false);
         setIsImporting(true);
 
+        let yazilanlar: YazilanKayitlar | null = null;
         try {
-            await importGardenData(importData);
+            yazilanlar = await importGardenData(importData);
 
             alert('Veriler başarıyla eklendi!');
             await fetchGardens();
         } catch (error) {
             console.error('Import append error:', error);
-            alert('İçe aktarma sırasında hata oluştu.');
+            await yazilanlariGeriAl(yazilanlar);
+            await fetchGardens();
+            alert(
+                'İçe aktarma tamamlanamadı; mevcut verileriniz değişmedi. ' +
+                    (error instanceof Error ? error.message : '')
+            );
         } finally {
             setIsImporting(false);
             setImportData(null);
         }
     };
 
-    // Ortak içe aktarma fonksiyonu - Tek tek insert ile güvenilir ID eşleştirmesi
-    const importGardenData = async (data: { gardens: any[]; nodes: any[] }) => {
+    /**
+     * Yarım kalan içe aktarmayı geri alır.
+     *
+     * Yalnızca bu aktarmada eklenen kayıtlar tombstone yapılır; kullanıcının
+     * önceden var olan notlarına dokunulmaz.
+     */
+    const yazilanlariGeriAl = async (yazilanlar: YazilanKayitlar | null) => {
+        if (!yazilanlar || yazilanlar.bahceIds.length === 0) return;
+        const deletedAt = new Date().toISOString();
+        try {
+            await supabase
+                .from('nodes')
+                .update({ deleted_at: deletedAt, updated_at: deletedAt, content: '' })
+                .in('garden_id', yazilanlar.bahceIds);
+            await supabase
+                .from('gardens')
+                .update({ deleted_at: deletedAt, updated_at: deletedAt, name: '' })
+                .in('id', yazilanlar.bahceIds);
+        } catch (hata) {
+            console.error('İçe aktarma geri alınamadı:', hata);
+        }
+    };
+
+    /**
+     * Doğrulanmış yedeği veritabanına yazar.
+     *
+     * Notlar üst notlarından sonra eklensin diye seviye sırasına göre
+     * yazılır (seviye hesabı döngüye karşı korumalı, bkz. lib/yedekDogrula.ts).
+     * Yazılan kayıtların kimlikleri döndürülür ki hata durumunda çağıran taraf
+     * yalnızca bu aktarmayı geri alabilsin.
+     */
+    const importGardenData = async (data: {
+        bahceler: YedekBahce[];
+        dugumler: YedekDugum[];
+    }): Promise<YazilanKayitlar> => {
         const kullaniciId = await kullaniciIdAl();
-        if (!kullaniciId) return;
+        if (!kullaniciId) throw new Error('Oturum bulunamadı, içe aktarma yapılmadı.');
 
         // ID eşleştirme için map
         const gardenIdMap: Record<string, string> = {};
         const nodeIdMap: Record<string, string> = {};
+        const bahceIds: string[] = [];
+        const dugumIds: string[] = [];
 
         // Bahçeleri tek tek ekle (sıralama garantisi için)
-        for (const garden of data.gardens) {
+        for (const garden of data.bahceler) {
             const { data: insertedGarden, error: gardenError } = await supabase
                 .from('gardens')
                 .insert({
                     name: garden.name,
                     user_id: kullaniciId,
-                        view_state: garden.view_state,
-                        deleted_at: null
-                    })
+                    view_state: garden.view_state,
+                    deleted_at: null,
+                })
                 .select()
                 .single();
 
@@ -836,76 +926,55 @@ export default function DataSection() {
                 console.error('Garden insert error:', gardenError);
                 throw gardenError;
             }
+            if (!insertedGarden) throw new Error('Bahçe kaydedilemedi.');
 
-            if (insertedGarden) {
-                gardenIdMap[garden.id] = insertedGarden.id;
-            }
+            gardenIdMap[garden.id] = insertedGarden.id;
+            bahceIds.push(insertedGarden.id);
         }
 
-        // Node'ları seviyelerine göre grupla
-        const nodesByLevel: Map<number, any[]> = new Map();
-        const nodeLevelCache: Map<string, number> = new Map();
+        const seviyeler = dugumSeviyeleri(data.dugumler);
+        const sirali = [...data.dugumler].sort(
+            (a, b) => (seviyeler.get(a.id) ?? 0) - (seviyeler.get(b.id) ?? 0)
+        );
 
-        // Node seviyesini hesapla
-        const getNodeLevel = (nodeId: string): number => {
-            if (nodeLevelCache.has(nodeId)) {
-                return nodeLevelCache.get(nodeId)!;
+        for (const node of sirali) {
+            const gardenId = gardenIdMap[node.garden_id];
+            if (!gardenId) {
+                throw new Error(`"${node.id}" notunun ait olduğu bahçe aktarılamadı.`);
             }
-            const node = data.nodes.find((n: any) => n.id === nodeId);
-            if (!node || !node.parent_id) {
-                nodeLevelCache.set(nodeId, 0);
-                return 0;
+            const parentId = node.parent_id ? nodeIdMap[node.parent_id] ?? null : null;
+            if (node.parent_id && !parentId) {
+                throw new Error(`"${node.id}" notunun üst notu aktarılamadı.`);
             }
-            const level = 1 + getNodeLevel(node.parent_id);
-            nodeLevelCache.set(nodeId, level);
-            return level;
-        };
 
-        // Tüm node'ları seviyelerine göre grupla
-        for (const node of data.nodes) {
-            const level = getNodeLevel(node.id);
-            if (!nodesByLevel.has(level)) {
-                nodesByLevel.set(level, []);
+            const { data: insertedNode, error: nodeError } = await supabase
+                .from('nodes')
+                .insert({
+                    garden_id: gardenId,
+                    parent_id: parentId,
+                    content: node.content,
+                    position_x: node.position_x,
+                    position_y: node.position_y,
+                    is_expanded: node.is_expanded,
+                    node_type: node.node_type,
+                    color: node.color,
+                    is_pruned: node.is_pruned,
+                    deleted_at: null,
+                })
+                .select()
+                .single();
+
+            if (nodeError) {
+                console.error('Node insert error:', nodeError);
+                throw nodeError;
             }
-            nodesByLevel.get(level)!.push(node);
+            if (!insertedNode) throw new Error('Not kaydedilemedi.');
+
+            nodeIdMap[node.id] = insertedNode.id;
+            dugumIds.push(insertedNode.id);
         }
 
-        // Seviyeleri sıralı şekilde işle (0, 1, 2, ...)
-        const sortedLevels = Array.from(nodesByLevel.keys()).sort((a, b) => a - b);
-
-        for (const level of sortedLevels) {
-            const nodesAtLevel = nodesByLevel.get(level)!;
-
-            // Bu seviyedeki node'ları tek tek ekle (sıralama garantisi için)
-            for (const node of nodesAtLevel) {
-                // Bahçe eşleşmesi yoksa atla
-                if (!gardenIdMap[node.garden_id]) continue;
-
-                const { data: insertedNode, error: nodeError } = await supabase
-                    .from('nodes')
-                    .insert({
-                        garden_id: gardenIdMap[node.garden_id],
-                        parent_id: node.parent_id ? nodeIdMap[node.parent_id] : null,
-                        content: node.content,
-                        position_x: node.position_x,
-                        position_y: node.position_y,
-                        is_expanded: node.is_expanded ?? true,
-                        node_type: node.node_type ?? 'auto',
-                        deleted_at: null
-                    })
-                    .select()
-                    .single();
-
-                if (nodeError) {
-                    console.error('Node insert error:', nodeError);
-                    throw nodeError;
-                }
-
-                if (insertedNode) {
-                    nodeIdMap[node.id] = insertedNode.id;
-                }
-            }
-        }
+        return { bahceIds, dugumIds };
     };
 
     // Import seçeneklerini kapat
@@ -915,8 +984,10 @@ export default function DataSection() {
     };
 
 
+    // Bu bölüm artık Ayarlar penceresinin bir sekmesi: kendi kaydırma kabı ve
+    // zemini yok, aksi hâlde pencerenin içinde ikinci bir kaydırma alanı oluşur.
     return (
-                                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-sand-50/60 p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:p-7">
+                                        <div className="space-y-3">
                                             {/* Export Section */}
                                             <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
                                                 <button
@@ -925,21 +996,23 @@ export default function DataSection() {
                                                     className="flex w-full items-center justify-between gap-3 px-4 py-3 transition-colors duration-200 hover:bg-sand-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        {isExporting ? (
-                                                            <Loader2 size={18} className="text-moss-600 animate-spin" />
-                                                        ) : (
-                                                            <Download size={18} className="text-moss-600" />
-                                                        )}
+                                                        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-moss-100 text-moss-700">
+                                                            {isExporting ? (
+                                                                <Loader2 size={18} className="animate-spin" />
+                                                            ) : (
+                                                                <Download size={18} />
+                                                            )}
+                                                        </span>
                                                         <div className="text-left">
-                                                            <p className="font-medium text-sand-700 text-sm">Dışa Aktar</p>
-                                                            <p className="text-xs text-sand-500">JSON, HTML veya PDF</p>
+                                                            <p className="text-sm font-semibold text-sand-900">Dışa Aktar</p>
+                                                            <p className="text-xs text-sand-600">Notları JSON, HTML veya PDF olarak indirin</p>
                                                         </div>
                                                     </div>
                                                     <motion.div
                                                         animate={{ rotate: showExportOptions ? 180 : 0 }}
                                                         transition={{ duration: 0.2 }}
                                                     >
-                                                        <ChevronDown size={16} className="text-sand-400" />
+                                                        <ChevronDown size={16} className="text-sand-600" />
                                                     </motion.div>
                                                 </button>
 
@@ -983,10 +1056,10 @@ export default function DataSection() {
                                                                                             }`}
                                                                                     >
                                                                                         <div className={`w-4 h-4 rounded flex items-center justify-center ${isSelected ? 'bg-moss-500' : 'bg-sand-200'}`}>
-                                                                                            {isSelected && <span className="text-white text-[10px]">✓</span>}
+                                                                                            {isSelected && <span className="text-white text-xs">✓</span>}
                                                                                         </div>
                                                                                         <span className="flex-1 truncate text-sand-700">{garden.name}</span>
-                                                                                        <span className="text-sand-400">{nodeCount} not</span>
+                                                                                        <span className="text-sand-600">{nodeCount} not</span>
                                                                                     </button>
                                                                                 );
                                                                             })}
@@ -1056,14 +1129,16 @@ export default function DataSection() {
                                                     className="flex w-full items-center justify-between gap-3 px-4 py-3 transition-colors duration-200 hover:bg-sand-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        {isImporting ? (
-                                                            <Loader2 size={18} className="text-clay-600 animate-spin" />
-                                                        ) : (
-                                                            <Upload size={18} className="text-clay-600" />
-                                                        )}
+                                                        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-clay-100 text-clay-700">
+                                                            {isImporting ? (
+                                                                <Loader2 size={18} className="animate-spin" />
+                                                            ) : (
+                                                                <Upload size={18} />
+                                                            )}
+                                                        </span>
                                                         <div className="text-left">
-                                                            <p className="font-medium text-sand-700 text-sm">İçe Aktar</p>
-                                                            <p className="text-xs text-sand-500">JSON dosyasından yükle</p>
+                                                            <p className="text-sm font-semibold text-sand-900">İçe Aktar</p>
+                                                            <p className="text-xs text-sand-600">Daha önce aldığınız JSON yedeğini geri yükleyin</p>
                                                         </div>
                                                     </div>
                                                     {showImportOptions && (
@@ -1071,7 +1146,7 @@ export default function DataSection() {
                                                             animate={{ rotate: 180 }}
                                                             transition={{ duration: 0.2 }}
                                                         >
-                                                            <ChevronDown size={16} className="text-sand-400" />
+                                                            <ChevronDown size={16} className="text-sand-600" />
                                                         </motion.div>
                                                     )}
                                                 </button>
@@ -1087,8 +1162,19 @@ export default function DataSection() {
                                                         >
                                                             <div className="px-4 pb-4 pt-2 border-t border-sand-200 space-y-3">
                                                                 <p className="text-xs text-sand-600">
-                                                                    {importData.gardens.length} bahçe, {importData.nodes.length} not bulundu
+                                                                    {importData.bahceler.length} bahçe, {importData.dugumler.length} not doğrulandı
                                                                 </p>
+
+                                                                {importData.uyarilar.length > 0 && (
+                                                                    <ul className="space-y-1 rounded-lg bg-sand-100 px-3 py-2 text-xs text-sand-700">
+                                                                        {importData.uyarilar.slice(0, 3).map((uyari, sira) => (
+                                                                            <li key={sira}>• {uyari}</li>
+                                                                        ))}
+                                                                        {importData.uyarilar.length > 3 && (
+                                                                            <li>… ve {importData.uyarilar.length - 3} uyarı daha</li>
+                                                                        )}
+                                                                    </ul>
+                                                                )}
 
                                                                 <button
                                                                     onClick={handleImportAppend}
@@ -1097,7 +1183,7 @@ export default function DataSection() {
                                                                     <Upload size={16} className="text-moss-600" />
                                                                     <div>
                                                                         <p className="text-xs font-medium text-moss-700">Mevcut Verilere Ekle</p>
-                                                                        <p className="text-[10px] text-moss-500">Verileriniz korunur</p>
+                                                                        <p className="text-xs text-moss-500">Verileriniz korunur</p>
                                                                     </div>
                                                                 </button>
 
@@ -1108,7 +1194,7 @@ export default function DataSection() {
                                                                     <Database size={16} className="text-berry-600" />
                                                                     <div>
                                                                         <p className="text-xs font-medium text-berry-700">Verileri Değiştir</p>
-                                                                        <p className="text-[10px] text-berry-500">Mevcut veriler silinir</p>
+                                                                        <p className="text-xs text-berry-500">Mevcut veriler silinir</p>
                                                                     </div>
                                                                 </button>
 

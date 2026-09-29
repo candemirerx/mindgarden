@@ -36,6 +36,7 @@
   ],
   "exclude": [
     "node_modules",
+    "yedek",
     "tasarim_taslagi"
   ]
 }
