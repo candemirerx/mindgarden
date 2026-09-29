@@ -17,6 +17,7 @@ Her adımı sırasıyla tamamla; bir adım kilitliyse Play Console hangi adımı
 | Veri silme talebi adresi | Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/veri-silme |
 | Mağaza açıklama metinleri | Hazır — `belgeler/03-magaza-metinleri.md` |
 | Veri güvenliği cevapları | Hazır — `belgeler/04-veri-guvenligi.md` |
+| İzin gerekçeleri ve inceleme cevapları | Hazır — `belgeler/07-izin-gerekceleri.md` |
 
 **Sürüm bilgisi:** paket adı `com.notbahcesi.app`, sürüm kodu `45`, sürüm adı `2.2.1`,
 hedef API seviyesi `36` (Android 16).

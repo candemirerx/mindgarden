@@ -20,7 +20,8 @@ play-store-paketi/
 │   ├── 03-magaza-metinleri.md    ← mağazaya kopyalanacak açıklama metinleri
 │   ├── 04-veri-guvenligi.md      ← veri güvenliği formu cevapları
 │   ├── 05-yeni-surum.md          ← yeni sürüm çıkarırken yapılacaklar
-│   └── 06-guncelleme-adimlari.md ← web sitesi ve Play Store güncelleme akışı
+│   ├── 06-guncelleme-adimlari.md ← web sitesi ve Play Store güncelleme akışı
+│   └── 07-izin-gerekceleri.md   ← izin gerekçeleri ve inceleme cevapları
 ├── gorseller/
 │   ├── uygulama-ikonu-512.png            ← mağaza ikonu (512×512)
 │   ├── one-cikan-gorsel-1024x500.png     ← öne çıkan görsel
