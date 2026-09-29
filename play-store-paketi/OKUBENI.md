@@ -21,7 +21,8 @@ play-store-paketi/
 │   ├── 04-veri-guvenligi.md      ← veri güvenliği formu cevapları
 │   ├── 05-yeni-surum.md          ← yeni sürüm çıkarırken yapılacaklar
 │   ├── 06-guncelleme-adimlari.md ← web sitesi ve Play Store güncelleme akışı
-│   └── 07-izin-gerekceleri.md   ← izin gerekçeleri ve inceleme cevapları
+│   ├── 07-izin-gerekceleri.md   ← izin gerekçeleri ve inceleme cevapları
+│   └── 08-gelir-modeli.md       ← para kazanma planı ve fiyat taktiği
 ├── gorseller/
 │   ├── uygulama-ikonu-512.png            ← mağaza ikonu (512×512)
 │   ├── one-cikan-gorsel-1024x500.png     ← öne çıkan görsel
@@ -38,11 +39,11 @@ play-store-paketi/
 > çıktısıdır ve kaynaktan yeniden üretilir (`05-yeni-surum.md`). Klasörün bu kopyasında
 > dosya hazır duruyor.
 
-> **Paket kaydı (2.2.1 / sürüm kodu 45):** `not-bahcesi-2.2.1.aab` — 5.049.821 bayt,
-> SHA-256 `30D649DEE09DA99FBDD1CA05D156DF91A126023F203604B664D8C8173E46D5A8`
-> (29 Eylül 2026, 20:58). Telefon testi için üretilen imzalı APK:
-> `not-bahcesi-2.2.1.apk` — 4.736.745 bayt, SHA-256
-> `C34E7559207BE187906B88B350ACC6734956304E242D83244C743D2FBE2BD4B2`. AAB'yi yeniden
+> **Paket kaydı (2.2.1 / sürüm kodu 45):** `not-bahcesi-2.2.1.aab` — 5.049.934 bayt,
+> SHA-256 `A3A43BB67A35C4043E0A39CDA4DB93F56E6B164B357715FAF32741846CC99EC2`
+> (29 Eylül 2026, 22:25). Telefon testi için üretilen imzalı APK:
+> `not-bahcesi-2.2.1.apk` — 4.736.878 bayt, SHA-256
+> `DA4C73B5A0122CBA2C3E9B97DB6406CBF37299B7B8251441D0938E33CBED4E23`. AAB'yi yeniden
 > üretirsen özeti `Get-FileHash uygulama/not-bahcesi-2.2.1.aab -Algorithm SHA256` ile
 > yenile ve bu satırı güncelle; Console'a yüklediğin dosyanın özeti bu kayıtla aynı olmalı.
 
@@ -114,6 +115,6 @@ sırayla ilerle.
   uygulamaya bir daha güncelleme yayınlayamazsın.
 - Gizlilik politikası adresi: https://mindgarden-neon.vercel.app/gizlilik
 - Veri silme talebi adresi: https://mindgarden-neon.vercel.app/veri-silme
-- **Yayına almadan önce siteyi yeniden dağıt:** yayındaki `/gizlilik` metni hâlâ eski
-  sürüm, `/veri-silme` ise henüz açılmıyor. Play Console formlarındaki adresler ancak
-  dağıtımdan sonra doğru içeriği gösterir.
+- **Site yayında ve doğrulandı (29.09.2026):** `/gizlilik` 200 (bilgisayar araçları ve
+  dikte bölümleri ekli), `/veri-silme` 200 (üç adımlı silme yönergesi,
+  candemirerx@gmail.com, 30 gün). Play Console formlarına bu iki adresi yazabilirsin.

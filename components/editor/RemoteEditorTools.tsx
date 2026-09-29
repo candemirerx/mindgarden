@@ -185,35 +185,35 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     if (placement === 'toolbar') return <>
             {prefs.enabledTools.shortcuts && <button id="studio-kisayollar" type="button" aria-pressed={mode === 'shortcuts'} onClick={() => onModeChange(mode === 'shortcuts' ? 'write' : 'shortcuts')}
                 title="Kısayollar: makro panosu"
-                className={`btn min-h-11 shrink-0 gap-1.5 px-3 text-sm ${mode === 'shortcuts' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
-                <Wand2 size={16} /> {mode === 'shortcuts' ? 'Yazıya dön' : 'Kısayollar'}</button>}
+                className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${mode === 'shortcuts' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
+                <Wand2 size={16} /><span className="sr-only sm:not-sr-only">{mode === 'shortcuts' ? ' Yazıya dön' : ' Kısayollar'}</span></button>}
             {prefs.enabledTools.mouse && <button id="studio-fare" type="button" aria-pressed={mode === 'mouse'} onClick={() => onModeChange(mode === 'mouse' ? 'write' : 'mouse')}
-                className={`btn min-h-11 shrink-0 gap-1.5 px-3 text-sm ${mode === 'mouse' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
-                {mode === 'mouse' ? <Keyboard size={16} /> : <MousePointer2 size={16} />}{mode === 'mouse' ? 'Yazıya dön' : 'Fare'}</button>}
+                className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${mode === 'mouse' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
+                {mode === 'mouse' ? <Keyboard size={16} /> : <MousePointer2 size={16} />}<span className="sr-only sm:not-sr-only">{mode === 'mouse' ? ' Yazıya dön' : ' Fare'}</span></button>}
             {prefs.enabledTools.dictation && <button id="studio-dikte" type="button" disabled={busy} onClick={() => void act(async () => {
                 const text = await dictate(prefs.dictationLanguage);
                 if (prefs.dictationTarget === 'computer') await typeOnComputer(text, prefs);
                 else onContentChange(prefs.appendDictation && content ? `${content}${/\s$/.test(content) ? '' : ' '}${text}` : text);
             }, prefs.dictationTarget === 'computer' ? 'Dikte bilgisayara yazıldı; not değişmedi.' : 'Dikte nota eklendi.')}
-                className="btn btn-primary min-h-11 shrink-0 gap-1.5 px-3 text-sm"><Mic size={16} /> Dikte</button>}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Mic size={16} /><span className="sr-only sm:not-sr-only"> Dikte</span></button>}
             {prefs.enabledTools.bridgeDictation && <button id="studio-kopru-dikte" type="button" disabled={bridgeStopping || (busy && !bridgeListening)}
                 onClick={() => {
                     if (bridgeListening) { setBridgeStopping(true); void stopBridgeDictation().catch(error => { setBridgeStopping(false); setNotice(error.message); }); }
                     else void runBridgeDictation();
-                }} className={`btn min-h-11 shrink-0 gap-1.5 px-3 text-sm ${bridgeListening ? 'border border-berry-300 bg-berry-50 text-berry-700 hover:bg-berry-100' : 'btn-primary'}`}>
-                <AudioLines size={16} /> {bridgeListening ? (bridgeStopping ? 'Bitiriliyor…' : 'Dikteyi bitir') : 'Köprü Dikte'}
+                }} className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${bridgeListening ? 'border border-berry-300 bg-berry-50 text-berry-700 hover:bg-berry-100' : 'btn-primary'}`}>
+                <AudioLines size={16} /><span className="sr-only sm:not-sr-only">{bridgeListening ? (bridgeStopping ? ' Bitiriliyor…' : ' Dikteyi bitir') : ' Köprü Dikte'}</span>
             </button>}
             {prefs.enabledTools.bridgeWrite && <button id="studio-kopru-yaz" type="button" aria-pressed={kopruYaz} onClick={kopruYazDegistir}
-                className={`btn min-h-11 shrink-0 gap-1.5 px-3 text-sm ${kopruYaz ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
-                <Keyboard size={16} /> {kopruYaz ? 'Köprü Yaz açık' : 'Köprü Yaz'}
+                className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${kopruYaz ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
+                <Keyboard size={16} /><span className="sr-only sm:not-sr-only">{kopruYaz ? ' Köprü Yaz açık' : ' Köprü Yaz'}</span>
             </button>}
             {kopruYaz && <span id="studio-kopru-yaz-durum" role="status" className={`max-w-56 shrink-0 text-xs ${kopruHata ? 'text-berry-700' : 'text-moss-700'}`}>{kopruDurum}</span>}
             {kopruYaz && kopruHata && <button type="button" id="studio-kopru-yaz-yeniden" onClick={() => { kopruDurdu.current = false; setKopruHata(false); kopruHedef.current = guncelIcerik.current; void kopruAktar(); }}
                 className="btn btn-secondary min-h-11 shrink-0 px-3 text-sm">Yeniden dene</button>}
             {prefs.enabledTools.computerWrite && <button id="studio-bilgisayara-yaz" type="button" disabled={busy || !content.trim()} onClick={() => void act(() => typeOnComputer(content, prefs), 'Metin bilgisayara yazıldı.')}
-                className="btn btn-primary min-h-11 shrink-0 gap-1.5 px-3 text-sm"><Send size={16} /> Bilgisayara yaz</button>}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Send size={16} /><span className="sr-only sm:not-sr-only"> Bilgisayara yaz</span></button>}
             {prefs.enabledTools.clipboard && <button id="studio-pc-panosu" type="button" disabled={busy || !content.trim()} onClick={() => void act(() => sendToComputerClipboard(content, prefs), 'Metin bilgisayar panosuna aktarıldı.')}
-                className="btn btn-primary min-h-11 shrink-0 gap-1.5 px-3 text-sm"><Clipboard size={16} /> PC panosu</button>}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Clipboard size={16} /><span className="sr-only sm:not-sr-only"> PC panosu</span></button>}
             {notice && <span role="status" className="max-w-48 shrink-0 text-xs text-sand-700">{notice}</span>}
         </>;
     if (mode !== 'mouse' || !prefs.enabledTools.mouse) return null;

@@ -1037,7 +1037,7 @@ function EditorPageInner() {
                                         disabled={sonucHazir}
                                         title={tool.subtitle || tool.title}
                                         aria-label={tool.title}
-                                        className={`flex flex-shrink-0 items-center gap-1.5 min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                                        className={`flex min-w-[44px] flex-shrink-0 items-center justify-center gap-1.5 min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                                             sonucHazir
                                                 ? 'bg-sand-200 text-sand-700 cursor-not-allowed'
                                                 : 'bg-moss-50 text-moss-800 hover:bg-moss-100'
@@ -1052,7 +1052,7 @@ function EditorPageInner() {
                                         ) : (
                                             <Eraser size={16} />
                                         )}
-                                        <span className="whitespace-nowrap">{tool.title}</span>
+                                        <span className="hidden whitespace-nowrap sm:inline">{tool.title}</span>
                                     </button>
                                 );
                             })}

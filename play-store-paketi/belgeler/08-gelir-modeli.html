@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gelir Modeli ve Fiyatlandırma Taktikleri</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px 16px 64px;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #2C251D;
+  background: #F6F3EE;
+  -webkit-text-size-adjust: 100%;
+}
+.icerik { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 26px; line-height: 1.25; margin: 8px 0 20px; color: #1B3A28; }
+h2 {
+  font-size: 21px; margin: 34px 0 12px; color: #275939;
+  border-bottom: 2px solid #DEEDDA; padding-bottom: 6px;
+}
+h3 { font-size: 18px; margin: 26px 0 10px; color: #306C47; }
+h4 { font-size: 17px; margin: 20px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: #275939; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 7px; }
+hr { border: 0; border-top: 1px solid #DAD3C9; margin: 30px 0; }
+code {
+  background: #EAE5DE; padding: 2px 6px; border-radius: 5px;
+  font-family: Consolas, Menlo, monospace; font-size: 15px;
+}
+pre {
+  background: #2C251D; color: #F6F3EE; padding: 14px 16px; border-radius: 12px;
+  overflow-x: auto; font-size: 14px; line-height: 1.5;
+}
+pre code { background: none; color: inherit; padding: 0; }
+blockquote {
+  margin: 0 0 16px; padding: 12px 16px;
+  background: #FDF8E9; border-left: 4px solid #E0A632; border-radius: 0 10px 10px 0;
+}
+blockquote p { margin: 0; }
+.tablo-sarmal { overflow-x: auto; margin: 0 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid #DAD3C9; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #DEEDDA; color: #1B3A28; }
+strong { color: #1B3A28; }
+.geri {
+  display: inline-block; margin-bottom: 18px; font-size: 15px;
+  text-decoration: none; color: #275939; font-weight: 600;
+}
+.kart {
+  display: block; padding: 16px 18px; margin-bottom: 12px;
+  background: #fff; border: 1px solid #DAD3C9; border-radius: 14px;
+  text-decoration: none; color: inherit;
+}
+.kart strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.kart span { font-size: 14px; color: #5B5348; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1E1813; color: #EAE5DE; }
+  h1 { color: #DEEDDA; }
+  h2 { color: #BBDCC1; border-bottom-color: #275939; }
+  h3 { color: #91C39D; }
+  strong { color: #F0F7EF; }
+  a, .geri { color: #91C39D; }
+  code { background: #2C251D; color: #DEEDDA; }
+  .kart { background: #2C251D; border-color: #463F36; }
+  .kart span { color: #ADA396; }
+  th { background: #275939; color: #F0F7EF; }
+  th, td { border-color: #463F36; }
+  blockquote { background: #361C09; border-left-color: #C9841B; }
+  hr { border-top-color: #463F36; }
+}
+</style>
+</head>
+<body>
+<div class="icerik">
+<a class="geri" href="../basla.html">← Başlangıç sayfası</a>
+<h1>Gelir Modeli ve Fiyatlandırma Taktikleri</h1>
+<p>Bu belge, Not Bahçesi yayına çıktıktan sonra para kazanmak için izlenecek yolu anlatır. Kısa cevap: <strong>her şeyi ücretsiz bırak, kendi yapay zekâ anahtarını dağıtma, "Not Bahçesi Plus" adında tek bir abonelik sat ve onu ancak uygulama gerçekten kullanılmaya başladıktan sonra aç.</strong></p>
+<hr />
+<h2>1. Önce Play'in zorunlu kuralları</h2>
+<ul><li>Uygulama içinden satılan **dijital içerik ve abonelikler yalnızca Google Play</li></ul>
+<p>  Faturalandırma** ile satılabilir. Kendi web sitenden ödeme alıp uygulamada   kilit açmak Play politikasına aykırıdır; uygulama kaldırılır.</p>
+<ul><li>Play, dijital satışlarda <strong>%15 komisyon</strong> alır (ilk 1 milyon dolar yıllık</li></ul>
+<p>  gelire kadar; üstünde %30). Aboneliklerde oran <strong>%15</strong>'tir. Güncel oranı   Play Console → Ödemeler bölümünden teyit et.</p>
+<ul><li>Fiyatı <strong>Play Console'da ürün/abonelik tanımı olarak</strong> oluşturursun; ülke</li></ul>
+<p>  bazlı fiyatlandırmayı Play otomatik uyarlar. Türkiye fiyatını sen belirlersin.</p>
+<h2>2. Ücretsiz kalması gerekenler</h2>
+<p>Bunlar ürünün alışkanlık kuran çekirdeğidir; arkasına ödeme duvarı koymak kullanıcıyı kaçırır ve mağaza yorumlarını bozar:</p>
+<ul><li>Not ağacı, tuval, metin işlemcisi (yazı atölyesi), makrolar</li><li>Google Drive yedekleme, içe/dışa aktarma</li><li>Kısayol panosu, konum seçici, fare yüzeyi</li><li>Bilgisayar köprüsü (PC panosu, dikte, bilgisayara yaz) — bu özellik</li></ul>
+<p>  kullanıcının kendi bilgisayarıyla konuşur, sana maliyeti yoktur</p>
+<ul><li><strong>Kendi API anahtarını getiren yapay zekâ</strong> (kullanıcı anahtarını Ayarlar →</li></ul>
+<p>  Yapay zekâ bölümüne girer, model çağrısını kendi hesabından öder)</p>
+<p>Kendi anahtarını tüm kullanıcılara ücretsiz açma. İki nedeni var: maliyeti kontrol edemezsin (tek bir kötüye kullanım faturasını sen ödersin) ve uygulama içinde anahtar taşımak Play incelemesinde ve güvenlikte risk yaratır.</p>
+<h2>3. Ücretli katman: Not Bahçesi Plus</h2>
+<p>Satılan şey <strong>yapay zekâ kolaylığıdır</strong>, not tutma değil:</p>
+<ul><li>Sunucu tarafı anahtarla <strong>aylık yapay zekâ kotası</strong> (örnek: ayda 300 istek).</li><li>Kotayı aşan kullanıcı kendi anahtarını girmeye yönlendirilir; özellik kapanmaz.</li><li>Plus'a özel üç dört küçük kolaylık: uzun belge özeti, toplu makro üretimi,</li></ul>
+<p>  gelişmiş yazım/üslup kontrolü, öncelikli destek.</p>
+<p>Fiyat önerisi (Play Console'da iki taban plan):</p>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Plan</th><th>Türkiye</th><th>Diğer ülkeler</th><th>Not</th></tr></thead>
+<tbody><tr><td>Aylık</td><td>99,99 TL</td><td>4,99 $</td><td>Varsayılan seçenek</td></tr><tr><td>Yıllık</td><td>799 TL</td><td>39,99 $</td><td>"2 ay bedava" olarak gösterilir</td></tr><tr><td>Kurucu üye (ilk 500 kişi, ömür boyu)</td><td>1.499 TL</td><td>79,99 $</td><td>Yalnız tek seferlik ürün; lansmanda duyurulur</td></tr></tbody>
+</table></div>
+<p>Yıllık planı öne çıkar: Play komisyonu yıllıkta da %15'tir ama tahsilat maliyeti ve iptal oranı düşer, nakit akışı öne gelir.</p>
+<h2>4. Lansman takvimi</h2>
+<ol><li><strong>0-2. hafta — kapalı test.</strong> Kişisel geliştirici hesabında üretime geçmeden</li></ol>
+<p>   önce kapalı test şartı var (kaç kullanıcı, kaç gün: 01-yukleme-rehberi.md).    Bu sürede her şey ücretsiz, Plus kapalı.</p>
+<ol><li><strong>Yayın günü — 0. gün.</strong> Tüm özellikler ücretsiz açık. Plus ürünleri Play</li></ol>
+<p>   Console'da hazır bekler ama uygulamada plusAcik = false bayrağıyla gizlidir.</p>
+<ol><li><strong>1-4. hafta.</strong> Kullanım ölçümü: günlük aktif kullanıcı, kişi başı yapay zekâ</li></ol>
+<p>   işlemi, en çok kullanılan üç araç. Geri bildirim ve hata düzeltme. Fiyat yok.</p>
+<ol><li><strong>4-8. hafta.</strong> Mağaza yorumlarını topla (uygulama içinden yönlendirme),</li></ol>
+<p>   kararlılık sürümleri çıkar. Plus'ı duyur, "yakında" ekranı göster.</p>
+<ol><li><strong>8-12. hafta.</strong> Plus açılır. İlk 500 kişiye kurucu üye fiyatı. Aynı gün</li></ol>
+<p>   mağaza metnine "yeni: Plus" satırı ve sürüm notu eklenir.</p>
+<ol><li><strong>Sonra.</strong> Yıllık planı varsayılan seçenek yap; kurucu üye kontenjanı</li></ol>
+<p>   dolduğunda aylık/yıllık ikilisine dön.</p>
+<p>Bu takvimin mantığı: indirimli lansman, boş bir uygulamada işe yaramaz. Önce kullanıcı ve yorum biriktir, sonra ödemeyi iste.</p>
+<h2>5. Birim ekonomi (kontrol sayıları)</h2>
+<ul><li>99,99 TL aylık abonelikten net gelir yaklaşık 85 TL (Play %15).</li><li>Bir kullanıcının aylık yapay zekâ maliyeti kotayla sınırlıdır; örneğin ayda</li></ul>
+<p>  300 istek kısa yanıt üretiyorsa maliyet 5-15 TL bandında kalır.</p>
+<ul><li><strong>Kural:</strong> kişi başı yapay zekâ maliyeti fiyatın %30'unu geçtiği ay kotayı</li></ul>
+<p>  düşür. Aksi halde çok kullanan azınlık, geliri yer.</p>
+<ul><li>Ücretsiz kullanıcının sana maliyeti sıfırdır; bunu bozacak tek şey kendi</li></ul>
+<p>  anahtarını ücretsiz dağıtmaktır.</p>
+<h2>6. Takip edilecek üç sayı</h2>
+<ol><li>Günlük aktif kullanıcı ve 7. gün geri dönüş oranı.</li><li>Plus ekranını görenlerin satın alma oranı (hedef: %2-4).</li><li>Kişi başı aylık yapay zekâ maliyeti.</li></ol>
+<p>Bu üçünü Play Console'un kendi istatistikleri ve kendi kota tablonla izleyebilirsin. Üçüncüsü için sunucu tarafında her isteği kullanıcı kimliğiyle say.</p>
+<h2>7. Yapılmaması gerekenler</h2>
+<ul><li>Uygulamaya kendi yapay zekâ anahtarını gömüp herkese açmak.</li><li>Play dışı ödeme yönlendirmesi (uygulama içinden "sitemizden öde" demek).</li><li>Fiyatı sürekli değiştirmek; ilk altı ay sabit tut, sonra yıllık güncelle.</li><li>Reklam koymak: reklam eklenirse AD_ID izni, veri güvenliği formu ve gizlilik</li></ul>
+<p>  politikası güncellenmeli; ilk sürümde reklamsız kalmak inceleme ve yorumlar   açısından daha güvenli.</p>
+<h2>8. Play Console ve kod tarafında yapılacaklar</h2>
+<p>Play Console:</p>
+<ol><li><strong>Monetize → Products → Subscriptions</strong>: plus_aylik, plus_yillik taban</li></ol>
+<p>   planlarını oluştur; ücretsiz deneme koyma (lansman zaten ücretsiz).</p>
+<ol><li><strong>Monetize → In-app products</strong>: kurucu_uye tek seferlik ürünü.</li><li>Fiyatları ülke bazlı ayarla; Türkiye fiyatını yukarıdaki tabloya göre gir.</li></ol>
+<p>Kod tarafı (henüz yapılmadı, Plus açılacağı zaman gerekir):</p>
+<ol><li>lib/config.ts içine plusAcik bayrağı ve lib/plus.ts içine kota durumu.</li><li>Abonelik durumunu Play Billing köprüsüyle doğrula (Capacitor eklentisi veya</li></ol>
+<p>   kendi Android köprün) ve sunucuda kullanıcıya bağlı tut.</p>
+<ol><li>/api/ai uç noktasına kota denetimi ve kullanıcı başına sayaç ekle; aşımda</li></ol>
+<p>   Türkçe, yönlendirici bir hata döndür.</p>
+<ol><li>Ayarlar → Yapay zekâ bölümüne "Plus durumu ve kota" kartı ekle; kalan kotayı</li></ol>
+<p>   ve yükseltme düğmesini göster.</p>
+<blockquote>Plus açılmadan önce yapılacak en önemli hazırlık, sunucu tarafı anahtarın hangi sağlayıcıda duracağına karar vermek ve aylık maliyet üst sınırını (örnek: kullanıcı başına 15 TL) yazılı olarak belirlemektir.</blockquote>
+</div>
+</body>
+</html>
