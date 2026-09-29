@@ -38,7 +38,32 @@ next-env.d.ts
 /.gradle-user/
 /.gradle_home/
 /android/wrapper/
+/android/.gradle-native/
 
 # Play Store paketindeki yayın paketi derleme çıktısıdır; kaynaktan üretilir.
-play-store-paketi/uygulama/*.aab
-play-store-paketi/uygulama/*.apk
+play-store-paketi/uygulama/**/*.aab
+play-store-paketi/uygulama/**/*.apk
+scripts/.pc_clipboard_token
+scripts/__pycache__/
+
+# Yerel kaynak yedekleri (ortam ve imzalama ayarları içerebilir)
+/yedek/
+
+# Codex çalışma artıkları: ekran görüntüleri, geçici betikler ve günlükler
+.codex-*/
+.codex-*.log
+.codex-*.mjs
+.codex-*.ps1
+.codex-*.txt
+.codex-*.json
+.gradle-native/
+/android/.gradle-user/
+
+# Derleme ve denetim çıktıları
+/build-cikti.txt
+/gradle-derleme.txt
+/lint-cikti.txt
+/studio-cikti.txt
+/tsc-cikti.txt
+/.pc-helper-test.log
+/.pc-helper-test.err
