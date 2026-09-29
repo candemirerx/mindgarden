@@ -93,37 +93,59 @@ strong { color: #1B3A28; }
 <p>Aşağıdaki tabloyu birebir gir. "Toplanıyor" = uygulamadan dışarı çıkıyor, "Paylaşılıyor" = üçüncü tarafla paylaşılıyor.</p>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Veri türü</th><th>Toplanıyor</th><th>Paylaşılıyor</th><th>Zorunlu mu</th><th>Amaç</th><th>Not</th></tr></thead>
-<tbody><tr><td><strong>Kişisel bilgiler → E-posta adresi</strong></td><td>Evet</td><td>Hayır</td><td>Hayır (isteğe bağlı)</td><td>Uygulama işlevselliği, Hesap yönetimi</td><td>Google ile giriş yapılırsa alınır</td></tr><tr><td><strong>Kişisel bilgiler → Ad</strong></td><td>Evet</td><td>Hayır</td><td>Hayır (isteğe bağlı)</td><td>Uygulama işlevselliği</td><td>Google profili ile gelir</td></tr><tr><td><strong>Uygulama etkinliği → Diğer kullanıcı içeriği</strong></td><td>Evet</td><td>Evet</td><td>Evet</td><td>Uygulama işlevselliği</td><td>Not metinleri; yapay zekâ kullanıldığında seçilen sağlayıcıya gönderilir</td></tr></tbody>
+<tbody><tr><td><strong>Kişisel bilgiler → E-posta adresi</strong></td><td>Evet</td><td>Hayır</td><td>Hayır (isteğe bağlı)</td><td>Uygulama işlevselliği, Hesap yönetimi</td><td>Google ile giriş yapılırsa alınır</td></tr><tr><td><strong>Kişisel bilgiler → Ad</strong></td><td>Evet</td><td>Hayır</td><td>Hayır (isteğe bağlı)</td><td>Uygulama işlevselliği</td><td>Google profili ile gelir</td></tr><tr><td><strong>Uygulama etkinliği → Diğer kullanıcı içeriği</strong></td><td>Evet</td><td>Evet</td><td>Evet</td><td>Uygulama işlevselliği</td><td>Not metinleri; yapay zekâ kullanıldığında seçilen sağlayıcıya, bilgisayar araçları kullanıldığında kullanıcının kendi bilgisayarına gönderilir</td></tr><tr><td><strong>Ses → Ses kayıtları</strong></td><td>Evet</td><td>Evet</td><td>Hayır (isteğe bağlı)</td><td>Uygulama işlevselliği</td><td>Yalnızca Dikte kullanıldığında. Tanımayı Android'in konuşma tanıma servisi yapar; uygulama ayrıca ses kaydı saklamaz</td></tr><tr><td><strong>Cihaz veya diğer kimlikler</strong></td><td>Hayır</td><td>Hayır</td><td>—</td><td>—</td><td>Uygulama reklam kimliği veya cihaz kimliği toplamaz</td></tr></tbody>
 </table></div>
-<p>Diğer tüm kategoriler (konum, kişiler, takvim, fotoğraf, dosyalar, sağlık, mesajlar, cihaz kimlikleri, ödeme bilgileri) için: <strong>Hayır</strong>.</p>
+<p>Diğer tüm kategoriler (konum, kişiler, takvim, fotoğraf, dosyalar, sağlık, mesajlar, ödeme bilgileri, uygulama içi arama geçmişi) için: <strong>Hayır</strong>.</p>
+<h3>Cihazda kalan, toplanmayan veriler</h3>
+<p>Aşağıdakiler yalnızca cihazda veya kullanıcının kendi cihazları arasında işlenir; uygulamanın bir sunucusuna gönderilmez:</p>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Veri</th><th>Ne için kullanılır</th><th>Nereye gider</th></tr></thead>
+<tbody><tr><td>Bluetooth eşleşme bilgisi (cihaz adı/adresi)</td><td>Kart veya bilgisayarla bağlantı kurmak</td><td>Yalnızca telefon ile eşleşen cihaz arasında</td></tr><tr><td>Yerel ağ adresi (kart/PC IP'si)</td><td>Wi‑Fi üzerinden bağlanmak</td><td>Yalnızca kullanıcının kendi yerel ağı</td></tr><tr><td>Panoya gönderilen metin</td><td>Bilgisayarın panosuna kopyalamak</td><td>Kullanıcının kendi bilgisayarı</td></tr><tr><td>Mikrofon sesi</td><td>Dikteyi yazıya çevirmek</td><td>Cihazdaki Android konuşma tanıma servisi</td></tr></tbody>
+</table></div>
+<blockquote>Bluetooth ve yerel ağ izinleri yalnızca eşleştirme ve bağlantı için kullanılır; arka planda cihaz taraması yapılmaz, listeler hiçbir yere gönderilmez.</blockquote>
 <hr />
 <h2>3. Veri güvenliği ayrıntıları</h2>
-<p><strong>Soru:</strong> Veriler aktarım sırasında şifreleniyor mu? <strong>Cevap:</strong> <strong>Evet</strong> (HTTPS)</p>
+<p><strong>Soru:</strong> Veriler aktarım sırasında şifreleniyor mu? <strong>Cevap:</strong> <strong>Evet</strong></p>
+<p>Buluta giden tüm trafik (yapay zekâ sağlayıcısı, Google Drive) HTTPS ile şifrelenir. Bilgisayar araçlarındaki yerel ağ trafiği (telefon ile kullanıcının kendi bilgisayarı arasında) şifrelenmez; bu özellik yalnızca güvenilen yerel ağlarda kullanılmalıdır.</p>
 <p><strong>Soru:</strong> Kullanıcı verilerinin silinmesini talep edebiliyor mu? <strong>Cevap:</strong> <strong>Evet</strong></p>
 <p>Silme yolları:</p>
-<ul><li>Uygulama içinde <strong>Ayarlar → Veri Yönetimi</strong> ile kayıtlar silinebilir</li><li>Uygulamayı kaldırmak cihazdaki tüm verileri siler</li><li>Drive yedeği kullanıcının kendi Drive'ında olduğu için kullanıcı oradan da silebilir</li></ul>
+<ul><li>Uygulama içinde <strong>Ayarlar → Veri yönetimi</strong> bölümünden kayıtlar silinebilir</li><li>Uygulamayı kaldırmak cihazdaki tüm verileri siler</li><li>Drive yedeği kullanıcının kendi Drive'ında olduğu için kullanıcı oradan da silebilir</li><li>Ayrıntılı silme sayfası: <code>https://mindgarden-neon.vercel.app/veri-silme</code></li></ul>
+<p>Play Console'da <strong>veri silme URL'i</strong> olarak yukarıdaki <code>/veri-silme</code> adresini ver. Bu sayfada adım adım silme, silinen veri listesi ve e-posta ile talep yolu anlatılır.</p>
 <hr />
 <h2>4. Yapay zekâ özelliği için ayrı beyan</h2>
 <p>Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:</p>
 <blockquote>Uygulamadaki yapay zekâ özelliği isteğe bağlıdır. Kullanıcı kendi API anahtarını girer ve bir makro çalıştırdığında seçili notun metni, kullanıcının kendi seçtiği yapay zekâ sağlayıcısına (Google, OpenAI, Anthropic veya kullanıcının belirttiği OpenAI uyumlu bir servis) gönderilir. Metin ve anahtar uygulamanın kendi sunucusunda saklanmaz; yalnızca isteği iletmek için kullanılır. Kullanıcı bu özelliği hiç kullanmayabilir; uygulamanın diğer tüm işlevleri anahtar olmadan çalışır.</blockquote>
 <hr />
-<h2>5. Google Drive yedekleme için ayrı beyan</h2>
+<h2>5. Bilgisayar araçları için ayrı beyan</h2>
+<p>Uygulamadaki bilgisayar araçları <strong>isteğe bağlıdır</strong> ve kendiliğinden çalışmaz; her işlem kullanıcının bir düğmeye basmasıyla başlar.</p>
+<ul><li><strong>Amaç:</strong> Telefonu bilgisayarın klavyesi, faresi ve panosu gibi kullanmak.</li><li><strong>Kullanılan izinler:</strong> Bluetooth/Yakındaki cihazlar (Android 12+) veya eski</li></ul>
+<p>  sistemlerde konum, mikrofon (yalnızca Dikte için), ağ durumu.</p>
+<ul><li><strong>Veri akışı:</strong> Yazılan metin, fare komutları ve pano içeriği doğrudan kullanıcının</li></ul>
+<p>  kendi bilgisayarına gönderilir. Bu veriler uygulamanın sunucusuna veya üçüncü bir   tarafa gitmez.</p>
+<ul><li><strong>Bağlantı yolları:</strong> Wi‑Fi üzerinden doğrudan bilgisayar, klasik Bluetooth veya</li></ul>
+<p>  kullanıcının kendi kartı üzerinden köprü.</p>
+<ul><li><strong>Güvenlik uyarısı:</strong> Telefon ile bilgisayar arasındaki yerel ağ trafiği şifrelenmez.</li></ul>
+<p>  Bu özellik yalnızca güvenilen yerel ağlarda kullanılmalı, bilgisayar tarafındaki   yardımcı program internete açılmamalıdır.</p>
+<ul><li><strong>Üçüncü taraf:</strong> Bilgisayar tarafında çalışan yardımcı program Play Store paketinin</li></ul>
+<p>  parçası değildir; kullanıcı onu kendi bilgisayarında başlatır.</p>
+<hr />
+<h2>6. Google Drive yedekleme için ayrı beyan</h2>
 <blockquote>Kullanıcı Google hesabıyla giriş yaptığında notları, kullanıcının kendi Google Drive hesabındaki uygulamaya özel gizli klasöre (appDataFolder) yedeklenir. Bu veri yalnızca kullanıcının kendi hesabında tutulur ve uygulama dışında kimseyle paylaşılmaz. Kullanıcı otomatik senkronu kapatabilir.</blockquote>
 <hr />
-<h2>6. Reklam ve analitik</h2>
+<h2>7. Reklam ve analitik</h2>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Soru</th><th>Cevap</th></tr></thead>
 <tbody><tr><td>Uygulama reklam içeriyor mu?</td><td><strong>Hayır</strong></td></tr><tr><td>Üçüncü taraf analitik var mı?</td><td><strong>Hayır</strong></td></tr><tr><td>Veriler reklam için kullanılıyor mu?</td><td><strong>Hayır</strong></td></tr><tr><td>Veriler kredi/uygunluk için kullanılıyor mu?</td><td><strong>Hayır</strong></td></tr></tbody>
 </table></div>
 <hr />
-<h2>7. Güvenlik pratikleri</h2>
+<h2>8. Güvenlik pratikleri</h2>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Soru</th><th>Cevap</th></tr></thead>
 <tbody><tr><td>Veriler aktarımda şifreleniyor mu?</td><td>Evet</td></tr><tr><td>Kullanıcı silme talebinde bulunabilir mi?</td><td>Evet</td></tr><tr><td>Bağımsız güvenlik incelemesinden geçti mi?</td><td>Hayır</td></tr><tr><td>Çocuklara yönelik mi?</td><td>Hayır</td></tr><tr><td>Play Aile politikalarına uygun mu?</td><td>Hayır (hedef kitle 18+)</td></tr></tbody>
 </table></div>
 <hr />
 <h2>Özet (formun sonunda sorulan özet ekranı için)</h2>
-<blockquote>Not Bahçesi notlarınızı cihazınızda saklar. Yalnızca siz istediğinizde, seçtiğiniz yapay zekâ sağlayıcısına metin gönderilir; yalnızca Google ile giriş yaptığınızda notlarınız kendi Drive hesabınıza yedeklenir. Reklam ve izleme yoktur.</blockquote>
+<blockquote>Not Bahçesi notlarınızı cihazınızda saklar. Yalnızca siz istediğinizde, seçtiğiniz yapay zekâ sağlayıcısına metin gönderilir; yalnızca Google ile giriş yaptığınızda notlarınız kendi Drive hesabınıza yedeklenir. Bilgisayar araçlarını kullandığınızda metin ve komutlar yalnızca kendi bilgisayarınıza gider. Mikrofon yalnızca Dikte sırasında kullanılır. Reklam ve izleme yoktur.</blockquote>
 </div>
 </body>
 </html>

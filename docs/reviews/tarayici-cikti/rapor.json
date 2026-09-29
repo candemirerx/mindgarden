@@ -1,0 +1,1170 @@
+{
+  "base": "http://localhost:3200",
+  "chrome": "Chrome/153.0.8010.53",
+  "generatedAt": "2026-09-28T06:39:33.339Z",
+  "scenarios": [
+    {
+      "name": "01-ana-sayfa-mobil",
+      "path": "/",
+      "png": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\01-ana-sayfa-mobil.png",
+      "audit": {
+        "url": "http://localhost:3200/",
+        "title": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "lang": "tr",
+        "viewport": {
+          "w": 390,
+          "h": 844,
+          "dpr": 3
+        },
+        "horizontalOverflow": 0,
+        "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Not Bahçesi"
+          },
+          {
+            "level": 2,
+            "text": "Hoş geldiniz"
+          }
+        ],
+        "imgIssues": [],
+        "nameIssues": [],
+        "labelIssues": [],
+        "contrastIssues": [],
+        "smallTargets": [],
+        "nonSemanticClicks": [],
+        "ariaHiddenFocusable": [],
+        "duplicateIds": [],
+        "tinyText": [],
+        "counts": {
+          "h1": 1,
+          "headings": 2,
+          "interactive": 3,
+          "contrastChecks": 6
+        },
+        "focusOutline": {
+          "target": "div.mx-auto.max-w-[1500px].px-4 > header.mb-8.flex.flex-col > div.flex.items-center.gap-3.5 > button.group.relative.flex-shrink-0",
+          "before": {
+            "o": "none 3px rgb(41, 27, 23)",
+            "s": "none"
+          },
+          "after": {
+            "o": "solid 2px rgb(68, 130, 91)",
+            "s": "none"
+          },
+          "changed": true
+        },
+        "reducedMotionRule": false,
+        "colors": {
+          "distinctTextColors": 4,
+          "top": [
+            [
+              "rgb(30, 24, 19)",
+              2
+            ],
+            [
+              "rgb(91, 83, 72)",
+              2
+            ],
+            [
+              "rgb(251, 249, 246)",
+              1
+            ],
+            [
+              "rgb(115, 64, 15)",
+              1
+            ]
+          ]
+        },
+        "themeVars": {
+          "paper": "#f6f3ee",
+          "branch": "#b9a88f"
+        },
+        "darkModeQuery": false,
+        "reducedMotionQuery": false
+      }
+    },
+    {
+      "name": "02-projeler-mobil",
+      "path": "/projeler",
+      "png": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\02-projeler-mobil.png",
+      "audit": {
+        "url": "http://localhost:3200/projeler",
+        "title": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "lang": "tr",
+        "viewport": {
+          "w": 390,
+          "h": 844,
+          "dpr": 3
+        },
+        "horizontalOverflow": 0,
+        "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Bahçe"
+          },
+          {
+            "level": 2,
+            "text": "Bahçeniz hazır"
+          }
+        ],
+        "imgIssues": [],
+        "nameIssues": [
+          {
+            "reason": "erisilebilir ad yok",
+            "tag": "input",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.relative.order-last.w-full > input.input.h-10.pl-10",
+            "text": "",
+            "ariaLabel": null
+          }
+        ],
+        "labelIssues": [
+          {
+            "reason": "etiket yok",
+            "tag": "input",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.relative.order-last.w-full > input.input.h-10.pl-10",
+            "text": "",
+            "type": "text",
+            "placeholder": "Düşüncelerde ara…"
+          }
+        ],
+        "contrastIssues": [],
+        "smallTargets": [
+          {
+            "tag": "button",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.flex.min-w-0.items-center > button.rounded-xl.p-2.text-sand-600",
+            "text": "",
+            "w": 37,
+            "h": 37,
+            "ariaLabel": "Ana sayfa"
+          },
+          {
+            "tag": "input",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.relative.order-last.w-full > input.input.h-10.pl-10",
+            "text": "",
+            "w": 358,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.ml-auto.flex.flex-shrink-0 > button.btn.btn-secondary.h-10",
+            "text": "Canvas",
+            "w": 50,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.ml-auto.flex.flex-shrink-0 > button.btn.btn-primary.h-10",
+            "text": "Yeni Ağaç",
+            "w": 48,
+            "h": 40,
+            "ariaLabel": null
+          }
+        ],
+        "nonSemanticClicks": [],
+        "ariaHiddenFocusable": [],
+        "duplicateIds": [],
+        "tinyText": [],
+        "counts": {
+          "h1": 1,
+          "headings": 2,
+          "interactive": 5,
+          "contrastChecks": 5
+        },
+        "focusOutline": {
+          "target": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.flex.min-w-0.items-center > button.rounded-xl.p-2.text-sand-600",
+          "before": {
+            "o": "none 3px rgb(91, 83, 72)",
+            "s": "none"
+          },
+          "after": {
+            "o": "solid 2px rgb(68, 130, 91)",
+            "s": "none"
+          },
+          "changed": true
+        },
+        "reducedMotionRule": false,
+        "colors": {
+          "distinctTextColors": 4,
+          "top": [
+            [
+              "rgb(30, 24, 19)",
+              2
+            ],
+            [
+              "rgb(124, 114, 104)",
+              1
+            ],
+            [
+              "rgb(91, 83, 72)",
+              1
+            ],
+            [
+              "rgb(251, 249, 246)",
+              1
+            ]
+          ]
+        },
+        "themeVars": {
+          "paper": "#f6f3ee",
+          "branch": "#b9a88f"
+        },
+        "darkModeQuery": false,
+        "reducedMotionQuery": false
+      }
+    },
+    {
+      "name": "03-editor-mobil",
+      "path": "/editor",
+      "png": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\03-editor-mobil.png",
+      "audit": {
+        "url": "http://localhost:3200/editor",
+        "title": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "lang": "tr",
+        "viewport": {
+          "w": 390,
+          "h": 844,
+          "dpr": 3
+        },
+        "horizontalOverflow": 0,
+        "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Başlıksız Not"
+          }
+        ],
+        "imgIssues": [],
+        "nameIssues": [
+          {
+            "reason": "erisilebilir ad yok",
+            "tag": "input",
+            "sel": "div.flex.items-center.gap-1 > div.flex.flex-col.items-center > label.flex.items-center.gap-1 > input.w-3.5.h-3.5.rounded",
+            "text": "",
+            "ariaLabel": null
+          },
+          {
+            "reason": "erisilebilir ad yok",
+            "tag": "input",
+            "sel": "div.max-w-4xl.mx-auto.px-4 > div.bg-white.shadow-card.min-h-[600px] > div.border-b.border-sand-200.px-6 > input.w-full.text-xl.font-semibold",
+            "text": "",
+            "ariaLabel": null
+          },
+          {
+            "reason": "erisilebilir ad yok",
+            "tag": "textarea",
+            "sel": "div.max-w-4xl.mx-auto.px-4 > div.bg-white.shadow-card.min-h-[600px] > div.px-6.sm:px-12.py-6 > textarea.w-full.min-h-[500px].sm:min-h-[600px]",
+            "text": "",
+            "ariaLabel": null
+          }
+        ],
+        "labelIssues": [
+          {
+            "reason": "etiket yok",
+            "tag": "input",
+            "sel": "div.max-w-4xl.mx-auto.px-4 > div.bg-white.shadow-card.min-h-[600px] > div.border-b.border-sand-200.px-6 > input.w-full.text-xl.font-semibold",
+            "text": "",
+            "type": "text",
+            "placeholder": "Başlık"
+          },
+          {
+            "reason": "etiket yok",
+            "tag": "textarea",
+            "sel": "div.max-w-4xl.mx-auto.px-4 > div.bg-white.shadow-card.min-h-[600px] > div.px-6.sm:px-12.py-6 > textarea.w-full.min-h-[500px].sm:min-h-[600px]",
+            "text": "",
+            "type": "textarea",
+            "placeholder": "İçeriğinizi buraya yazın..."
+          }
+        ],
+        "contrastIssues": [
+          {
+            "tag": "span",
+            "sel": "div.min-h-screen.bg-sand-200.flex > header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > span.mr-1.flex-shrink-0.text-xs",
+            "text": "AI",
+            "ratio": 4.47,
+            "need": 4.5,
+            "fontSize": 12,
+            "fontWeight": "500",
+            "color": "rgb(170, 104, 20)",
+            "bg": "rgb(255, 255, 255)"
+          },
+          {
+            "tag": "span",
+            "sel": "div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center > span.whitespace-nowrap",
+            "text": "İmla Düzelt",
+            "ratio": 1.98,
+            "need": 4.5,
+            "fontSize": 14,
+            "fontWeight": "500",
+            "color": "rgb(173, 163, 150)",
+            "bg": "rgb(234, 229, 222)"
+          }
+        ],
+        "smallTargets": [
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.justify-between > div.flex.items-center.gap-3 > button.p-2.hover:bg-sand-100.rounded-lg",
+            "text": "",
+            "w": 36,
+            "h": 36,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.justify-between > div.flex.items-center.gap-1 > button.flex.h-10.w-10",
+            "text": "",
+            "w": 40,
+            "h": 40,
+            "ariaLabel": "Ayarları aç"
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.justify-between > div.flex.items-center.gap-1 > button.p-2.5.rounded-lg.transition-all",
+            "text": "",
+            "w": 40,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "div.flex.items-center.justify-between > div.flex.items-center.gap-1 > div.relative > button.p-2.5.text-sand-500.hover:bg-sand-100",
+            "text": "",
+            "w": 40,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "input",
+            "sel": "div.flex.items-center.gap-1 > div.flex.flex-col.items-center > label.flex.items-center.gap-1 > input.w-3.5.h-3.5.rounded",
+            "text": "",
+            "w": 14,
+            "h": 14,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "div.flex.items-center.justify-between > div.flex.items-center.gap-1 > div.flex.flex-col.items-center > button.p-2.rounded-lg.transition-all",
+            "text": "",
+            "w": 36,
+            "h": 36,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "İmla Düzelt",
+            "w": 120,
+            "h": 32,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "Özetle",
+            "w": 89,
+            "h": 32,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "Resmileştir",
+            "w": 120,
+            "h": 32,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "Sadeleştir",
+            "w": 113,
+            "h": 32,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "Genişlet",
+            "w": 101,
+            "h": 32,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "İngilizceye Çevir",
+            "w": 156,
+            "h": 32,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "İçerikten Başlık",
+            "w": 148,
+            "h": 36,
+            "ariaLabel": "İçerikten Başlık"
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "Sıralı Ad",
+            "w": 101,
+            "h": 36,
+            "ariaLabel": "Sıralı Ad"
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "Numaralandır",
+            "w": 136,
+            "h": 36,
+            "ariaLabel": "Numaralandır"
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.flex.flex-shrink-0.items-center",
+            "text": "Boşlukları Sadeleştir",
+            "w": 182,
+            "h": 36,
+            "ariaLabel": "Boşlukları Sadeleştir"
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.btn.min-h-10.shrink-0",
+            "text": "Fare",
+            "w": 76,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.btn.btn-primary.min-h-10",
+            "text": "Dikte",
+            "w": 81,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.btn.min-h-10.shrink-0",
+            "text": "Köprü Dikte",
+            "w": 125,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.btn.btn-primary.min-h-10",
+            "text": "Köprü Yaz",
+            "w": 115,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.btn.btn-primary.min-h-10",
+            "text": "Bilgisayara yaz",
+            "w": 148,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.gap-2 > div.flex.min-w-0.flex-1 > button.btn.btn-primary.min-h-10",
+            "text": "PC panosu",
+            "w": 119,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "input",
+            "sel": "div.max-w-4xl.mx-auto.px-4 > div.bg-white.shadow-card.min-h-[600px] > div.border-b.border-sand-200.px-6 > input.w-full.text-xl.font-semibold",
+            "text": "",
+            "w": 310,
+            "h": 28,
+            "ariaLabel": null
+          }
+        ],
+        "nonSemanticClicks": [],
+        "ariaHiddenFocusable": [],
+        "duplicateIds": [],
+        "tinyText": [
+          {
+            "tag": "span",
+            "sel": "div.flex.items-center.gap-1 > div.flex.flex-col.items-center > label.flex.items-center.gap-1 > span.text-[10px].text-sand-500",
+            "text": "Oto",
+            "fontSize": 10
+          }
+        ],
+        "counts": {
+          "h1": 1,
+          "headings": 1,
+          "interactive": 24,
+          "contrastChecks": 22
+        },
+        "focusOutline": {
+          "target": "header.bg-white.border-b.border-sand-300 > div.flex.items-center.justify-between > div.flex.items-center.gap-3 > button.p-2.hover:bg-sand-100.rounded-lg",
+          "before": {
+            "o": "none 3px rgb(41, 27, 23)",
+            "s": "none"
+          },
+          "after": {
+            "o": "solid 2px rgb(68, 130, 91)",
+            "s": "none"
+          },
+          "changed": true
+        },
+        "reducedMotionRule": false,
+        "colors": {
+          "distinctTextColors": 7,
+          "top": [
+            [
+              "rgb(173, 163, 150)",
+              6
+            ],
+            [
+              "rgb(251, 249, 246)",
+              6
+            ],
+            [
+              "rgb(255, 255, 255)",
+              4
+            ],
+            [
+              "rgb(124, 114, 104)",
+              3
+            ],
+            [
+              "rgb(44, 37, 29)",
+              1
+            ],
+            [
+              "rgb(170, 104, 20)",
+              1
+            ],
+            [
+              "rgb(91, 83, 72)",
+              1
+            ]
+          ]
+        },
+        "themeVars": {
+          "paper": "#f6f3ee",
+          "branch": "#b9a88f"
+        },
+        "darkModeQuery": false,
+        "reducedMotionQuery": false
+      }
+    },
+    {
+      "name": "04-bahce-view-mobil",
+      "path": "/bahce_view",
+      "png": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\04-bahce-view-mobil.png",
+      "audit": {
+        "url": "http://localhost:3200/bahce_view",
+        "title": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "lang": "tr",
+        "viewport": {
+          "w": 390,
+          "h": 844,
+          "dpr": 3
+        },
+        "horizontalOverflow": 0,
+        "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+        "headings": [
+          {
+            "level": 2,
+            "text": "Bahçe bulunamadı"
+          }
+        ],
+        "imgIssues": [],
+        "nameIssues": [],
+        "labelIssues": [],
+        "contrastIssues": [],
+        "smallTargets": [],
+        "nonSemanticClicks": [],
+        "ariaHiddenFocusable": [],
+        "duplicateIds": [],
+        "tinyText": [],
+        "counts": {
+          "h1": 0,
+          "headings": 1,
+          "interactive": 1,
+          "contrastChecks": 3
+        },
+        "focusOutline": {
+          "target": "body.font-sans.antialiased > div.flex.min-h-screen.items-center > div.rounded-3xl.border.border-sand-200 > button.btn.btn-primary.mt-6",
+          "before": {
+            "o": "none 3px rgb(251, 249, 246)",
+            "s": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(29, 21, 16, 0.04) 0px 1px 2px 0px, rgba(29, 21, 16, 0.06) 0px 1px 3px 0px"
+          },
+          "after": {
+            "o": "solid 3px rgb(251, 249, 246)",
+            "s": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(29, 21, 16, 0.04) 0px 1px 2px 0px, rgba(29, 21, 16, 0.06) 0px 1px 3px 0px"
+          },
+          "changed": true
+        },
+        "reducedMotionRule": false,
+        "colors": {
+          "distinctTextColors": 3,
+          "top": [
+            [
+              "rgb(30, 24, 19)",
+              1
+            ],
+            [
+              "rgb(91, 83, 72)",
+              1
+            ],
+            [
+              "rgb(251, 249, 246)",
+              1
+            ]
+          ]
+        },
+        "themeVars": {
+          "paper": "#f6f3ee",
+          "branch": "#b9a88f"
+        },
+        "darkModeQuery": false,
+        "reducedMotionQuery": false
+      }
+    },
+    {
+      "name": "05-gizlilik-mobil",
+      "path": "/gizlilik",
+      "png": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\05-gizlilik-mobil.png",
+      "audit": {
+        "url": "http://localhost:3200/gizlilik",
+        "title": "Gizlilik Politikası - Not Bahçesi",
+        "lang": "tr",
+        "viewport": {
+          "w": 390,
+          "h": 844,
+          "dpr": 3
+        },
+        "horizontalOverflow": 0,
+        "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Gizlilik Politikası"
+          },
+          {
+            "level": 2,
+            "text": "1. Topladığımız Veriler"
+          },
+          {
+            "level": 2,
+            "text": "2. Google Drive Yedeklemesi"
+          },
+          {
+            "level": 2,
+            "text": "3. Yapay Zeka Özellikleri"
+          },
+          {
+            "level": 2,
+            "text": "4. Veri Paylaşımı"
+          },
+          {
+            "level": 2,
+            "text": "5. Bilgisayar Araçları ve Dikte"
+          },
+          {
+            "level": 2,
+            "text": "6. Çocukların Gizliliği"
+          },
+          {
+            "level": 2,
+            "text": "7. İletişim"
+          }
+        ],
+        "imgIssues": [],
+        "nameIssues": [],
+        "labelIssues": [],
+        "contrastIssues": [],
+        "smallTargets": [
+          {
+            "tag": "a",
+            "sel": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl.px-6 > a.mb-10.inline-flex.items-center",
+            "text": "Ana Sayfaya Dön",
+            "w": 137,
+            "h": 20,
+            "ariaLabel": null
+          },
+          {
+            "tag": "a",
+            "sel": "div.mx-auto.max-w-2xl.px-6 > div.space-y-6.rounded-3xl.border > p.border-t.border-sand-200.pt-6 > a.font-semibold.text-clay-800.underline",
+            "text": "veri silme talebi",
+            "w": 91,
+            "h": 15,
+            "ariaLabel": null
+          }
+        ],
+        "nonSemanticClicks": [],
+        "ariaHiddenFocusable": [],
+        "duplicateIds": [],
+        "tinyText": [],
+        "counts": {
+          "h1": 1,
+          "headings": 8,
+          "interactive": 2,
+          "contrastChecks": 29
+        },
+        "focusOutline": {
+          "target": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl.px-6 > a.mb-10.inline-flex.items-center",
+          "before": {
+            "o": "none 3px rgb(91, 83, 72)",
+            "s": "none"
+          },
+          "after": {
+            "o": "solid 2px rgb(68, 130, 91)",
+            "s": "none"
+          },
+          "changed": true
+        },
+        "reducedMotionRule": false,
+        "colors": {
+          "distinctTextColors": 5,
+          "top": [
+            [
+              "rgb(70, 63, 54)",
+              18
+            ],
+            [
+              "rgb(30, 24, 19)",
+              8
+            ],
+            [
+              "rgb(91, 83, 72)",
+              1
+            ],
+            [
+              "rgb(124, 114, 104)",
+              1
+            ],
+            [
+              "rgb(115, 64, 15)",
+              1
+            ]
+          ]
+        },
+        "themeVars": {
+          "paper": "#f6f3ee",
+          "branch": "#b9a88f"
+        },
+        "darkModeQuery": false,
+        "reducedMotionQuery": false
+      }
+    },
+    {
+      "name": "06-veri-silme-mobil",
+      "path": "/veri-silme",
+      "png": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\06-veri-silme-mobil.png",
+      "audit": {
+        "url": "http://localhost:3200/veri-silme",
+        "title": "Veri Silme Talebi - Not Bahçesi",
+        "lang": "tr",
+        "viewport": {
+          "w": 390,
+          "h": 844,
+          "dpr": 3
+        },
+        "horizontalOverflow": 0,
+        "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Veri Silme Talebi"
+          },
+          {
+            "level": 2,
+            "text": "1. Verilerinizi nasıl silersiniz"
+          },
+          {
+            "level": 2,
+            "text": "2. Silinen veriler"
+          },
+          {
+            "level": 2,
+            "text": "3. E-posta ile silme talebi"
+          },
+          {
+            "level": 2,
+            "text": "4. Silmenin kapsamadığı durumlar"
+          }
+        ],
+        "imgIssues": [],
+        "nameIssues": [],
+        "labelIssues": [],
+        "contrastIssues": [],
+        "smallTargets": [
+          {
+            "tag": "a",
+            "sel": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl.px-6 > a.mb-10.inline-flex.items-center",
+            "text": "Ana Sayfaya Dön",
+            "w": 137,
+            "h": 20,
+            "ariaLabel": null
+          },
+          {
+            "tag": "a",
+            "sel": "div.mx-auto.max-w-2xl.px-6 > div.space-y-8.rounded-3xl.border > p.border-t.border-sand-200.pt-6 > a.font-semibold.text-clay-800.underline",
+            "text": "gizlilik politikasına",
+            "w": 106,
+            "h": 15,
+            "ariaLabel": null
+          }
+        ],
+        "nonSemanticClicks": [],
+        "ariaHiddenFocusable": [],
+        "duplicateIds": [],
+        "tinyText": [],
+        "counts": {
+          "h1": 1,
+          "headings": 5,
+          "interactive": 2,
+          "contrastChecks": 29
+        },
+        "focusOutline": {
+          "target": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl.px-6 > a.mb-10.inline-flex.items-center",
+          "before": {
+            "o": "none 3px rgb(91, 83, 72)",
+            "s": "none"
+          },
+          "after": {
+            "o": "solid 2px rgb(68, 130, 91)",
+            "s": "none"
+          },
+          "changed": true
+        },
+        "reducedMotionRule": false,
+        "colors": {
+          "distinctTextColors": 6,
+          "top": [
+            [
+              "rgb(70, 63, 54)",
+              13
+            ],
+            [
+              "rgb(30, 24, 19)",
+              9
+            ],
+            [
+              "rgb(91, 83, 72)",
+              4
+            ],
+            [
+              "rgb(32, 71, 47)",
+              1
+            ],
+            [
+              "rgb(124, 114, 104)",
+              1
+            ],
+            [
+              "rgb(115, 64, 15)",
+              1
+            ]
+          ]
+        },
+        "themeVars": {
+          "paper": "#f6f3ee",
+          "branch": "#b9a88f"
+        },
+        "darkModeQuery": false,
+        "reducedMotionQuery": false
+      }
+    },
+    {
+      "name": "07-ana-sayfa-masaustu",
+      "path": "/",
+      "png": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\07-ana-sayfa-masaustu.png",
+      "audit": {
+        "url": "http://localhost:3200/",
+        "title": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "lang": "tr",
+        "viewport": {
+          "w": 1440,
+          "h": 900,
+          "dpr": 1
+        },
+        "horizontalOverflow": 0,
+        "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Not Bahçesi"
+          },
+          {
+            "level": 2,
+            "text": "Hoş geldiniz"
+          }
+        ],
+        "imgIssues": [],
+        "nameIssues": [],
+        "labelIssues": [],
+        "contrastIssues": [],
+        "smallTargets": [],
+        "nonSemanticClicks": [],
+        "ariaHiddenFocusable": [],
+        "duplicateIds": [],
+        "tinyText": [],
+        "counts": {
+          "h1": 1,
+          "headings": 2,
+          "interactive": 3,
+          "contrastChecks": 6
+        },
+        "focusOutline": {
+          "target": "div.mx-auto.max-w-[1500px].px-4 > header.mb-8.flex.flex-col > div.flex.items-center.gap-3.5 > button.group.relative.flex-shrink-0",
+          "before": {
+            "o": "none 3px rgb(41, 27, 23)",
+            "s": "none"
+          },
+          "after": {
+            "o": "solid 2px rgb(68, 130, 91)",
+            "s": "none"
+          },
+          "changed": true
+        },
+        "reducedMotionRule": false,
+        "colors": {
+          "distinctTextColors": 4,
+          "top": [
+            [
+              "rgb(30, 24, 19)",
+              2
+            ],
+            [
+              "rgb(91, 83, 72)",
+              2
+            ],
+            [
+              "rgb(251, 249, 246)",
+              1
+            ],
+            [
+              "rgb(115, 64, 15)",
+              1
+            ]
+          ]
+        },
+        "themeVars": {
+          "paper": "#f6f3ee",
+          "branch": "#b9a88f"
+        },
+        "darkModeQuery": false,
+        "reducedMotionQuery": false
+      }
+    },
+    {
+      "name": "08-projeler-masaustu",
+      "path": "/projeler",
+      "png": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\08-projeler-masaustu.png",
+      "audit": {
+        "url": "http://localhost:3200/projeler",
+        "title": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "lang": "tr",
+        "viewport": {
+          "w": 1440,
+          "h": 900,
+          "dpr": 1
+        },
+        "horizontalOverflow": 0,
+        "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Bahçe"
+          },
+          {
+            "level": 2,
+            "text": "Bahçeniz hazır"
+          }
+        ],
+        "imgIssues": [],
+        "nameIssues": [
+          {
+            "reason": "erisilebilir ad yok",
+            "tag": "input",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.relative.order-last.w-full > input.input.h-10.pl-10",
+            "text": "",
+            "ariaLabel": null
+          }
+        ],
+        "labelIssues": [
+          {
+            "reason": "etiket yok",
+            "tag": "input",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.relative.order-last.w-full > input.input.h-10.pl-10",
+            "text": "",
+            "type": "text",
+            "placeholder": "Düşüncelerde ara…"
+          }
+        ],
+        "contrastIssues": [],
+        "smallTargets": [
+          {
+            "tag": "button",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.flex.min-w-0.items-center > button.rounded-xl.p-2.text-sand-600",
+            "text": "",
+            "w": 37,
+            "h": 37,
+            "ariaLabel": "Ana sayfa"
+          },
+          {
+            "tag": "input",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.relative.order-last.w-full > input.input.h-10.pl-10",
+            "text": "",
+            "w": 448,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "div.flex.flex-wrap.items-center > div.ml-auto.flex.flex-shrink-0 > div.hidden.lg:flex.items-center > button.flex.items-center.gap-1.5",
+            "text": "Bölmeli",
+            "w": 87,
+            "h": 28,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "div.flex.flex-wrap.items-center > div.ml-auto.flex.flex-shrink-0 > div.hidden.lg:flex.items-center > button.flex.items-center.gap-1.5",
+            "text": "Pano",
+            "w": 73,
+            "h": 28,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.ml-auto.flex.flex-shrink-0 > button.btn.btn-secondary.h-10",
+            "text": "Canvas",
+            "w": 109,
+            "h": 40,
+            "ariaLabel": null
+          },
+          {
+            "tag": "button",
+            "sel": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.ml-auto.flex.flex-shrink-0 > button.btn.btn-primary.h-10",
+            "text": "Yeni Ağaç",
+            "w": 124,
+            "h": 40,
+            "ariaLabel": null
+          }
+        ],
+        "nonSemanticClicks": [],
+        "ariaHiddenFocusable": [],
+        "duplicateIds": [],
+        "tinyText": [],
+        "counts": {
+          "h1": 1,
+          "headings": 2,
+          "interactive": 7,
+          "contrastChecks": 9
+        },
+        "focusOutline": {
+          "target": "div.mx-auto.max-w-[1600px].px-4 > div.flex.flex-wrap.items-center > div.flex.min-w-0.items-center > button.rounded-xl.p-2.text-sand-600",
+          "before": {
+            "o": "none 3px rgb(91, 83, 72)",
+            "s": "none"
+          },
+          "after": {
+            "o": "solid 2px rgb(68, 130, 91)",
+            "s": "none"
+          },
+          "changed": true
+        },
+        "reducedMotionRule": false,
+        "colors": {
+          "distinctTextColors": 5,
+          "top": [
+            [
+              "rgb(30, 24, 19)",
+              3
+            ],
+            [
+              "rgb(91, 83, 72)",
+              2
+            ],
+            [
+              "rgb(251, 249, 246)",
+              2
+            ],
+            [
+              "rgb(124, 114, 104)",
+              1
+            ],
+            [
+              "rgb(91, 60, 51)",
+              1
+            ]
+          ]
+        },
+        "themeVars": {
+          "paper": "#f6f3ee",
+          "branch": "#b9a88f"
+        },
+        "darkModeQuery": false,
+        "reducedMotionQuery": false
+      }
+    }
+  ],
+  "interactions": {
+    "settingsClick": "tiklandi",
+    "modal": {
+      "dialogCount": 1,
+      "dialogAttrs": [
+        {
+          "role": "dialog",
+          "ariaModal": "true",
+          "ariaLabel": null,
+          "labelledBy": "ayarlar-basligi"
+        }
+      ],
+      "activeElement": "h2 Tercihler ve Ayarlar",
+      "focusInsideDialog": true,
+      "bodyOverflow": "hidden"
+    },
+    "modalPng": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\09-ayarlar-modali-mobil.png",
+    "focusStayedInDialogWhileTabbing": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "tabEscapedDialog": false,
+    "dialogsBeforeEsc": 1,
+    "dialogsAfterEsc": 0,
+    "focusAfterEsc": "BODY",
+    "escPng": "C:\\projelerim\\notbahcesi\\docs\\reviews\\tarayici-cikti\\10-esc-sonrasi-mobil.png"
+  },
+  "consoleMessages": []
+}

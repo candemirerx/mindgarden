@@ -85,9 +85,10 @@ strong { color: #1B3A28; }
 <hr />
 <h2>1. Sürüm numarasını artır</h2>
 <p><code>android/app/build.gradle</code> dosyasını aç ve şu iki satırı güncelle:</p>
-<pre><code>versionCode 9          // her yüklemede 1 artır — Play bunu zorunlu tutar
-versionName "1.8.0"    // kullanıcının gördüğü sürüm</code></pre>
+<pre><code>versionCode 45         // her yüklemede 1 artır (44 → 45 → 46 ...) — Play bunu zorunlu tutar
+versionName "2.2.1"    // kullanıcının gördüğü sürüm</code></pre>
 <blockquote><code>versionCode</code> daha önce kullandığın bir değere eşit veya küçük olursa Play yüklemeyi reddeder. Yayınlanan en yüksek değerin üzerine çık.</blockquote>
+<p><strong>Şu anki durum:</strong> <code>versionCode 45</code>, <code>versionName "2.2.1"</code>, hedef API seviyesi 36. Bir sonraki yükleme en az 46 olmalıdır.</p>
 <hr />
 <h2>2. Paketi yeniden üret</h2>
 <p>Proje klasöründe sırayla:</p>
@@ -95,6 +96,9 @@ versionName "1.8.0"    // kullanıcının gördüğü sürüm</code></pre>
 <p>Sonra Android klasöründe:</p>
 <pre><code>cd android
 gradlew.bat bundleRelease</code></pre>
+<p><strong>Windows notu:</strong> <code>GRADLE_USER_HOME</code> ayarlı değilse Gradle "Could not initialize native services" hatasıyla durur. PowerShell'de derlemeden önce şu iki satırı çalıştır:</p>
+<pre><code>$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:GRADLE_USER_HOME='C:\projelerim\notbahcesi\.gradle-user'</code></pre>
 <p>Yeni dosya: <code>android/app/build/outputs/bundle/release/app-release.aab</code></p>
 <p>Telefona kurup denemek istersen debug paketini de üretebilirsin:</p>
 <pre><code>gradlew.bat assembleDebug</code></pre>
@@ -103,21 +107,23 @@ gradlew.bat bundleRelease</code></pre>
 <ol><li><strong>Test etme → Kapalı test → Yeni sürüm oluştur</strong></li></ol>
 <p>   (veya doğrudan <strong>Üretim → Yeni sürüm oluştur</strong>)</p>
 <ol><li>Yeni AAB'yi yükle</li><li><strong>Sürüm notları</strong> alanına kullanıcıya görünecek kısa notu yaz, örneğin:</li></ol>
-<pre><code>• Dallara renk verme eklendi
-• Yapay zekâ makroları artık açılıp kapatılabiliyor
-• Küçük hata düzeltmeleri</code></pre>
+<pre><code>• Ana ekranda her bahçenin kaç ağaç olduğu görünüyor
+• Görünüm adları sadeleşti: Liste ve Tuval
+• Dal rengi seçimin artık kaydediliyor
+• Karanlık tema ve okunabilirlik iyileştirmeleri</code></pre>
 <ol><li><strong>Kaydet → Sürümü incele → Yayına gönder</strong></li></ol>
 <hr />
 <h2>4. Sürüm notu yazma önerisi</h2>
 <p>İyi bir sürüm notu kısa, madde madde ve kullanıcı dilinde olur. Teknik terim kullanma. Örnek:</p>
 <pre><code>• Notlarına artık renk verebilirsin
-• Metin editöründe onayla/geri al düğmeleri büyütüldü
-• Drive yedekleme hızlandırıldı</code></pre>
+• Ayarlar artık tek ekranda: yapay zekâ, araçlar ve yedekleme bir arada
+• Telefonundan bilgisayarına yazabilir, farenin yerine telefonunu kullanabilirsin
+• Metin editöründe onayla/geri al düğmeleri büyütüldü</code></pre>
 <hr />
 <h2>5. Sürüm geçmişi</h2>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Sürüm kodu</th><th>Sürüm adı</th><th>Not</th></tr></thead>
-<tbody><tr><td>5</td><td>1.4.0</td><td>Yedek telefonlarda kurulu eski sürüm</td></tr><tr><td>7</td><td>1.6.0</td><td>Play Store hazırlığı</td></tr><tr><td>8</td><td>1.7.0</td><td>Çoklu AI makroları, dal renkleri, yeni ikon, CORS düzeltmesi</td></tr><tr><td>9</td><td>1.8.0</td><td>(sıradaki sürüm için ayrıldı)</td></tr></tbody>
+<tbody><tr><td>5</td><td>1.4.0</td><td>Yedek telefonlarda kurulu eski sürüm</td></tr><tr><td>7</td><td>1.6.0</td><td>Play Store hazırlığı</td></tr><tr><td>8</td><td>1.7.0</td><td>Çoklu AI makroları, dal renkleri, yeni ikon, CORS düzeltmesi</td></tr><tr><td>9–40</td><td>1.8.0–2.1.6</td><td>Ara geliştirme sürümleri</td></tr><tr><td>41</td><td>2.1.7</td><td>Ayarlar arayüzü yenilendi (7 sekme), tema tutarlılığı, bilgisayar araçları</td></tr><tr><td>42</td><td>2.1.8</td><td>Yayın adayı: veri güvenilirliği, güvenlik (SSRF/kota) ve Android lint düzeltmeleri</td></tr><tr><td>43</td><td>2.1.9</td><td>Yayın adayı: not kalıcılığı, veri silme temizliği, içe aktarma doğrulaması, ayar arayüzü tutarlılığı</td></tr><tr><td>44</td><td>2.2.0</td><td>Koyu tema, erişilebilirlik ve kontrast düzeltmeleri, R8 ile küçültme</td></tr><tr><td>45</td><td>2.2.1</td><td>Ana ekranda ağaç sayısı rozeti, görünüm adları (Liste/Tuval), dal rengi kalıcılığı, dokunmatikte yapışan vurgu düzeltmesi</td></tr></tbody>
 </table></div>
 </div>
 </body>

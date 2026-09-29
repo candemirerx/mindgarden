@@ -1,0 +1,1875 @@
+{
+  "adres": "http://127.0.0.1:3050",
+  "tarih": "2026-09-28T06:55:51.096Z",
+  "sayfalar": {
+    "ana-sayfa": {
+      "yol": "/",
+      "olcum": {
+        "baslik": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "dil": "tr",
+        "genislik": 412,
+        "yukseklik": 915,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 915,
+        "yataySayfaTasmasi": false,
+        "etkilesimliSayisi": 17,
+        "kucukHedefSayisi": 9,
+        "kucukHedefler": [
+          {
+            "yol": "main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > button.mb-5.flex",
+            "ad": "metin: 20 Eylül 2026",
+            "genislik": 97,
+            "yukseklik": 16
+          },
+          {
+            "yol": "div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex > button.btn.btn-secondary",
+            "ad": "metin: Projeler",
+            "genislik": 165,
+            "yukseklik": 42
+          },
+          {
+            "yol": "div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex > button.btn.btn-primary",
+            "ad": "metin: Canvas",
+            "genislik": 163,
+            "yukseklik": 42
+          },
+          {
+            "yol": "main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > button.mb-5.flex",
+            "ad": "metin: 20 Eylül 2026",
+            "genislik": 97,
+            "yukseklik": 16
+          },
+          {
+            "yol": "div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex > button.btn.btn-secondary",
+            "ad": "metin: Projeler",
+            "genislik": 165,
+            "yukseklik": 42
+          },
+          {
+            "yol": "div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex > button.btn.btn-primary",
+            "ad": "metin: Canvas",
+            "genislik": 163,
+            "yukseklik": 42
+          },
+          {
+            "yol": "main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > button.mb-5.flex",
+            "ad": "metin: 19 Eylül 2026",
+            "genislik": 95,
+            "yukseklik": 16
+          },
+          {
+            "yol": "div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex > button.btn.btn-secondary",
+            "ad": "metin: Projeler",
+            "genislik": 165,
+            "yukseklik": 42
+          },
+          {
+            "yol": "div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex > button.btn.btn-primary",
+            "ad": "metin: Canvas",
+            "genislik": 163,
+            "yukseklik": 42
+          }
+        ],
+        "isimsizEtkilesimliler": [],
+        "kucukYazilar": [],
+        "kucukYaziDagilimi": [],
+        "yatayTasma": [],
+        "basliklar": [
+          {
+            "seviye": "H1",
+            "metin": "Not Bahçesi"
+          },
+          {
+            "seviye": "H3",
+            "metin": "Kitap Notlari"
+          },
+          {
+            "seviye": "H3",
+            "metin": "Proje Fikirleri"
+          },
+          {
+            "seviye": "H3",
+            "metin": "Gunluk"
+          }
+        ],
+        "imgSayisi": 0,
+        "altsizImg": 0,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 23,
+        "renkler": {
+          "govdeZemin": "rgb(246, 243, 238)",
+          "govdeRenk": "rgb(41, 27, 23)",
+          "kokZemin": "rgba(0, 0, 0, 0)"
+        },
+        "tercihler": {
+          "karanlik": false,
+          "hareketAzalt": false
+        },
+        "touchAction": "auto",
+        "textSizeAdjust": "100%"
+      },
+      "axe": {
+        "ihlaller": [
+          {
+            "id": "heading-order",
+            "etki": "moderate",
+            "yardim": "Heading levels should only increase by one",
+            "kriterler": [],
+            "dugumSayisi": 1,
+            "ornekler": [
+              {
+                "hedef": "h3[title=\"Kitap Notlari\"]",
+                "ozet": "Fix any of the following: Heading order invalid"
+              }
+            ]
+          }
+        ],
+        "belirsiz": []
+      },
+      "sekmeSirasi": [
+        "button[Ayarları aç] |  | 56x56 | group relative flex-shrink-0 rounded-2xl transition-transform duration",
+        "button | Yeni Bahçe | 380x48 | btn btn-primary w-full px-5 py-3 md:w-auto md:px-6",
+        "button[Kitap Notlari bahçesini aç] | Kitap Notlari | 282x44 | flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visi",
+        "button[Bahçe seçenekleri] |  | 44x44 | flex h-11 w-11 items-center justify-center rounded-xl transition-color",
+        "button | 20 Eylül 2026 | 97x16 | mb-5 flex w-fit items-center gap-1.5 rounded-md text-xs text-sand-500 ",
+        "button | Projeler | 165x42 | btn btn-secondary flex-1 px-3 py-2.5 text-sm",
+        "button | Canvas | 163x42 | btn btn-primary flex-1 px-3 py-2.5 text-sm",
+        "button[Proje Fikirleri bahçesini aç] | Proje Fikirleri | 282x44 | flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visi",
+        "button[Bahçe seçenekleri] |  | 44x44 | flex h-11 w-11 items-center justify-center rounded-xl transition-color",
+        "button | 20 Eylül 2026 | 97x16 | mb-5 flex w-fit items-center gap-1.5 rounded-md text-xs text-sand-500 ",
+        "button | Projeler | 165x42 | btn btn-secondary flex-1 px-3 py-2.5 text-sm",
+        "button | Canvas | 163x42 | btn btn-primary flex-1 px-3 py-2.5 text-sm",
+        "button[Gunluk bahçesini aç] | Gunluk | 282x44 | flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visi",
+        "button[Bahçe seçenekleri] |  | 44x44 | flex h-11 w-11 items-center justify-center rounded-xl transition-color",
+        "button | 19 Eylül 2026 | 95x16 | mb-5 flex w-fit items-center gap-1.5 rounded-md text-xs text-sand-500 ",
+        "button | Projeler | 165x42 | btn btn-secondary flex-1 px-3 py-2.5 text-sm",
+        "button | Canvas | 163x42 | btn btn-primary flex-1 px-3 py-2.5 text-sm",
+        "(govde)"
+      ],
+      "karanlikTercihRenkleri": {
+        "govdeZemin": "rgb(246, 243, 238)",
+        "govdeRenk": "rgb(41, 27, 23)",
+        "kokZemin": "rgba(0, 0, 0, 0)"
+      },
+      "hareketAzalt": {
+        "eslesiyor": true,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 23
+      },
+      "buyukYazi": {
+        "yataySayfaTasmasi": false,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 1760,
+        "kucukHedefSayisi": 3,
+        "kucukYaziDagilimi": [],
+        "yatayTasma": [
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-[1500px] > header.mb-8.flex",
+            "kaydirma": 360,
+            "gorunur": 348
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-[1500px] > header.mb-8.flex > div.flex.items-center",
+            "kaydirma": 360,
+            "gorunur": 348
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-[1500px] > header.mb-8.flex > div.flex.items-center > button.group.relative",
+            "kaydirma": 120,
+            "gorunur": 112
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-[1500px] > main > div.grid.grid-cols-1 > div.group.relative",
+            "kaydirma": 428,
+            "gorunur": 346
+          },
+          {
+            "yol": "div.mx-auto.max-w-[1500px] > main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1",
+            "kaydirma": 428,
+            "gorunur": 346
+          },
+          {
+            "yol": "div.group.relative > div.flex.flex-1 > div.mb-4.flex > button.flex.min-w-0 > h3.truncate.text-base",
+            "kaydirma": 197,
+            "gorunur": 42
+          },
+          {
+            "yol": "main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex",
+            "kaydirma": 388,
+            "gorunur": 266
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-[1500px] > main > div.grid.grid-cols-1 > div.group.relative",
+            "kaydirma": 428,
+            "gorunur": 346
+          },
+          {
+            "yol": "div.mx-auto.max-w-[1500px] > main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1",
+            "kaydirma": 428,
+            "gorunur": 346
+          },
+          {
+            "yol": "div.group.relative > div.flex.flex-1 > div.mb-4.flex > button.flex.min-w-0 > h3.truncate.text-base",
+            "kaydirma": 211,
+            "gorunur": 42
+          },
+          {
+            "yol": "main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex",
+            "kaydirma": 388,
+            "gorunur": 266
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-[1500px] > main > div.grid.grid-cols-1 > div.group.relative",
+            "kaydirma": 428,
+            "gorunur": 346
+          },
+          {
+            "yol": "div.mx-auto.max-w-[1500px] > main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1",
+            "kaydirma": 428,
+            "gorunur": 346
+          },
+          {
+            "yol": "div.group.relative > div.flex.flex-1 > div.mb-4.flex > button.flex.min-w-0 > h3.truncate.text-base",
+            "kaydirma": 112,
+            "gorunur": 42
+          },
+          {
+            "yol": "main > div.grid.grid-cols-1 > div.group.relative > div.flex.flex-1 > div.mt-auto.flex",
+            "kaydirma": 388,
+            "gorunur": 266
+          }
+        ],
+        "kucukYazilar": []
+      },
+      "konsol": [
+        {
+          "seviye": "error",
+          "metin": "WebSocket connection to 'ws://127.0.0.1:3050/_next/webpack-hmr' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE"
+        }
+      ]
+    },
+    "projeler": {
+      "yol": "/projeler?id=bahce-kitap",
+      "olcum": {
+        "baslik": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "dil": "tr",
+        "genislik": 412,
+        "yukseklik": 915,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 915,
+        "yataySayfaTasmasi": false,
+        "etkilesimliSayisi": 19,
+        "kucukHedefSayisi": 17,
+        "kucukHedefler": [
+          {
+            "yol": "header.sticky.top-0 > div.mx-auto.max-w-[1600px] > div.flex.flex-wrap > div.flex.min-w-0 > button.rounded-xl.p-2",
+            "ad": "aria-label: Ana sayfa",
+            "genislik": 37,
+            "yukseklik": 37
+          },
+          {
+            "yol": "header.sticky.top-0 > div.mx-auto.max-w-[1600px] > div.flex.flex-wrap > div.relative.order-last > input.input.h-10",
+            "ad": "(YOK)",
+            "genislik": 380,
+            "yukseklik": 40
+          },
+          {
+            "yol": "header.sticky.top-0 > div.mx-auto.max-w-[1600px] > div.flex.flex-wrap > div.ml-auto.flex > button.btn.btn-secondary",
+            "ad": "metin: Canvas",
+            "genislik": 50,
+            "yukseklik": 40
+          },
+          {
+            "yol": "header.sticky.top-0 > div.mx-auto.max-w-[1600px] > div.flex.flex-wrap > div.ml-auto.flex > button.btn.btn-primary",
+            "ad": "metin: Yeni Ağaç",
+            "genislik": 48,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.flex.flex-col > div.w-full.lg:w-[460px] > div.flex.items-center > div.flex.items-center > button.btn.btn-ghost",
+            "ad": "metin: Tümünü Aç",
+            "genislik": 103,
+            "yukseklik": 24
+          },
+          {
+            "yol": "div.flex.flex-col > div.w-full.lg:w-[460px] > div.flex.items-center > div.flex.items-center > button.btn.btn-ghost",
+            "ad": "metin: Kapat",
+            "genislik": 50,
+            "yukseklik": 24
+          },
+          {
+            "yol": "div.w-full > div.w-full > div.relative.rounded-2xl > div.flex.items-center > button.flex-shrink-0.rounded-xl",
+            "ad": "title: Düzenle",
+            "genislik": 36,
+            "yukseklik": 36
+          },
+          {
+            "yol": "div.w-full > div.relative.rounded-2xl > div.flex.items-center > div.flex.items-center > button.flex.h-7",
+            "ad": "aria-label: İçeriği kopyala",
+            "genislik": 28,
+            "yukseklik": 28
+          },
+          {
+            "yol": "div.w-full > div.relative.rounded-2xl > div.flex.items-center > div.flex.items-center > button.flex.h-7",
+            "ad": "aria-label: Notu editörde aç",
+            "genislik": 28,
+            "yukseklik": 28
+          },
+          {
+            "yol": "div.w-full > div.w-full > div.relative.rounded-2xl > div.flex.items-center > button.flex-shrink-0.rounded-xl",
+            "ad": "title: Dalları kapat",
+            "genislik": 36,
+            "yukseklik": 36
+          },
+          {
+            "yol": "div.w-full > div.w-full > div.relative.rounded-2xl > div.flex.items-center > button.flex-shrink-0.rounded-md",
+            "ad": "aria-label: Dalları kapat",
+            "genislik": 20,
+            "yukseklik": 20
+          },
+          {
+            "yol": "div.w-full > div.relative.rounded-2xl > div.flex.items-center > div.flex.items-center > button.flex.h-7",
+            "ad": "aria-label: İçeriği kopyala",
+            "genislik": 28,
+            "yukseklik": 28
+          },
+          {
+            "yol": "div.w-full > div.relative.rounded-2xl > div.flex.items-center > div.flex.items-center > button.flex.h-7",
+            "ad": "aria-label: Notu editörde aç",
+            "genislik": 28,
+            "yukseklik": 28
+          },
+          {
+            "yol": "div.w-full > div.mt-1.5.space-y-1 > div.w-full > div.group.relative > button.flex-shrink-0.rounded-lg",
+            "ad": "title: Düzenle",
+            "genislik": 28,
+            "yukseklik": 28
+          },
+          {
+            "yol": "div.mt-1.5.space-y-1 > div.w-full > div.group.relative > div.flex.items-center > button.flex.h-7",
+            "ad": "aria-label: İçeriği kopyala",
+            "genislik": 28,
+            "yukseklik": 28
+          },
+          {
+            "yol": "div.mt-1.5.space-y-1 > div.w-full > div.group.relative > div.flex.items-center > button.flex.h-7",
+            "ad": "aria-label: Notu editörde aç",
+            "genislik": 28,
+            "yukseklik": 28
+          },
+          {
+            "yol": "div.w-full > div.group.relative > div.flex.items-center > div.relative > button.flex.h-10",
+            "ad": "aria-label: Altini cizdigim satirlar seçenekleri",
+            "genislik": 40,
+            "yukseklik": 40
+          }
+        ],
+        "isimsizEtkilesimliler": [
+          "header.sticky.top-0 > div.mx-auto.max-w-[1600px] > div.flex.flex-wrap > div.relative.order-last > input.input.h-10"
+        ],
+        "kucukYazilar": [
+          {
+            "yol": "div.flex.flex-col > div.w-full.lg:w-[460px] > div.flex.items-center > div.flex.items-center > span.chip-moss.text-[11px]",
+            "px": 11,
+            "ornek": "2 ağaç"
+          }
+        ],
+        "kucukYaziDagilimi": [
+          [
+            11,
+            1
+          ]
+        ],
+        "yatayTasma": [
+          {
+            "yol": "div.relative.rounded-2xl > div.flex.items-center > div.flex-1.min-w-0 > div.flex.items-center > span.block.truncate",
+            "kaydirma": 167,
+            "gorunur": 139
+          }
+        ],
+        "basliklar": [
+          {
+            "seviye": "H1",
+            "metin": "Kitap Notlari"
+          },
+          {
+            "seviye": "H2",
+            "metin": "Sapiens"
+          }
+        ],
+        "imgSayisi": 0,
+        "altsizImg": 0,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 33,
+        "renkler": {
+          "govdeZemin": "rgb(246, 243, 238)",
+          "govdeRenk": "rgb(41, 27, 23)",
+          "kokZemin": "rgba(0, 0, 0, 0)"
+        },
+        "tercihler": {
+          "karanlik": false,
+          "hareketAzalt": false
+        },
+        "touchAction": "auto",
+        "textSizeAdjust": "100%"
+      },
+      "axe": {
+        "ihlaller": [
+          {
+            "id": "button-name",
+            "etki": "critical",
+            "yardim": "Buttons must have discernible text",
+            "kriterler": [
+              "wcag2a",
+              "wcag412"
+            ],
+            "dugumSayisi": 2,
+            "ornekler": [
+              {
+                "hedef": ".btn-secondary.h-10.px-4",
+                "ozet": "Fix any of the following: Element does not have inner text that is visible to screen readers aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references elements that do not exist or references eleme"
+              },
+              {
+                "hedef": ".btn-primary.h-10.px-4",
+                "ozet": "Fix any of the following: Element does not have inner text that is visible to screen readers aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references elements that do not exist or references eleme"
+              }
+            ]
+          },
+          {
+            "id": "color-contrast",
+            "etki": "serious",
+            "yardim": "Elements must meet minimum color contrast ratio thresholds",
+            "kriterler": [
+              "wcag2aa",
+              "wcag143"
+            ],
+            "dugumSayisi": 1,
+            "ornekler": [
+              {
+                "hedef": ".text-\\[11px\\].font-medium.text-sand-400",
+                "ozet": "Fix any of the following: Element has insufficient color contrast of 2.48 (foreground color: #ada396, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+              }
+            ]
+          }
+        ],
+        "belirsiz": []
+      },
+      "sekmeSirasi": [
+        "button[Ana sayfa] |  | 37x37 | rounded-xl p-2 text-sand-600 transition-colors duration-200 hover:bg-s",
+        "input |  | 380x40 | input h-10 pl-10 pr-10 text-sm",
+        "button |  | 50x40 | btn btn-secondary h-10 px-4 text-sm",
+        "button |  | 48x40 | btn btn-primary h-10 px-4 text-sm",
+        "button | Tümünü Aç | 103x24 | btn btn-ghost px-2 py-1 text-xs text-sand-600 hover:text-sand-900",
+        "button | Kapat | 50x24 | btn btn-ghost px-2 py-1 text-xs text-sand-600 hover:text-sand-900",
+        "button |  | 36x36 | flex-shrink-0 rounded-xl transition-transform duration-200 hover:scale",
+        "button[İçeriği kopyala] |  | 28x28 | flex h-7 w-7 items-center justify-center rounded-lg transition-all dur",
+        "button[Notu editörde aç] |  | 28x28 | flex h-7 w-7 items-center justify-center rounded-lg bg-clay-100 text-c",
+        "button[Sapiens seçenekleri] |  | 44x44 | flex h-11 w-11 items-center justify-center rounded-xl text-sand-500 tr",
+        "button |  | 36x36 | flex-shrink-0 rounded-xl transition-transform duration-200 hover:scale",
+        "button[Dalları kapat] |  | 20x20 | flex-shrink-0 rounded-md p-0.5 text-sand-500 transition-colors duratio",
+        "button[İçeriği kopyala] |  | 28x28 | flex h-7 w-7 items-center justify-center rounded-lg transition-all dur",
+        "button[Notu editörde aç] |  | 28x28 | flex h-7 w-7 items-center justify-center rounded-lg bg-clay-100 text-c",
+        "button[Simyaci - Paulo Coelho seçenekleri] |  | 44x44 | flex h-11 w-11 items-center justify-center rounded-xl text-sand-500 tr",
+        "button |  | 28x28 | flex-shrink-0 rounded-lg transition-transform duration-200 hover:scale",
+        "button[İçeriği kopyala] |  | 28x28 | flex h-7 w-7 items-center justify-center rounded-lg transition-all dur",
+        "button[Notu editörde aç] |  | 28x28 | flex h-7 w-7 items-center justify-center rounded-lg bg-clay-100 text-c"
+      ],
+      "karanlikTercihRenkleri": {
+        "govdeZemin": "rgb(246, 243, 238)",
+        "govdeRenk": "rgb(41, 27, 23)",
+        "kokZemin": "rgba(0, 0, 0, 0)"
+      },
+      "hareketAzalt": {
+        "eslesiyor": true,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 33
+      },
+      "buyukYazi": {
+        "yataySayfaTasmasi": false,
+        "belgeGenisligi": 484,
+        "sayfaYuksekligi": 1073,
+        "kucukHedefSayisi": 1,
+        "kucukYaziDagilimi": [
+          [
+            11,
+            1
+          ]
+        ],
+        "yatayTasma": [
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper",
+            "kaydirma": 483,
+            "gorunur": 412
+          },
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > main.flex-1.relative",
+            "kaydirma": 483,
+            "gorunur": 412
+          },
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > main.flex-1.relative > div.flex.flex-col",
+            "kaydirma": 451,
+            "gorunur": 348
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-paper > main.flex-1.relative > div.flex.flex-col > div.w-full.lg:w-[460px]",
+            "kaydirma": 451,
+            "gorunur": 348
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > main.flex-1.relative > div.flex.flex-col > div.w-full.lg:w-[460px] > div.flex.items-center",
+            "kaydirma": 451,
+            "gorunur": 348
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > main.flex-1.relative > div.flex.flex-col > div.w-full.lg:w-[460px] > div.space-y-3.5",
+            "kaydirma": 397,
+            "gorunur": 348
+          },
+          {
+            "yol": "main.flex-1.relative > div.flex.flex-col > div.w-full.lg:w-[460px] > div.space-y-3.5 > div.w-full",
+            "kaydirma": 353,
+            "gorunur": 348
+          },
+          {
+            "yol": "div.flex.flex-col > div.w-full.lg:w-[460px] > div.space-y-3.5 > div.w-full > div.w-full",
+            "kaydirma": 353,
+            "gorunur": 348
+          },
+          {
+            "yol": "div.w-full.lg:w-[460px] > div.space-y-3.5 > div.w-full > div.w-full > div.relative.rounded-2xl",
+            "kaydirma": 352,
+            "gorunur": 346
+          },
+          {
+            "yol": "div.space-y-3.5 > div.w-full > div.w-full > div.relative.rounded-2xl > div.flex.items-center",
+            "kaydirma": 328,
+            "gorunur": 298
+          },
+          {
+            "yol": "main.flex-1.relative > div.flex.flex-col > div.w-full.lg:w-[460px] > div.space-y-3.5 > div.w-full",
+            "kaydirma": 397,
+            "gorunur": 348
+          },
+          {
+            "yol": "div.flex.flex-col > div.w-full.lg:w-[460px] > div.space-y-3.5 > div.w-full > div.w-full",
+            "kaydirma": 397,
+            "gorunur": 348
+          },
+          {
+            "yol": "div.w-full.lg:w-[460px] > div.space-y-3.5 > div.w-full > div.w-full > div.relative.rounded-2xl",
+            "kaydirma": 396,
+            "gorunur": 346
+          },
+          {
+            "yol": "div.space-y-3.5 > div.w-full > div.w-full > div.relative.rounded-2xl > div.flex.items-center",
+            "kaydirma": 372,
+            "gorunur": 298
+          },
+          {
+            "yol": "div.mt-1.5.space-y-1 > div.w-full > div.group.relative > div.flex-1.min-w-0 > span.block.truncate",
+            "kaydirma": 287,
+            "gorunur": 24
+          }
+        ],
+        "kucukYazilar": [
+          {
+            "yol": "div.flex.flex-col > div.w-full.lg:w-[460px] > div.flex.items-center > div.flex.items-center > span.chip-moss.text-[11px]",
+            "px": 11,
+            "ornek": "2 ağaç"
+          }
+        ]
+      },
+      "konsol": [
+        {
+          "seviye": "error",
+          "metin": "WebSocket connection to 'ws://127.0.0.1:3050/_next/webpack-hmr' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE"
+        }
+      ]
+    },
+    "editor": {
+      "yol": "/editor?id=bahce-kitap&nodeId=dugum-altini",
+      "olcum": {
+        "baslik": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "dil": "tr",
+        "genislik": 412,
+        "yukseklik": 915,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 915,
+        "yataySayfaTasmasi": false,
+        "etkilesimliSayisi": 24,
+        "kucukHedefSayisi": 23,
+        "kucukHedefler": [
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.items-center > button.p-2.hover:bg-sand-100",
+            "ad": "title: Geri Dön",
+            "genislik": 36,
+            "yukseklik": 36
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.items-center > button.flex.h-10",
+            "ad": "aria-label: Ayarları aç",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.items-center > button.p-2.5.rounded-lg",
+            "ad": "title: İçeriği Kopyala",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "header.bg-white.border-b > div.flex.items-center > div.flex.items-center > div.relative > button.p-2.5.text-sand-500",
+            "ad": "title: Dışa Aktar",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.flex.items-center > div.flex.items-center > div.flex.flex-col > label.flex.items-center > input.w-3.5.h-3.5",
+            "ad": "label: Oto",
+            "genislik": 14,
+            "yukseklik": 14
+          },
+          {
+            "yol": "header.bg-white.border-b > div.flex.items-center > div.flex.items-center > div.flex.flex-col > button.p-2.rounded-lg",
+            "ad": "title: Otomatik kaydetme açık",
+            "genislik": 36,
+            "yukseklik": 36
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "metin: İmla Düzelt",
+            "genislik": 120,
+            "yukseklik": 32
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "metin: Özetle",
+            "genislik": 89,
+            "yukseklik": 32
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "metin: Resmileştir",
+            "genislik": 120,
+            "yukseklik": 32
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "metin: Sadeleştir",
+            "genislik": 113,
+            "yukseklik": 32
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "metin: Genişlet",
+            "genislik": 101,
+            "yukseklik": 32
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "metin: İngilizceye Çevir",
+            "genislik": 156,
+            "yukseklik": 32
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "aria-label: İçerikten Başlık",
+            "genislik": 148,
+            "yukseklik": 36
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "aria-label: Sıralı Ad",
+            "genislik": 101,
+            "yukseklik": 36
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "aria-label: Numaralandır",
+            "genislik": 136,
+            "yukseklik": 36
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.flex.flex-shrink-0",
+            "ad": "aria-label: Boşlukları Sadeleştir",
+            "genislik": 182,
+            "yukseklik": 36
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.btn.min-h-10",
+            "ad": "metin: Fare",
+            "genislik": 76,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.btn.btn-primary",
+            "ad": "metin: Dikte",
+            "genislik": 81,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.btn.min-h-10",
+            "ad": "metin: Köprü Dikte",
+            "genislik": 125,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.btn.btn-primary",
+            "ad": "metin: Köprü Yaz",
+            "genislik": 115,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.btn.btn-primary",
+            "ad": "metin: Bilgisayara yaz",
+            "genislik": 148,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.min-w-0 > button.btn.btn-primary",
+            "ad": "metin: PC panosu",
+            "genislik": 119,
+            "yukseklik": 40
+          },
+          {
+            "yol": "main.flex-1.overflow-auto > div.max-w-4xl.mx-auto > div.bg-white.shadow-card > div.border-b.border-sand-200 > input.w-full.text-xl",
+            "ad": "(YOK)",
+            "genislik": 332,
+            "yukseklik": 28
+          }
+        ],
+        "isimsizEtkilesimliler": [
+          "main.flex-1.overflow-auto > div.max-w-4xl.mx-auto > div.bg-white.shadow-card > div.border-b.border-sand-200 > input.w-full.text-xl",
+          "main.flex-1.overflow-auto > div.max-w-4xl.mx-auto > div.bg-white.shadow-card > div.px-6.sm:px-12 > textarea.w-full.min-h-[500px]"
+        ],
+        "kucukYazilar": [
+          {
+            "yol": "div.flex.items-center > div.flex.items-center > div.flex.flex-col > label.flex.items-center > span.text-[10px].text-sand-500",
+            "px": 10,
+            "ornek": "Oto"
+          }
+        ],
+        "kucukYaziDagilimi": [
+          [
+            10,
+            1
+          ]
+        ],
+        "yatayTasma": [
+          {
+            "yol": "header.bg-white.border-b > div.flex.items-center > div.flex.items-center > div.min-w-0.flex-1 > h1.text-base.sm:text-lg",
+            "kaydirma": 168,
+            "gorunur": 151
+          }
+        ],
+        "basliklar": [
+          {
+            "seviye": "H1",
+            "metin": "Altini cizdigim satirlar"
+          }
+        ],
+        "imgSayisi": 0,
+        "altsizImg": 0,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 21,
+        "renkler": {
+          "govdeZemin": "rgb(246, 243, 238)",
+          "govdeRenk": "rgb(41, 27, 23)",
+          "kokZemin": "rgba(0, 0, 0, 0)"
+        },
+        "tercihler": {
+          "karanlik": false,
+          "hareketAzalt": false
+        },
+        "touchAction": "auto",
+        "textSizeAdjust": "100%"
+      },
+      "axe": {
+        "ihlaller": [
+          {
+            "id": "aria-prohibited-attr",
+            "etki": "serious",
+            "yardim": "Elements must only use permitted ARIA attributes",
+            "kriterler": [
+              "wcag2a",
+              "wcag412"
+            ],
+            "dugumSayisi": 1,
+            "ornekler": [
+              {
+                "hedef": ".text-\\[11px\\]",
+                "ozet": "Fix all of the following: aria-label attribute cannot be used on a span with no valid role attribute."
+              }
+            ]
+          },
+          {
+            "id": "scrollable-region-focusable",
+            "etki": "serious",
+            "yardim": "Scrollable region must have keyboard access",
+            "kriterler": [
+              "wcag2a",
+              "wcag211",
+              "wcag213"
+            ],
+            "dugumSayisi": 1,
+            "ornekler": [
+              {
+                "hedef": ".bg-gradient-to-r > .overflow-x-auto.pb-0\\.5.min-w-0",
+                "ozet": "Fix any of the following: Element should have focusable content Element should be focusable"
+              }
+            ]
+          }
+        ],
+        "belirsiz": [
+          {
+            "id": "color-contrast",
+            "dugumSayisi": 2
+          }
+        ]
+      },
+      "sekmeSirasi": [
+        "button |  | 36x36 | p-2 hover:bg-sand-100 rounded-lg transition-colors",
+        "button[Ayarları aç] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-600 tr",
+        "button |  | 40x40 | p-2.5 rounded-lg transition-all text-sand-500 hover:bg-sand-100 hover:",
+        "button |  | 40x40 | p-2.5 text-sand-500 hover:bg-sand-100 hover:text-sand-700 rounded-lg t",
+        "input |  | 14x14 | w-3.5 h-3.5 rounded border-sand-300 text-moss-600 focus:ring-moss-500 ",
+        "div | İmla Düzelt Özetle Resmileştir Sadeleşti | 356x34 | flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5",
+        "button[İçerikten Başlık] | İçerikten Başlık | 148x36 | flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm f",
+        "button[Sıralı Ad] | Sıralı Ad | 101x36 | flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm f",
+        "button[Numaralandır] | Numaralandır | 136x36 | flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm f",
+        "button[Boşlukları Sadeleştir] | Boşlukları Sadeleştir | 182x36 | flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm f",
+        "button | Fare | 76x40 | btn min-h-10 shrink-0 gap-1.5 px-3 text-sm btn-primary",
+        "button | Dikte | 81x40 | btn btn-primary min-h-10 shrink-0 gap-1.5 px-3 text-sm",
+        "button | Köprü Dikte | 125x40 | btn min-h-10 shrink-0 gap-1.5 px-3 text-sm btn-primary",
+        "button | Köprü Yaz | 115x40 | btn btn-primary min-h-10 shrink-0 gap-1.5 px-3 text-sm ",
+        "input |  | 332x28 | w-full text-xl font-semibold text-sand-800 outline-none placeholder:te",
+        "textarea |  | 332x500 | w-full min-h-[500px] sm:min-h-[600px] resize-none outline-none text-sa",
+        "(govde)",
+        "button |  | 36x36 | p-2 hover:bg-sand-100 rounded-lg transition-colors"
+      ],
+      "karanlikTercihRenkleri": {
+        "govdeZemin": "rgb(246, 243, 238)",
+        "govdeRenk": "rgb(41, 27, 23)",
+        "kokZemin": "rgba(0, 0, 0, 0)"
+      },
+      "hareketAzalt": {
+        "eslesiyor": true,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 21
+      },
+      "buyukYazi": {
+        "yataySayfaTasmasi": false,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 1250,
+        "kucukHedefSayisi": 1,
+        "kucukYaziDagilimi": [
+          [
+            10,
+            1
+          ]
+        ],
+        "yatayTasma": [
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-sand-200 > header.bg-white.border-b > div.flex.items-center > div.flex.items-center",
+            "kaydirma": 52,
+            "gorunur": 46
+          },
+          {
+            "yol": "main.flex-1.overflow-auto > div.max-w-4xl.mx-auto > div.bg-white.shadow-card > div.border-b.border-sand-200 > input.w-full.text-xl",
+            "kaydirma": 418,
+            "gorunur": 252
+          }
+        ],
+        "kucukYazilar": [
+          {
+            "yol": "div.flex.items-center > div.flex.items-center > div.flex.flex-col > label.flex.items-center > span.text-[10px].text-sand-500",
+            "px": 10,
+            "ornek": "Oto"
+          }
+        ]
+      },
+      "konsol": [
+        {
+          "seviye": "error",
+          "metin": "WebSocket connection to 'ws://127.0.0.1:3050/_next/webpack-hmr' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE"
+        }
+      ]
+    },
+    "bahce-view": {
+      "yol": "/bahce_view?id=bahce-kitap",
+      "olcum": {
+        "baslik": "Not Bahçesi - Ağaç Temalı Not Tutma",
+        "dil": "tr",
+        "genislik": 412,
+        "yukseklik": 915,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 915,
+        "yataySayfaTasmasi": false,
+        "etkilesimliSayisi": 21,
+        "kucukHedefSayisi": 21,
+        "kucukHedefler": [
+          {
+            "yol": "body.font-sans.antialiased > div.h-screen.flex > header.relative.z-40 > div.flex.min-w-0 > button.flex-shrink-0.rounded-xl",
+            "ad": "aria-label: Ana sayfa",
+            "genislik": 36,
+            "yukseklik": 36
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.h-screen.flex > header.relative.z-40 > div.flex.flex-shrink-0 > button.flex-shrink-0.rounded-xl",
+            "ad": "aria-label: Projeler",
+            "genislik": 35,
+            "yukseklik": 35
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.h-screen.flex > header.relative.z-40 > div.flex.flex-shrink-0 > button.flex-shrink-0.rounded-xl",
+            "ad": "aria-label: Ayarlar",
+            "genislik": 35,
+            "yukseklik": 35
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.h-screen.flex > header.relative.z-40 > div.flex.flex-shrink-0 > button.btn.btn-primary",
+            "ad": "metin: Ağaç Ekle",
+            "genislik": 40,
+            "yukseklik": 32
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > div.relative.flex > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Metin editörünü aç",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > div.relative.flex > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: İçeriği kopyala",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > div.relative.flex > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Alt dal ekle",
+            "genislik": 106,
+            "yukseklik": 40
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > div.relative.flex > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Buda",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > div.relative.flex > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Metin editörünü aç",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > div.relative.flex > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: İçeriği kopyala",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > div.relative.flex > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Alt dal ekle",
+            "genislik": 106,
+            "yukseklik": 40
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > div.relative.flex > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Buda",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "ul.flex.gap-20 > li.tree-drag-area.relative > li > div.relative.flex > button.flex.items-center",
+            "ad": "aria-label: Dalları kapat",
+            "genislik": 36,
+            "yukseklik": 36
+          },
+          {
+            "yol": "ul > li > div.relative.inline-block > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Metin editörünü aç",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "ul > li > div.relative.inline-block > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: İçeriği kopyala",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "ul > li > div.relative.inline-block > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Yan dal ekle",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "ul > li > div.relative.inline-block > div.absolute.bottom-full > button.flex.h-10",
+            "ad": "aria-label: Buda",
+            "genislik": 40,
+            "yukseklik": 40
+          },
+          {
+            "yol": "div.h-screen.flex > div.flex-1.relative > div.w-full.h-full > div.absolute.bottom-5 > button.p-2.text-sand-700",
+            "ad": "aria-label: Uzaklaştır",
+            "genislik": 32,
+            "yukseklik": 32
+          },
+          {
+            "yol": "div.h-screen.flex > div.flex-1.relative > div.w-full.h-full > div.absolute.bottom-5 > button.px-2.5.py-1",
+            "ad": "metin: 100%",
+            "genislik": 53,
+            "yukseklik": 24
+          },
+          {
+            "yol": "div.h-screen.flex > div.flex-1.relative > div.w-full.h-full > div.absolute.bottom-5 > button.p-2.text-sand-700",
+            "ad": "aria-label: Yakınlaştır",
+            "genislik": 32,
+            "yukseklik": 32
+          },
+          {
+            "yol": "div.h-screen.flex > div.flex-1.relative > div.w-full.h-full > div.absolute.bottom-5 > button.p-2.text-sand-700",
+            "ad": "aria-label: Ağacı Ortala",
+            "genislik": 31,
+            "yukseklik": 31
+          }
+        ],
+        "isimsizEtkilesimliler": [],
+        "kucukYazilar": [
+          {
+            "yol": "li > div.relative.flex > div.dugum-karti.relative > div.mb-2.inline-flex > span",
+            "px": 11,
+            "ornek": "Kök Düşünce"
+          },
+          {
+            "yol": "li > div.relative.flex > div.dugum-karti.relative > div.mb-2.inline-flex > span",
+            "px": 11,
+            "ornek": "Kök Düşünce"
+          }
+        ],
+        "kucukYaziDagilimi": [
+          [
+            11,
+            2
+          ]
+        ],
+        "yatayTasma": [
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.h-screen.flex > div.flex-1.relative > div.w-full.h-full",
+            "kaydirma": 657,
+            "gorunur": 412
+          },
+          {
+            "yol": "div.w-full.h-full > div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li",
+            "kaydirma": 242,
+            "gorunur": 236
+          },
+          {
+            "yol": "div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li > div.relative.flex",
+            "kaydirma": 234,
+            "gorunur": 220
+          },
+          {
+            "yol": "div.w-full.h-full > div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li",
+            "kaydirma": 267,
+            "gorunur": 257
+          },
+          {
+            "yol": "div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li > div.relative.flex",
+            "kaydirma": 259,
+            "gorunur": 241
+          }
+        ],
+        "basliklar": [
+          {
+            "seviye": "H1",
+            "metin": "Kitap Notlari"
+          },
+          {
+            "seviye": "H4",
+            "metin": "Sapiens"
+          },
+          {
+            "seviye": "H4",
+            "metin": "Simyaci - Paulo Coelho"
+          },
+          {
+            "seviye": "H4",
+            "metin": "Altini cizdigim satirlar"
+          }
+        ],
+        "imgSayisi": 0,
+        "altsizImg": 0,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 38,
+        "renkler": {
+          "govdeZemin": "rgb(246, 243, 238)",
+          "govdeRenk": "rgb(41, 27, 23)",
+          "kokZemin": "rgba(0, 0, 0, 0)"
+        },
+        "tercihler": {
+          "karanlik": false,
+          "hareketAzalt": false
+        },
+        "touchAction": "auto",
+        "textSizeAdjust": "100%"
+      },
+      "axe": {
+        "ihlaller": [
+          {
+            "id": "heading-order",
+            "etki": "moderate",
+            "yardim": "Heading levels should only increase by one",
+            "kriterler": [],
+            "dugumSayisi": 1,
+            "ornekler": [
+              {
+                "hedef": ".tree-drag-area[data-agac-alani=\"true\"]:nth-child(1) > li > .group.flex-col.relative > .min-w-\\[220px\\].max-w-\\[340px\\].rounded-3xl > .font-serif.text-xl.tracking-tight",
+                "ozet": "Fix any of the following: Heading order invalid"
+              }
+            ]
+          },
+          {
+            "id": "landmark-one-main",
+            "etki": "moderate",
+            "yardim": "Document should have one main landmark",
+            "kriterler": [],
+            "dugumSayisi": 1,
+            "ornekler": [
+              {
+                "hedef": "html",
+                "ozet": "Fix all of the following: Document does not have a main landmark"
+              }
+            ]
+          },
+          {
+            "id": "listitem",
+            "etki": "serious",
+            "yardim": "<li> elements must be contained in a <ul> or <ol>",
+            "kriterler": [
+              "wcag2a",
+              "wcag131"
+            ],
+            "dugumSayisi": 2,
+            "ornekler": [
+              {
+                "hedef": ".tree-drag-area[data-agac-alani=\"true\"]:nth-child(1) > li",
+                "ozet": "Fix any of the following: List item does not have a <ul>, <ol> parent element"
+              },
+              {
+                "hedef": ".tree-drag-area[data-agac-alani=\"true\"]:nth-child(2) > li",
+                "ozet": "Fix any of the following: List item does not have a <ul>, <ol> parent element"
+              }
+            ]
+          },
+          {
+            "id": "region",
+            "etki": "moderate",
+            "yardim": "All page content should be contained by landmarks",
+            "kriterler": [],
+            "dugumSayisi": 10,
+            "ornekler": [
+              {
+                "hedef": "div[aria-label=\"Sapiens araçları\"]",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              },
+              {
+                "hedef": ".tree-drag-area[data-agac-alani=\"true\"]:nth-child(1) > li > .group.flex-col.relative > .min-w-\\[220px\\].max-w-\\[340px\\].rounded-3xl > .mb-2.inline-flex.bg-white\\/15 > span",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              },
+              {
+                "hedef": ".tree-drag-area[data-agac-alani=\"true\"]:nth-child(1) > li > .group.flex-col.relative > .min-w-\\[220px\\].max-w-\\[340px\\].rounded-3xl > .font-serif.text-xl.tracking-tight",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              }
+            ]
+          }
+        ],
+        "belirsiz": [
+          {
+            "id": "color-contrast",
+            "dugumSayisi": 3
+          }
+        ]
+      },
+      "sekmeSirasi": [
+        "button[Ana sayfa] |  | 36x36 | flex-shrink-0 rounded-xl p-2 text-sand-600 transition-colors duration-",
+        "button[Projeler] |  | 35x35 | flex-shrink-0 rounded-xl p-2 text-clay-700 transition-colors duration-",
+        "button[Ayarlar] |  | 35x35 | flex-shrink-0 rounded-xl p-2 text-sand-600 transition-colors duration-",
+        "button |  | 40x32 | btn btn-primary ml-1 px-3 py-2 text-xs md:px-4 md:text-sm",
+        "button[Metin editörünü aç] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr",
+        "button[İçeriği kopyala] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr",
+        "button[Alt dal ekle] | Dal Ekle | 106x40 | flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold",
+        "button[Buda] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr",
+        "button[Yeni dal ekle] |  | 36x36 | \n                            flex items-center justify-center rounded-",
+        "button[Metin editörünü aç] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr",
+        "button[İçeriği kopyala] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr",
+        "button[Alt dal ekle] | Dal Ekle | 106x40 | flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold",
+        "button[Buda] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr",
+        "button[Yeni dal ekle] |  | 36x36 | \n                            flex items-center justify-center rounded-",
+        "button[Dalları kapat] |  | 36x36 | \n                                flex items-center justify-center roun",
+        "button[Metin editörünü aç] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr",
+        "button[İçeriği kopyala] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr",
+        "button[Yan dal ekle] |  | 40x40 | flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 tr"
+      ],
+      "karanlikTercihRenkleri": {
+        "govdeZemin": "rgb(246, 243, 238)",
+        "govdeRenk": "rgb(41, 27, 23)",
+        "kokZemin": "rgba(0, 0, 0, 0)"
+      },
+      "hareketAzalt": {
+        "eslesiyor": true,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 38
+      },
+      "buyukYazi": {
+        "yataySayfaTasmasi": false,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 915,
+        "kucukHedefSayisi": 0,
+        "kucukYaziDagilimi": [
+          [
+            11,
+            2
+          ]
+        ],
+        "yatayTasma": [
+          {
+            "yol": "div.h-screen.flex > header.relative.z-40 > div.flex.min-w-0 > div.min-w-0.flex-1 > h1.truncate.text-base",
+            "kaydirma": 197,
+            "gorunur": 78
+          },
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.h-screen.flex > div.flex-1.relative > div.w-full.h-full",
+            "kaydirma": 820,
+            "gorunur": 412
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.h-screen.flex > div.flex-1.relative > div.w-full.h-full > div.absolute.origin-top-left",
+            "kaydirma": 714,
+            "gorunur": 640
+          },
+          {
+            "yol": "div.h-screen.flex > div.flex-1.relative > div.w-full.h-full > div.absolute.origin-top-left > ul.flex.gap-20",
+            "kaydirma": 714,
+            "gorunur": 640
+          },
+          {
+            "yol": "div.flex-1.relative > div.w-full.h-full > div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative",
+            "kaydirma": 382,
+            "gorunur": 288
+          },
+          {
+            "yol": "div.w-full.h-full > div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li",
+            "kaydirma": 374,
+            "gorunur": 272
+          },
+          {
+            "yol": "div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li > div.relative.flex",
+            "kaydirma": 366,
+            "gorunur": 256
+          },
+          {
+            "yol": "div.flex-1.relative > div.w-full.h-full > div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative",
+            "kaydirma": 402,
+            "gorunur": 328
+          },
+          {
+            "yol": "div.w-full.h-full > div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li",
+            "kaydirma": 394,
+            "gorunur": 312
+          },
+          {
+            "yol": "div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li > div.relative.flex",
+            "kaydirma": 386,
+            "gorunur": 296
+          },
+          {
+            "yol": "div.absolute.origin-top-left > ul.flex.gap-20 > li.tree-drag-area.relative > li > ul",
+            "kaydirma": 329,
+            "gorunur": 296
+          },
+          {
+            "yol": "ul.flex.gap-20 > li.tree-drag-area.relative > li > ul > li",
+            "kaydirma": 329,
+            "gorunur": 296
+          },
+          {
+            "yol": "li.tree-drag-area.relative > li > ul > li > div.relative.inline-block",
+            "kaydirma": 321,
+            "gorunur": 280
+          },
+          {
+            "yol": "div.relative.inline-block > div.node-content.dugum-karti > div.flex.items-center > div.flex-1.min-w-0 > h4.truncate.text-[15px]",
+            "kaydirma": 157,
+            "gorunur": 148
+          }
+        ],
+        "kucukYazilar": [
+          {
+            "yol": "li > div.relative.flex > div.dugum-karti.relative > div.mb-2.inline-flex > span",
+            "px": 11,
+            "ornek": "Kök Düşünce"
+          },
+          {
+            "yol": "li > div.relative.flex > div.dugum-karti.relative > div.mb-2.inline-flex > span",
+            "px": 11,
+            "ornek": "Kök Düşünce"
+          }
+        ]
+      },
+      "konsol": [
+        {
+          "seviye": "error",
+          "metin": "WebSocket connection to 'ws://127.0.0.1:3050/_next/webpack-hmr' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE"
+        },
+        {
+          "seviye": "error",
+          "metin": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+        },
+        {
+          "seviye": "error",
+          "metin": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+        }
+      ]
+    },
+    "gizlilik": {
+      "yol": "/gizlilik",
+      "olcum": {
+        "baslik": "Gizlilik Politikası - Not Bahçesi",
+        "dil": "tr",
+        "genislik": 412,
+        "yukseklik": 915,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 2489,
+        "yataySayfaTasmasi": false,
+        "etkilesimliSayisi": 2,
+        "kucukHedefSayisi": 2,
+        "kucukHedefler": [
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > a.mb-10.inline-flex",
+            "ad": "metin: Ana Sayfaya Dön",
+            "genislik": 137,
+            "yukseklik": 20
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > p.border-t.border-sand-200 > a.font-semibold.text-clay-800",
+            "ad": "metin: veri silme talebi",
+            "genislik": 91,
+            "yukseklik": 15
+          }
+        ],
+        "isimsizEtkilesimliler": [],
+        "kucukYazilar": [],
+        "kucukYaziDagilimi": [],
+        "yatayTasma": [],
+        "basliklar": [
+          {
+            "seviye": "H1",
+            "metin": "Gizlilik Politikası"
+          },
+          {
+            "seviye": "H2",
+            "metin": "1. Topladığımız Veriler"
+          },
+          {
+            "seviye": "H2",
+            "metin": "2. Google Drive Yedeklemesi"
+          },
+          {
+            "seviye": "H2",
+            "metin": "3. Yapay Zeka Özellikleri"
+          },
+          {
+            "seviye": "H2",
+            "metin": "4. Veri Paylaşımı"
+          },
+          {
+            "seviye": "H2",
+            "metin": "5. Bilgisayar Araçları ve Dikte"
+          },
+          {
+            "seviye": "H2",
+            "metin": "6. Çocukların Gizliliği"
+          },
+          {
+            "seviye": "H2",
+            "metin": "7. İletişim"
+          }
+        ],
+        "imgSayisi": 0,
+        "altsizImg": 0,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 1,
+        "renkler": {
+          "govdeZemin": "rgb(246, 243, 238)",
+          "govdeRenk": "rgb(41, 27, 23)",
+          "kokZemin": "rgba(0, 0, 0, 0)"
+        },
+        "tercihler": {
+          "karanlik": false,
+          "hareketAzalt": false
+        },
+        "touchAction": "auto",
+        "textSizeAdjust": "100%"
+      },
+      "axe": {
+        "ihlaller": [
+          {
+            "id": "landmark-one-main",
+            "etki": "moderate",
+            "yardim": "Document should have one main landmark",
+            "kriterler": [],
+            "dugumSayisi": 1,
+            "ornekler": [
+              {
+                "hedef": "html",
+                "ozet": "Fix all of the following: Document does not have a main landmark"
+              }
+            ]
+          },
+          {
+            "id": "region",
+            "etki": "moderate",
+            "yardim": "All page content should be contained by landmarks",
+            "kriterler": [],
+            "dugumSayisi": 3,
+            "ornekler": [
+              {
+                "hedef": ".mb-10",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              },
+              {
+                "hedef": "h1",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              },
+              {
+                "hedef": ".space-y-6",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              }
+            ]
+          }
+        ],
+        "belirsiz": [
+          {
+            "id": "color-contrast",
+            "dugumSayisi": 1
+          }
+        ]
+      },
+      "sekmeSirasi": [
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | veri silme talebi | 91x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | veri silme talebi | 91x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | veri silme talebi | 91x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | veri silme talebi | 91x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | veri silme talebi | 91x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | veri silme talebi | 91x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-"
+      ],
+      "karanlikTercihRenkleri": {
+        "govdeZemin": "rgb(246, 243, 238)",
+        "govdeRenk": "rgb(41, 27, 23)",
+        "kokZemin": "rgba(0, 0, 0, 0)"
+      },
+      "hareketAzalt": {
+        "eslesiyor": true,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 1
+      },
+      "buyukYazi": {
+        "yataySayfaTasmasi": false,
+        "belgeGenisligi": 458,
+        "sayfaYuksekligi": 13948,
+        "kucukHedefSayisi": 1,
+        "kucukYaziDagilimi": [],
+        "yatayTasma": [
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper",
+            "kaydirma": 458,
+            "gorunur": 412
+          },
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl",
+            "kaydirma": 458,
+            "gorunur": 412
+          },
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl",
+            "kaydirma": 409,
+            "gorunur": 314
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2",
+            "kaydirma": 257,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2 > h2.text-lg.font-semibold",
+            "kaydirma": 222,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2 > p",
+            "kaydirma": 197,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2 > p",
+            "kaydirma": 257,
+            "gorunur": 186
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2",
+            "kaydirma": 248,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2 > h2.text-lg.font-semibold",
+            "kaydirma": 213,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2 > p",
+            "kaydirma": 248,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2 > p",
+            "kaydirma": 243,
+            "gorunur": 186
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2",
+            "kaydirma": 197,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2 > p",
+            "kaydirma": 197,
+            "gorunur": 186
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2",
+            "kaydirma": 232,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-6.rounded-3xl > section.space-y-2 > p",
+            "kaydirma": 232,
+            "gorunur": 186
+          }
+        ],
+        "kucukYazilar": []
+      },
+      "konsol": [
+        {
+          "seviye": "error",
+          "metin": "WebSocket connection to 'ws://127.0.0.1:3050/_next/webpack-hmr' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE"
+        }
+      ]
+    },
+    "veri-silme": {
+      "yol": "/veri-silme",
+      "olcum": {
+        "baslik": "Veri Silme Talebi - Not Bahçesi",
+        "dil": "tr",
+        "genislik": 412,
+        "yukseklik": 915,
+        "belgeGenisligi": 412,
+        "sayfaYuksekligi": 2537,
+        "yataySayfaTasmasi": false,
+        "etkilesimliSayisi": 2,
+        "kucukHedefSayisi": 2,
+        "kucukHedefler": [
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > a.mb-10.inline-flex",
+            "ad": "metin: Ana Sayfaya Dön",
+            "genislik": 137,
+            "yukseklik": 20
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > p.border-t.border-sand-200 > a.font-semibold.text-clay-800",
+            "ad": "metin: gizlilik politikasına",
+            "genislik": 106,
+            "yukseklik": 15
+          }
+        ],
+        "isimsizEtkilesimliler": [],
+        "kucukYazilar": [],
+        "kucukYaziDagilimi": [],
+        "yatayTasma": [],
+        "basliklar": [
+          {
+            "seviye": "H1",
+            "metin": "Veri Silme Talebi"
+          },
+          {
+            "seviye": "H2",
+            "metin": "1. Verilerinizi nasıl silersiniz"
+          },
+          {
+            "seviye": "H2",
+            "metin": "2. Silinen veriler"
+          },
+          {
+            "seviye": "H2",
+            "metin": "3. E-posta ile silme talebi"
+          },
+          {
+            "seviye": "H2",
+            "metin": "4. Silmenin kapsamadığı durumlar"
+          }
+        ],
+        "imgSayisi": 0,
+        "altsizImg": 0,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 1,
+        "renkler": {
+          "govdeZemin": "rgb(246, 243, 238)",
+          "govdeRenk": "rgb(41, 27, 23)",
+          "kokZemin": "rgba(0, 0, 0, 0)"
+        },
+        "tercihler": {
+          "karanlik": false,
+          "hareketAzalt": false
+        },
+        "touchAction": "auto",
+        "textSizeAdjust": "100%"
+      },
+      "axe": {
+        "ihlaller": [
+          {
+            "id": "landmark-one-main",
+            "etki": "moderate",
+            "yardim": "Document should have one main landmark",
+            "kriterler": [],
+            "dugumSayisi": 1,
+            "ornekler": [
+              {
+                "hedef": "html",
+                "ozet": "Fix all of the following: Document does not have a main landmark"
+              }
+            ]
+          },
+          {
+            "id": "region",
+            "etki": "moderate",
+            "yardim": "All page content should be contained by landmarks",
+            "kriterler": [],
+            "dugumSayisi": 13,
+            "ornekler": [
+              {
+                "hedef": ".mb-10",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              },
+              {
+                "hedef": "h1",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              },
+              {
+                "hedef": ".space-y-8 > p:nth-child(1)",
+                "ozet": "Fix any of the following: Some page content is not contained by landmarks"
+              }
+            ]
+          }
+        ],
+        "belirsiz": [
+          {
+            "id": "color-contrast",
+            "dugumSayisi": 1
+          }
+        ]
+      },
+      "sekmeSirasi": [
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | gizlilik politikasına | 106x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | gizlilik politikasına | 106x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | gizlilik politikasına | 106x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | gizlilik politikasına | 106x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | gizlilik politikasına | 106x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-",
+        "a | gizlilik politikasına | 106x15 | font-semibold text-clay-800 underline decoration-clay-400 underline-of",
+        "(govde)",
+        "a | Ana Sayfaya Dön | 137x20 | mb-10 inline-flex items-center gap-2 text-sm text-sand-600 transition-"
+      ],
+      "karanlikTercihRenkleri": {
+        "govdeZemin": "rgb(246, 243, 238)",
+        "govdeRenk": "rgb(41, 27, 23)",
+        "kokZemin": "rgba(0, 0, 0, 0)"
+      },
+      "hareketAzalt": {
+        "eslesiyor": true,
+        "animasyonluOgeSayisi": 0,
+        "gecisliOgeSayisi": 1
+      },
+      "buyukYazi": {
+        "yataySayfaTasmasi": false,
+        "belgeGenisligi": 486,
+        "sayfaYuksekligi": 13392,
+        "kucukHedefSayisi": 1,
+        "kucukYaziDagilimi": [],
+        "yatayTasma": [
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper",
+            "kaydirma": 486,
+            "gorunur": 412
+          },
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl",
+            "kaydirma": 486,
+            "gorunur": 412
+          },
+          {
+            "yol": "html.__variable_f367f3.__variable_eb41fe > body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl",
+            "kaydirma": 437,
+            "gorunur": 314
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-4",
+            "kaydirma": 257,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-4 > ol.space-y-3",
+            "kaydirma": 257,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-4 > ol.space-y-3 > li.rounded-2xl.border",
+            "kaydirma": 256,
+            "gorunur": 184
+          },
+          {
+            "yol": "div.space-y-8.rounded-3xl > section.space-y-4 > ol.space-y-3 > li.rounded-2xl.border > p.text-sand-600",
+            "kaydirma": 224,
+            "gorunur": 120
+          },
+          {
+            "yol": "div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-4 > ol.space-y-3 > li.rounded-2xl.border",
+            "kaydirma": 198,
+            "gorunur": 184
+          },
+          {
+            "yol": "div.space-y-8.rounded-3xl > section.space-y-4 > ol.space-y-3 > li.rounded-2xl.border > p.text-sand-600",
+            "kaydirma": 166,
+            "gorunur": 120
+          },
+          {
+            "yol": "div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-4 > ol.space-y-3 > li.rounded-2xl.border",
+            "kaydirma": 246,
+            "gorunur": 184
+          },
+          {
+            "yol": "div.space-y-8.rounded-3xl > section.space-y-4 > ol.space-y-3 > li.rounded-2xl.border > p.text-sand-600",
+            "kaydirma": 214,
+            "gorunur": 120
+          },
+          {
+            "yol": "body.font-sans.antialiased > div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-3",
+            "kaydirma": 221,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.min-h-screen.bg-paper > div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-3 > ul.list-disc.space-y-1",
+            "kaydirma": 221,
+            "gorunur": 186
+          },
+          {
+            "yol": "div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-3 > ul.list-disc.space-y-1 > li",
+            "kaydirma": 156,
+            "gorunur": 146
+          },
+          {
+            "yol": "div.mx-auto.max-w-2xl > div.space-y-8.rounded-3xl > section.space-y-3 > ul.list-disc.space-y-1 > li",
+            "kaydirma": 181,
+            "gorunur": 146
+          }
+        ],
+        "kucukYazilar": []
+      },
+      "konsol": [
+        {
+          "seviye": "error",
+          "metin": "WebSocket connection to 'ws://127.0.0.1:3050/_next/webpack-hmr' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE"
+        }
+      ]
+    }
+  },
+  "masaustuAyarlar": {
+    "axe": [
+      {
+        "id": "landmark-no-duplicate-banner",
+        "etki": "moderate",
+        "dugumSayisi": 1,
+        "ornekler": [
+          {
+            "hedef": ".min-h-screen > header",
+            "ozet": "Fix any of the following: Document has more than one banner landmark"
+          }
+        ]
+      },
+      {
+        "id": "landmark-unique",
+        "etki": "moderate",
+        "dugumSayisi": 1,
+        "ornekler": [
+          {
+            "hedef": ".min-h-screen > header",
+            "ozet": "Fix any of the following: The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+          }
+        ]
+      }
+    ],
+    "odakTesti": {
+      "dialogVar": true,
+      "ariaModal": "true",
+      "etiketli": true,
+      "odakIceride": true
+    },
+    "sekmeIzleri": [
+      "button | KULLANIM KILAVUZU Bahçeniz, sizin düzeni | 896x99 | group relative isolate flex w-full items-center gap-3 overflow-hidden ",
+      "input |  | 896x56 | h-14 w-full rounded-2xl border border-sand-300 bg-white pl-11 pr-14 te",
+      "button | Hesap ve giriş Hesabınız ve oturum terci | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button | Yedekleme ve senkronizasyon Notlarınızı  | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button | Yapay zekâ Modeller, sağlayıcılar ve API | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button | AI makroları Yazılarınıza özel hazır kom | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button | Düzenleme araçları Editörde kullanacağın | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button | Bilgisayar bağlantısı Telefon ve bilgisa | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button | Kullanım kılavuzu Bahçe, editör, yapay z | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button | Veri yönetimi Notlarınızı dışa aktarın v | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button | Uygulama hakkında Sürüm bilgisi ve gizli | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left ",
+      "button[Ayarlardan geri dön] |  | 44x44 | flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border",
+      "button | KULLANIM KILAVUZU Bahçeniz, sizin düzeni | 896x99 | group relative isolate flex w-full items-center gap-3 overflow-hidden ",
+      "input |  | 896x56 | h-14 w-full rounded-2xl border border-sand-300 bg-white pl-11 pr-14 te",
+      "button | Hesap ve giriş Hesabınız ve oturum terci | 434x88 | group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left "
+    ],
+    "odakKacagi": {
+      "odakIceride": true,
+      "aktif": "BUTTON | Hesap ve giriş Hesabınız ve oturum terci"
+    },
+    "kapanmaSonrasi": {
+      "dialogVar": false,
+      "odak": "TEXTAREA"
+    }
+  }
+}

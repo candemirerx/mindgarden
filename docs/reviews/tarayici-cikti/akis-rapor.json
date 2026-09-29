@@ -1,0 +1,172 @@
+{
+  "base": "http://localhost:3200",
+  "steps": [
+    {
+      "name": "Oturum yokken /projeler acildi",
+      "pass": true
+    },
+    {
+      "name": "Bos durumda \"Ilk Agaci Dik\" cagrisi gorunuyor",
+      "pass": true
+    },
+    {
+      "name": "\"Ilk Agaci Dik\" tiklandi",
+      "pass": true,
+      "detail": {
+        "tag": "BUTTON",
+        "text": "İlk Ağacı Dik"
+      }
+    },
+    {
+      "name": "Ad sorma penceresi acildi",
+      "pass": true
+    },
+    {
+      "name": "Bahcesiz agac ekleme denemesi sessizce basarisiz mi? (beklenen: uyari veya otomatik bahce)",
+      "pass": false,
+      "detail": {
+        "gardens": 0,
+        "nodes": 0,
+        "nodeGardenIds": [],
+        "uyariMetniVar": false,
+        "gorunurDugum": false
+      }
+    },
+    {
+      "name": "\"Yerel Modda Gir\" butonu bulundu",
+      "pass": true,
+      "detail": {
+        "tag": "BUTTON",
+        "text": "Yerel Modda Gir"
+      }
+    },
+    {
+      "name": "Yerel oturum olustu",
+      "pass": true
+    },
+    {
+      "name": "Bos bahce ekrani geldi",
+      "pass": true
+    },
+    {
+      "name": "Bahce olusturma penceresi acildi",
+      "pass": true
+    },
+    {
+      "name": "Bahce adi yazildi",
+      "pass": true
+    },
+    {
+      "name": "Pencere kapandi",
+      "pass": true
+    },
+    {
+      "name": "Bahce veriye yazildi (nb-local-db-v1)",
+      "pass": true,
+      "detail": {
+        "adet": 1,
+        "ad": "Test Bahçesi",
+        "user_id": "local-f2ff8e11"
+      }
+    },
+    {
+      "name": "Bahce icinde \"Ilk Agaci Dik\" tiklandi",
+      "pass": true,
+      "detail": {
+        "tag": "BUTTON",
+        "text": "İlk Ağacı Dik"
+      }
+    },
+    {
+      "name": "Agac adi penceresi acildi",
+      "pass": true
+    },
+    {
+      "name": "Agac (dugum) olusturuldu",
+      "pass": true,
+      "detail": {
+        "dugum": 1
+      }
+    },
+    {
+      "name": "Dugum ekranda listelendi",
+      "pass": true
+    },
+    {
+      "name": "Editor sayfasina girildi",
+      "pass": true,
+      "detail": "/editor?id=b45dc700-edc2-444f-9cd5-1601a1454e59&nodeId=0fe66609-d83d-4c55-9b42-c87f46d38343"
+    },
+    {
+      "name": "Baslik ve icerik alanlarina yazildi",
+      "pass": true,
+      "detail": {
+        "titleOk": true,
+        "bodyOk": true
+      }
+    },
+    {
+      "name": "Icerik otomatik kaydedildi",
+      "pass": true,
+      "detail": {
+        "ilk60": "Deneme Notu\nBu bir akis testi icerigidir. Ikinci satir."
+      }
+    },
+    {
+      "name": "Yenileme oncesi editor icerigi okunabildi",
+      "pass": true,
+      "detail": {
+        "body": "Bu bir akis testi icerigidir. Ikinci satir."
+      }
+    },
+    {
+      "name": "Yenileme sonrasi baslik geri yuklendi",
+      "pass": true,
+      "detail": "Deneme Notu"
+    },
+    {
+      "name": "Yenileme sonrasi icerik geri yuklendi",
+      "pass": true,
+      "detail": {
+        "body": "Bu bir akis testi icerigidir. Ikinci satir."
+      }
+    },
+    {
+      "name": "Yenileme sonrasi yerel veri bozulmadi",
+      "pass": true,
+      "detail": "Deneme Notu\nBu bir akis testi icerigidir. Ikinci satir."
+    },
+    {
+      "name": "Hizli cikistan sonra eklenen metin korundu",
+      "pass": true,
+      "detail": "Bu bir akis testi icerigidir. Ikinci satir. HIZLI-CIKIS-EKI"
+    },
+    {
+      "name": "Hizli cikis eski icerigi silmedi",
+      "pass": true,
+      "detail": "Bu bir akis testi icerigidir. Ikinci satir. HIZLI-"
+    },
+    {
+      "name": "Canvas gorunumu dugumu cizdi (bos durum degil)",
+      "pass": true,
+      "detail": {
+        "hasEmptyText": false,
+        "textLen": 50,
+        "reactFlow": false,
+        "svg": 13
+      }
+    },
+    {
+      "name": "Ikinci sekme ayni veriyi gordu",
+      "pass": true,
+      "detail": {
+        "lists": [
+          "Test Bahçesi"
+        ]
+      }
+    }
+  ],
+  "consoleMessages": [],
+  "passed": 26,
+  "failed": 1
+}

@@ -100,13 +100,18 @@ git push origin main</code></pre>
 <h3>Adımlar</h3>
 <p><strong>1. Sürüm numarasını artır</strong></p>
 <p><code>android/app/build.gradle</code> dosyasını aç:</p>
-<pre><code>versionCode 9          // her yüklemede 1 artır (8 -&gt; 9 -&gt; 10 ...)
-versionName "1.8.0"    // kullanıcının gördüğü sürüm</code></pre>
+<pre><code>versionCode 44         // her yüklemede 1 artır (43 -&gt; 44 -&gt; 45 ...)
+versionName "2.2.0"    // kullanıcının gördüğü sürüm</code></pre>
+<p>Şu anki sürüm <code>43</code> / <code>2.1.9</code> (hedef API 36). Bir sonraki yükleme en az 44 olmalıdır.</p>
 <p><strong>2. Yeni paketi üret</strong></p>
 <pre><code>npm run build:android</code></pre>
 <p>Sonra:</p>
 <pre><code>cd android
 gradlew.bat bundleRelease</code></pre>
+<p><strong>Windows notu:</strong> <code>GRADLE_USER_HOME</code> verilmezse Gradle "Could not initialize native services" hatasıyla durur. PowerShell'de:</p>
+<pre><code>$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:GRADLE_USER_HOME='C:\projelerim\notbahcesi\.gradle-user'
+.\gradlew.bat bundleRelease</code></pre>
 <p>Yeni dosya: <code>android/app/build/outputs/bundle/release/app-release.aab</code></p>
 <p><strong>3. Play Console'a yükle</strong></p>
 <ol><li>https://play.google.com/console adresine gir</li><li>Uygulamayı seç</li><li><strong>Test etme → Kapalı test → Yeni sürüm oluştur</strong></li></ol>
@@ -118,8 +123,9 @@ gradlew.bat bundleRelease</code></pre>
 <p>Kısa, madde madde ve kullanıcı dilinde olmalı. Teknik terim kullanma.</p>
 <p>İyi örnek:</p>
 <pre><code>• Notlarına artık renk verebilirsin
-• Metin editöründe onayla/geri al düğmeleri büyütüldü
-• Yapay zekâ makroları hızlandırıldı</code></pre>
+• Ayarlar artık tek ekranda: yapay zekâ, araçlar ve yedekleme bir arada
+• Telefonundan bilgisayarına yazabilir, farenin yerine telefonunu kullanabilirsin
+• Metin editöründe onayla/geri al düğmeleri büyütüldü</code></pre>
 <p>Kötü örnek:</p>
 <pre><code>• CORS başlıkları eklendi, max_tokens değeri güncellendi</code></pre>
 <hr />
@@ -132,7 +138,7 @@ gradlew.bat bundleRelease</code></pre>
 <h2>E. Sürüm geçmişi</h2>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Sürüm kodu</th><th>Sürüm adı</th><th>Not</th></tr></thead>
-<tbody><tr><td>7</td><td>1.6.0</td><td>Play Store hazırlığı</td></tr><tr><td>8</td><td>1.7.0</td><td>Çoklu AI makroları, dal renkleri, yeni ikon, AI hız düzeltmeleri</td></tr><tr><td>9</td><td>1.8.0</td><td>(sıradaki sürüm için ayrıldı)</td></tr></tbody>
+<tbody><tr><td>7</td><td>1.6.0</td><td>Play Store hazırlığı</td></tr><tr><td>8</td><td>1.7.0</td><td>Çoklu AI makroları, dal renkleri, yeni ikon, AI hız düzeltmeleri</td></tr><tr><td>9–40</td><td>1.8.0–2.1.6</td><td>Ara geliştirme sürümleri</td></tr><tr><td>41</td><td>2.1.7</td><td>Ayarlar arayüzü yenilendi (7 sekme), tema tutarlılığı, bilgisayar araçları</td></tr><tr><td>42</td><td>2.1.8</td><td>Yayın adayı: veri güvenilirliği, güvenlik (SSRF/kota) ve Android lint düzeltmeleri</td></tr><tr><td>43</td><td>2.1.9</td><td>Yayın adayı: not kalıcılığı, veri silme temizliği, içe aktarma doğrulaması, ayar arayüzü tutarlılığı</td></tr><tr><td>44</td><td>2.2.0</td><td>(sıradaki sürüm için ayrıldı)</td></tr></tbody>
 </table></div>
 <hr />
 <h2>F. Önemli hatırlatmalar</h2>

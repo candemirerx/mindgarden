@@ -42,9 +42,11 @@ artırmak zorundasın**. Aynı sürüm kodunu ikinci kez yükleyemezsin.
 `android/app/build.gradle` dosyasını aç:
 
 ```gradle
-versionCode 9          // her yüklemede 1 artır (8 -> 9 -> 10 ...)
-versionName "1.8.0"    // kullanıcının gördüğü sürüm
+versionCode 44         // her yüklemede 1 artır (43 -> 44 -> 45 ...)
+versionName "2.2.0"    // kullanıcının gördüğü sürüm
 ```
+
+Şu anki sürüm `43` / `2.1.9` (hedef API 36). Bir sonraki yükleme en az 44 olmalıdır.
 
 **2. Yeni paketi üret**
 
@@ -57,6 +59,15 @@ Sonra:
 ```
 cd android
 gradlew.bat bundleRelease
+```
+
+**Windows notu:** `GRADLE_USER_HOME` verilmezse Gradle "Could not initialize native
+services" hatasıyla durur. PowerShell'de:
+
+```powershell
+$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:GRADLE_USER_HOME='C:\projelerim\notbahcesi\.gradle-user'
+.\gradlew.bat bundleRelease
 ```
 
 Yeni dosya: `android/app/build/outputs/bundle/release/app-release.aab`
@@ -83,8 +94,9 @@ Kısa, madde madde ve kullanıcı dilinde olmalı. Teknik terim kullanma.
 
 ```
 • Notlarına artık renk verebilirsin
+• Ayarlar artık tek ekranda: yapay zekâ, araçlar ve yedekleme bir arada
+• Telefonundan bilgisayarına yazabilir, farenin yerine telefonunu kullanabilirsin
 • Metin editöründe onayla/geri al düğmeleri büyütüldü
-• Yapay zekâ makroları hızlandırıldı
 ```
 
 Kötü örnek:
@@ -112,7 +124,11 @@ Kötü örnek:
 |---|---|---|
 | 7 | 1.6.0 | Play Store hazırlığı |
 | 8 | 1.7.0 | Çoklu AI makroları, dal renkleri, yeni ikon, AI hız düzeltmeleri |
-| 9 | 1.8.0 | (sıradaki sürüm için ayrıldı) |
+| 9–40 | 1.8.0–2.1.6 | Ara geliştirme sürümleri |
+| 41 | 2.1.7 | Ayarlar arayüzü yenilendi (7 sekme), tema tutarlılığı, bilgisayar araçları |
+| 42 | 2.1.8 | Yayın adayı: veri güvenilirliği, güvenlik (SSRF/kota) ve Android lint düzeltmeleri |
+| 43 | 2.1.9 | Yayın adayı: not kalıcılığı, veri silme temizliği, içe aktarma doğrulaması, ayar arayüzü tutarlılığı |
+| 44 | 2.2.0 | (sıradaki sürüm için ayrıldı) |
 
 ---
 

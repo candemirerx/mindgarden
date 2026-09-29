@@ -9,8 +9,9 @@ her not bir ağaç, her alt not bir dal ya da yaprak.
 
 Uygulamayı ilk açtığın ekran:
 
-- **Sol üstteki ağaç simgesi** — ayar panelini açar. Sağ alt köşesindeki küçük dişli
-  simgesi de aynı işi yapar.
+- **Sol üstteki ağaç simgesi** — kenar çubuğunu açar. Kenar çubuğundaki **Ayarlar**
+  kartı (dişli simgesi) tüm ayarların bulunduğu pencereyi açar. Bu kart giriş
+  yapılmamışken de görünür.
 - **Yeni Bahçe** — sağ üstteki yeşil düğme.
 
 Notlarını kaydetmek için giriş yapman gerekir. İki yol var:
@@ -25,7 +26,35 @@ Notlarını kaydetmek için giriş yapman gerekir. İki yol var:
 
 ---
 
-## 2. Bahçe oluşturma
+## 2. Ayarlar penceresi
+
+Tüm ayarlar tek bir pencerede toplandı. Pencereye iki yerden ulaşabilirsin:
+
+- **Kenar çubuğu** (sol üstteki ağaç simgesi) → **Ayarlar** kartı
+- **Editörün sağ üstündeki dişli simgesi**
+
+Pencere, üstte **arama kutusu** ve altında gruplanmış bölüm kartları bulunan bir giriş
+ekranıyla açılır. Aradığın kelimeyi yazınca liste süzülür:
+
+| Bölüm | Ne yapılır |
+|---|---|
+| **Kullanım kılavuzu** | Adım adım anlatım; ilgili ayara doğrudan geçiş |
+| **Hesap ve giriş** | Google/e-posta ile giriş, bu cihazdaki oturum ve çıkış |
+| **Yapay zekâ** | Sağlayıcı seçimi, API anahtarı ve model listesi |
+| **AI makroları** | Hazır makroları aç/kapat, kendi makronu yaz |
+| **Düzenleme araçları** | Editörde görünecek araçları seç |
+| **Bilgisayar bağlantısı** | Bağlantı yolu, yardımcı program adresi ve erişim anahtarı |
+| **Yedekleme ve senkronizasyon** | Google Drive ile yedekleme |
+| **Veri yönetimi** | Dışa/içe aktarma ve kayıt silme |
+| **Uygulama hakkında** | Sürüm numarası ve gizlilik politikası |
+
+Çoğu ayar seçildiği anda kaydedilir; makro düzenleyici gibi bazı akışlarda **Kaydet**
+düğmesi vardır. Masaüstünde bölümler iki sütunda, telefonda tek sütunda listelenir.
+`Esc` tuşu pencereyi kapatır.
+
+---
+
+## 3. Bahçe oluşturma
 
 1. **Yeni Bahçe** düğmesine dokun
 2. Bahçeye bir ad ver (örn. "Kitap Notları")
@@ -37,14 +66,15 @@ Her bahçe kartında:
 
 | Öğe | Ne yapar |
 |---|---|
-| Kartın üstündeki ad | Son kullandığın görünümü açar (Canvas veya Projeler) |
-| **Projeler** | Notları liste hâlinde gösterir |
-| **Canvas** | Notları görsel ağaç olarak gösterir |
+| Kartın üstündeki ad | Son kullandığın görünümü açar (Tuval veya Liste) |
+| **Liste** | Notları hiyerarşik liste hâlinde gösterir |
+| **Tuval** | Notları görsel ağaç olarak gösterir |
+| Ağaç sayısı | Bahçede kaç ağaç (en üst seviye not) olduğunu gösterir |
 | Üç nokta | *Yeniden adlandır* / *Bahçeyi sil* |
 
 ---
 
-## 3. Canvas — görsel ağaç görünümü
+## 4. Tuval — görsel ağaç görünümü
 
 Notlarını dallarıyla birlikte bir ağaç olarak gösterir.
 
@@ -57,7 +87,7 @@ Notlarını dallarıyla birlikte bir ağaç olarak gösterir.
 
 ---
 
-## 4. Projeler — liste görünümü
+## 5. Liste — not listesi görünümü
 
 Notlarını hiyerarşik liste hâlinde gösterir. Aradığın notu bulmak için üstteki
 arama kutusunu kullanabilirsin.
@@ -81,7 +111,7 @@ arama kutusunu kullanabilirsin.
 
 Menüde altı hazır renk ve bir **Varsayılan** düğmesi var:
 
-- Yosun yeşili, Bal köşe, Deniz mavisi, Lavanta, Gül kurusu, Kahve
+- Yosun yeşili, Bal köşesi, Deniz mavisi, Lavanta, Gül kurusu, Kahve
 - Renk seçtiğinde notun simgesi ve yanındaki renk şeridi o renge döner
 - **Varsayılan** düğmesi rengi seviyeye göre otomatik renge döndürür
 - Renkler cihazda saklanır ve Drive yedeklemesiyle diğer cihazlarına da geçer
@@ -90,14 +120,15 @@ Renkleri kullanarak bir bahçedeki farklı konu başlıklarını görsel olarak 
 
 ---
 
-## 5. Metin editörü ve yapay zekâ
+## 6. Metin editörü ve yapay zekâ
 
 Bir notu açtığın büyük editör ekranı.
 
 ### Temel işlemler
 - **Başlık** ve **içerik** alanlarına yaz
 - **Oto** kutusu açıkken değişiklikler kendiliğinden kaydedilir
-- Üstteki düğmeler: geri dön, içeriği kopyala, dışa aktar (PDF / Word)
+- Üstteki düğmeler: geri dön, içeriği kopyala, dışa aktar (PDF / Word) ve
+  **Ayarlar** (dişli simgesi)
 - **Otomatik kaydetme** kapalıysa Kaydet düğmesini kendin basmalısın
 
 ### Yapay zekâ makroları
@@ -119,7 +150,7 @@ Bir kutuya dokunduğunda:
 
 ### Yapay zekâ sağlayıcısını ayarlama
 
-Ayar paneli → **Model, API ve Senkronizasyon** → **Model Ayarları**
+Ayarlar → **Yapay zekâ** bölümü
 
 1. Sağlayıcı seç: Google Gemini, OpenAI, Anthropic veya **Özel (Custom)**
 2. **Özel** seçtiysen:
@@ -134,7 +165,7 @@ Ayar paneli → **Model, API ve Senkronizasyon** → **Model Ayarları**
 
 ### Makroları yönetme
 
-Ayar paneli → **Model, API ve Senkronizasyon** → **AI Makroları**
+Ayarlar → **AI makroları** bölümü
 
 - Her makronun yanındaki **anahtar** ile makroyu kapatıp açabilirsin
 - Kapatılan makro **editörde görünmez**, böylece arayüz kalabalıklaşmaz
@@ -149,9 +180,9 @@ Makro detay sayfasında üç alan var: **Makro adı** (kutuda görünen ad),
 
 ---
 
-## 6. Google Drive yedekleme
+## 7. Google Drive yedekleme
 
-Ayar paneli → **Model, API ve Senkronizasyon** → **Senkronizasyon**
+Ayarlar → **Yedekleme ve senkronizasyon** bölümü
 
 | Düğme | Ne yapar |
 |---|---|
@@ -166,19 +197,22 @@ Alt tarafta son yedekleme zamanı yazar.
 
 ---
 
-## 7. Veri Yönetimi
+## 8. Veri yönetimi
 
-Ayar paneli → **Veri Yönetimi** (varsayılan olarak kapalıdır, dokununca açılır)
+Ayarlar → **Veri yönetimi** bölümü
 
-- **Dışa Aktar** — bahçelerini JSON, HTML, PDF veya Word olarak kaydeder.
+- **Dışa Aktar** — bahçelerini JSON, HTML veya PDF olarak kaydeder.
   Hangi bahçelerin dışa aktarılacağını seçebilirsin.
-- **İçe Aktar** — daha önce aldığın JSON yedeğini geri yükler.
+- **İçe Aktar** — daha önce aldığın JSON yedeğini geri yükler. Yedek önce doğrulanır;
+  bozuk bir dosya mevcut notlarına dokunmaz.
+- **Word** çıktısı tek bir not için editörün üst şeridindeki **Word olarak indir**
+  düğmesinden alınır.
 
 Bu yolu cihaz değiştirirken veya Drive kullanmadan yedek almak istediğinde kullan.
 
 ---
 
-## 8. Sık sorulanlar
+## 9. Sık sorulanlar
 
 **Notlarım kaybolur mu?**
 Yerel modda veriler cihazda tutulur; uygulamayı kaldırırsan silinir. Google ile giriş
@@ -200,4 +234,9 @@ diğer tüm özellikleri normal çalışır.
 Evet. Notlar cihazda tutulur; yalnızca Drive senkronu ve yapay zekâ internet ister.
 
 **Bir dalın rengini nasıl değiştiririm?**
-Projeler ekranında notun üç nokta menüsüne dokun → **Dal rengi** bölümünden bir renk seç.
+Liste görünümünde notun üç nokta menüsüne dokun → **Dal rengi** seçeneğine bas. Renk sırayla
+değişir ve kaydedilir; seçtiğin renk uygulamayı kapatıp açsan da korunur.
+
+**Ayarları nereden açarım?**
+Kenar çubuğundaki **Ayarlar** kartından ya da editörün sağ üstündeki dişli simgesinden.
+Telefonunu bilgisayarına bağlamak istiyorsan **Bilgisayar bağlantısı** bölümüne bak.

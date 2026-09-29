@@ -29,25 +29,50 @@ Aşağıdaki tabloyu birebir gir. "Toplanıyor" = uygulamadan dışarı çıkıy
 |---|---|---|---|---|---|
 | **Kişisel bilgiler → E-posta adresi** | Evet | Hayır | Hayır (isteğe bağlı) | Uygulama işlevselliği, Hesap yönetimi | Google ile giriş yapılırsa alınır |
 | **Kişisel bilgiler → Ad** | Evet | Hayır | Hayır (isteğe bağlı) | Uygulama işlevselliği | Google profili ile gelir |
-| **Uygulama etkinliği → Diğer kullanıcı içeriği** | Evet | Evet | Evet | Uygulama işlevselliği | Not metinleri; yapay zekâ kullanıldığında seçilen sağlayıcıya gönderilir |
+| **Uygulama etkinliği → Diğer kullanıcı içeriği** | Evet | Evet | Evet | Uygulama işlevselliği | Not metinleri; yapay zekâ kullanıldığında seçilen sağlayıcıya, bilgisayar araçları kullanıldığında kullanıcının kendi bilgisayarına gönderilir |
+| **Ses → Ses kayıtları** | Evet | Evet | Hayır (isteğe bağlı) | Uygulama işlevselliği | Yalnızca Dikte kullanıldığında. Tanımayı Android'in konuşma tanıma servisi yapar; uygulama ayrıca ses kaydı saklamaz |
+| **Cihaz veya diğer kimlikler** | Hayır | Hayır | — | — | Uygulama reklam kimliği veya cihaz kimliği toplamaz |
 
 Diğer tüm kategoriler (konum, kişiler, takvim, fotoğraf, dosyalar, sağlık, mesajlar,
-cihaz kimlikleri, ödeme bilgileri) için: **Hayır**.
+ödeme bilgileri, uygulama içi arama geçmişi) için: **Hayır**.
+
+### Cihazda kalan, toplanmayan veriler
+
+Aşağıdakiler yalnızca cihazda veya kullanıcının kendi cihazları arasında işlenir;
+uygulamanın bir sunucusuna gönderilmez:
+
+| Veri | Ne için kullanılır | Nereye gider |
+|---|---|---|
+| Bluetooth eşleşme bilgisi (cihaz adı/adresi) | Kart veya bilgisayarla bağlantı kurmak | Yalnızca telefon ile eşleşen cihaz arasında |
+| Yerel ağ adresi (kart/PC IP'si) | Wi‑Fi üzerinden bağlanmak | Yalnızca kullanıcının kendi yerel ağı |
+| Panoya gönderilen metin | Bilgisayarın panosuna kopyalamak | Kullanıcının kendi bilgisayarı |
+| Mikrofon sesi | Dikteyi yazıya çevirmek | Cihazdaki Android konuşma tanıma servisi |
+
+> Bluetooth ve yerel ağ izinleri yalnızca eşleştirme ve bağlantı için kullanılır;
+> arka planda cihaz taraması yapılmaz, listeler hiçbir yere gönderilmez.
 
 ---
 
 ## 3. Veri güvenliği ayrıntıları
 
 **Soru:** Veriler aktarım sırasında şifreleniyor mu?
-**Cevap:** **Evet** (HTTPS)
+**Cevap:** **Evet**
+
+Buluta giden tüm trafik (yapay zekâ sağlayıcısı, Google Drive) HTTPS ile şifrelenir.
+Bilgisayar araçlarındaki yerel ağ trafiği (telefon ile kullanıcının kendi bilgisayarı
+arasında) şifrelenmez; bu özellik yalnızca güvenilen yerel ağlarda kullanılmalıdır.
 
 **Soru:** Kullanıcı verilerinin silinmesini talep edebiliyor mu?
 **Cevap:** **Evet**
 
 Silme yolları:
-- Uygulama içinde **Ayarlar → Veri Yönetimi** ile kayıtlar silinebilir
+- Uygulama içinde **Ayarlar → Veri yönetimi** bölümünden kayıtlar silinebilir
 - Uygulamayı kaldırmak cihazdaki tüm verileri siler
 - Drive yedeği kullanıcının kendi Drive'ında olduğu için kullanıcı oradan da silebilir
+- Ayrıntılı silme sayfası: `https://mindgarden-neon.vercel.app/veri-silme`
+
+Play Console'da **veri silme URL'i** olarak yukarıdaki `/veri-silme` adresini ver.
+Bu sayfada adım adım silme, silinen veri listesi ve e-posta ile talep yolu anlatılır.
 
 ---
 
@@ -64,7 +89,28 @@ Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:
 
 ---
 
-## 5. Google Drive yedekleme için ayrı beyan
+## 5. Bilgisayar araçları için ayrı beyan
+
+Uygulamadaki bilgisayar araçları **isteğe bağlıdır** ve kendiliğinden çalışmaz; her
+işlem kullanıcının bir düğmeye basmasıyla başlar.
+
+- **Amaç:** Telefonu bilgisayarın klavyesi, faresi ve panosu gibi kullanmak.
+- **Kullanılan izinler:** Bluetooth/Yakındaki cihazlar (Android 12+) veya eski
+  sistemlerde konum, mikrofon (yalnızca Dikte için), ağ durumu.
+- **Veri akışı:** Yazılan metin, fare komutları ve pano içeriği doğrudan kullanıcının
+  kendi bilgisayarına gönderilir. Bu veriler uygulamanın sunucusuna veya üçüncü bir
+  tarafa gitmez.
+- **Bağlantı yolları:** Wi‑Fi üzerinden doğrudan bilgisayar, klasik Bluetooth veya
+  kullanıcının kendi kartı üzerinden köprü.
+- **Güvenlik uyarısı:** Telefon ile bilgisayar arasındaki yerel ağ trafiği şifrelenmez.
+  Bu özellik yalnızca güvenilen yerel ağlarda kullanılmalı, bilgisayar tarafındaki
+  yardımcı program internete açılmamalıdır.
+- **Üçüncü taraf:** Bilgisayar tarafında çalışan yardımcı program Play Store paketinin
+  parçası değildir; kullanıcı onu kendi bilgisayarında başlatır.
+
+---
+
+## 6. Google Drive yedekleme için ayrı beyan
 
 > Kullanıcı Google hesabıyla giriş yaptığında notları, kullanıcının kendi Google
 > Drive hesabındaki uygulamaya özel gizli klasöre (appDataFolder) yedeklenir. Bu
@@ -73,7 +119,7 @@ Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:
 
 ---
 
-## 6. Reklam ve analitik
+## 7. Reklam ve analitik
 
 | Soru | Cevap |
 |---|---|
@@ -84,7 +130,7 @@ Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:
 
 ---
 
-## 7. Güvenlik pratikleri
+## 8. Güvenlik pratikleri
 
 | Soru | Cevap |
 |---|---|
@@ -100,4 +146,6 @@ Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:
 
 > Not Bahçesi notlarınızı cihazınızda saklar. Yalnızca siz istediğinizde, seçtiğiniz
 > yapay zekâ sağlayıcısına metin gönderilir; yalnızca Google ile giriş yaptığınızda
-> notlarınız kendi Drive hesabınıza yedeklenir. Reklam ve izleme yoktur.
+> notlarınız kendi Drive hesabınıza yedeklenir. Bilgisayar araçlarını kullandığınızda
+> metin ve komutlar yalnızca kendi bilgisayarınıza gider. Mikrofon yalnızca Dikte
+> sırasında kullanılır. Reklam ve izleme yoktur.

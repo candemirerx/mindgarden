@@ -85,8 +85,8 @@ strong { color: #1B3A28; }
 <hr />
 <h2>1. İlk açılış ve giriş</h2>
 <p>Uygulamayı ilk açtığın ekran:</p>
-<ul><li><strong>Sol üstteki ağaç simgesi</strong> — ayar panelini açar. Sağ alt köşesindeki küçük dişli</li></ul>
-<p>  simgesi de aynı işi yapar.</p>
+<ul><li><strong>Sol üstteki ağaç simgesi</strong> — kenar çubuğunu açar. Kenar çubuğundaki <strong>Ayarlar</strong></li></ul>
+<p>  kartı (dişli simgesi) tüm ayarların bulunduğu pencereyi açar. Bu kart giriş   yapılmamışken de görünür.</p>
 <ul><li><strong>Yeni Bahçe</strong> — sağ üstteki yeşil düğme.</li></ul>
 <p>Notlarını kaydetmek için giriş yapman gerekir. İki yol var:</p>
 <ol><li><strong>Yerel Modda Gir</strong> — şifre sormaz, veriler yalnızca bu cihazda saklanır.</li></ol>
@@ -95,20 +95,30 @@ strong { color: #1B3A28; }
 <p>   diğer cihazlarınla birleştirir.</p>
 <blockquote>Yerel modda başlayıp sonradan Google ile giriş yaparsan, o ana kadar girdiğin notlar silinmez; Drive ile birleştirilir.</blockquote>
 <hr />
-<h2>2. Bahçe oluşturma</h2>
+<h2>2. Ayarlar penceresi</h2>
+<p>Tüm ayarlar tek bir pencerede toplandı. Pencereye iki yerden ulaşabilirsin:</p>
+<ul><li><strong>Kenar çubuğu</strong> (sol üstteki ağaç simgesi) → <strong>Ayarlar</strong> kartı</li><li><strong>Editörün sağ üstündeki dişli simgesi</strong></li></ul>
+<p>Pencere, üstte <strong>arama kutusu</strong> ve altında gruplanmış bölüm kartları bulunan bir giriş ekranıyla açılır. Aradığın kelimeyi yazınca liste süzülür:</p>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Bölüm</th><th>Ne yapılır</th></tr></thead>
+<tbody><tr><td><strong>Kullanım kılavuzu</strong></td><td>Adım adım anlatım; ilgili ayara doğrudan geçiş</td></tr><tr><td><strong>Hesap ve giriş</strong></td><td>Google/e-posta ile giriş, bu cihazdaki oturum ve çıkış</td></tr><tr><td><strong>Yapay zekâ</strong></td><td>Sağlayıcı seçimi, API anahtarı ve model listesi</td></tr><tr><td><strong>AI makroları</strong></td><td>Hazır makroları aç/kapat, kendi makronu yaz</td></tr><tr><td><strong>Düzenleme araçları</strong></td><td>Editörde görünecek araçları seç</td></tr><tr><td><strong>Bilgisayar bağlantısı</strong></td><td>Bağlantı yolu, yardımcı program adresi ve erişim anahtarı</td></tr><tr><td><strong>Yedekleme ve senkronizasyon</strong></td><td>Google Drive ile yedekleme</td></tr><tr><td><strong>Veri yönetimi</strong></td><td>Dışa/içe aktarma ve kayıt silme</td></tr><tr><td><strong>Uygulama hakkında</strong></td><td>Sürüm numarası ve gizlilik politikası</td></tr></tbody>
+</table></div>
+<p>Çoğu ayar seçildiği anda kaydedilir; makro düzenleyici gibi bazı akışlarda <strong>Kaydet</strong> düğmesi vardır. Masaüstünde bölümler iki sütunda, telefonda tek sütunda listelenir. <code>Esc</code> tuşu pencereyi kapatır.</p>
+<hr />
+<h2>3. Bahçe oluşturma</h2>
 <ol><li><strong>Yeni Bahçe</strong> düğmesine dokun</li><li>Bahçeye bir ad ver (örn. "Kitap Notları")</li><li><strong>Oluştur</strong></li></ol>
 <p>Yeni oluşturduğun bahçe listenin <strong>en başında</strong> görünür.</p>
 <p>Her bahçe kartında:</p>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Öğe</th><th>Ne yapar</th></tr></thead>
-<tbody><tr><td>Kartın üstündeki ad</td><td>Son kullandığın görünümü açar (Canvas veya Projeler)</td></tr><tr><td><strong>Projeler</strong></td><td>Notları liste hâlinde gösterir</td></tr><tr><td><strong>Canvas</strong></td><td>Notları görsel ağaç olarak gösterir</td></tr><tr><td>Üç nokta</td><td><em>Yeniden adlandır</em> / <em>Bahçeyi sil</em></td></tr></tbody>
+<tbody><tr><td>Kartın üstündeki ad</td><td>Son kullandığın görünümü açar (Tuval veya Liste)</td></tr><tr><td><strong>Liste</strong></td><td>Notları hiyerarşik liste hâlinde gösterir</td></tr><tr><td><strong>Tuval</strong></td><td>Notları görsel ağaç olarak gösterir</td></tr><tr><td>Ağaç sayısı</td><td>Bahçede kaç ağaç (en üst seviye not) olduğunu gösterir</td></tr><tr><td>Üç nokta</td><td><em>Yeniden adlandır</em> / <em>Bahçeyi sil</em></td></tr></tbody>
 </table></div>
 <hr />
-<h2>3. Canvas — görsel ağaç görünümü</h2>
+<h2>4. Tuval — görsel ağaç görünümü</h2>
 <p>Notlarını dallarıyla birlikte bir ağaç olarak gösterir.</p>
 <ul><li><strong>Düğüme dokun</strong> → üstünde eylem menüsü açılır</li><li><strong>Başka düğüme dokun</strong> → öncekinin menüsü kapanır, yalnızca tek menü açık kalır</li><li><strong>Boş alana dokun</strong> → tüm menüler kapanır</li><li><strong>İki parmakla</strong> büyüt/küçült, <strong>parmakla sürükle</strong> gezin</li><li>Menüdeki simgeler: tam editör, başlığı kopyala, yeni dal ekle, düğüm tipini değiştir</li><li><strong>Ağaç yönetimi</strong> düğmesi ile ağaçları toplu açıp kapatabilirsin</li></ul>
 <hr />
-<h2>4. Projeler — liste görünümü</h2>
+<h2>5. Liste — not listesi görünümü</h2>
 <p>Notlarını hiyerarşik liste hâlinde gösterir. Aradığın notu bulmak için üstteki arama kutusunu kullanabilirsin.</p>
 <h3>Not ekleme</h3>
 <ul><li><strong>Yeni Ağaç</strong> ile en üst seviyede bir not aç</li><li>Bir notun üç nokta menüsünden <strong>Yeni dal ekle</strong> (alt notu varsa) veya</li></ul>
@@ -120,13 +130,15 @@ strong { color: #1B3A28; }
 </table></div>
 <h3>Dal rengi</h3>
 <p>Menüde altı hazır renk ve bir <strong>Varsayılan</strong> düğmesi var:</p>
-<ul><li>Yosun yeşili, Bal köşe, Deniz mavisi, Lavanta, Gül kurusu, Kahve</li><li>Renk seçtiğinde notun simgesi ve yanındaki renk şeridi o renge döner</li><li><strong>Varsayılan</strong> düğmesi rengi seviyeye göre otomatik renge döndürür</li><li>Renkler cihazda saklanır ve Drive yedeklemesiyle diğer cihazlarına da geçer</li></ul>
+<ul><li>Yosun yeşili, Bal köşesi, Deniz mavisi, Lavanta, Gül kurusu, Kahve</li><li>Renk seçtiğinde notun simgesi ve yanındaki renk şeridi o renge döner</li><li><strong>Varsayılan</strong> düğmesi rengi seviyeye göre otomatik renge döndürür</li><li>Renkler cihazda saklanır ve Drive yedeklemesiyle diğer cihazlarına da geçer</li></ul>
 <p>Renkleri kullanarak bir bahçedeki farklı konu başlıklarını görsel olarak ayırabilirsin.</p>
 <hr />
-<h2>5. Metin editörü ve yapay zekâ</h2>
+<h2>6. Metin editörü ve yapay zekâ</h2>
 <p>Bir notu açtığın büyük editör ekranı.</p>
 <h3>Temel işlemler</h3>
-<ul><li><strong>Başlık</strong> ve <strong>içerik</strong> alanlarına yaz</li><li><strong>Oto</strong> kutusu açıkken değişiklikler kendiliğinden kaydedilir</li><li>Üstteki düğmeler: geri dön, içeriği kopyala, dışa aktar (PDF / Word)</li><li><strong>Otomatik kaydetme</strong> kapalıysa Kaydet düğmesini kendin basmalısın</li></ul>
+<ul><li><strong>Başlık</strong> ve <strong>içerik</strong> alanlarına yaz</li><li><strong>Oto</strong> kutusu açıkken değişiklikler kendiliğinden kaydedilir</li><li>Üstteki düğmeler: geri dön, içeriği kopyala, dışa aktar (PDF / Word) ve</li></ul>
+<p>  <strong>Ayarlar</strong> (dişli simgesi)</p>
+<ul><li><strong>Otomatik kaydetme</strong> kapalıysa Kaydet düğmesini kendin basmalısın</li></ul>
 <h3>Yapay zekâ makroları</h3>
 <p>Üst şeritte <strong>AI</strong> etiketinin yanında makro kutuları görünür. Varsayılan olarak:</p>
 <p><strong>İmla Düzelt · Özetle · Resmileştir · Sadeleştir · Genişlet · İngilizceye Çevir</strong></p>
@@ -135,7 +147,7 @@ strong { color: #1B3A28; }
 <ul><li><strong>Onayla</strong> → sonucu kalıcı hâle getirir</li><li><strong>Geri Al</strong> → notu eski hâline döndürür</li></ul>
 <blockquote>Metnin bir bölümünü seçtiysen yapay zekâ yalnızca o bölümü işler.</blockquote>
 <h3>Yapay zekâ sağlayıcısını ayarlama</h3>
-<p>Ayar paneli → <strong>Model, API ve Senkronizasyon</strong> → <strong>Model Ayarları</strong></p>
+<p>Ayarlar → <strong>Yapay zekâ</strong> bölümü</p>
 <ol><li>Sağlayıcı seç: Google Gemini, OpenAI, Anthropic veya <strong>Özel (Custom)</strong></li><li><strong>Özel</strong> seçtiysen:</li></ol>
 <ul><li><strong>Base URL</strong> — örn. <code>https://api.ornek.com/v1</code></li></ul>
 <p>     (<code>/v1</code> adresini ya da doğrudan <code>/chat/completions</code> adresini yazabilirsin)</p>
@@ -143,34 +155,38 @@ strong { color: #1B3A28; }
 <ol><li><strong>API Anahtarı</strong> alanına kendi anahtarını gir</li><li><strong>Sağlayıcıyı Ekle</strong></li></ol>
 <blockquote>API anahtarın yalnızca cihazında saklanır. Yapay zekâyı kullandığında anahtar ve işlenecek metin önce uygulamanın sunucu rotasına, oradan seçtiğin sağlayıcıya iletilir.</blockquote>
 <h3>Makroları yönetme</h3>
-<p>Ayar paneli → <strong>Model, API ve Senkronizasyon</strong> → <strong>AI Makroları</strong></p>
+<p>Ayarlar → <strong>AI makroları</strong> bölümü</p>
 <ul><li>Her makronun yanındaki <strong>anahtar</strong> ile makroyu kapatıp açabilirsin</li><li>Kapatılan makro <strong>editörde görünmez</strong>, böylece arayüz kalabalıklaşmaz</li><li>Makroya dokunup <strong>Makroyu kaydet</strong> ile görev metnini değiştirebilirsin</li><li><strong>Makroyu sil</strong> ile kaldırabilirsin</li><li><strong>Yeni makro ekle</strong> ile kendi görevini yazabilirsin (örn. "Bu notu toplantı</li></ul>
 <p>  tutanağına çevir ve kararları madde madde yaz")</p>
 <ul><li><strong>Varsayılanlar</strong> düğmesi hazır makro setini geri getirir</li></ul>
 <p>Makro detay sayfasında üç alan var: <strong>Makro adı</strong> (kutuda görünen ad), <strong>Alt başlık</strong> (ne yaptığının kısa açıklaması) ve <strong>Yapay zekâya gönderilecek görev</strong>.</p>
 <hr />
-<h2>6. Google Drive yedekleme</h2>
-<p>Ayar paneli → <strong>Model, API ve Senkronizasyon</strong> → <strong>Senkronizasyon</strong></p>
+<h2>7. Google Drive yedekleme</h2>
+<p>Ayarlar → <strong>Yedekleme ve senkronizasyon</strong> bölümü</p>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Düğme</th><th>Ne yapar</th></tr></thead>
 <tbody><tr><td>Google Drive ile Senkron</td><td>Drive'daki yedekle bu cihazı güvenle birleştirir</td></tr><tr><td>Drive'a Yedekle</td><td>Bu cihazdaki her şeyi Drive'a yazar</td></tr><tr><td>Drive'dan Geri Yükle</td><td>Drive'daki yedeği cihaza indirir</td></tr><tr><td>Şimdi Senkronla</td><td>Beklemeden hemen senkron yapar</td></tr><tr><td>Otomatik Senkron</td><td>Açıkken değişiklikler kendiliğinden yedeklenir</td></tr></tbody>
 </table></div>
 <p>Yedekler Drive'ın uygulamaya özel gizli klasöründe tutulur; Drive'ında görünmez. Alt tarafta son yedekleme zamanı yazar.</p>
 <hr />
-<h2>7. Veri Yönetimi</h2>
-<p>Ayar paneli → <strong>Veri Yönetimi</strong> (varsayılan olarak kapalıdır, dokununca açılır)</p>
-<ul><li><strong>Dışa Aktar</strong> — bahçelerini JSON, HTML, PDF veya Word olarak kaydeder.</li></ul>
+<h2>8. Veri yönetimi</h2>
+<p>Ayarlar → <strong>Veri yönetimi</strong> bölümü</p>
+<ul><li><strong>Dışa Aktar</strong> — bahçelerini JSON, HTML veya PDF olarak kaydeder.</li></ul>
 <p>  Hangi bahçelerin dışa aktarılacağını seçebilirsin.</p>
-<ul><li><strong>İçe Aktar</strong> — daha önce aldığın JSON yedeğini geri yükler.</li></ul>
+<ul><li><strong>İçe Aktar</strong> — daha önce aldığın JSON yedeğini geri yükler. Yedek önce doğrulanır;</li></ul>
+<p>  bozuk bir dosya mevcut notlarına dokunmaz.</p>
+<ul><li><strong>Word</strong> çıktısı tek bir not için editörün üst şeridindeki <strong>Word olarak indir</strong></li></ul>
+<p>  düğmesinden alınır.</p>
 <p>Bu yolu cihaz değiştirirken veya Drive kullanmadan yedek almak istediğinde kullan.</p>
 <hr />
-<h2>8. Sık sorulanlar</h2>
+<h2>9. Sık sorulanlar</h2>
 <p><strong>Notlarım kaybolur mu?</strong> Yerel modda veriler cihazda tutulur; uygulamayı kaldırırsan silinir. Google ile giriş yapıp otomatik senkronu açarsan Drive'da yedeklenir.</p>
 <p><strong>Telefon ile bilgisayarda aynı notları görebilir miyim?</strong> Evet. İki cihazda da <strong>aynı Google hesabıyla</strong> giriş yap ve otomatik senkronu aç. Notlar birleştirilir; çakışmada en son değiştirilen sürüm geçerli olur.</p>
 <p><strong>Yapay zekâ hata veriyor, ne yapmalıyım?</strong> Hata mesajı sağlayıcının kendi cevabını gösterir. Sık sebepler: anahtar geçersiz, model adı yanlış yazılmış veya hesabında bakiye/kota kalmamış.</p>
 <p><strong>Yapay zekâ kullanmak zorunda mıyım?</strong> Hayır. Hiçbir sağlayıcı tanımlamazsan makro kutuları çalışmaz ama uygulamanın diğer tüm özellikleri normal çalışır.</p>
 <p><strong>İnternet olmadan çalışır mı?</strong> Evet. Notlar cihazda tutulur; yalnızca Drive senkronu ve yapay zekâ internet ister.</p>
-<p><strong>Bir dalın rengini nasıl değiştiririm?</strong> Projeler ekranında notun üç nokta menüsüne dokun → <strong>Dal rengi</strong> bölümünden bir renk seç.</p>
+<p><strong>Bir dalın rengini nasıl değiştiririm?</strong> Liste görünümünde notun üç nokta menüsüne dokun → <strong>Dal rengi</strong> seçeneğine bas. Renk sırayla değişir ve kaydedilir; seçtiğin renk uygulamayı kapatıp açsan da korunur.</p>
+<p><strong>Ayarları nereden açarım?</strong> Kenar çubuğundaki <strong>Ayarlar</strong> kartından ya da editörün sağ üstündeki dişli simgesinden. Telefonunu bilgisayarına bağlamak istiyorsan <strong>Bilgisayar bağlantısı</strong> bölümüne bak.</p>
 </div>
 </body>
 </html>
