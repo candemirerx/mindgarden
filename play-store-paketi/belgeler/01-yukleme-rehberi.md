@@ -13,8 +13,8 @@ Her adımı sırasıyla tamamla; bir adım kilitliyse Play Console hangi adımı
 | Uygulama ikonu 512×512 | Hazır — `gorseller/uygulama-ikonu-512.png` |
 | Öne çıkan görsel 1024×500 | Hazır — `gorseller/one-cikan-gorsel-1024x500.png` |
 | Telefon ekran görüntüleri (4 adet) | Hazır — `gorseller/ekran-1..4-*.png` (1080×2160) |
-| Gizlilik politikası adresi | Adres hazır — https://mindgarden-neon.vercel.app/gizlilik (yayındaki metin hâlâ eski sürüm; aşağıdaki nota bak) |
-| Veri silme talebi adresi | Koda eklendi — https://mindgarden-neon.vercel.app/veri-silme (site yeniden dağıtılınca yayına girer) |
+| Gizlilik politikası adresi | Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/gizlilik |
+| Veri silme talebi adresi | Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/veri-silme |
 | Mağaza açıklama metinleri | Hazır — `belgeler/03-magaza-metinleri.md` |
 | Veri güvenliği cevapları | Hazır — `belgeler/04-veri-guvenligi.md` |
 
@@ -116,11 +116,8 @@ Sol menüde **Politikalar → Uygulama içeriği**. Sırayla doldur:
 Veri silme talebi adresi (form bunu ayrıca sorar):
 `https://mindgarden-neon.vercel.app/veri-silme`
 
-> **Bu iki adresi form doldurmadan önce doğrula.** Adresler ancak web sitesi yeniden
-> dağıtıldıktan sonra güncel içeriği gösterir: yayındaki `/gizlilik` sayfası şu an eski
-> metni (bilgisayar araçları ve mikrofon bölümü olmadan) gösterir, `/veri-silme` ise
-> henüz açılmamıştır. Siteyi dağıttıktan sonra iki adresi tarayıcıda açıp yeni bölümlerin
-> göründüğünü doğrula.
+> **İki adres de 29 Eylül 2026'da yayında ve tarayıcıda doğrulandı.** Form
+> doldurmadan önce bir kez daha açıp güncel metinlerin göründüğünü kontrol et.
 
 ### 5.2 Uygulama erişimi
 **"Tüm işlevler kısıtlı olmadan kullanılabiliyor"** seçeneğini işaretle ve açıklamaya şunu yaz:

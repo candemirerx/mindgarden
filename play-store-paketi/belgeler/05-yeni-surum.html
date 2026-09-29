@@ -102,6 +102,10 @@ $env:GRADLE_USER_HOME='C:\projelerim\notbahcesi\.gradle-user'</code></pre>
 <p>Yeni dosya: <code>android/app/build/outputs/bundle/release/app-release.aab</code></p>
 <p>Telefona kurup denemek istersen debug paketini de üretebilirsin:</p>
 <pre><code>gradlew.bat assembleDebug</code></pre>
+<p>Mağaza görselleri de tazelenmeli (arayüz değiştiyse):</p>
+<pre><code>node scripts/play-gorsel-cek.mjs      # 4 ekran görüntüsü (uygulama 3000 portunda çalışırken)
+node scripts/play-one-cikan-uret.mjs  # öne çıkan görsel 1024x500</code></pre>
+<p>Uygulama ikonu değiştiyse <code>store/play-icon-512.png</code> dosyasını yeni ikonla güncelle ve aynı dosyayı <code>play-store-paketi/gorseller/uygulama-ikonu-512.png</code> üzerine kopyala.</p>
 <hr />
 <h2>3. Play Console'a yükle</h2>
 <ol><li><strong>Test etme → Kapalı test → Yeni sürüm oluştur</strong></li></ol>

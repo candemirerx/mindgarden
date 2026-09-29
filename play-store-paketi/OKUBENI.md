@@ -37,11 +37,13 @@ play-store-paketi/
 > çıktısıdır ve kaynaktan yeniden üretilir (`05-yeni-surum.md`). Klasörün bu kopyasında
 > dosya hazır duruyor.
 
-> **Paket kaydı (2.2.1 / sürüm kodu 45):** `not-bahcesi-2.2.1.aab` — 5.015.818 bayt,
-> SHA-256 `3800DF74F745406951E6F48A0E4484E6E1E1EB2DAF62A5CC3733EFCB36FF1228`
-> (28 Eylül 2026, 13:26). AAB'yi yeniden üretirsen özeti
-> `Get-FileHash uygulama/not-bahcesi-2.2.1.aab -Algorithm SHA256` ile yenile ve bu
-> satırı güncelle; Console'a yüklediğin dosyanın özeti bu kayıtla aynı olmalı.
+> **Paket kaydı (2.2.1 / sürüm kodu 45):** `not-bahcesi-2.2.1.aab` — 5.049.821 bayt,
+> SHA-256 `30D649DEE09DA99FBDD1CA05D156DF91A126023F203604B664D8C8173E46D5A8`
+> (29 Eylül 2026, 20:58). Telefon testi için üretilen imzalı APK:
+> `not-bahcesi-2.2.1.apk` — 4.736.745 bayt, SHA-256
+> `C34E7559207BE187906B88B350ACC6734956304E242D83244C743D2FBE2BD4B2`. AAB'yi yeniden
+> üretirsen özeti `Get-FileHash uygulama/not-bahcesi-2.2.1.aab -Algorithm SHA256` ile
+> yenile ve bu satırı güncelle; Console'a yüklediğin dosyanın özeti bu kayıtla aynı olmalı.
 
 ---
 

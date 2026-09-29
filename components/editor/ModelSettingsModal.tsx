@@ -873,7 +873,11 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                         icon={Wrench}
                                         title="Düzenleme araçları"
                                         description="Yerel metin araçları ve bilgisayar kısayolları tek yerde. Araçlar ve Yapay zekâ satırları varsayılan olarak kapalıdır; aşağıdaki anahtarlarla açılır."
-                                        badge={<SettingsPill tone="moss">{enabledToolCount} / {totalToolCount} etkin</SettingsPill>}
+                                        badge={
+                                            <SettingsPill tone={araclarAcik ? 'moss' : 'clay'}>
+                                                {araclarAcik ? `${enabledToolCount} / ${totalToolCount} etkin` : 'Bölüm kapalı'}
+                                            </SettingsPill>
+                                        }
                                     />
 
                                     <div className="space-y-4">

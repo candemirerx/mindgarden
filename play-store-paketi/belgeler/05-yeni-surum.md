@@ -53,6 +53,16 @@ Telefona kurup denemek istersen debug paketini de üretebilirsin:
 gradlew.bat assembleDebug
 ```
 
+Mağaza görselleri de tazelenmeli (arayüz değiştiyse):
+
+```
+node scripts/play-gorsel-cek.mjs      # 4 ekran görüntüsü (uygulama 3000 portunda çalışırken)
+node scripts/play-one-cikan-uret.mjs  # öne çıkan görsel 1024x500
+```
+
+Uygulama ikonu değiştiyse `store/play-icon-512.png` dosyasını yeni ikonla güncelle ve aynı
+dosyayı `play-store-paketi/gorseller/uygulama-ikonu-512.png` üzerine kopyala.
+
 ---
 
 ## 3. Play Console'a yükle
