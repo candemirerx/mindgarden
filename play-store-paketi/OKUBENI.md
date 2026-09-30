@@ -106,6 +106,35 @@ sırayla ilerle.
 
 ---
 
+## Paketi masaüstüne zip olarak vermek
+
+Masaüstündeki **Not Bahcesi Guncel.zip** dosyası, Console'a yükleme yaparken
+gereken her şeyi tek yerde taşır: AAB, test APK'sı, tüm belgeler (Markdown +
+telefondan okunabilir HTML), mağaza görselleri, sürüm özeti ve bilgisayar
+yardımcısı. Güncel sürümü zip'e koymak için proje klasöründe:
+
+```
+node scripts/paket-zip.mjs
+```
+
+Betik sürüm bilgisini kaynaktan okur, `SURUM-BILGILERI.txt` dosyasını (boyut ve
+SHA-256 özetleriyle) yeniler, mevcut zip'i "- onceki <tarih>.zip" olarak
+yedekler ve yenisini masaüstüne yazar. Sıra: `npm run build:android` →
+`cd android` → `gradlew assembleRelease bundleRelease` →
+`node scripts/paket-zip.mjs`. Zip içeriği:
+
+```
+uygulama/not-bahcesi-2.2.1.aab   Play Console'a yuklenecek dosya
+uygulama/not-bahcesi-2.2.1.apk   telefonda denemek icin imzali paket
+belgeler/01..08                  yukleme, guvenlik, izin, gelir belgeleri
+gorseller/                       ikon, one cikan gorsel, dort ekran goruntusu
+bilgisayar-yardimcisi/           PC koprusu yardimcisi (Play icin gerekmez)
+SURUM-BILGILERI.txt              surum, boyut, SHA-256, imza parmak izi
+OKUBENI.md, basla.html           bu belge ve telefon baslangic sayfasi
+```
+
+---
+
 ## Önemli notlar
 
 - **Paket adı** `com.notbahcesi.app` ilk yüklemede kilitlenir, sonradan değiştirilemez.
