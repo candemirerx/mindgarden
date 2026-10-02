@@ -42,11 +42,11 @@ artırmak zorundasın**. Aynı sürüm kodunu ikinci kez yükleyemezsin.
 `android/app/build.gradle` dosyasını aç:
 
 ```gradle
-versionCode 44         // her yüklemede 1 artır (43 -> 44 -> 45 ...)
-versionName "2.2.0"    // kullanıcının gördüğü sürüm
+versionCode 56         // her yüklemede 1 artır (55 -> 56 -> 57 ...)
+versionName "2.2.12"   // kullanıcının gördüğü sürüm
 ```
 
-Şu anki sürüm `43` / `2.1.9` (hedef API 36). Bir sonraki yükleme en az 44 olmalıdır.
+Şu anki sürüm `55` / `2.2.11` (hedef API 36). Bir sonraki yükleme en az 56 olmalıdır.
 
 **2. Yeni paketi üret**
 
@@ -128,7 +128,8 @@ Kötü örnek:
 | 41 | 2.1.7 | Ayarlar arayüzü yenilendi (7 sekme), tema tutarlılığı, bilgisayar araçları |
 | 42 | 2.1.8 | Yayın adayı: veri güvenilirliği, güvenlik (SSRF/kota) ve Android lint düzeltmeleri |
 | 43 | 2.1.9 | Yayın adayı: not kalıcılığı, veri silme temizliği, içe aktarma doğrulaması, ayar arayüzü tutarlılığı |
-| 44 | 2.2.0 | (sıradaki sürüm için ayrıldı) |
+| 44–54 | 2.2.0–2.2.10 | Ayrıntılar için 05-yeni-surum.md |
+| 55 | 2.2.11 | Editörde tam ekran yazma ve araç iyileştirmeleri (güncel yayın adayı) |
 
 ---
 

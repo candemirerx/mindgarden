@@ -2,7 +2,8 @@
     [ValidateRange(1024, 65535)][int]$Port = 8765,
     [switch]$TestMode,
     [string]$BluetoothPort = 'auto',
-    [switch]$SerialOnly
+    [switch]$SerialOnly,
+    [switch]$RfcommOnly
 )
 
 # Windows PowerShell 5.1 ve .NET ile çalışır; Python veya ek paket gerekmez.
@@ -30,6 +31,36 @@ if (-not (Test-Path -LiteralPath $tokenPath)) {
 $secret = [System.IO.File]::ReadAllText($tokenPath, [System.Text.Encoding]::ASCII).Trim()
 if ($secret.Length -lt 32) { throw 'Anahtar dosyası geçersiz. Yardımcı programı başlatmadan önce kontrol edin.' }
 
+if ($RfcommOnly) {
+    Add-Type -Path (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll')
+    $bluetooth = [InTheHand.Net.Sockets.BluetoothListener]::new([Guid]'93c7b30b-d973-4873-bf10-148491968b2c')
+    $bluetooth.ServiceName = 'Not Bahcesi PC'
+    $bluetooth.Authenticate = $true
+    $bluetooth.Start()
+    Write-Output 'BluetoothReady:RFCOMM'
+    try {
+        while ($true) {
+            $client = $bluetooth.AcceptBluetoothClient()
+            $stream = $client.GetStream()
+            $reader = [System.IO.StreamReader]::new($stream, [System.Text.UTF8Encoding]::new($false, $true), $false, 4096, $true)
+            $writer = [System.IO.StreamWriter]::new($stream, [System.Text.UTF8Encoding]::new($false), 4096, $true)
+            $writer.NewLine = "`n"; $writer.AutoFlush = $true
+            try {
+                while ($null -ne ($line = $reader.ReadLine())) {
+                    try {
+                        if ([System.Text.Encoding]::UTF8.GetByteCount($line) -gt 32768) { throw 'İstek çok uzun.' }
+                        $command = $line | ConvertFrom-Json
+                        if ($command.token -isnot [string]) { throw 'Anahtar gerekli.' }
+                        $inputBody = $command | Select-Object -Property * -ExcludeProperty token | ConvertTo-Json -Compress -Depth 4
+                        $reply = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$Port/input" -Headers @{ Authorization = "Bearer $($command.token)" } -ContentType 'text/plain; charset=utf-8' -Body ([System.Text.Encoding]::UTF8.GetBytes($inputBody)) -TimeoutSec 8
+                        $writer.WriteLine((@{ ok = ($reply.ok -eq $true) } | ConvertTo-Json -Compress))
+                    } catch { $writer.WriteLine('{"ok":false,"error":"Komut reddedildi; erişim anahtarını kontrol edin."}') }
+                }
+            } catch { } finally { $reader.Dispose(); $writer.Dispose(); $client.Close() }
+        }
+    } finally { $bluetooth.Stop() }
+}
+
 if ($SerialOnly) {
     $serial = New-Object -TypeName System.IO.Ports.SerialPort -ArgumentList $BluetoothPort, 115200
     $serial.Encoding = [System.Text.UTF8Encoding]::new($false)
@@ -37,6 +68,7 @@ if ($SerialOnly) {
     $serial.ReadTimeout = 1000
     $serial.WriteTimeout = 3000
     $serial.Open()
+    Write-Output "BluetoothReady:$BluetoothPort"
     try {
         while ($true) {
             try { $line = $serial.ReadLine() }
@@ -52,6 +84,20 @@ if ($SerialOnly) {
             } catch { try { $serial.WriteLine('{"ok":false}') } catch { } }
         }
     } finally { $serial.Close(); $serial.Dispose() }
+}
+
+# Windows panosunu aynı anda yalnız bir program açabilir; pano geçmişi, bulut
+# panosu ve pano yöneticileri her yazmanın ardından kısa süre kilitli tutar.
+# Arka arkaya gelen gönderimlerde Set-Clipboard bu yüzden ExternalException
+# veriyordu; kısa aralıklarla yeniden denenir.
+function Set-ClipboardRetry([string]$text) {
+    for ($deneme = 1; ; $deneme++) {
+        try { Set-Clipboard -Value $text -ErrorAction Stop; return }
+        catch {
+            if ($deneme -ge 15) { throw }
+            Start-Sleep -Milliseconds (40 * $deneme)
+        }
+    }
 }
 
 function Same-Token([string]$candidate, [string]$expected) {
@@ -113,7 +159,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
         $utf8 = New-Object System.Text.UTF8Encoding($false, $true)
         $content = $utf8.GetString($payload)
         if ($parts[1] -eq '/clipboard') {
-            if (-not $dryRun) { Set-Clipboard -Value $content }
+            if (-not $dryRun) { Set-ClipboardRetry $content }
         } else {
             if ($length -gt 32768) { Send-Response $stream 413 '{"ok":false}'; return }
             $inputAction = $content | ConvertFrom-Json
@@ -122,7 +168,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
                 'ping' { }
                 'clipboard' {
                     if ($inputAction.text -isnot [string] -or $inputAction.text.Length -gt 32000) { throw 'Pano metni geçersiz.' }
-                    if (-not $dryRun) { Set-Clipboard -Value $inputAction.text }
+                    if (-not $dryRun) { Set-ClipboardRetry $inputAction.text }
                 }
                 'text' {
                     if ($inputAction.text -isnot [string] -or $inputAction.text.Length -gt 32000) { throw 'Metin geçersiz.' }
@@ -161,14 +207,29 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
     } finally { $client.Close() }
 }
 
+$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $Port)
+try { $listener.Start() }
+catch {
+    Write-Host "PC bağlantı noktası $Port zaten kullanılıyor. Açık Not Bahçesi yardımcısının penceresini kullanın; başka bir yardımcı açmadan önce mevcut olanı kapatın." -ForegroundColor Yellow
+    exit 3
+}
+# Port zaten kullaniliyorsa ikinci bir Bluetooth alicisi baslatma.
 $serialJob = $null
+$directBluetooth = $false
 if (-not $TestMode) {
-    if ($BluetoothPort -eq 'auto') {
+    if ($BluetoothPort -eq 'auto' -and (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll'))) {
+        $directBluetooth = $true
+        $scriptPath = $PSCommandPath
+        $serialJob = Start-Job -ScriptBlock {
+            param($path, $port)
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $path -Port $port -RfcommOnly
+        } -ArgumentList $scriptPath, $Port
+    } elseif ($BluetoothPort -eq 'auto') {
         $incoming = Get-CimInstance Win32_SerialPort -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match 'Bluetooth' -and $_.PNPDeviceID -match 'LOCALMFG' } | Select-Object -First 1
+            Where-Object { $_.PNPDeviceID -match 'LOCALMFG' -and $_.PNPDeviceID -match '00001101' } | Select-Object -First 1
         if ($incoming) { $BluetoothPort = $incoming.DeviceID }
     }
-    if ($BluetoothPort -ne 'auto' -and $BluetoothPort -ne 'off') {
+    if (-not $directBluetooth -and $BluetoothPort -ne 'auto' -and $BluetoothPort -ne 'off') {
         $scriptPath = $PSCommandPath
         $serialJob = Start-Job -ScriptBlock {
             param($path, $port, $com)
@@ -176,12 +237,14 @@ if (-not $TestMode) {
         } -ArgumentList $scriptPath, $Port, $BluetoothPort
     }
 }
-$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $Port)
-$listener.Start()
 try {
     Write-Host "Not Bahçesi PC kontrol yardımcısı — Wi‑Fi port $Port" -ForegroundColor Green
-    $adresler = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-        Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' }
+    # Bağlantısız hotspot/VPN adresi yerine etkin fiziksel ağ kartını öncele.
+    $physical = @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | Select-Object -ExpandProperty ifIndex)
+    $active = @(Get-NetIPInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object ConnectionState -eq 'Connected' | Select-Object -ExpandProperty InterfaceIndex)
+    $adresler = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' -and $active -contains $_.InterfaceIndex } |
+        Sort-Object @{ Expression = { if ($physical -contains $_.InterfaceIndex) { 0 } else { 1 } } }, InterfaceIndex)
     $adresler | ForEach-Object { Write-Host "Adres: http://$($_.IPAddress):$Port" }
     Write-Host "Erişim anahtarı: $secret"
     # Telefonda iki alanı elle doldurmak yerine adres ve anahtar tek satırda
@@ -196,8 +259,20 @@ try {
             Write-Host "Bağlantı satırı (elle kopyalayın): $baglantiSatiri"
         }
     }
-    if ($serialJob) { Write-Host "Klasik Bluetooth: gelen $BluetoothPort portu (Windows ile önce eşleştirin)." }
-    else { Write-Host 'Klasik Bluetooth: gelen seri port bulunamadı; yalnız Wi‑Fi etkin.' }
+    $serialReady = $false
+    if ($serialJob) {
+        $deadline = [DateTime]::UtcNow.AddSeconds(8)
+        do {
+            $jobOutput = @(Receive-Job $serialJob -Keep -ErrorAction SilentlyContinue)
+            $readyMarker = if ($directBluetooth) { 'BluetoothReady:RFCOMM' } else { "BluetoothReady:$BluetoothPort" }
+            $serialReady = @($jobOutput | Where-Object { "$_" -eq $readyMarker }).Count -gt 0
+            if (-not $serialReady) { Start-Sleep -Milliseconds 200 }
+        } while (-not $serialReady -and $serialJob.State -eq 'Running' -and [DateTime]::UtcNow -lt $deadline)
+    }
+    if ($serialReady -and $directBluetooth) { Write-Host 'Klasik Bluetooth: doğrudan alıcı hazır; COM portu gerekmez. Windows ve telefonu eşleştirin.' }
+    elseif ($serialReady) { Write-Host "Klasik Bluetooth: gelen $BluetoothPort portu hazır (Windows ile önce eşleştirin)." }
+    elseif ($serialJob) { Write-Warning "Bluetooth $BluetoothPort açılamadı. Portu başka bir program kullanıyorsa kapatıp yardımcıyı yeniden açın." }
+    else { Write-Host 'Bluetooth için Windows > Diğer Bluetooth ayarları > COM Bağlantı Noktaları > Ekle > Gelen seçin; ardından yardımcıyı yeniden açın.' }
     if ($TestMode) { Write-Warning 'TestMode: gelen metin gerçek panoya yazılmaz.' }
     Write-Host 'Yalnız güvenilen Özel ağda kullanın. Kapatmak için Ctrl+C.'
     while ($true) {

@@ -9,7 +9,7 @@ Her adımı sırasıyla tamamla; bir adım kilitliyse Play Console hangi adımı
 
 | Gereken | Durum |
 |---|---|
-| Yayın paketi (AAB) | Hazır — `uygulama/not-bahcesi-2.2.1.aab` |
+| Yayın paketi (AAB) | Hazır — `uygulama/not-bahcesi-2.2.11.aab` |
 | Uygulama ikonu 512×512 | Hazır — `gorseller/uygulama-ikonu-512.png` |
 | Öne çıkan görsel 1024×500 | Hazır — `gorseller/one-cikan-gorsel-1024x500.png` |
 | Telefon ekran görüntüleri (4 adet) | Hazır — `gorseller/ekran-1..4-*.png` (1080×2160) |
@@ -19,7 +19,7 @@ Her adımı sırasıyla tamamla; bir adım kilitliyse Play Console hangi adımı
 | Veri güvenliği cevapları | Hazır — `belgeler/04-veri-guvenligi.md` |
 | İzin gerekçeleri ve inceleme cevapları | Hazır — `belgeler/07-izin-gerekceleri.md` |
 
-**Sürüm bilgisi:** paket adı `com.notbahcesi.app`, sürüm kodu `45`, sürüm adı `2.2.1`,
+**Sürüm bilgisi:** paket adı `com.notbahcesi.app`, sürüm kodu `55`, sürüm adı `2.2.11`,
 hedef API seviyesi `36` (Android 16).
 
 > Play, yeni uygulamalarda güncel hedef API seviyesini zorunlu tutar. Paket API 36
@@ -161,7 +161,7 @@ Kullanıcı verisini uygulama içinden de silebilir: **Ayarlar → Veri yönetim
 
 1. Sol menüden **Test etme → Kapalı test → Yeni sürüm oluştur**
 2. "Play App Signing" şartlarını kabul et
-3. `uygulama/not-bahcesi-2.2.1.aab` dosyasını yükle
+3. `uygulama/not-bahcesi-2.2.11.aab` dosyasını yükle
 4. Sürüm notlarına şunu yaz:
 
 > Ayarlar ekranı yenilendi: yapay zekâ, makrolar, araçlar, bilgisayar, senkronizasyon
@@ -243,8 +243,8 @@ Her yeni yüklemede **sürüm kodu artmak zorundadır**. Proje klasöründe:
 `android/app/build.gradle` dosyasını aç, şu iki satırı güncelle:
 
 ```
-versionCode 44       ← her yüklemede 1 artır (43 → 44 → 45 ...)
-versionName "2.2.0"  ← kullanıcıya görünen sürüm
+versionCode 56       ← her yüklemede 1 artır (55 → 56 → 57 ...)
+versionName "2.2.12" ← kullanıcıya görünen sürüm
 ```
 
 Sonra paketi yeniden üret (Windows'ta `GRADLE_USER_HOME` verilmezse derleme

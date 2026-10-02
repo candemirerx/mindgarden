@@ -25,6 +25,12 @@
 -keep public class * extends com.getcapacitor.Plugin { *; }
 -keep class com.notbahcesi.app.** { *; }
 
+# MediaPipe serializes generated protobuf messages using field-name reflection.
+# R8 must preserve those fields or real model loading fails in release builds.
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite { <fields>; }
+-keep class com.google.mediapipe.tasks.genai.llminference.jni.proto.** { *; }
+-keep class com.google.ai.edge.litertlm.** { *; }
+
 # WebView köprüsü: JS'e açılan metotlar korunmalı.
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;

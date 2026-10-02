@@ -7,15 +7,16 @@
  */
 import { bildir } from './degisim';
 
-export type ProviderType = 'gemini' | 'openai' | 'anthropic' | 'custom';
+export type ProviderType = 'gemini' | 'openai' | 'anthropic' | 'custom' | 'local';
 
-export const PROVIDER_IDS: ProviderType[] = ['gemini', 'openai', 'anthropic', 'custom'];
+export const PROVIDER_IDS: ProviderType[] = ['gemini', 'openai', 'anthropic', 'custom', 'local'];
 
 export const PROVIDER_LABELS: Record<ProviderType, string> = {
-    gemini: 'Google Gemini',
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    custom: 'Özel (Custom)'
+    gemini: 'Google Gemini (Bulut)',
+    openai: 'OpenAI (Bulut)',
+    anthropic: 'Anthropic (Bulut)',
+    custom: 'Özel / Custom API',
+    local: 'Yerel / Çevrimdışı (MediaPipe / Edge AI)'
 };
 
 /** Sağlayıcı seçilmediğinde kullanılan model. */
@@ -23,21 +24,24 @@ export const DEFAULT_MODELS: Record<ProviderType, string> = {
     gemini: 'gemini-2.5-flash',
     openai: 'gpt-4o-mini',
     anthropic: 'claude-3-haiku-20240307',
-    custom: ''
+    custom: '',
+    local: 'gemma3:1b'
 };
 
 export const MODEL_HINTS: Record<ProviderType, string> = {
     gemini: 'Örn. gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-pro',
     openai: 'Örn. gpt-4o-mini, gpt-4o, gpt-4.1-mini',
     anthropic: 'Örn. claude-3-haiku-20240307, claude-3-5-sonnet-latest',
-    custom: 'Sağlayıcınızın panelinde yazan gerçek model kimliği'
+    custom: 'Sağlayıcınızın panelinde yazan gerçek model kimliği',
+    local: 'Android: MediaPipe .task / .bin dosyası; bilgisayar: Ollama model adı'
 };
 
 export const KEY_HINTS: Record<ProviderType, string> = {
     gemini: 'Google AI Studio anahtarınız',
     openai: 'OpenAI platform anahtarınız',
     anthropic: 'Anthropic Console anahtarınız',
-    custom: 'Sağlayıcınızın verdiği anahtar'
+    custom: 'Sağlayıcınızın verdiği anahtar',
+    local: 'Anahtar gerekmez — Cihazda çevrimdışı çalışır'
 };
 
 const PROVIDER_KEY = 'nb-ai-provider';
@@ -68,6 +72,7 @@ export function saveActiveProvider(provider: ProviderType): void {
 
 /** Sağlayıcının anahtarını döner; eski tek anahtar varsa etkin sağlayıcıya taşır. */
 export function readProviderKey(provider: ProviderType): string {
+    if (provider === 'local') return 'local-on-device';
     if (typeof window === 'undefined') return '';
 
     const own = localStorage.getItem(keyStorageKey(provider));
@@ -187,4 +192,17 @@ export function saveCustomUrl(url: string): void {
     } else {
         localStorage.removeItem(CUSTOM_URL_KEY);
     }
+}
+
+/**
+ * Etkin sağlayıcı kullanıma hazır mı?
+ * Özel sunucularda (LM Studio, Ollama, vLLM…) anahtar gerekmeyebilir; adres ve
+ * model yeterlidir. Diğer sağlayıcılarda anahtar zorunludur.
+ */
+export function providerHazir(provider: ProviderType): boolean {
+    if (provider === 'local') return true;
+    if (provider === 'custom') {
+        return readCustomUrl().trim().length > 0 && readProviderModel('custom').trim().length > 0;
+    }
+    return readProviderKey(provider).trim().length > 0;
 }

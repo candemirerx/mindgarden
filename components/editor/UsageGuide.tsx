@@ -107,6 +107,8 @@ const KONULAR: Konu[] = [
         title: 'Yapay zekâ ve makrolar',
         description: 'İmla, özet ve çeviri gibi hazır komutları kullanın.',
         adimlar: [
+            '**Ayarlar → Yapay zekâ** içinde **Bulut** ve **Yerel** sekmeleri bulunur. Sekme değiştirmek kullanılan motoru değiştirmez; ilgili sağlayıcıyı veya modeli ayrıca etkinleştirin.',
+            'Android’de yerel model için Hugging Face’ten LiteRT-LM uyumlu **.litertlm** veya MediaPipe uyumlu **.task / .bin** dosyasını indirin. Uygulamada **Dosya seç → Etkinleştir** adımlarını izleyin. **Modeli dene** ile yanıtı kontrol edebilirsiniz.',
             'Yapay zekâ satırı varsayılan olarak kapalıdır: dişli simgesinden **Ayarlar → Düzenleme araçları** bölümünü açıp "Yapay zekâ bölümünü editörde göster" anahtarını açın.',
             'Editörde **AI** etiketinin yanındaki makro kutusuna dokunun (örn. **Özetle**, **İmla Düzelt**).',
             'Metnin yalnızca bir bölümünü seçtiyseniz yapay zekâ sadece o bölümü işler.',

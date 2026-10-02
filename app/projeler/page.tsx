@@ -15,6 +15,8 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
 import { sonrakiRenk } from '@/lib/branchColors';
 import { siraliAdEtkin, siraliAd } from '@/lib/tools';
+import { BudananlarDugmesi, useBudananlariGoster } from '@/components/ui/BudananlarDugmesi';
+import { budananlariAyikla } from '@/lib/uiPrefs';
 
 interface TreeItem {
     id: string;
@@ -50,6 +52,7 @@ function ProjectsPageInner() {
     const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'split' | 'grid'>('split');
+    const budananlariGoster = useBudananlariGoster();
 
     // Modals state
     const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
@@ -136,7 +139,7 @@ function ProjectsPageInner() {
         return items.map(item => filterItem(item)).filter((item): item is TreeItem => item !== null);
     }, []);
 
-    const displayedTrees = filterTrees(trees, searchQuery);
+    const displayedTrees = filterTrees(budananlariGoster ? trees : budananlariAyikla(trees), searchQuery);
 
     const toggleExpand = async (nodeId: string) => {
         const newExpanded = new Set(expandedNodes);
@@ -849,6 +852,7 @@ function ProjectsPageInner() {
                                 </button>
                             </div>
 
+                            <BudananlarDugmesi />
                             <button
                                 onClick={() => router.push(`/bahce_view?id=${gardenId}`)}
                                 title="Tuval görünümü"
@@ -913,7 +917,7 @@ function ProjectsPageInner() {
                             <Search size={26} />
                         </span>
                         <p className="text-sand-600">
-                            &ldquo;{searchQuery}&rdquo; için sonuç bulunamadı
+                            {searchQuery ? <>&ldquo;{searchQuery}&rdquo; için sonuç bulunamadı</> : 'Gösterilecek not yok; budananlar gizli.'}
                         </p>
                     </div>
                 ) : viewMode === 'split' ? (

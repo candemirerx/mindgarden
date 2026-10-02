@@ -1,15 +1,19 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { AudioLines, Clipboard, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { AudioLines, Check, Clipboard, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
 import { bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
+import FareYuzeyi from './FareYuzeyi';
 
-export default function RemoteEditorTools({ content, onContentChange, mode, onModeChange, placement }: {
+export default function RemoteEditorTools({ content, onContentChange, mode, onModeChange, placement, profilId = null, onProfilChange }: {
     content: string; onContentChange: (text: string) => void;
     mode: RemoteMode; onModeChange: (mode: RemoteMode) => void;
     placement: 'toolbar' | 'surface';
+    /** Kısayol panosunda açık profil; null → tüm makrolar. */
+    profilId?: string | null; onProfilChange?: (profilId: string | null) => void;
 }) {
     const prefs = useRemotePrefs();
     const [busy, setBusy] = useState(false);
@@ -19,6 +23,8 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     const [kopruDurum, setKopruDurum] = useState('');
     const [kopruHata, setKopruHata] = useState(false);
     const [notice, setNotice] = useState('');
+    const [panoBildirim, setPanoBildirim] = useState<{ metin: string; ton: 'sending' | 'ok' | 'error' } | null>(null);
+    const panoZamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
     /** Köprü Yaz: bilgisayara gönderilmiş metin, gönderilecek son metin ve kilitler. */
     const kopruSon = useRef('');
     const kopruHedef = useRef('');
@@ -31,10 +37,6 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     guncelIcerik.current = content;
     const guncelPrefs = useRef(prefs);
     guncelPrefs.current = prefs;
-    const start = useRef<{ id: number; x: number; y: number; originX: number; originY: number; time: number; moved: boolean } | null>(null);
-    const movement = useRef<Promise<void>>(Promise.resolve());
-    const pendingMove = useRef({ x: 0, y: 0 });
-    const moveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
         if (kopruYaz && (!prefs.enabledTools.bridgeWrite || (mode !== 'write' && mode !== 'dictation'))) {
             setKopruYaz(false); setKopruDurum(''); setKopruHata(false);
@@ -44,10 +46,19 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
         if (
             (mode === 'mouse' && !prefs.enabledTools.mouse) ||
             (mode === 'dictation' && !prefs.enabledTools.dictation) ||
-            (mode === 'shortcuts' && !prefs.enabledTools.shortcuts)
+            (mode === 'shortcuts' && !prefs.enabledTools.shortcuts) ||
+            (mode === 'screen' && !prefs.enabledTools.screen)
         ) onModeChange('write');
-    }, [mode, onModeChange, prefs.enabledTools.mouse, prefs.enabledTools.dictation, prefs.enabledTools.shortcuts]);
-    useEffect(() => () => { if (moveTimer.current) clearTimeout(moveTimer.current); }, []);
+    }, [mode, onModeChange, prefs.enabledTools.mouse, prefs.enabledTools.dictation, prefs.enabledTools.shortcuts, prefs.enabledTools.screen]);
+    useEffect(() => () => { if (panoZamanlayici.current) clearTimeout(panoZamanlayici.current); }, []);
+    const panoyaGonder = async () => {
+        if (panoZamanlayici.current) clearTimeout(panoZamanlayici.current);
+        setPanoBildirim({ metin: 'Bilgisayar panosuna gönderiliyor…', ton: 'sending' });
+        let tamam = false;
+        await act(async () => { await sendToComputerClipboard(content, prefs); tamam = true; }, 'Metin bilgisayar panosuna aktarıldı.');
+        setPanoBildirim(tamam ? { metin: 'Bilgisayar panosuna gönderildi', ton: 'ok' } : { metin: 'Panoya gönderilemedi; ayrıntı araç çubuğunda.', ton: 'error' });
+        panoZamanlayici.current = setTimeout(() => setPanoBildirim(null), tamam ? 2500 : 4000);
+    };
     const act = async (action: () => Promise<void>, success: string) => {
         setBusy(true); setNotice('');
         try { await action(); setNotice(success); }
@@ -100,7 +111,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
             void dongu();
         });
         try {
-            const metin = await bridgeDictate(prefs.dictationLanguage, prefs.bridgeDictationUnlimited ? 0 : prefs.bridgeDictationSeconds);
+            const metin = await bridgeDictate(prefs.dictationLanguage, prefs.bridgeDictationUnlimited ? 0 : prefs.bridgeDictationSeconds, prefs.dictationEngine);
             akis.hedef = metin;
             void dongu();
             await bosal();
@@ -163,30 +174,26 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [content, kopruYaz]);
 
-    const flushMove = () => {
-        if (moveTimer.current) { clearTimeout(moveTimer.current); moveTimer.current = null; }
-        const dx = Math.max(-127, Math.min(127, pendingMove.current.x));
-        const dy = Math.max(-127, Math.min(127, pendingMove.current.y));
-        pendingMove.current.x -= dx;
-        pendingMove.current.y -= dy;
-        if (dx || dy) movement.current = movement.current.catch(() => {}).then(() => sendCommand(`mm:${dx},${dy}`, prefs)).catch(error => setNotice(error.message));
-        if (pendingMove.current.x || pendingMove.current.y) moveTimer.current = setTimeout(flushMove, 35);
-    };
-    const move = (x: number, y: number) => {
-        const point = start.current;
-        if (!point) return;
-        const dx = x - point.x, dy = y - point.y;
-        if (Math.hypot(x - point.originX, y - point.originY) > 8) point.moved = true;
-        point.x = x; point.y = y;
-        pendingMove.current.x += Math.round(dx * prefs.mouseSensitivity);
-        pendingMove.current.y += Math.round(dy * prefs.mouseSensitivity);
-        if (!moveTimer.current) moveTimer.current = setTimeout(flushMove, 35);
-    };
     if (placement === 'toolbar') return <>
-            {prefs.enabledTools.shortcuts && <button id="studio-kisayollar" type="button" aria-pressed={mode === 'shortcuts'} onClick={() => onModeChange(mode === 'shortcuts' ? 'write' : 'shortcuts')}
-                title="Kısayollar: makro panosu"
-                className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${mode === 'shortcuts' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
-                <Wand2 size={16} /><span className="sr-only sm:not-sr-only">{mode === 'shortcuts' ? ' Yazıya dön' : ' Kısayollar'}</span></button>}
+            {prefs.enabledTools.shortcuts && (() => {
+                const tumuAcik = mode === 'shortcuts' && !profilId;
+                return <button id="studio-kisayollar" type="button" aria-pressed={tumuAcik} onClick={() => { onProfilChange?.(null); onModeChange(tumuAcik ? 'write' : 'shortcuts'); }}
+                    title="Kısayollar: makro panosu"
+                    className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${tumuAcik ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
+                    <Wand2 size={16} /><span className="sr-only sm:not-sr-only">{tumuAcik ? ' Yazıya dön' : ' Kısayollar'}</span></button>;
+            })()}
+            {prefs.enabledTools.shortcuts && prefs.shortcutButtons.filter(dugme => prefs.profiles.some(p => p.id === dugme.profileId)).map((dugme, index) => {
+                const acik = mode === 'shortcuts' && profilId === dugme.profileId;
+                const ad = dugme.name.trim() || prefs.profiles.find(p => p.id === dugme.profileId)?.name || 'Profil';
+                return <button key={dugme.id} id={'studio-kisayol-dugmesi-' + index} type="button" aria-pressed={acik} title={ad + ' profilinin makroları'}
+                    onClick={() => { if (acik) onModeChange('write'); else { onProfilChange?.(dugme.profileId); onModeChange('shortcuts'); } }}
+                    className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${acik ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-secondary'}`}>
+                    <FolderKanban size={16} aria-hidden="true" /><span className="max-w-28 truncate">{acik ? 'Yazıya dön' : ad}</span></button>;
+            })}
+            {prefs.enabledTools.screen && <button id="studio-ekran" type="button" aria-pressed={mode === 'screen'} onClick={() => onModeChange(mode === 'screen' ? 'write' : 'screen')}
+                title="Ekran: tasarladığın bölmeli düzen"
+                className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${mode === 'screen' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
+                {mode === 'screen' ? <Keyboard size={16} /> : <LayoutDashboard size={16} />}<span className="sr-only sm:not-sr-only">{mode === 'screen' ? ' Yazıya dön' : ' Ekran'}</span></button>}
             {prefs.enabledTools.mouse && <button id="studio-fare" type="button" aria-pressed={mode === 'mouse'} onClick={() => onModeChange(mode === 'mouse' ? 'write' : 'mouse')}
                 className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${mode === 'mouse' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
                 {mode === 'mouse' ? <Keyboard size={16} /> : <MousePointer2 size={16} />}<span className="sr-only sm:not-sr-only">{mode === 'mouse' ? ' Yazıya dön' : ' Fare'}</span></button>}
@@ -212,27 +219,22 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                 className="btn btn-secondary min-h-11 shrink-0 px-3 text-sm">Yeniden dene</button>}
             {prefs.enabledTools.computerWrite && <button id="studio-bilgisayara-yaz" type="button" disabled={busy || !content.trim()} onClick={() => void act(() => typeOnComputer(content, prefs), 'Metin bilgisayara yazıldı.')}
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Send size={16} /><span className="sr-only sm:not-sr-only"> Bilgisayara yaz</span></button>}
-            {prefs.enabledTools.clipboard && <button id="studio-pc-panosu" type="button" disabled={busy || !content.trim()} onClick={() => void act(() => sendToComputerClipboard(content, prefs), 'Metin bilgisayar panosuna aktarıldı.')}
+            {prefs.enabledTools.clipboard && <button id="studio-pc-panosu" type="button" disabled={busy || !content.trim()} onClick={() => void panoyaGonder()}
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Clipboard size={16} /><span className="sr-only sm:not-sr-only"> PC panosu</span></button>}
             {notice && <span role="status" className="max-w-48 shrink-0 text-xs text-sand-700">{notice}</span>}
+            {panoBildirim && typeof document !== 'undefined' && createPortal(
+                <div id="studio-pano-bildirim" role="status" aria-live="polite"
+                    className={`pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+16px)] left-1/2 z-[120] flex max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg ${panoBildirim.ton === 'error' ? 'bg-berry-700 text-berry-50' : 'bg-moss-800 text-moss-50'}`}>
+                    {panoBildirim.ton === 'sending' ? <Loader2 size={16} className="animate-spin" /> : panoBildirim.ton === 'ok' ? <Check size={16} /> : <Clipboard size={16} />}
+                    <span>{panoBildirim.metin}</span>
+                </div>, document.body)}
         </>;
     if (mode !== 'mouse' || !prefs.enabledTools.mouse) return null;
     return <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-4 sm:px-6">
         <div className="flex min-h-0 flex-1 flex-col gap-2">
-            <div role="application" aria-label="Fare dokunmatik yüzeyi" className="flex min-h-[46dvh] flex-1 touch-none select-none items-center justify-center rounded-2xl border border-moss-200 bg-gradient-to-br from-moss-50 to-sand-50 p-6 text-center text-sm text-sand-600"
-                onPointerDown={e => { if (!e.isPrimary || start.current) return; e.currentTarget.setPointerCapture(e.pointerId); start.current = { id: e.pointerId, x: e.clientX, y: e.clientY, originX: e.clientX, originY: e.clientY, time: Date.now(), moved: false }; }}
-                onPointerMove={e => { if (start.current?.id === e.pointerId && e.buttons) move(e.clientX, e.clientY); }}
-                onPointerUp={e => {
-                    const point = start.current;
-                    if (!point || point.id !== e.pointerId) return;
-                    if (point && !point.moved && Math.hypot(e.clientX - point.originX, e.clientY - point.originY) < 8 && Date.now() - point.time < 450) {
-                        flushMove();
-                        movement.current = movement.current.catch(() => {}).then(() => sendCommand('mc:1', prefs)).catch(error => setNotice(error.message));
-                    }
-                    start.current = null;
-                }} onPointerCancel={e => { if (start.current?.id === e.pointerId) start.current = null; }}>
+            <FareYuzeyi prefs={prefs} onHata={setNotice} className="flex min-h-[46dvh] flex-1 touch-none select-none items-center justify-center rounded-2xl border border-moss-200 bg-gradient-to-br from-moss-50 to-sand-50 p-6 text-center text-sm text-sand-600">
                 Sürükle: imleci hareket ettir · Bir kez dokun: sol tık
-            </div>
+            </FareYuzeyi>
             <div className="grid shrink-0 grid-cols-3 gap-2">
                 <button className="btn btn-secondary min-h-11 py-2.5 text-sm" onClick={() => void act(() => sendCommand('mc:1', prefs), 'Sol tık gönderildi.')}>Sol tık</button>
                 <button className="btn btn-secondary min-h-11 py-2.5 text-sm" onClick={() => void act(() => sendCommand('ms:3', prefs), 'Yukarı kaydırıldı.')}>↑ Kaydır</button>

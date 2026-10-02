@@ -84,7 +84,7 @@ strong { color: #1B3A28; }
 <p>Play Console → <strong>Politikalar → Uygulama içeriği → Veri güvenliği</strong>. Bu bölüm en çok reddedilen yerdir; aşağıdaki cevapları birebir gir.</p>
 <hr />
 <h2>Genel bakış</h2>
-<p>Uygulama <strong>hiçbir veriyi kendi sunucusuna kaydetmez</strong>. Notlar kullanıcının cihazında tutulur. Yapay zekâ özelliği kullanıldığında metin, kullanıcının kendi seçtiği sağlayıcıya gönderilir. Yedekleme kullanıcının kendi Google Drive hesabına yapılır.</p>
+<p>Uygulama <strong>hiçbir veriyi kendi sunucusunda saklamaz</strong>. Notlar kullanıcının cihazında tutulur. Bulut yapay zekâ özelliği kullanıldığında metin ve kullanıcının API anahtarı önce Not Bahçesi'nin Vercel üzerindeki sunucu rotasına, oradan kullanıcının seçtiği sağlayıcıya iletilir; Vercel rotası isteği yalnızca aktarır, kaydetmez. Yedekleme kullanıcının kendi Google Drive hesabına yapılır.</p>
 <hr />
 <h2>1. Veri toplama ve paylaşma</h2>
 <p><strong>Soru:</strong> Uygulamanız gerekli kullanıcı verilerini topluyor veya paylaşıyor mu? <strong>Cevap:</strong> <strong>Evet</strong></p>
@@ -97,10 +97,11 @@ strong { color: #1B3A28; }
 </table></div>
 <p>Diğer tüm kategoriler (konum, kişiler, takvim, fotoğraf, dosyalar, sağlık, mesajlar, ödeme bilgileri, uygulama içi arama geçmişi) için: <strong>Hayır</strong>.</p>
 <h3>Cihazda kalan, toplanmayan veriler</h3>
+<p>Android’de yerel yapay zekâ modeliyle işlenen metin cihazda kalır; Vercel’e veya bulut yapay zekâ sağlayıcısına gönderilmez. İlk model indirmesi, kullanıcının tarayıcıda Hugging Face hesabıyla kabul ettiği lisans ve hizmet koşullarıyla yapılır. Tarayıcıdaki yerel mod metni kullanıcının yapılandırdığı Ollama sunucusuna gönderir.</p>
 <p>Aşağıdakiler yalnızca cihazda veya kullanıcının kendi cihazları arasında işlenir; uygulamanın bir sunucusuna gönderilmez:</p>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Veri</th><th>Ne için kullanılır</th><th>Nereye gider</th></tr></thead>
-<tbody><tr><td>Bluetooth eşleşme bilgisi (cihaz adı/adresi)</td><td>Kart veya bilgisayarla bağlantı kurmak</td><td>Yalnızca telefon ile eşleşen cihaz arasında</td></tr><tr><td>Yerel ağ adresi (kart/PC IP'si)</td><td>Wi‑Fi üzerinden bağlanmak</td><td>Yalnızca kullanıcının kendi yerel ağı</td></tr><tr><td>Panoya gönderilen metin</td><td>Bilgisayarın panosuna kopyalamak</td><td>Kullanıcının kendi bilgisayarı</td></tr><tr><td>Mikrofon sesi</td><td>Dikteyi yazıya çevirmek</td><td>Cihazdaki Android konuşma tanıma servisi</td></tr></tbody>
+<tbody><tr><td>Bluetooth eşleşme bilgisi (cihaz adı/adresi)</td><td>Kart veya bilgisayarla bağlantı kurmak</td><td>Yalnızca telefon ile eşleşen cihaz arasında</td></tr><tr><td>Yerel ağ adresi (kart/PC IP'si)</td><td>Wi‑Fi üzerinden bağlanmak</td><td>Yalnızca kullanıcının kendi yerel ağı</td></tr><tr><td>Panoya gönderilen metin</td><td>Bilgisayarın panosuna kopyalamak</td><td>Kullanıcının kendi bilgisayarı</td></tr><tr><td>Mikrofon sesi</td><td>Dikteyi yazıya çevirmek</td><td>Android'in konuşma tanıma servisi (cihazda ya da servis sağlayıcısının, ör. Google'ın, sunucusunda işlenebilir; bu yüzden yukarıdaki tabloda "Ses kayıtları" toplanıyor ve paylaşılıyor olarak beyan edilir)</td></tr></tbody>
 </table></div>
 <blockquote>Bluetooth ve yerel ağ izinleri yalnızca eşleştirme ve bağlantı için kullanılır; arka planda cihaz taraması yapılmaz, listeler hiçbir yere gönderilmez.</blockquote>
 <hr />
@@ -114,7 +115,7 @@ strong { color: #1B3A28; }
 <hr />
 <h2>4. Yapay zekâ özelliği için ayrı beyan</h2>
 <p>Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:</p>
-<blockquote>Uygulamadaki yapay zekâ özelliği isteğe bağlıdır. Kullanıcı kendi API anahtarını girer ve bir makro çalıştırdığında seçili notun metni, kullanıcının kendi seçtiği yapay zekâ sağlayıcısına (Google, OpenAI, Anthropic veya kullanıcının belirttiği OpenAI uyumlu bir servis) gönderilir. Metin ve anahtar uygulamanın kendi sunucusunda saklanmaz; yalnızca isteği iletmek için kullanılır. Kullanıcı bu özelliği hiç kullanmayabilir; uygulamanın diğer tüm işlevleri anahtar olmadan çalışır.</blockquote>
+<blockquote>Uygulamadaki yapay zekâ özelliği isteğe bağlıdır. Kullanıcı kendi API anahtarını girer ve bir makro çalıştırdığında seçili notun metni ve anahtar, Not Bahçesi'nin Vercel üzerindeki sunucu rotası aracılığıyla kullanıcının kendi seçtiği yapay zekâ sağlayıcısına (Google, OpenAI, Anthropic veya kullanıcının belirttiği OpenAI uyumlu bir servis) iletilir. Metin ve anahtar bu sunucuda saklanmaz; yalnızca isteği iletmek için kullanılır. Android'de yerel model seçilirse metin cihazdan çıkmaz. Kullanıcı bu özelliği hiç kullanmayabilir; uygulamanın diğer tüm işlevleri anahtar olmadan çalışır.</blockquote>
 <hr />
 <h2>5. Bilgisayar araçları için ayrı beyan</h2>
 <p>Uygulamadaki bilgisayar araçları <strong>isteğe bağlıdır</strong> ve kendiliğinden çalışmaz; her işlem kullanıcının bir düğmeye basmasıyla başlar.</p>

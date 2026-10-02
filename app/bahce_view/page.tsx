@@ -5,6 +5,8 @@ import { useEffect, Suspense, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Sprout, Settings, List, TreePine } from 'lucide-react';
+import { BudananlarDugmesi, useBudananlariGoster } from '@/components/ui/BudananlarDugmesi';
+import { budananlariAyikla } from '@/lib/uiPrefs';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
@@ -189,8 +191,11 @@ function GardenPageInner() {
     const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned, setNodeColor, setSelectedNode } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
+    const [ortalanacak, setOrtalanacak] = useState<{ id: string; sayac: number } | null>(null);
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const budananlariGoster = useBudananlariGoster();
+    const gorunenAgaclar = budananlariGoster ? mindRoots : budananlariAyikla(mindRoots);
 
     // Modals state
     const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
@@ -267,7 +272,8 @@ function GardenPageInner() {
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
                 const ad = title || (adIzinli ? siraliAd(null, nodes) : varsayilan);
-                await addNode(gardenId, ad, null, { x: 0, y: 0 });
+                const yeni = await addNode(gardenId, ad, null, { x: 0, y: 0 });
+                if (yeni) setOrtalanacak(o => ({ id: yeni.id, sayac: (o?.sayac ?? 0) + 1 }));
             }
         });
     };
@@ -361,6 +367,7 @@ function GardenPageInner() {
                     // Odak yeni dala geçsin: seçili olduğu için eylem
                     // düğmeleri hemen çevresinde görünür.
                     setSelectedNode(newNode.id);
+                    setOrtalanacak(o => ({ id: newNode.id, sayac: (o?.sayac ?? 0) + 1 }));
                 }
             }
         });
@@ -579,6 +586,7 @@ function GardenPageInner() {
                 </div>
 
                 <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
+                    <BudananlarDugmesi />
                     <button
                         onClick={() => router.push(`/projeler?id=${gardenId}`)}
                         aria-label="Liste"
@@ -609,10 +617,10 @@ function GardenPageInner() {
 
             {/* Tuval */}
             <main className="flex-1 min-h-0 relative overflow-hidden">
-                <GardenCanvas gardenId={gardenId} initialViewState={currentGarden.view_state}>
+                <GardenCanvas gardenId={gardenId} initialViewState={currentGarden.view_state} ortalanacak={ortalanacak}>
                     {mindRoots.length > 0 ? (
                         <ul className="flex gap-20">
-                            {mindRoots.map((root) => (
+                            {gorunenAgaclar.map((root) => (
                                 <SuruklenebilirAgac
                                     key={root.id}
                                     x={nodes.find((n) => n.id === root.id)?.position_x ?? 0}

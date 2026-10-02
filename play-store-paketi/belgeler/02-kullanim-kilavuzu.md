@@ -124,6 +124,22 @@ Renkleri kullanarak bir bahçedeki farklı konu başlıklarını görsel olarak 
 
 Bir notu açtığın büyük editör ekranı.
 
+### Bulut ve yerel yapay zekâ
+
+**Ayarlar → Yapay zekâ** bölümünde iki sekme var: **Bulut** ve **Yerel**.
+Sekme değiştirmek kullanılan motoru değiştirmez. Bulutta sağlayıcını seçip API
+anahtarını gir, ardından ilgili sağlayıcıyı kullan düğmesine dokun.
+
+Android’de yerel model için Hugging Face’ten LiteRT-LM uyumlu **.litertlm** veya
+MediaPipe uyumlu **.task / .bin** dosyasını indir. Modelin lisans koşullarını kontrol et.
+Uygulamaya dön, **Dosya seç** ile dosyayı seç ve **Etkinleştir** düğmesine dokun.
+**Modeli dene** ile kısa bir yanıt kontrolü yapabilirsin. İlk indirmeden sonra
+model internet veya API anahtarı olmadan cihazda çalışır. Modelin kalitesi ve
+hızı telefonun donanımına göre değişir; ham GGUF / safetensors dosyaları desteklenmez.
+
+Bilgisayardaki tarayıcıda yerel mod için Ollama sunucu adresini ve kurulu model
+adını gir. Bulut anahtarların bu seçimden etkilenmez.
+
 ### Temel işlemler
 - **Başlık** ve **içerik** alanlarına yaz
 - **Oto** kutusu açıkken değişiklikler kendiliğinden kaydedilir

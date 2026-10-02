@@ -10,15 +10,15 @@ artırman ve yeni bir paket üretmen gerekir.
 `android/app/build.gradle` dosyasını aç ve şu iki satırı güncelle:
 
 ```gradle
-versionCode 45         // her yüklemede 1 artır (44 → 45 → 46 ...) — Play bunu zorunlu tutar
-versionName "2.2.1"    // kullanıcının gördüğü sürüm
+versionCode 55         // her yüklemede 1 artır (45 → 46 → 47 ...) — Play bunu zorunlu tutar
+versionName "2.2.11"    // kullanıcının gördüğü sürüm
 ```
 
 > `versionCode` daha önce kullandığın bir değere eşit veya küçük olursa Play yüklemeyi
 > reddeder. Yayınlanan en yüksek değerin üzerine çık.
 
-**Şu anki durum:** `versionCode 45`, `versionName "2.2.1"`, hedef API seviyesi 36.
-Bir sonraki yükleme en az 46 olmalıdır.
+**Şu anki durum:** `versionCode 55`, `versionName "2.2.11"`, hedef API seviyesi 36.
+Bir sonraki yükleme en az 56 olmalıdır.
 
 ---
 
@@ -110,3 +110,13 @@ kullanma. Örnek:
 | 43 | 2.1.9 | Yayın adayı: not kalıcılığı, veri silme temizliği, içe aktarma doğrulaması, ayar arayüzü tutarlılığı |
 | 44 | 2.2.0 | Koyu tema, erişilebilirlik ve kontrast düzeltmeleri, R8 ile küçültme |
 | 45 | 2.2.1 | Ana ekranda ağaç sayısı rozeti, görünüm adları (Liste/Tuval), dal rengi kalıcılığı, dokunmatikte yapışan vurgu düzeltmesi |
+| 46 | 2.2.2 | Bulut/Yerel yapay zekâ sekmeleri, Gemma 3 indirme rehberi, Android dosya seçicisiyle model ekleme ve yerel motor güncellemesi |
+| 47 | 2.2.3 | Kısa yerel model indirme açıklaması, tek Dosya seç düğmesi ve yayın paketinde model yüklemeyi engelleyen R8 alan adı sorununun düzeltmesi |
+| 48 | 2.2.4 | Çevrimdışı bildirimi küçük, dokunmaları engellemeyen ve 2,5 saniyede kaybolan bir uyarı hâline getirildi |
+| 49 | 2.2.5 | Yerel model tanıtım kartı kaldırıldı; kısa indirme bilgisi, Dosya seç ve cihazdaki model listesi korundu |
+| 50 | 2.2.6 | LiteRT-LM motoru ve .litertlm model ekleme; Gemma 4, Qwen ve DeepSeek türevleri için yerel destek |
+| 51 | 2.2.7 | Yerel modelleri silme ve liste temizliği; editörde Yerel, Bilgisayar ve Yapay zekâ sekmeleri |
+| 52 | 2.2.8 | PC Wi-Fi adres seçimi, kayıtlı Bluetooth bilgisayarıyla yeniden bağlantı ve bağlantı hata bildirimleri |
+| 53 | 2.2.9 | PC Wi-Fi güvenlik duvarı engeli düzeltildi; yapay zekâ ayarlarında etkin model adı gösterilir |
+| 54 | 2.2.10 | Bilgisayar bağlantısı arayüzü sadeleştirildi; Bluetooth cihazları tarama sırasında listelenir |
+| 55 | 2.2.11 | Editörde tam ekran yazma, kalıcı araç sekmesi, tuvalde yeni dala odaklanma, sanal PC klavyesiyle kısayol seçme, Ekran aracı, daha akıcı fare |

@@ -61,10 +61,10 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     {
         id: 'models',
         title: 'Yapay zekâ',
-        description: 'Modeller, sağlayıcılar ve API anahtarları',
+        description: 'Bulut bağlantısı veya cihazınızda çalışan yerel model',
         icon: Sparkles,
         group: 'Yazma deneyimi',
-        keywords: ['ai', 'model', 'chatgpt', 'openai', 'gemini', 'claude', 'api', 'anahtar'],
+        keywords: ['ai', 'model', 'chatgpt', 'openai', 'gemini', 'claude', 'api', 'anahtar', 'yerel', 'çevrimdışı', 'mediapipe', 'gemma', 'edge'],
     },
     {
         id: 'macros',

@@ -9,6 +9,7 @@ import json
 import os
 import secrets
 import sys
+import time
 from ctypes import wintypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -45,7 +46,11 @@ def set_clipboard(text):
         raise OSError("Pano belleği kilitlenemedi")
     ctypes.memmove(pointer, data, len(data))
     kernel.GlobalUnlock(handle)
-    if not user.OpenClipboard(None):
+    for deneme in range(15):
+        if user.OpenClipboard(None):
+            break
+        time.sleep(0.04 * (deneme + 1))
+    else:
         kernel.GlobalFree(handle)
         raise OSError("Pano şu anda başka uygulamada açık")
     try:

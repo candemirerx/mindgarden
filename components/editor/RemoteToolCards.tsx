@@ -7,7 +7,7 @@
  * araçları" bölümünün içinde yalnızca satırları döndürür. Böylece tüm ayar
  * listeleri aynı satır görünümünü paylaşır.
  */
-import { AudioLines, Clipboard, Keyboard, Mic, MousePointer2, Wand2 } from 'lucide-react';
+import { AudioLines, Clipboard, Keyboard, LayoutDashboard, Mic, MousePointer2, Wand2 } from 'lucide-react';
 import { REMOTE_TOOL_IDS, saveRemotePrefs } from '@/lib/remoteTools';
 import type { RemoteToolId } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
@@ -20,7 +20,8 @@ const items = {
     bridgeWrite: { title: 'Köprü Yaz', subtitle: 'Notta yazarken aynı metin bilgisayara da yazılır; açıp kapatmak için editördeki düğmeyi kullan.', Icon: Keyboard },
     computerWrite: { title: 'Bilgisayara Yaz', subtitle: 'Not metnini kartın klavyesiyle bilgisayardaki odaklı alana yaz.', Icon: Keyboard },
     clipboard: { title: 'Bilgisayar Panosuna Gönder', subtitle: 'Not metnini PC pano yardımcısına gönder.', Icon: Clipboard },
-    shortcuts: { title: 'Kısayollar', subtitle: 'Kişisel klavye, metin ve konum makrolarını editördeki panodan çalıştır.', Icon: Wand2 }
+    shortcuts: { title: 'Kısayollar', subtitle: 'Kişisel klavye, metin ve konum makrolarını editördeki panodan çalıştır.', Icon: Wand2 },
+    screen: { title: 'Ekran', subtitle: 'Kendi tasarladığın bölmeli ekran: fare, yön tuşları, metin ve kısayollar bir arada.', Icon: LayoutDashboard }
 } satisfies Record<RemoteToolId, { title: string; subtitle: string; Icon: typeof MousePointer2 }>;
 
 export default function RemoteToolCards() {

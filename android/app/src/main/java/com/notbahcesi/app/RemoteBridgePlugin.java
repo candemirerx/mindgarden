@@ -15,8 +15,11 @@ import android.bluetooth.BluetoothSocket;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
 import android.content.Context;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -52,6 +55,7 @@ import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @CapacitorPlugin(name = "RemoteBridge", permissions = {
@@ -63,6 +67,7 @@ public class RemoteBridgePlugin extends Plugin {
     private static final UUID NUS = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
     private static final UUID RX = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
     private static final UUID SPP = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
+    private static final UUID PC_SERVICE = UUID.fromString("93c7b30b-d973-4873-bf10-148491968b2c");
     private final Handler handler = new Handler(Looper.getMainLooper());
     private BluetoothGatt gatt;
     private BluetoothGattCharacteristic rx;
@@ -70,6 +75,7 @@ public class RemoteBridgePlugin extends Plugin {
     private PluginCall writing;
     private ScanCallback scanning;
     private volatile BluetoothSocket classicSocket;
+    private volatile String classicAddress;
     private final ExecutorService classicWorker = Executors.newSingleThreadExecutor();
     private SpeechRecognizer bridgeRecognizer;
     private PluginCall bridgeCall;
@@ -82,6 +88,14 @@ public class RemoteBridgePlugin extends Plugin {
     private boolean bridgeSegmentGoruldu;
     /** Henüz kesinleşmemiş, konuşulmakta olan cümlenin son hâli. */
     private String bridgePartial = "";
+    private RecognitionListener bridgeListener;
+    /** İstenen motor: "auto" (önce cihaz içi), "device" (yalnızca cihaz içi), "system" (çevrimiçi sistem tanıyıcısı). */
+    private String bridgeMotor = "auto";
+    /** Çalışan tanıyıcı cihaz içi (çevrimdışı) motor mu? */
+    private boolean bridgeCihazIci;
+    /** Tanıyıcıdan en son ne zaman bir geri çağrı geldi; takılmayı yakalamak için. */
+    private long bridgeSonOlay;
+    private Runnable bridgeBekci;
     /**
      * Köprü Dikte boyunca sessize alınan ses akışlarının önceki düzeyleri.
      *
@@ -102,10 +116,12 @@ public class RemoteBridgePlugin extends Plugin {
     }
     @PermissionCallback private void permissionReady(PluginCall call) {
         if (call == null) return;
+        if (!bluetoothIzinleriHazir()) { call.reject("Bluetooth izni verilmedi. Telefon ayarlarından Yakındaki cihazlar iznini açabilirsiniz."); return; }
         if (call.getMethodName().equals("scan")) scan(call);
         else if (call.getMethodName().equals("connect")) connect(call);
         else if (call.getMethodName().equals("scanPaired")) scanPaired(call);
         else if (call.getMethodName().equals("connectClassic")) connectClassic(call);
+        else if (call.getMethodName().equals("sendClassic")) sendClassic(call);
         else call.reject("Bluetooth izni gerekli.");
     }
     private BluetoothAdapter adapter() {
@@ -155,10 +171,12 @@ public class RemoteBridgePlugin extends Plugin {
         if (adapter == null || !adapter.isEnabled()) { call.reject("Bluetooth kapalı veya desteklenmiyor."); return; }
         BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
         if (scanner == null) { call.reject("BLE tarama başlatılamadı."); return; }
-        if (scanning != null) scanner.stopScan(scanning);
+        if (scanning != null) { call.reject("BLE taraması zaten devam ediyor."); return; }
+        final String scanId = call.getString("scanId", "");
         Map<String, JSObject> found = new LinkedHashMap<>();
         ScanCallback callback = new ScanCallback() {
             @Override public void onScanResult(int type, ScanResult result) {
+                if (scanning != this) return;
                 String name = result.getScanRecord() == null ? null : result.getScanRecord().getDeviceName();
                 if (name == null || name.isEmpty()) name = result.getDevice().getName();
                 if (name == null || name.isEmpty()) return;
@@ -167,11 +185,19 @@ public class RemoteBridgePlugin extends Plugin {
                 item.put("name", name);
                 item.put("rssi", result.getRssi());
                 found.put(result.getDevice().getAddress(), item);
+                JSObject event = new JSObject();
+                event.put("scanId", scanId);
+                event.put("device", item);
+                notifyListeners("bleScanDevice", event);
+            }
+            @Override public void onBatchScanResults(List<ScanResult> results) {
+                for (ScanResult result : results) onScanResult(0, result);
             }
             @Override public void onScanFailed(int error) { if (scanning == this) { scanning = null; call.reject("BLE tarama hatası: " + error); } }
         };
         scanning = callback;
-        try { scanner.startScan(callback); }
+        try { scanner.startScan(null, new ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).setReportDelay(0).build(), callback); }
         catch (SecurityException e) { scanning = null; call.reject("Bluetooth izni gerekli."); return; }
         handler.postDelayed(() -> {
             if (scanning != callback) return;
@@ -196,6 +222,7 @@ public class RemoteBridgePlugin extends Plugin {
     private void closeClassic() {
         BluetoothSocket socket = classicSocket;
         classicSocket = null;
+        classicAddress = null;
         if (socket != null) try { socket.close(); } catch (IOException ignored) { }
     }
     @SuppressLint("MissingPermission") // Gerekçe: bluetoothHazir() çalışma zamanı iznini doğrular.
@@ -213,49 +240,92 @@ public class RemoteBridgePlugin extends Plugin {
             JSObject result = new JSObject(); result.put("devices", devices); call.resolve(result);
         } catch (SecurityException e) { call.reject("Bluetooth izni gerekli."); }
     }
-    @SuppressLint("MissingPermission") // Gerekçe: bluetoothHazir() çalışma zamanı iznini doğrular.
+    @SuppressLint("MissingPermission") // Called only after bluetoothHazir validates permissions.
+    private BluetoothSocket openClassicService(String address, UUID service) throws IOException {
+        BluetoothAdapter adapter = adapter();
+        if (adapter == null || !adapter.isEnabled()) throw new IOException("Bluetooth kapalı.");
+        if (!BluetoothAdapter.checkBluetoothAddress(address)) throw new IOException("Ayarlardan eşleşmiş bilgisayarınızı seçin.");
+        closeClassic(); closeGatt();
+        adapter.cancelDiscovery();
+        BluetoothSocket socket = adapter.getRemoteDevice(address).createRfcommSocketToServiceRecord(service);
+        classicSocket = socket;
+        Runnable timeout = () -> { if (classicSocket == socket) closeClassic(); };
+        handler.postDelayed(timeout, 12000);
+        try {
+            socket.connect(); classicAddress = address;
+            return socket;
+        } catch (IOException error) { closeClassic(); throw error; }
+        finally { handler.removeCallbacks(timeout); }
+    }
+    @SuppressLint("MissingPermission")
+    private void refreshClassicServices(String address) throws IOException {
+        BluetoothDevice device = adapter().getRemoteDevice(address);
+        CountDownLatch ready = new CountDownLatch(1);
+        BroadcastReceiver receiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) {
+                BluetoothDevice found = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                if (found != null && address.equalsIgnoreCase(found.getAddress())) ready.countDown();
+            }
+        };
+        Context context = getContext();
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_UUID);
+        if (Build.VERSION.SDK_INT >= 33) context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
+        else context.registerReceiver(receiver, filter);
+        try {
+            // Android may cache PC services from before the helper was started.
+            // Refresh discovery only after a failed connection, before sending any command.
+            if (device.fetchUuidsWithSdp()) ready.await(4, TimeUnit.SECONDS);
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt(); throw new IOException("Bluetooth bağlantısı iptal edildi.", error);
+        } finally { context.unregisterReceiver(receiver); }
+    }
+    private BluetoothSocket openClassic(String address) throws IOException {
+        try { return openClassicService(address, PC_SERVICE); }
+        catch (IOException firstError) {
+            refreshClassicServices(address);
+            try { return openClassicService(address, PC_SERVICE); }
+            catch (IOException refreshedError) { return openClassicService(address, SPP); }
+        }
+    }
     @PluginMethod public void connectClassic(PluginCall call) {
         if (!bluetoothHazir(call)) return;
-        BluetoothAdapter adapter = adapter();
-        if (adapter == null || !adapter.isEnabled()) { call.reject("Bluetooth kapalı."); return; }
         String address = call.getString("address", "");
-        AtomicBoolean finished = new AtomicBoolean(false);
         classicWorker.execute(() -> {
-            BluetoothSocket socket = null;
             try {
-                closeClassic(); closeGatt();
-                BluetoothDevice device = adapter.getRemoteDevice(address);
-                socket = device.createRfcommSocketToServiceRecord(SPP);
-                classicSocket = socket;
-                socket.connect();
+                openClassic(address);
                 JSObject result = new JSObject(); result.put("connected", true); call.resolve(result);
             } catch (Exception e) {
-                closeClassic(); call.reject("PC Bluetooth seri bağlantısı kurulamadı: " + e.getMessage());
-            } finally { finished.set(true); }
+                closeClassic(); call.reject("PC Bluetooth bağlantısı kurulamadı. Güncel PC yardımcısını açın ve Windows ile telefonu eşleştirin. " + e.getMessage());
+            }
         });
-        handler.postDelayed(() -> { if (!finished.get()) closeClassic(); }, 12000);
     }
     @SuppressLint("MissingPermission") // Gerekçe: işlem yalnızca bağlantı kurulmuş soket üzerinde yapılır.
     @PluginMethod public void sendClassic(PluginCall call) {
+        if (!bluetoothHazir(call)) return;
         String body = call.getString("body", "");
-        if (body.length() == 0 || body.length() > 32000 || body.contains("\n")) { call.reject("Bluetooth komutu geçersiz."); return; }
-        AtomicBoolean finished = new AtomicBoolean(false);
+        String address = call.getString("address", "");
+        if (body.length() == 0 || body.length() > 32000 || body.getBytes(StandardCharsets.UTF_8).length > 32768 || body.contains("\n")) { call.reject("Bluetooth komutu geçersiz veya çok uzun."); return; }
         classicWorker.execute(() -> {
-            BluetoothSocket socket = classicSocket;
-            if (socket == null || !socket.isConnected()) { finished.set(true); call.reject("Önce PC ile klasik Bluetooth bağlantısı kurun."); return; }
+            Runnable timeout = null;
             try {
+                BluetoothSocket socket = classicSocket;
+                if (socket == null || !socket.isConnected() || (!address.isEmpty() && !address.equalsIgnoreCase(classicAddress))) socket = openClassic(address);
+                final BluetoothSocket activeSocket = socket;
+                timeout = () -> { if (classicSocket == activeSocket) closeClassic(); };
+                handler.postDelayed(timeout, 10000);
                 OutputStream out = socket.getOutputStream();
                 out.write((body + "\n").getBytes(StandardCharsets.UTF_8)); out.flush();
                 InputStream in = socket.getInputStream();
                 ByteArrayOutputStream reply = new ByteArrayOutputStream();
                 int next;
                 while ((next = in.read()) != '\n' && next != -1 && reply.size() < 512) reply.write(next);
-                if (next != '\n' || !new JSONObject(reply.toString("UTF-8")).optBoolean("ok")) throw new IOException("PC komutu reddetti.");
+                if (next != '\n') throw new IOException("PC bağlantıyı kapattı; komut yeniden gönderilmedi.");
+                JSONObject response = new JSONObject(reply.toString("UTF-8"));
+                if (!response.optBoolean("ok")) throw new IOException(response.optString("error", "PC komutu reddetti. Erişim anahtarını kontrol edin."));
                 call.resolve();
             } catch (Exception e) { closeClassic(); call.reject("Bluetooth aktarımı başarısız: " + e.getMessage()); }
-            finally { finished.set(true); }
+            finally { if (timeout != null) handler.removeCallbacks(timeout); }
         });
-        handler.postDelayed(() -> { if (!finished.get()) closeClassic(); }, 10000);
     }
     @SuppressLint("MissingPermission") // Gerekçe: bluetoothHazir() çalışma zamanı iznini doğrular.
     @PluginMethod public void connect(PluginCall call) {
@@ -340,7 +410,9 @@ public class RemoteBridgePlugin extends Plugin {
                 URL url = new URL(address);
                 if (!url.getProtocol().equals("http") && !url.getProtocol().equals("https")) throw new IllegalArgumentException("HTTP(S) gerekli.");
                 connection = (HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(3500); connection.setReadTimeout(10000);
+                // BLE and Wi-Fi share airtime on the card. Allow a TCP retry
+                // during a cold connection without replaying input commands.
+                connection.setConnectTimeout(6500); connection.setReadTimeout(10000);
                 connection.setRequestMethod(method);
                 if (!token.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + token);
                 if (method.equals("POST")) {
@@ -429,24 +501,25 @@ public class RemoteBridgePlugin extends Plugin {
         }
         handler.post(() -> {
             if (bridgeCall != null) { call.reject("Köprü Dikte zaten dinliyor."); return; }
-            if (!SpeechRecognizer.isRecognitionAvailable(getContext())) { call.reject("Ses tanıma hizmeti bulunamadı."); return; }
+            if (!SpeechRecognizer.isRecognitionAvailable(getContext()) && !cihazIciTanimaVar()) { call.reject("Ses tanıma hizmeti bulunamadı."); return; }
             int requested = call.getInt("seconds", 30);
             int seconds = requested == 0 ? 0 : Math.max(5, Math.min(3600, requested));
             bridgeCall = call;
             bridgeWords.setLength(0);
             bridgePartial = "";
             bridgeLanguage = call.getString("language", "tr-TR");
+            String istenen = call.getString("engine", "auto");
+            bridgeMotor = "device".equals(istenen) || "system".equals(istenen) ? istenen : "auto";
             bridgeStopping = false;
             bridgeErrors = 0;
             sessizlestir();
             try {
-                bridgeRecognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
-                bridgeRecognizer.setRecognitionListener(new RecognitionListener() {
-                    @Override public void onReadyForSpeech(Bundle params) { }
-                    @Override public void onBeginningOfSpeech() { }
-                    @Override public void onRmsChanged(float rmsdB) { }
+                bridgeListener = new RecognitionListener() {
+                    @Override public void onReadyForSpeech(Bundle params) { bridgeSonOlay = System.currentTimeMillis(); }
+                    @Override public void onBeginningOfSpeech() { bridgeSonOlay = System.currentTimeMillis(); }
+                    @Override public void onRmsChanged(float rmsdB) { bridgeSonOlay = System.currentTimeMillis(); }
                     @Override public void onBufferReceived(byte[] buffer) { }
-                    @Override public void onEndOfSpeech() { }
+                    @Override public void onEndOfSpeech() { bridgeSonOlay = System.currentTimeMillis(); }
                     /**
                      * Kısmi sonuç: konuşma sürerken tanıyıcı cümlenin o ana kadarki
                      * hâlini verir. Metne eklenmez, "konuşulmakta olan" parça olarak
@@ -491,31 +564,76 @@ public class RemoteBridgePlugin extends Plugin {
                         handler.postDelayed(() -> listenBridgeAgain(), 120);
                     }
                     @Override public void onError(int error) {
+                        bridgeSonOlay = System.currentTimeMillis();
                         if (bridgeStopping) { finishBridgeDictation(); return; }
-                        // 9: mikrofon izni yok, 12-13: dil desteklenmiyor. Bunlar
-                        // yeniden denemekle düzelmez.
-                        if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS || error == 12 || error == 13) {
-                            failBridgeDictation("Ses tanıma hatası: " + error); return;
+                        if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                            failBridgeDictation("Mikrofon izni verilmedi."); return;
+                        }
+                        // 12-13: dil desteklenmiyor / dil modeli yüklü değil.
+                        if (error == 12 || error == 13) {
+                            if (bridgeCihazIci && "auto".equals(bridgeMotor)) {
+                                // Cihaz içi Türkçe model yoksa indirmeyi başlat ve bu oturum
+                                // için çevrimiçi sistem tanıyıcısına geç.
+                                cihazIciModeliIndir();
+                                bridgeMotor = "system";
+                                bridgeKesinlestir(bridgePartial);
+                                if (!bridgeTanimaYenile()) return;
+                                handler.postDelayed(() -> listenBridgeAgain(), 200);
+                                return;
+                            }
+                            failBridgeDictation(bridgeCihazIci
+                                ? "Cihaz içi ses tanıma modeli bu dil için yüklü değil. Telefon ayarlarından Google ses tanıma dil paketini indirin veya motoru Otomatik yapın."
+                                : "Ses tanıma bu dili desteklemiyor: " + bridgeLanguage);
+                            return;
                         }
                         // Dinleme yeniden başlarken cümlenin son hâli kaybolmasın.
                         bridgeKesinlestir(bridgePartial);
                         long bekle;
+                        boolean yenile = false;
                         switch (error) {
-                            // 1,2,4: ağ/sunucu, 10,11: sunucu sınırı. Kısa aralıkla
-                            // denemek servisi boğar; 1,5 saniye beklenir.
-                            case 1: case 2: case 4: case 10: case 11: bekle = 1500; break;
-                            case 5: bekle = 150; break;
+                            // 1,2,4: ağ/sunucu, 10: aşırı yük. Kısa aralıkla denemek
+                            // servisi boğar; 1,5 saniye beklenir ve bağlantı tazelenir.
+                            case 1: case 2: case 4: case 10: bekle = 1500; yenile = true; break;
+                            // 11: servis bağlantısı koptu; tanıyıcı yeniden kurulmadan çalışmaz.
+                            case 11: bekle = 800; yenile = true; break;
+                            // 5: istemci hatası, 8: tanıyıcı meşgul. İkisi de eski
+                            // nesneyi kullanmayı bırakıp yenisini kurmayı gerektirir.
+                            case 5: case 8: bekle = 300; yenile = true; break;
                             case 6: case 7: bekle = 100; break;
-                            // 8: tanıyıcı meşgul; önce iptal edilip yeniden başlatılır.
-                            case 8: try { bridgeRecognizer.cancel(); } catch (Exception ignored) { } bekle = 400; break;
                             default: bekle = 400; break;
                         }
-                        if (error != 6 && error != 7 && ++bridgeErrors >= 6) {
-                            failBridgeDictation("Ses tanıma hizmeti tekrar tekrar hata verdi: " + error); return;
+                        if (error != 6 && error != 7) {
+                            if (++bridgeErrors >= 8) {
+                                failBridgeDictation("Ses tanıma hizmeti tekrar tekrar hata verdi: " + error); return;
+                            }
+                            // Art arda hata servisin takıldığını gösterir.
+                            if (bridgeErrors % 3 == 0) yenile = true;
                         }
+                        if (yenile && !bridgeTanimaYenile()) return;
                         handler.postDelayed(() -> listenBridgeAgain(), bekle);
                     }
-                });
+                };
+                bridgeRecognizer = bridgeTanimaOlustur();
+                if (bridgeRecognizer == null) {
+                    failBridgeDictation("Cihaz içi ses tanıma bu telefonda yok. Motoru Otomatik veya Çevrimiçi yapın."); return;
+                }
+                bridgeRecognizer.setRecognitionListener(bridgeListener);
+                bridgeSonOlay = System.currentTimeMillis();
+                bridgeBekci = new Runnable() {
+                    @Override public void run() {
+                        if (bridgeCall == null) return;
+                        // Bazı cihazlarda tanıyıcı hata bile vermeden susuyor. Dinleme
+                        // sırasında ses düzeyi olayları sürekli gelir; uzun süre hiç olay
+                        // gelmediyse tanıyıcı yeniden kurulur.
+                        if (!bridgeStopping && System.currentTimeMillis() - bridgeSonOlay > 12000) {
+                            bridgeKesinlestir(bridgePartial);
+                            bridgeYayinla();
+                            if (bridgeTanimaYenile()) listenBridgeAgain();
+                        }
+                        if (bridgeCall != null) handler.postDelayed(this, 3000);
+                    }
+                };
+                handler.postDelayed(bridgeBekci, 3000);
                 if (seconds > 0) {
                     bridgeDeadline = () -> stopBridgeListening();
                     handler.postDelayed(bridgeDeadline, seconds * 1000L);
@@ -528,8 +646,62 @@ public class RemoteBridgePlugin extends Plugin {
         if (call != null && getPermissionState("microphone") == com.getcapacitor.PermissionState.GRANTED) startBridgeDictation(call);
         else if (call != null) call.reject("Mikrofon izni verilmedi.");
     }
+    /** Bu telefonda cihaz içi (çevrimdışı) ses tanıma kullanılabilir mi? */
+    private boolean cihazIciTanimaVar() {
+        return Build.VERSION.SDK_INT >= 33 && SpeechRecognizer.isOnDeviceRecognitionAvailable(getContext());
+    }
+    /**
+     * İstenen motora göre tanıyıcı kurar. Cihaz içi motor internet ve sunucu
+     * sınırı gerektirmez, gecikmesi düşüktür. Otomatikte cihaz içi motor tercih
+     * edilir, yoksa sistem tanıyıcısı kullanılır; "device" seçiliyken cihaz içi
+     * yoksa null döner.
+     */
+    private SpeechRecognizer bridgeTanimaOlustur() {
+        bridgeCihazIci = false;
+        if (!"system".equals(bridgeMotor) && cihazIciTanimaVar()) {
+            try {
+                SpeechRecognizer yerel = SpeechRecognizer.createOnDeviceSpeechRecognizer(getContext());
+                bridgeCihazIci = true;
+                return yerel;
+            } catch (Exception ignored) { }
+        }
+        if ("device".equals(bridgeMotor)) return null;
+        return SpeechRecognizer.createSpeechRecognizer(getContext());
+    }
+    /** Takılan veya bozulan tanıyıcıyı atıp yenisini kurar. Kurulamazsa dikteyi hatayla bitirir. */
+    private boolean bridgeTanimaYenile() {
+        if (bridgeRecognizer != null) {
+            try { bridgeRecognizer.cancel(); } catch (Exception ignored) { }
+            try { bridgeRecognizer.destroy(); } catch (Exception ignored) { }
+            bridgeRecognizer = null;
+        }
+        try {
+            bridgeRecognizer = bridgeTanimaOlustur();
+        } catch (Exception e) { bridgeRecognizer = null; }
+        if (bridgeRecognizer == null) { failBridgeDictation("Ses tanıma yeniden başlatılamadı."); return false; }
+        bridgeRecognizer.setRecognitionListener(bridgeListener);
+        bridgeSonOlay = System.currentTimeMillis();
+        return true;
+    }
+    /** Cihaz içi Türkçe dil modeli yoksa indirmesini ister; en iyi çaba, sonuç beklenmez. */
+    private void cihazIciModeliIndir() {
+        if (Build.VERSION.SDK_INT < 33 || bridgeRecognizer == null) return;
+        try {
+            Intent niyet = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            niyet.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            niyet.putExtra(RecognizerIntent.EXTRA_LANGUAGE, bridgeLanguage);
+            bridgeRecognizer.triggerModelDownload(niyet);
+        } catch (Exception ignored) { }
+    }
+    @PluginMethod public void getDictationEngines(PluginCall call) {
+        JSObject sonuc = new JSObject();
+        sonuc.put("onDevice", cihazIciTanimaVar());
+        sonuc.put("system", SpeechRecognizer.isRecognitionAvailable(getContext()));
+        call.resolve(sonuc);
+    }
     private void listenBridgeAgain() {
         if (bridgeCall == null || bridgeStopping || bridgeRecognizer == null) return;
+        bridgeSonOlay = System.currentTimeMillis();
         // Oturum yenilenirken yarım kalan cümle varsa kaybolmasın.
         bridgeKesinlestir(bridgePartial);
         bridgeSegmentGoruldu = false;
@@ -545,6 +717,7 @@ public class RemoteBridgePlugin extends Plugin {
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L);
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000L);
         intent.putExtra("android.speech.extra.SEGMENTED_SESSION", "android.speech.extras.SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS");
+        if (bridgeCihazIci) intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
         try { bridgeRecognizer.startListening(intent); }
         catch (Exception e) { failBridgeDictation("Dinleme yeniden başlatılamadı: " + e.getMessage()); }
     }
@@ -626,6 +799,38 @@ public class RemoteBridgePlugin extends Plugin {
         }
         sessizAkislar.clear();
     }
+    /** Editör tam ekranı: sistem çubuklarını gizler; kenardan kaydırınca geçici görünür. */
+    @PluginMethod public void setImmersive(PluginCall call) {
+        boolean acik = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        Activity activity = getActivity();
+        if (activity == null) { call.resolve(); return; }
+        activity.runOnUiThread(() -> {
+            androidx.core.view.WindowInsetsControllerCompat kontrol =
+                androidx.core.view.WindowCompat.getInsetsController(activity.getWindow(), activity.getWindow().getDecorView());
+            int cubuklar = androidx.core.view.WindowInsetsCompat.Type.systemBars();
+            // Gizlenen çubukların ve kamera çentiğinin yeri boş şerit kalmasın.
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(activity.getWindow(), !acik);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                android.view.WindowManager.LayoutParams lp = activity.getWindow().getAttributes();
+                lp.layoutInDisplayCutoutMode = acik
+                    ? android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    : android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT;
+                activity.getWindow().setAttributes(lp);
+            }
+            if (acik) {
+                kontrol.setSystemBarsBehavior(androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                kontrol.hide(cubuklar);
+            } else {
+                kontrol.show(cubuklar);
+                // WebView son kenar boşluğunu (safe-area) önbellekte tutar; sıfırlanmazsa
+                // sayfa durum çubuğu yüksekliği kadar aşağıda kalır.
+                android.view.View web = getBridge().getWebView();
+                web.post(() -> androidx.core.view.ViewCompat.dispatchApplyWindowInsets(web,
+                    new androidx.core.view.WindowInsetsCompat.Builder().build()));
+            }
+            call.resolve();
+        });
+    }
     @PluginMethod public void stopBridgeDictation(PluginCall call) {
         handler.post(() -> { stopBridgeListening(); call.resolve(); });
     }
@@ -656,10 +861,28 @@ public class RemoteBridgePlugin extends Plugin {
     private void clearBridgeDictation() {
         if (bridgeDeadline != null) handler.removeCallbacks(bridgeDeadline);
         bridgeDeadline = null;
+        if (bridgeBekci != null) handler.removeCallbacks(bridgeBekci);
+        bridgeBekci = null;
         bridgeCall = null;
         bridgeStopping = false;
         bridgePartial = "";
         sesiGeriVer();
         if (bridgeRecognizer != null) { bridgeRecognizer.destroy(); bridgeRecognizer = null; }
+    }
+    @SuppressLint("MissingPermission") // Cleanup must also work after permission revocation.
+    @Override protected void handleOnDestroy() {
+        closeClassic(); closeGatt();
+        if (scanning != null) {
+            try {
+                BluetoothAdapter adapter = adapter();
+                BluetoothLeScanner scanner = adapter == null ? null : adapter.getBluetoothLeScanner();
+                if (scanner != null) scanner.stopScan(scanning);
+            } catch (Exception ignored) { }
+            scanning = null;
+        }
+        clearBridgeDictation();
+        handler.removeCallbacksAndMessages(null);
+        classicWorker.shutdownNow();
+        super.handleOnDestroy();
     }
 }

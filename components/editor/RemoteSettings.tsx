@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bluetooth, Check, MonitorSmartphone, MousePointer2, Radio, Wifi } from 'lucide-react';
-import { baglantiSatiriniCoz, connectCard, connectComputerBluetooth, disconnectCard, discoverCards, remotePrefs, saveRemotePrefs, scanCards, scanPairedComputers, sendToComputerClipboard, testCard, testHelper } from '@/lib/remoteTools';
+import { Bluetooth, Check, Loader2, MonitorSmartphone, MousePointer2, Radio, Wifi } from 'lucide-react';
+import { baglantiSatiriniCoz, connectCard, connectComputerBluetooth, disconnectCard, discoverCards, remotePrefs, saveRemotePrefs, scanCards, scanPairedComputers, dictationEngines, sendToComputerClipboard, testCard, testHelper } from '@/lib/remoteTools';
 import type { RemotePrefs } from '@/lib/remoteTools';
 import {
     SettingsField,
@@ -29,31 +29,38 @@ const CONNECTION_LABELS: Record<RemotePrefs['connection'], string> = {
 };
 
 /** Yol seçtiren kutuların ortak görünümü. */
-const linkCard = 'flex min-h-16 items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40';
+const linkCard = 'flex min-h-14 items-center gap-2.5 rounded-xl border p-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40';
 
 /** Cihaz ve kart listesi satırlarının ortak görünümü. */
 const listRow = 'block w-full rounded-xl border border-sand-200 bg-white p-2.5 text-left text-sm transition-colors duration-200 hover:border-sand-300 hover:bg-sand-50';
 
+/** Sinyal gücünü (dBm) kabaca yakınlığa çevirir; kesin mesafe değildir. */
+function yakinlik(rssi: number): string {
+    if (rssi >= -60) return 'çok yakın';
+    if (rssi >= -75) return 'yakın';
+    if (rssi >= -88) return 'uzak';
+    return 'çok uzak';
+}
+
 /**
- * PC yardımcısının üç adımlı kurulumu.
- *
- * Bilgiler eskiden tek bir numaralı liste ve üst üste paragraflar içinde
- * veriliyordu; adımlar burada her biri tek işi anlatan kutulara bölündü.
+ * Bulunan cihazın satırı: ad, adres, sinyal ve sağda Bağlan düğmesi. Bağlantı
+ * sürerken düğme dönen simgeyle "Bağlanıyor…" der; bağlıysa onay gösterir.
  */
-const PC_ADIMLARI = [
-    {
-        baslik: 'Yardımcıyı bilgisayarda aç',
-        aciklama: 'Masaüstündeki Not Bahçesi PC Yardımcısı kısayoluna çift tıklayın; kısayol yoksa projedeki scripts/pc_yardimcisi_baslat.cmd dosyasını çalıştırın.'
-    },
-    {
-        baslik: 'Yönetici iznini bir kez ver',
-        aciklama: 'Windows izin sorarsa Evet deyin. Bu izin güvenlik duvarına TCP 8765 kapısını yalnız Özel ağ için ekler; bu adım atlanırsa telefon PC’ye ulaşamaz.'
-    },
-    {
-        baslik: 'Bağlantı satırını yapıştır',
-        aciklama: 'Pencereyi kapatmayın; adres ve anahtarı panonuza tek satır olarak kopyalar. Aşağıdaki alana yapıştırıp Yapıştır ve uygula düğmesine dokunun. Telefon ve PC aynı güvenilen ağda olmalı.'
-    }
-];
+function CihazSatiri({ device, durum, disabled, onBaglan }: { device: Device; durum: 'bagli' | 'baglaniyor' | 'bos'; disabled: boolean; onBaglan: () => void }) {
+    return <div className={cx('flex w-full items-center gap-3 rounded-xl border p-3 text-sm transition-colors duration-200', durum === 'bagli' ? 'border-moss-400 bg-moss-50' : 'border-sand-200 bg-white')}>
+        <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium text-sand-800">{device.name || 'Adsız cihaz'}</span>
+            <span className="block truncate text-xs text-sand-600">{device.address}{device.rssi ? ' · ' + device.rssi + ' dBm (' + yakinlik(device.rssi) + ')' : ''}</span>
+        </span>
+        {durum === 'bagli'
+            ? <span className="flex min-h-[44px] shrink-0 items-center gap-1.5 px-2 text-sm font-medium text-moss-700"><Check size={16} /> Bağlı</span>
+            : <button type="button" disabled={disabled} aria-busy={durum === 'baglaniyor'} onClick={onBaglan}
+                aria-label={(device.name || device.address) + (durum === 'baglaniyor' ? ' bağlanıyor' : ' cihazına bağlan')}
+                className="btn btn-primary min-h-[44px] shrink-0 gap-1.5 px-4 text-sm">
+                {durum === 'baglaniyor' ? <><Loader2 size={15} className="animate-spin" /> Bağlanıyor…</> : 'Bağlan'}
+            </button>}
+    </div>;
+}
 
 export default function RemoteSettings() {
     const [prefs, setPrefs] = useState<RemotePrefs>(remotePrefs);
@@ -64,9 +71,12 @@ export default function RemoteSettings() {
     const [message, setMessage] = useState('');
     const [messageTone, setMessageTone] = useState<'ok' | 'error'>('ok');
     const [connected, setConnected] = useState('');
+    /** Bağlanılmakta olan cihazın adresi; satırda "Bağlanıyor…" gösterilir. */
+    const [baglaniyor, setBaglaniyor] = useState('');
     /** PC penceresinden kopyalanan tek satırlık bağlantı bilgisi. */
     const [baglantiSatiri, setBaglantiSatiri] = useState('');
-    useEffect(() => { setPrefs(remotePrefs()); }, []);
+    const [motorlar, setMotorlar] = useState<{ onDevice: boolean; system: boolean } | null>(null);
+    useEffect(() => { setPrefs(remotePrefs()); void dictationEngines().then(setMotorlar); }, []);
     const update = (next: RemotePrefs) => { setPrefs(next); saveRemotePrefs(next); };
     const act = async (action: () => Promise<void>) => {
         setBusy(true); setMessage('');
@@ -84,13 +94,13 @@ export default function RemoteSettings() {
         const cozulen = baglantiSatiriniCoz(baglantiSatiri);
         if (!cozulen) {
             setMessageTone('error');
-            setMessage('Satır okunamadı. PC penceresindeki satırı olduğu gibi yapıştırın: http://PC-IP:8765|anahtar');
+            setMessage('Kod okunamadı. Yardımcıdan bağlantı kodunu yeniden kopyalayın.');
             return;
         }
-        update({ ...prefs, helperUrl: cozulen.helperUrl, helperToken: cozulen.helperToken, connection: 'pc-wifi' });
+        update({ ...prefs, helperUrl: cozulen.helperUrl, helperToken: cozulen.helperToken });
         setBaglantiSatiri('');
         setMessageTone('ok');
-        setMessage('Adres ve anahtar alındı; "Doğrudan PC" bağlantısı seçildi. Şimdi PC bağlantısını dene ile sınayın.');
+        setMessage('Bağlantı bilgileri kaydedildi.');
     };
     /** Yardımcı bağlantı bilgileri eksiksiz mi? Durum, kart başlığındaki rozette görünür. */
     const kurulumHazir = prefs.helperToken.trim() !== '' && (prefs.connection === 'pc-bluetooth' || prefs.helperUrl.trim() !== '');
@@ -98,7 +108,6 @@ export default function RemoteSettings() {
         <SettingsPageHeader
             icon={Radio}
             title="Bilgisayar bağlantısı"
-            description="Önce bağlantı yolunu seçin. Notlarınız bağlantı olmadan da çalışır."
             badge={<SettingsPill tone={prefs.connection === 'wifi' || prefs.connection === 'bluetooth' ? 'clay' : 'moss'}>{CONNECTION_LABELS[prefs.connection]}</SettingsPill>}
         />
 
@@ -125,18 +134,19 @@ export default function RemoteSettings() {
                     })}
                 </div>
 
-                {prefs.connection === 'pc-wifi' && <SettingsHint>Bilgisayarda aşağıdaki yardımcıyı açın. Telefonla PC aynı güvenilen Wi‑Fi ağında olmalı. Yazma, fare, makro ve pano doğrudan PC’ye gider.</SettingsHint>}
+                {prefs.connection === 'pc-wifi' && <SettingsHint>Telefon ve bilgisayar aynı ağda olmalı.</SettingsHint>}
 
                 {prefs.connection === 'pc-bluetooth' && <div className="space-y-3">
-                    <SettingsHint>Windows ve telefonu sistem Bluetooth ayarlarından eşleştirin. PC yardımcısı gelen Bluetooth seri portunu açar; kart gerekmez. Önce yardımcının penceresinde “Klasik Bluetooth: gelen COM…” satırını kontrol edin.</SettingsHint>
+                    <SettingsHint>Eşleşmiş bilgisayarınızı seçin.</SettingsHint>
                     <button type="button" disabled={busy} onClick={() => void act(async () => { setPaired(await scanPairedComputers()); setMessage('Eşleşmiş cihazlar listelendi. PC’nizi seçin.'); })} className="btn btn-secondary px-3 py-2 text-sm">Eşleşmiş cihazları göster</button>
-                    {paired.map(device => <button key={device.address} type="button" disabled={busy} onClick={() => void act(async () => { await connectComputerBluetooth(device.address); setConnected(device.address); setMessage(device.name + ' seri Bluetooth bağlantısı kuruldu. Anahtarı girip bağlantıyı deneyin.'); })}
-                        className={listRow}>{device.name} · {device.address}{connected === device.address ? ' ✓' : ''}</button>)}
+                    {paired.map(device => <CihazSatiri key={device.address} device={device} disabled={busy}
+                        durum={connected === device.address ? 'bagli' : baglaniyor === device.address ? 'baglaniyor' : 'bos'}
+                        onBaglan={() => { setBaglaniyor(device.address); void act(async () => { await connectComputerBluetooth(device.address); update({ ...prefs, helperBluetoothAddress: device.address }); setConnected(device.address); setMessage(device.name + ' Bluetooth bağlantısı kuruldu. Anahtarı girip bağlantıyı deneyin.'); }).finally(() => setBaglaniyor('')); }} />)}
                     {connected && <button type="button" onClick={() => void act(async () => { await disconnectCard(); setConnected(''); setMessage('Bağlantı kesildi.'); })} className="btn btn-ghost px-3 py-2 text-sm text-berry-600 hover:bg-berry-50">Bağlantıyı kes</button>}
                 </div>}
 
                 {prefs.connection === 'wifi' && <>
-                    <p className="text-xs leading-relaxed text-sand-600">Telefon ve kart aynı ağda veya kart erişim noktasında olmalı; kartın USB kablosu hedef PC’de.</p>
+                    <p className="text-xs leading-relaxed text-sand-600">Telefon ve kart aynı ağda, kart USB ile bilgisayara bağlı olmalı.</p>
                     <SettingsField label="Kart adresi (Wi‑Fi)" htmlFor="remote-kart-adresi">
                         <input id="remote-kart-adresi" className={settingsFieldClass} inputMode="url" value={prefs.cardUrl} onChange={e => update({ ...prefs, cardUrl: e.target.value })} placeholder="http://192.168.4.1" />
                     </SettingsField>
@@ -149,10 +159,11 @@ export default function RemoteSettings() {
                 </>}
 
                 {prefs.connection === 'bluetooth' && <div className="space-y-3">
-                    <p className="text-xs leading-relaxed text-sand-600">Kartın “USB HID Klavye” NUS yayınına bağlanın; kartın USB kablosu hedef PC’de olmalı.</p>
-                    <button type="button" disabled={busy} onClick={() => void act(async () => { setDevices(await scanCards()); setMessage('Tarama tamamlandı.'); })} className="btn btn-secondary px-4 py-2.5 text-sm">{busy ? 'İşleniyor…' : 'BLE cihazlarını tara (8 sn)'}</button>
-                    {devices.map(device => <button type="button" key={device.address} disabled={busy} onClick={() => void act(async () => { await connectCard(device.address); setConnected(device.address); update({ ...prefs, connection: 'bluetooth' }); setMessage(device.name + ' bağlandı.'); })}
-                        className="flex w-full items-center justify-between gap-3 rounded-xl border border-sand-200 bg-white p-3 text-left text-sm transition-colors duration-200 hover:border-sand-300 hover:bg-sand-50"><span className="truncate">{device.name} <span className="text-sand-600">{device.address}</span></span><span>{connected === device.address ? <Check size={18} /> : device.rssi + ' dBm'}</span></button>)}
+                    <p className="text-xs leading-relaxed text-sand-600">KablosuzBellek cihazını seçin. Kart USB ile bilgisayara bağlı olmalı.</p>
+                    <button type="button" disabled={busy} onClick={() => void act(async () => { setDevices([]); setMessage('Taranıyor; bulunan cihazlar anında listelenir.'); setDevices(await scanCards(setDevices)); setMessage('Tarama tamamlandı.'); })} className="btn btn-secondary px-4 py-2.5 text-sm">{busy ? 'İşleniyor…' : 'BLE cihazlarını tara (canlı)'}</button>
+                    {devices.map(device => <CihazSatiri key={device.address} device={device} disabled={busy && baglaniyor !== device.address}
+                        durum={connected === device.address ? 'bagli' : baglaniyor === device.address ? 'baglaniyor' : 'bos'}
+                        onBaglan={() => { setBaglaniyor(device.address); void act(async () => { await connectCard(device.address); setConnected(device.address); update({ ...prefs, connection: 'bluetooth' }); setMessage(device.name + ' bağlandı.'); }).finally(() => setBaglaniyor('')); }} />)}
                     {connected && <button type="button" onClick={() => void act(async () => { await disconnectCard(); setConnected(''); setMessage('BLE bağlantısı kesildi.'); })} className="btn btn-ghost px-3 py-2 text-sm text-berry-600 hover:bg-berry-50">BLE bağlantısını kes</button>}
                 </div>}
             </div>
@@ -160,46 +171,34 @@ export default function RemoteSettings() {
 
         <SettingsSection
             icon={MonitorSmartphone}
-            title="PC yardımcısı"
-            description="Bilgisayarda açık kalan küçük bir alıcıdır: telefondan gelen yazı, fare ve pano isteklerini uygular. Uygulamanın parçası değildir."
-            action={<SettingsPill tone={kurulumHazir ? 'moss' : 'sand'}>{kurulumHazir ? 'Bağlantı hazır' : 'Bağlantı yok'}</SettingsPill>}
+            title={prefs.connection === 'wifi' || prefs.connection === 'bluetooth' ? 'PC panosu (kartla birlikte)' : 'Bilgisayar'}
+            description={prefs.connection === 'wifi' || prefs.connection === 'bluetooth'
+                ? 'Kart yalnız klavye ve fare gibi davranır; bilgisayar panosuna yazamaz. PC panosu düğmesi için PC yardımcısının bağlantı kodunu yapıştırın (aynı Wi‑Fi). Kod girilmezse daha önce eşleştirdiğiniz PC Bluetooth bağlantısı denenir.'
+                : 'Yardımcıdan bağlantı kodunu yapıştırın.'}
+            action={<SettingsPill tone={kurulumHazir ? 'moss' : 'sand'}>{kurulumHazir ? 'Bilgiler kayıtlı' : 'Kurulum'}</SettingsPill>}
         >
             <div className="space-y-4">
-                <ol className="space-y-2">
-                    {PC_ADIMLARI.map((adim, sira) => (
-                        <li key={adim.baslik} className="flex gap-3 rounded-xl border border-sand-200 bg-sand-50/70 p-3">
-                            <span aria-hidden className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-moss-100 text-xs font-semibold text-moss-700">{sira + 1}</span>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold leading-5 text-sand-900">{adim.baslik}</p>
-                                <p className="mt-0.5 text-xs leading-relaxed text-sand-600">{adim.aciklama}</p>
-                            </div>
-                        </li>
-                    ))}
-                </ol>
-                <SettingsHint>
-                    Yardımcı penceresi kapanınca bağlantı biter; yeni oturumda kısayoldan başlatın. Başka bir bilgisayarda kullanmak için o PC’de yardımcıyı açıp kendi bağlantı satırını yapıştırın; telefonda yeniden kurulum gerekmez.
-                </SettingsHint>
-                <SettingsField label="Tek satır bağlantı bilgisi" htmlFor="pc-baglanti-satiri" hint="PC penceresinin kopyaladığı satırı buraya yapıştırın; adres ve anahtar birlikte dolar.">
+                <SettingsField label="Bağlantı kodu" htmlFor="pc-baglanti-satiri">
                     <div className="flex flex-wrap items-stretch gap-2">
-                        <input id="pc-baglanti-satiri" className={settingsFieldClass + ' min-w-0 flex-1'} value={baglantiSatiri} onChange={e => setBaglantiSatiri(e.target.value)} placeholder="http://192.168.1.20:8765|anahtar" />
-                        <button type="button" id="pc-baglanti-uygula" disabled={busy || !baglantiSatiri.trim()} onClick={baglantiUygula} className="btn btn-primary min-h-[44px] shrink-0 px-4 text-sm">Yapıştır ve uygula</button>
+                        <input id="pc-baglanti-satiri" type="password" autoComplete="off" className={settingsFieldClass + ' min-w-0 flex-1'} value={baglantiSatiri} onChange={e => setBaglantiSatiri(e.target.value)} placeholder="Kodu yapıştırın" />
+                        <button type="button" id="pc-baglanti-uygula" disabled={busy || !baglantiSatiri.trim()} onClick={baglantiUygula} className="btn btn-primary min-h-[44px] shrink-0 px-4 text-sm">Kaydet</button>
                     </div>
                 </SettingsField>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <details className="rounded-xl border border-sand-200">
+                <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">Bağlantı bilgilerini düzenle</summary>
+                <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2">
                     {prefs.connection !== 'pc-bluetooth' && <SettingsField label="Adres" htmlFor="pc-yardimci-adresi">
                         <input id="pc-yardimci-adresi" aria-label="PC yardımcı programı adresi" className={settingsFieldClass} inputMode="url" placeholder="http://192.168.1.20:8765" value={prefs.helperUrl} onChange={e => update({ ...prefs, helperUrl: e.target.value })} />
                     </SettingsField>}
-                    <SettingsField label="Erişim anahtarı" htmlFor="pc-yardimci-anahtari" hint="Bağlantı satırı yapıştırıldığında iki alan da kendiliğinden dolar.">
+                    <SettingsField label="Erişim anahtarı" htmlFor="pc-yardimci-anahtari">
                         <input id="pc-yardimci-anahtari" aria-label="PC yardımcı programı erişim anahtarı" className={settingsFieldClass} type="password" autoComplete="off" placeholder="Yardımcı programın erişim anahtarı" value={prefs.helperToken} onChange={e => update({ ...prefs, helperToken: e.target.value })} />
                     </SettingsField>
                 </div>
+                </details>
                 <div className="flex flex-wrap gap-2">
-                    <button type="button" disabled={busy} onClick={() => void act(async () => { await testHelper(prefs); setMessage('PC yardımcısı hazır.'); })} className="btn btn-primary min-h-[44px] px-4 text-sm">PC bağlantısını dene</button>
-                    <button type="button" id="pc-pano-test" disabled={busy} onClick={() => void act(async () => { await sendToComputerClipboard('Not Bahçesi pano denemesi', prefs); setMessage('Deneme metni bilgisayarın panosuna gönderildi; PC’de Ctrl+V ile yapıştırıp kontrol edin.'); })} className="btn btn-secondary min-h-[44px] px-4 text-sm">Pano aktarımını dene</button>
+                    {(prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') && <button type="button" disabled={busy} onClick={() => void act(async () => { await testHelper(prefs); setMessage('Bilgisayara bağlanıldı.'); })} className="btn btn-primary min-h-[44px] px-4 text-sm">Bağlantıyı dene</button>}
+                    <button type="button" id="pc-pano-test" disabled={busy} onClick={() => void act(async () => { await sendToComputerClipboard('Not Bahçesi pano denemesi', prefs); setMessage('Panoya gönderildi. Bilgisayarda Ctrl+V ile kontrol edin.'); })} className="btn btn-secondary min-h-[44px] px-4 text-sm">Panoyu dene</button>
                 </div>
-                <SettingsHint>
-                    Yardımcı; klasik Bluetooth seri ve Wi‑Fi bağlantısını alır. Doğrudan PC BLE (düşük enerji Bluetooth) Windows’ta ayrıca GATT alıcısı gerektirdiği için bu sürümde kullanılmaz.
-                </SettingsHint>
             </div>
         </SettingsSection>
 
@@ -211,6 +210,19 @@ export default function RemoteSettings() {
                 <SettingsField label="Dikte dili" htmlFor="remote-dikte-dili">
                     <input id="remote-dikte-dili" className={settingsFieldClass} value={prefs.dictationLanguage} onChange={e => update({ ...prefs, dictationLanguage: e.target.value })} placeholder="tr-TR" />
                 </SettingsField>
+                {motorlar && (motorlar.onDevice || motorlar.system) && (
+                    <SettingsField label="Köprü Dikte ses tanıma motoru" htmlFor="remote-dikte-motoru"
+                        hint={motorlar.onDevice
+                            ? 'Cihaz içi motor internet gerektirmez ve çevrimiçi servisin kesintilerinden etkilenmez. Otomatik: cihaz içi motor varsa o kullanılır.'
+                            : 'Bu telefon cihaz içi ses tanımayı desteklemiyor; çevrimiçi sistem tanıyıcısı kullanılır.'}>
+                        <select id="remote-dikte-motoru" className={settingsFieldClass} value={motorlar.onDevice ? prefs.dictationEngine : 'system'} disabled={!motorlar.onDevice}
+                            onChange={e => update({ ...prefs, dictationEngine: e.target.value as RemotePrefs['dictationEngine'] })}>
+                            <option value="auto">Otomatik (önerilen)</option>
+                            <option value="device">Yalnızca cihaz içi</option>
+                            <option value="system">Çevrimiçi (sistem)</option>
+                        </select>
+                    </SettingsField>
+                )}
                 <SettingsField label="Köprü Dikte süresi (saniye)" htmlFor="remote-kopru-sure" hint="5–3600 saniye. Süre bitmeden araç düğmesine tekrar basarak durdurabilirsiniz.">
                     <input id="remote-kopru-sure" className={settingsFieldClass} type="number" inputMode="numeric" min="5" max="3600" step="1" disabled={prefs.bridgeDictationUnlimited} value={prefs.bridgeDictationSeconds}
                         onChange={e => update({ ...prefs, bridgeDictationSeconds: Math.max(5, Math.min(3600, Number(e.target.value) || 5)) })} />
@@ -235,4 +247,3 @@ export default function RemoteSettings() {
         {message && <SettingsNote tone={messageTone}>{message}</SettingsNote>}
     </div>;
 }
-

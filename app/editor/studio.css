@@ -36,7 +36,7 @@
 .studio-tab--active { background: rgb(var(--moss-50)); color: rgb(var(--moss-700)); }
 .studio-tab--active::after { content: ''; position: absolute; bottom: 3px; width: 14px; height: 2px; border-radius: 2px; background: currentColor; }
 .studio-tab:disabled { opacity: .4; cursor: not-allowed; }
-.studio-menu-copy { display: none; }
+.studio-menu-focus { display: none; }
 @media (max-width: 639px) {
   .studio-topbar { flex-wrap: nowrap; padding: 2px 6px; }
   .studio-topbar > div:first-child { flex: 1 1 44px; gap: 0; }
@@ -56,6 +56,21 @@
 @media (max-width: 379px) {
   .studio-topbar { padding-inline: 2px; gap: 0; }
   .studio-tabs, .studio-actions { gap: 0; }
-  [data-studio-copy] { display: none; }
-  .studio-menu-copy { display: block; }
+  /* Dar telefonlarda kopyala düğmesi görünür kalır; düğmeler yatayda daralır. */
+  .studio-topbar button, .studio-actions > div:last-child button { width: 40px; min-width: 40px; }
 }
+.studio-footer-fullscreen { display: none; }
+@media (max-width: 430px) {
+  .studio-focus { display: none; }
+  .studio-menu-focus { display: block; }
+  .studio-footer-fullscreen { display: flex; }
+}
+/* Tam ekran: yalnızca yazı alanı kalır; bekleyen AI sonucu paneli görünür kalır. */
+.writing-studio--focused .studio-topbar,
+.writing-studio--focused .studio-footer { display: none; }
+.writing-studio--focused .studio-header { padding-top: 0; box-shadow: none; border-bottom: 0; }
+.writing-studio--focused .studio-workspace { padding-top: 12px; }
+.writing-studio--focused .studio-title { padding-right: 64px; }
+.writing-studio--focused .studio-paper { min-height: calc(100dvh - 24px); }
+.studio-fullscreen-exit { top: calc(env(safe-area-inset-top, 0px) + 10px); opacity: .85; }
+.studio-fullscreen-exit:hover, .studio-fullscreen-exit:focus-visible { opacity: 1; }

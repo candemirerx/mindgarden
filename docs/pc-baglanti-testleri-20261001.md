@@ -1,0 +1,13 @@
+# Bağlantı doğrulaması — 1 Ekim 2026
+
+Sürüm: 2.2.9 (53). GM24 Pro USB ve Samsung S24 FE kablosuz ADB üzerinden test edildi; notlar silinmeden güncellendi.
+
+- PC Bluetooth: iki telefonda gerçek Windows yardımcısına bağlantı, ping, Türkçe/emoji metnin gerçek PC panosuyla birebir eşleşmesi, yeniden bağlantı ve yanlış anahtarın reddedilmesi geçti. Android'in eski SDP servis kaydı başarısız bağlantıdan sonra yenileniyor; hiçbir komut otomatik tekrar gönderilmiyor.
+- Kart Bluetooth: A4:CB:8F:D8:D4:7D adresli KablosuzBellek-2331-CBA4 kartı iki telefonda tarandı. NUS bağlantısı ve iki yönlü fare komutlarının GATT kabulü doğrulandı. Kartın USB HID çıktısının PC imlecine etkisi ayrıca ölçülmedi. S24'te eski eşleştirme anahtarı HCI_ERR_KEY_MISSING hatası verdi; yalnız ilgili kart kaydı temizlendi. Aynı karta bağlı tr.kablosuzbellek.s3 ve io.appground.blekpremium uygulamaları verileri silinmeden durduruldu; ardından komut testleri geçti. Kartın açık NUS servisi yeni sistem eşleştirmesi gerektirmedi.
+- PC HTTP protokolü: GM24'ün gerçek native istekleri ADB tüneli üzerinden yardımcının health/input/clipboard uçlarına ulaştı. Yanlış anahtar 401, doğru anahtar 200; Türkçe pano metni birebir eşleşti. Bu kontrol aynı Wi-Fi ağındaki erişim testi yerine geçmez.
+- PC Wi-Fi: PC 192.168.1.109:8765 üzerinde dinliyor. Windows'un önceki izin penceresinden oluşan açık PowerShell TCP engeli, özel ağdaki port iznini geçersiz kılıyordu. Ortak ağ engeli ve diğer özel ağ TCP portlarının engeli korunarak yalnız TCP 8765 / yerel alt ağ istisnası açıldı. Düzeltmeden sonra iki telefonda gerçek LAN testi geçti: health, ping, yanlış anahtarın 401 ile reddi, Unicode pano metninin PC panosuyla birebir eşleşmesi ve iki yönlü fare komutları.
+- Kart Wi-Fi: LAN taraması kart bulmadı. Kartın 2.33.1 yazılımı Bluetooth modunda Wi-Fi radyosunu tamamen kapatıyor. BOOT tuşuna uzun basılarak Wi-Fi moduna geçilmeli, sonra gerçek HTTP durum/yazı testleri yapılmalı. Kart firmware'i değiştirilmedi.
+
+2.2.9 release APK/AAB derlemesi, lint, 13/13 yayın dosyası kontrolü ve 16 KB APK hizalama kontrolü geçti. Son 2.2.9 APK ile her telefonda PC Bluetooth ve gerçek LAN Wi-Fi testleri yeniden çalıştırıldı: ikisinde de OK (2 tests). Masaüstü ZIP'i yedeklenip 2.2.9 paketleri ve düzeltilmiş yardımcıyla güncellendi. Kart Wi-Fi uçtan uca testi fiziksel mod değişimi bekliyor; başarılı sayılmadı.
+
+Kanıtlar: .codex-device-tests/pc-gm-2.2.9-final.log, pc-s24-2.2.9-final.log, pc-gm-lan-fixed.log, pc-s24-lan-fixed.log, pc-gm-bt-recheck.log, pc-s24-bt-recheck2.log, card-gm-details.log ve card-s24-clean-retest-details.log. Test günlükleri erişim anahtarı içermez.

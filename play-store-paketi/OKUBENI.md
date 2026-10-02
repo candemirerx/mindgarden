@@ -2,7 +2,7 @@
 
 Bu klasör, uygulamayı Google Play Store'a yükleyip yayınlamak için gereken her şeyi içerir.
 
-**Sürüm:** 2.2.1 (sürüm kodu 45) · **Paket adı:** com.notbahcesi.app · **Hedef API:** 36
+**Sürüm:** 2.2.11 (sürüm kodu 55) · **Paket adı:** com.notbahcesi.app · **Hedef API:** 36
 
 ---
 
@@ -31,7 +31,7 @@ play-store-paketi/
 │   ├── ekran-3-editor.png
 │   └── ekran-4-ayarlar.png
 └── uygulama/
-    └── not-bahcesi-2.2.1.aab     ← Play Console'a yüklenecek dosya
+    └── not-bahcesi-2.2.11.aab     ← Play Console'a yüklenecek dosya
         (arsiv/ klasöründe eski derlemeler durur; bunları yükleme)
 ```
 
@@ -39,13 +39,9 @@ play-store-paketi/
 > çıktısıdır ve kaynaktan yeniden üretilir (`05-yeni-surum.md`). Klasörün bu kopyasında
 > dosya hazır duruyor.
 
-> **Paket kaydı (2.2.1 / sürüm kodu 45):** `not-bahcesi-2.2.1.aab` — 5.049.934 bayt,
-> SHA-256 `A3A43BB67A35C4043E0A39CDA4DB93F56E6B164B357715FAF32741846CC99EC2`
-> (29 Eylül 2026, 22:25). Telefon testi için üretilen imzalı APK:
-> `not-bahcesi-2.2.1.apk` — 4.736.878 bayt, SHA-256
-> `DA4C73B5A0122CBA2C3E9B97DB6406CBF37299B7B8251441D0938E33CBED4E23`. AAB'yi yeniden
-> üretirsen özeti `Get-FileHash uygulama/not-bahcesi-2.2.1.aab -Algorithm SHA256` ile
-> yenile ve bu satırı güncelle; Console'a yüklediğin dosyanın özeti bu kayıtla aynı olmalı.
+> Güncel paket boyutu, sürüm kodu ve SHA-256 özetleri bu klasördeki
+> `SURUM-BILGILERI.txt` dosyasında otomatik oluşturulur. Console’a yüklediğiniz
+> AAB dosyasını bu kayıtla karşılaştırın.
 
 ---
 
@@ -64,7 +60,7 @@ sırayla ilerle.
 1. Play Console'da uygulamayı oluştur (`01-yukleme-rehberi.md` → 2. adım)
 2. Mağaza metinlerini ve görselleri yükle (`03-magaza-metinleri.md` + `gorseller/`)
 3. Uygulama içeriği formlarını doldur (`04-veri-guvenligi.md`)
-4. `uygulama/not-bahcesi-2.2.1.aab` dosyasını kapalı teste yükle
+4. `uygulama/not-bahcesi-2.2.11.aab` dosyasını kapalı teste yükle
 5. Play App Signing SHA-1'ini Google Cloud'daki OAuth istemcisine ekle
    (**bu adımı atlarsan Google ile giriş çalışmaz**)
 6. 12 test kullanıcısı ekle, 14 gün bekle
@@ -72,7 +68,23 @@ sırayla ilerle.
 
 ---
 
-## Bu sürümde (2.2.1)
+## Bu sürümde (2.2.11)
+
+- **Tam ekran yazma:** Editörde tam ekran düğmesi (telefonda alt çubukta); üst/alt çubuklar ve Android durum çubuğu gizlenir, geri tuşu veya köşedeki düğmeyle çıkılır.
+- **Editör:** Son seçilen araç sekmesi hatırlanır.
+- **Tuval:** Yeni dal/yaprak/ağaç eklenince ekran ona ortalanır; + düğmesi küçüldü.
+- **Bilgisayar araçları:** Kart bağlıyken panoya gönderme, sanal PC klavyesiyle kısayol seçme, bölgeli Ekran aracı, daha akıcı fare.
+- **Ayarlar:** Telefonda yatay taşma giderildi.
+
+### Önceki sürümden (2.2.10 ve öncesi)
+
+- **Bilgisayar bağlantısı:** Etkin fiziksel ağın Wi-Fi adresi seçilir; Bluetooth bilgisayarı kaydedilir ve sonraki komutta yeniden bağlantı kurulabilir. Bağlantı satırını yapıştırmak seçili Bluetooth yolunu değiştirmez.
+- **Model listesi:** Yerel modelleri tek tek silme veya listeyi onayla temizleme; etkin modelin belleği ve eski seçimi de temizlenir.
+- **Editör:** Yerel araçlar, Bilgisayar araçları ve Yapay zekâ için bağımsız ikon sekmeleri; kapatılan bölüm tamamen kaldırılır.
+- **Düzenleme ayarları:** Yerel ve Bilgisayar araçları ayrı sekmelerde.
+- **Yapay zekâ ayarları:** Bulut ve Yerel sekmeleri; motor seçimi sekmelerden bağımsız.
+- **Yerel model ekleme:** Android dosya seçicisiyle .litertlm/.task/.bin içe aktarma, etkinleştirme ve kısa yanıt testi.
+- **Yerel model motoru:** MediaPipe ve LiteRT-LM; Gemma 4, Qwen ve DeepSeek'in uyumlu telefon sürümleri desteklenir. Model lisansları indirme kaynağından kontrol edilmelidir.
 
 - **Ana ekranda ağaç sayısı:** Her bahçe kartı, tarihin yanında kaç ağaç (en üst
   seviye not) olduğunu gösteriyor; sayım alınamazsa rozet çizilmiyor.
@@ -124,8 +136,8 @@ yedekler ve yenisini masaüstüne yazar. Sıra: `npm run build:android` →
 `node scripts/paket-zip.mjs`. Zip içeriği:
 
 ```
-uygulama/not-bahcesi-2.2.1.aab   Play Console'a yuklenecek dosya
-uygulama/not-bahcesi-2.2.1.apk   telefonda denemek icin imzali paket
+uygulama/not-bahcesi-2.2.11.aab   Play Console'a yuklenecek dosya
+uygulama/not-bahcesi-2.2.11.apk   telefonda denemek icin imzali paket
 belgeler/01..08                  yukleme, guvenlik, izin, gelir belgeleri
 gorseller/                       ikon, one cikan gorsel, dort ekran goruntusu
 bilgisayar-yardimcisi/           PC koprusu yardimcisi (Play icin gerekmez)

@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Yalnızca test APK'sında; yalnızca sentetik model verisi sunar. -->
+        <provider android:name="com.notbahcesi.app.ModelFixtureProvider"
+            android:authorities="com.notbahcesi.app.test.model-fixture"
+            android:exported="true" />
+    </application>
+</manifest>

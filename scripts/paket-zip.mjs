@@ -25,6 +25,10 @@ const PAKET = join(KOK, 'play-store-paketi');
 
 const surum = /APP_VERSION\s*=\s*'([^']+)'/.exec(await readFile(join(KOK, 'lib/config.ts'), 'utf8'))?.[1];
 const surumKodu = /(?:^|\s)versionCode\s+(\d+)/m.exec(await readFile(join(KOK, 'android/app/build.gradle'), 'utf8'))?.[1];
+const androidDegiskenler = await readFile(join(KOK, 'android/variables.gradle'), 'utf8');
+const minSdk = /minSdkVersion\s*=\s*(\d+)/.exec(androidDegiskenler)?.[1];
+const targetSdk = /targetSdkVersion\s*=\s*(\d+)/.exec(androidDegiskenler)?.[1];
+if (!minSdk || !targetSdk) throw new Error('Android SDK seviyeleri okunamadi.');
 if (!surum || !surumKodu) throw new Error('Surum bilgisi okunamadi (lib/config.ts, android/app/build.gradle).');
 
 const aab = join(PAKET, 'uygulama', 'not-bahcesi-' + surum + '.aab');
@@ -55,7 +59,7 @@ const bilgi = [
     '',
     'Surum      : ' + surum + ' (surum kodu ' + surumKodu + ')',
     'Paket adi  : com.notbahcesi.app',
-    'Hedef API  : 36   (minSdk 22)',
+    'Hedef API  : ' + targetSdk + '   (minSdk ' + minSdk + ')',
     'Imza SHA-256: ' + parmakIzi,
     '',
     'Play Console\'a yuklenecek dosya:',
@@ -89,8 +93,8 @@ const yardimciOkU = [
     '  1) pc_yardimcisi_baslat.cmd dosyasina cift tiklayin.',
     '  2) Windows yonetici izni ister; "Evet" deyin (guvenlik duvarina TCP 8765 izni eklenir).',
     '  3) Pencere acik kalir ve adres + erisim anahtari panoya kopyalanir.',
-    '  4) Telefonda: Ayarlar > Bilgisayar baglantisi > "Tek satir baglanti bilgisi" alanina',
-    '     yapistirip "Yapistir ve uygula" dugmesine dokunun.',
+    '  4) Telefonda: Ayarlar > Bilgisayar baglantisi > "Baglanti kodu" alanina',
+    '     yapistirip "Kaydet" dugmesine dokunun.',
     '',
     'Kosullar: telefon ve bilgisayar ayni guvenilir agda olmali, pencere acik kalmali.',
     'Erisim anahtari ilk calistirmada bu klasorde .pc_clipboard_token olarak olusturulur;',
@@ -130,11 +134,18 @@ const yardimciDosyalar = [
     'pc_guvenlik_duvari.ps1',
     'pc_clipboard_helper.ps1',
     'pc_clipboard_helper.py',
-    'RemoteInput.cs'
+    'RemoteInput.cs',
+    'vendor/InTheHand.Net.Personal.dll',
+    'vendor/32feet-LICENSE.txt',
+    'vendor/README.md'
 ];
 for (const dosya of yardimciDosyalar) {
     const kaynak = join(KOK, 'scripts', dosya);
-    if (existsSync(kaynak)) await copyFile(kaynak, join(stage, 'bilgisayar-yardimcisi', dosya));
+    if (existsSync(kaynak)) {
+        const hedefDosya = join(stage, 'bilgisayar-yardimcisi', dosya);
+        await mkdir(resolve(hedefDosya, '..'), { recursive: true });
+        await copyFile(kaynak, hedefDosya);
+    }
 }
 await writeFile(join(stage, 'bilgisayar-yardimcisi', 'OKU.txt'), yardimciOkU, 'utf8');
 const yardimciBelge = join(KOK, 'docs/bilgisayar-araclari.md');

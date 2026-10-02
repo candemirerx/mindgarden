@@ -16,14 +16,35 @@ if (-not $yonetici) {
     exit 1
 }
 
+# Windows'un onceki izin penceresinde "Iptal" secilmesi PowerShell icin
+# tum portlari engelleyen kurallar olusturur. Acik engel, port izninden ustundur.
+# Yalniz TCP 8765 istisnasini ac: Ortak ag engeli ve diger portlar korunur.
+$taskPowerShellPath = Join-Path $PSHOME 'powershell.exe'
+$taskPrivateBlocks = @(Get-NetFirewallApplicationFilter -Program $taskPowerShellPath -ErrorAction SilentlyContinue |
+    Get-NetFirewallRule | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' -and $_.Name -like 'TCP Query User*' -and ([int]$_.Profile -band 2) -ne 0 })
+if ($taskPrivateBlocks.Count -gt 0) {
+    $taskOtherPortsName = 'Not Bahcesi PowerShell diger TCP portlari'
+    if (-not (Get-NetFirewallRule -DisplayName $taskOtherPortsName -ErrorAction SilentlyContinue)) {
+        New-NetFirewallRule -DisplayName $taskOtherPortsName -Direction Inbound -Action Block -Program $taskPowerShellPath -Protocol TCP -LocalPort @('1-8764','8766-65535') -Profile Private | Out-Null
+    }
+    foreach ($taskBlock in $taskPrivateBlocks) {
+        $taskRemainingProfiles = [int]$taskBlock.Profile -band (-bnot 2)
+        if ($taskRemainingProfiles -eq 0) { $taskBlock | Disable-NetFirewallRule | Out-Null }
+        else { $taskBlock | Set-NetFirewallRule -Profile $taskRemainingProfiles | Out-Null }
+    }
+    Write-Host 'Onceki PowerShell engelinde yalniz yerel TCP 8765 baglantisi icin istisna hazirlandi.' -ForegroundColor Green
+}
+
 $kural = $null
 try { $kural = Get-NetFirewallRule -DisplayName $kuralAdi -ErrorAction SilentlyContinue } catch { $kural = $null }
 
 if ($kural) {
+    $kural | Set-NetFirewallRule -Enabled True -Direction Inbound -Action Allow -Profile Private
+    $kural | Get-NetFirewallAddressFilter | Set-NetFirewallAddressFilter -RemoteAddress LocalSubnet
     Write-Host ('Guvenlik duvari izni zaten var: ' + $kuralAdi) -ForegroundColor Green
 } else {
     try {
-        New-NetFirewallRule -DisplayName $kuralAdi -Direction Inbound -Action Allow -Protocol TCP -LocalPort $port -Profile Private -Description 'Not Bahcesi telefon-PC bagi (yalniz yerel ag)' | Out-Null
+        New-NetFirewallRule -DisplayName $kuralAdi -Direction Inbound -Action Allow -Protocol TCP -LocalPort $port -Profile Private -RemoteAddress LocalSubnet -Description 'Not Bahcesi telefon-PC bagi (yalniz yerel ag)' | Out-Null
         Write-Host ('Guvenlik duvari izni eklendi: TCP ' + $port + ' (yalniz Ozel ag profili).') -ForegroundColor Green
     } catch {
         Write-Host ('Guvenlik duvari izni eklenemedi: ' + $_.Exception.Message) -ForegroundColor Red

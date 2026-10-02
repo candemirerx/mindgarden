@@ -25,6 +25,15 @@ const ARAC_DUGMESI =
     'transition-colors duration-150 hover:bg-sand-200/80 hover:text-sand-900 ' +
     'active:scale-95 touch-manipulation outline-none focus-visible:bg-sand-200/80';
 
+/** Kartın alt kenarına yarı gömülü küçük "+". Görünen daire 28 px, dokunma
+    alanı 40 px; alttaki dalın araç çubuğuna taşmaz. */
+const EKLE_DUGMESI =
+    'group/ekle absolute left-1/2 top-full flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center ' +
+    'touch-manipulation outline-none transition-opacity duration-200';
+const EKLE_DAIRESI =
+    'flex h-7 w-7 items-center justify-center rounded-full border bg-white shadow-soft transition-transform duration-150 ' +
+    'group-hover/ekle:scale-110 group-active/ekle:scale-95 group-focus-visible/ekle:ring-4 group-focus-visible/ekle:ring-moss-500/40';
+
 interface MindMapNodeProps {
     node: MindNode;
     onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
@@ -223,6 +232,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         role={isEditingTitle ? undefined : 'button'}
                         tabIndex={isEditingTitle ? -1 : 0}
                         aria-label={node.title}
+                        data-node-id={node.id}
                         aria-pressed={isSelected}
                         onKeyDown={event => {
                             if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
@@ -274,17 +284,11 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     {/* Alt Bağlantı Noktası: Yeni Dal Ekle düğmesi */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                        className={`
-                            ${DUGME_TABANI}
-                            absolute -bottom-[22px] left-1/2 h-11 w-11 -translate-x-1/2
-                            bg-white text-moss-700 border-moss-400 hover:bg-moss-50 hover:border-moss-500
-                            ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                            z-30
-                        `}
+                        className={`${EKLE_DUGMESI} z-30 ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                         title="Yeni dal ekle"
                         aria-label="Yeni dal ekle"
                     >
-                        <Plus size={20} />
+                        <span className={`${EKLE_DAIRESI} border-moss-400 text-moss-700`}><Plus size={16} /></span>
                     </button>
 
                     {/* Eğer çocukları varsa: Katla / Aç Rozeti (sağ alt köşe)
@@ -405,6 +409,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     role={isEditingTitle ? undefined : 'button'}
                     tabIndex={isEditingTitle ? -1 : 0}
                     aria-label={node.title}
+                    data-node-id={node.id}
                     aria-pressed={isSelected}
                     onKeyDown={event => {
                         if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
@@ -480,16 +485,11 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     {/* ALT DALA EKLE (ALT ORTA) */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                        className={`
-                            ${DUGME_TABANI}
-                            absolute -bottom-[22px] left-1/2 h-11 w-11 -translate-x-1/2
-                            bg-white text-moss-600 border-moss-300 hover:bg-moss-50 hover:border-moss-400
-                            ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                        `}
+                        className={`${EKLE_DUGMESI} ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                         title="Alt dal veya yaprak ekle"
                         aria-label="Alt dal veya yaprak ekle"
                     >
-                        <Plus size={20} />
+                        <span className={`${EKLE_DAIRESI} border-moss-300 text-moss-600`}><Plus size={16} /></span>
                     </button>
 
                     {/* KATLA / AÇ ROZETİ (SAĞ ALT KÖŞE)

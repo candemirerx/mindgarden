@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Capacitor açılış ekranı ve ikonlar ada göre aranır; küçültücü bunları silmesin. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/splash,@drawable/ic_launcher_background,@drawable/ic_launcher_foreground,@mipmap/*,@xml/*,@layout/*" />

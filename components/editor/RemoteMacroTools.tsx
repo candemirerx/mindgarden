@@ -9,8 +9,8 @@
  * bir pencerede (MakroDuzenleyici) yapılır; tür seçimi oradadır.
  */
 import { useState } from 'react';
-import { ChevronRight, Keyboard, MousePointer2, Pencil, Play, Plus, TextCursorInput, Trash2 } from 'lucide-react';
-import { konumYuzdesi, runRemoteMacro, saveRemotePrefs, type RemoteMacro } from '@/lib/remoteTools';
+import { ChevronRight, Keyboard, ListOrdered, MousePointer2, Pencil, Play, Plus, TextCursorInput, Trash2 } from 'lucide-react';
+import { konumYuzdesi, makroHazir, runRemoteMacro, saveRemotePrefs, type RemoteMacro } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { SettingsNote, SettingsRow, SettingsSwitch } from '@/components/ui/settings';
 import MakroDuzenleyici from './MakroDuzenleyici';
@@ -19,11 +19,27 @@ import MakroDuzenleyici from './MakroDuzenleyici';
 const TUR_ADI: Record<RemoteMacro['type'], string> = {
     text: 'Hazır metin',
     shortcut: 'Klavye kısayolu',
-    position: 'Fare konumu ve tıkla'
+    position: 'Fare konumu ve tıkla',
+    sequence: 'Sıralı makro'
+};
+
+const TUR_IKONU: Record<RemoteMacro['type'], typeof Keyboard> = {
+    text: TextCursorInput,
+    shortcut: Keyboard,
+    position: MousePointer2,
+    sequence: ListOrdered
 };
 
 /** Satırda ve özet alanında gösterilen kısa değer. */
-function makroOzeti(makro: RemoteMacro): string {
+function makroOzeti(makro: RemoteMacro, tumu: RemoteMacro[]): string {
+    if (makro.type === 'sequence') {
+        return (makro.steps ?? []).map((adim, sira) => (sira + 1) + '. ' + (
+            adim.type === 'macro' ? (tumu.find((m) => m.id === adim.value)?.name ?? 'silinmiş makro')
+                : adim.type === 'position' ? 'tıklama'
+                    : adim.type === 'shortcut' ? adim.value
+                        : '"' + (adim.value.length > 20 ? adim.value.slice(0, 20) + '…' : adim.value) + '"'
+        )).join(' → ');
+    }
     if (makro.type === 'position') {
         const [x, y] = makro.value.split(',').map((parca) => Number(parca.trim()));
         return 'X %' + konumYuzdesi(x).toFixed(1) + ' · Y %' + konumYuzdesi(y).toFixed(1) + ' · ' + (makro.click === 2 ? 'çift tık' : 'tek tık');
@@ -73,7 +89,7 @@ export default function RemoteMacroTools() {
             return (
                 <div key={makro.id} className="space-y-2">
                     <SettingsRow
-                        icon={makro.type === 'position' ? MousePointer2 : makro.type === 'shortcut' ? Keyboard : TextCursorInput}
+                        icon={TUR_IKONU[makro.type]}
                         dimmed={!etkin}
                         title={makro.name.trim() || 'Yeni kısayol'}
                         description={'Bilgisayar · ' + TUR_ADI[makro.type]}
@@ -99,7 +115,11 @@ export default function RemoteMacroTools() {
                         <button
                             type="button"
                             aria-label="Kısayolu sil"
-                            onClick={() => saveRemotePrefs({ ...prefs, macros: prefs.macros.filter((mevcut) => mevcut.id !== makro.id) })}
+                            onClick={() => saveRemotePrefs({
+                                ...prefs,
+                                macros: prefs.macros.filter((mevcut) => mevcut.id !== makro.id),
+                                profiles: prefs.profiles.map((profil) => ({ ...profil, macroIds: profil.macroIds.filter((id) => id !== makro.id) }))
+                            })}
                             className="flex h-11 w-11 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-berry-50 hover:text-berry-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berry-500/40"
                         >
                             <Trash2 size={16} />
@@ -109,7 +129,7 @@ export default function RemoteMacroTools() {
                     {acik && (
                         <div className="space-y-3 rounded-xl border border-sand-200 bg-sand-50/70 p-3.5">
                             <p className="text-xs leading-relaxed text-sand-700">
-                                <span id={'kisayol-ozet-' + index} className="font-medium text-sand-800">{makroOzeti(makro) || 'Değer girilmedi'}</span>
+                                <span id={'kisayol-ozet-' + index} className="font-medium text-sand-800">{makroOzeti(makro, prefs.macros) || 'Değer girilmedi'}</span>
                             </p>
                             <div className="flex flex-wrap gap-2">
                                 <button
@@ -123,7 +143,7 @@ export default function RemoteMacroTools() {
                                 <button
                                     type="button"
                                     id={'kisayol-calistir-' + index}
-                                    disabled={busy || !prefs.enabledTools.shortcuts || makro.enabled === false || !makro.name.trim() || !makro.value.trim()}
+                                    disabled={busy || !prefs.enabledTools.shortcuts || !makroHazir(makro)}
                                     onClick={() => void run(makro)}
                                     className="btn btn-primary min-h-[44px] px-4 text-sm"
                                 >

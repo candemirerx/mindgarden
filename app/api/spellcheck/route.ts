@@ -262,7 +262,10 @@ function isPrivateHost(hostname: string): boolean {
  */
 async function assertPublicProviderUrl(endpoint: URL): Promise<void> {
     if (endpoint.protocol !== 'https:') {
-        throw new ProviderError(400, 'Özel sağlayıcı adresi HTTPS kullanmalıdır.');
+        throw new ProviderError(
+            400,
+            'Özel sağlayıcı adresi HTTPS kullanmalıdır. HTTP veya yerel ağ adresleri için Android uygulamasını kullanın.'
+        );
     }
 
     const host = endpoint.hostname.replace(/^\[|\]$/g, '');
@@ -413,9 +416,11 @@ async function handleSpellcheckRequest(request: NextRequest) {
             clientApiKey ||
             (provider === 'gemini' && sunucuAnahtariKullanilabilir
                 ? process.env.GEMINI_API_KEY
-                : undefined);
+                : undefined) ||
+            '';
 
-        if (!apiKey) {
+        // Özel sunucular (kendi barındırılan modeller) anahtarsız çalışabilir.
+        if (!apiKey && provider !== 'custom') {
             return NextResponse.json(
                 {
                     error:
@@ -496,6 +501,14 @@ ${text}`;
                     temperature: 0.1
                 })
             }, 'OpenAI');
+            if (response.status === 401 || response.status === 403) {
+                throw new ProviderError(
+                    401,
+                    apiKey
+                        ? 'Sunucu API anahtarını kabul etmedi. Ayarlar → Yapay zekâ bölümünde anahtarı kontrol edin.'
+                        : 'Bu sunucu API anahtarı istiyor. Ayarlar → Yapay zekâ bölümünde anahtarı girin.'
+                );
+            }
             if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = requireProviderText(data.choices?.[0]?.message?.content, data, 'Sağlayıcı');
@@ -561,7 +574,7 @@ ${text}`;
 
             const basliklar = {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+                ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
             };
 
             const temelGovde = {

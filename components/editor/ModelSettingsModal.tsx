@@ -4,10 +4,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     X, Sparkles, Database, Check, RefreshCw, Key, HardDriveDownload, UploadCloud, Loader2,
     Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2, Wrench, Hash, ListOrdered,
-    Eraser, Type, MonitorSmartphone, Info, ShieldCheck, Server, Cpu, Cloud, ExternalLink, Mail, Keyboard, TreePine, LayoutGrid, BookOpen, Palette
+    Eraser, Type, MonitorSmartphone, Info, ShieldCheck, Server, Cpu, Cloud, ExternalLink, Mail, Keyboard, TreePine, LayoutGrid, BookOpen, Palette,
+    WifiOff, Download, Play, CheckCircle2, FolderOpen, FolderKanban, LayoutDashboard
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import AccountSettings from './AccountSettings';
+import AiSettings from './AiSettings';
 import UsageGuide from './UsageGuide';
 import SettingsHome, { SETTINGS_SECTIONS } from './SettingsHome';
 import type { SettingsSectionId } from './SettingsHome';
@@ -23,27 +25,12 @@ import type { Bolum } from '@/lib/uiPrefs';
 import DataSection from './DataSection';
 import RemoteSettings from './RemoteSettings';
 import RemoteMacroTools from './RemoteMacroTools';
+import RemoteProfileTools from './RemoteProfileTools';
+import RemoteScreenTools from './RemoteScreenTools';
 import RemoteToolCards from './RemoteToolCards';
 import TemaSecici from '@/components/ui/TemaSecici';
-import { REMOTE_TOOL_IDS } from '@/lib/remoteTools';
+import { REMOTE_TOOL_IDS, makroHazir } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
-import {
-    PROVIDER_IDS,
-    PROVIDER_LABELS,
-    MODEL_HINTS,
-    KEY_HINTS,
-    DEFAULT_MODELS,
-    readActiveProvider,
-    saveActiveProvider,
-    readProviderKey,
-    saveProviderKey,
-    readRawProviderModel,
-    saveProviderModel,
-    readModelList,
-    saveModelList,
-    readCustomUrl,
-    saveCustomUrl
-} from '@/lib/aiProvider';
 import { APP_VERSION } from '@/lib/config';
 import {
     SettingsField,
@@ -63,8 +50,6 @@ interface ModelSettingsModalProps {
     initialSection?: SettingsSectionId | 'home';
 }
 
-type ProviderType = 'gemini' | 'openai' | 'anthropic' | 'custom';
-
 export default function ModelSettingsModal({ isOpen, onClose, initialSection = 'home' }: ModelSettingsModalProps) {
     const [activeTab, setActiveTab] = useState<SettingsSectionId | 'home'>(initialSection);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -74,22 +59,6 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
     const backRef = useRef<() => void>(() => {});
     backRef.current = () => activeTab === 'home' ? closeRef.current() : setActiveTab('home');
 
-    // AI Ayarları
-    const [provider, setProvider] = useState<ProviderType>('gemini');
-    const [customUrl, setCustomUrl] = useState('');
-    const [customModel, setCustomModel] = useState('');
-    /** Sağlayıcı başına anahtar ve model; biri diğerini etkilemez. */
-    const [keys, setKeys] = useState<Record<ProviderType, string>>({
-        gemini: '', openai: '', anthropic: '', custom: ''
-    });
-    const [models, setModels] = useState<Record<ProviderType, string>>({
-        gemini: '', openai: '', anthropic: '', custom: ''
-    });
-    /** Sağlayıcı başına kayıtlı model adları. */
-    const [modelLists, setModelLists] = useState<Record<ProviderType, string[]>>({
-        gemini: [], openai: [], anthropic: [], custom: []
-    });
-    const [yeniModel, setYeniModel] = useState('');
     const [macroList, setMacroList] = useState<AiMacro[]>([]);
     const [macroDraft, setMacroDraft] = useState<AiMacro | null>(null);
     const [toolList, setToolList] = useState<AppTool[]>([]);
@@ -97,7 +66,9 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
     /** Editör bölümlerinin görünürlüğü; ayarlardan kapatılabilir. */
     const [yapayZekaAcik, setYapayZekaAcik] = useState(false);
     const [araclarAcik, setAraclarAcik] = useState(false);
-    const [isSaved, setIsSaved] = useState(false);
+    const [bilgisayarAcik, setBilgisayarAcik] = useState(false);
+    const [toolsTab, setToolsTab] = useState<'local' | 'computer'>('local');
+    const toolsTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
     // Google Drive (kolay senkron) durumu
     const [driveBusy, setDriveBusy] = useState<'idle' | 'upload' | 'restore' | 'merge'>('idle');
@@ -164,38 +135,20 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
 
     useEffect(() => {
         if (isOpen) {
-            // Yüklendiğinde mevcut ayarları al
-            setProvider(readActiveProvider());
-
-            // Her sağlayıcının kendi anahtarı ve modeli yüklenir
-            const bosKayit = { gemini: '', openai: '', anthropic: '', custom: '' } as Record<ProviderType, string>;
-            const nextKeys = { ...bosKayit };
-            const nextModels = { ...bosKayit };
-            for (const id of PROVIDER_IDS) {
-                nextKeys[id] = readProviderKey(id);
-                nextModels[id] = readRawProviderModel(id);
-            }
-            setKeys(nextKeys);
-            setModels(nextModels);
-
-            const nextLists = { gemini: [], openai: [], anthropic: [], custom: [] } as Record<ProviderType, string[]>;
-            for (const id of PROVIDER_IDS) nextLists[id] = readModelList(id);
-            setModelLists(nextLists);
-            setYeniModel('');
-            if (PROVIDER_IDS.some((id) => nextKeys[id])) setIsSaved(true);
-
-            setCustomUrl(readCustomUrl());
-            setCustomModel(nextModels.custom);
             setMacroList(readAiMacros());
             setMacroDraft(null);
             setToolList(readTools());
             setYapayZekaAcik(bolumAcik('yapayzeka'));
             setAraclarAcik(bolumAcik('araclar'));
+            setBilgisayarAcik(bolumAcik('bilgisayar'));
             setAutoSync(isAutoSyncEnabled());
             setLastSync(lastSyncTime());
             setActiveTab(initialSection);
+            setToolsTab(initialSection === 'tools' ? 'computer' : 'local');
+
         }
     }, [isOpen, initialSection]);
+
 
     /**
      * Pencere açıkken klavye ve kaydırma davranışı.
@@ -268,62 +221,6 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
         return () => { disposed = true; void remove?.(); };
     }, [isOpen]);
 
-    const handleSaveAi = (e: React.FormEvent) => {
-        e.preventDefault();
-        saveActiveProvider(provider);
-        for (const id of PROVIDER_IDS) {
-            saveProviderKey(id, keys[id]);
-            saveProviderModel(id, models[id]);
-        }
-        saveCustomUrl(customUrl);
-        setCustomModel(models.custom);
-        for (const id of PROVIDER_IDS) saveModelList(id, modelLists[id]);
-        setIsSaved(true);
-    };
-
-    /** Girişteki model adını listeye ekler ve etkin model yapar. */
-    const handleAddModel = () => {
-        const ad = yeniModel.trim();
-        if (!ad) return;
-
-        const sonrakiListe = Array.from(new Set([...modelLists[provider], ad]));
-        const sonrakiModeller = { ...models, [provider]: ad };
-        setModelLists(prev => ({ ...prev, [provider]: sonrakiListe }));
-        setModels(sonrakiModeller);
-        saveModelList(provider, sonrakiListe);
-        persistAyarlar({ provider, keys, models: sonrakiModeller, customUrl });
-        setYeniModel('');
-        setIsSaved(false);
-    };
-
-    /** Modeli listeden çıkarır; etkinse varsayılana döner. */
-    const handleRemoveModel = (ad: string) => {
-        const sonrakiListe = modelLists[provider].filter(x => x !== ad);
-        setModelLists(prev => ({ ...prev, [provider]: sonrakiListe }));
-        saveModelList(provider, sonrakiListe);
-        if (models[provider] === ad) {
-            setModels(prev => ({ ...prev, [provider]: '' }));
-        }
-        persistAyarlar({ provider, keys, models, customUrl });
-        setIsSaved(false);
-    };
-
-    /** Ayarları anında kalıcı hale getirir; ayrı bir kayıt adımı gerekmez. */
-    const persistAyarlar = (
-        sonraki: {
-            provider: ProviderType;
-            keys: Record<ProviderType, string>;
-            models: Record<ProviderType, string>;
-            customUrl: string;
-        }
-    ) => {
-        saveActiveProvider(sonraki.provider);
-        for (const id of PROVIDER_IDS) {
-            saveProviderKey(id, sonraki.keys[id]);
-            saveProviderModel(id, sonraki.models[id]);
-        }
-        saveCustomUrl(sonraki.customUrl);
-    };
 
     const persistMacros = (next: AiMacro[]) => {
         setMacroList(next);
@@ -398,13 +295,14 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
 
     const enabledToolCount = toolList.filter((item) => item.enabled !== false).length
         + REMOTE_TOOL_IDS.filter(id => remoteToolPrefs.enabledTools[id]).length
-        + (remoteToolPrefs.enabledTools.shortcuts ? remoteToolPrefs.macros.filter(m => m.enabled !== false && m.name.trim() && m.value.trim()).length : 0);
+        + (remoteToolPrefs.enabledTools.shortcuts ? remoteToolPrefs.macros.filter(makroHazir).length : 0);
     const totalToolCount = toolList.length + REMOTE_TOOL_IDS.length + remoteToolPrefs.macros.length;
 
     /** Editördeki bir bölümü tümüyle gösterir/gizler. */
     const handleBolumDegistir = (bolum: Bolum, acik: boolean) => {
         bolumAcikliginiAyarla(bolum, acik);
         if (bolum === 'yapayzeka') setYapayZekaAcik(acik);
+        else if (bolum === 'bilgisayar') setBilgisayarAcik(acik);
         else setAraclarAcik(acik);
     };
 
@@ -412,12 +310,6 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
 
     const activeSection = SETTINGS_SECTIONS.find(section => section.id === activeTab);
 
-    const saglayicilar: Array<{ id: ProviderType; name: string }> = [
-        { id: 'gemini', name: 'Google Gemini' },
-        { id: 'openai', name: 'OpenAI' },
-        { id: 'anthropic', name: 'Anthropic' },
-        { id: 'custom', name: 'Özel (Custom)' }
-    ];
 
     return (
         <div className="fixed inset-0 z-[100] bg-sand-100">
@@ -494,212 +386,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                     <UsageGuide onNavigate={setActiveTab} />
                                 </>
                             )}
-                            {activeTab === 'models' && (
-                                <>
-                                    <SettingsPageHeader
-                                        icon={Sparkles}
-                                        title="Yapay zekâ"
-                                        description="İmla düzeltme ve akıllı makrolar seçtiğiniz sağlayıcı üzerinden çalışır. Her sağlayıcının anahtarı ve modeli ayrı saklanır."
-                                        badge={<SettingsPill tone="moss">{PROVIDER_LABELS[provider]}</SettingsPill>}
-                                    />
-
-                                    <form onSubmit={handleSaveAi} className="space-y-4">
-                                        <SettingsSection
-                                            icon={Server}
-                                            title="Sağlayıcı"
-                                            description="Notlarınızı işleyecek yapay zekâ servisi."
-                                        >
-                                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                                {saglayicilar.map(p => {
-                                                    const secili = provider === p.id;
-                                                    return (
-                                                        <button
-                                                            key={p.id}
-                                                            type="button"
-                                                            aria-pressed={secili}
-                                                            onClick={() => {
-                                                                setProvider(p.id);
-                                                                persistAyarlar({ provider: p.id, keys, models, customUrl });
-                                                                setIsSaved(false);
-                                                            }}
-                                                            className={'flex items-center justify-between gap-1.5 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40 sm:text-sm ' + (secili
-                                                                ? 'border-moss-400 bg-moss-50 text-moss-800 ring-1 ring-moss-500/25'
-                                                                : 'border-sand-200 bg-white text-sand-600 hover:border-sand-300 hover:text-sand-900')}
-                                                        >
-                                                            <span className="truncate">{p.name}</span>
-                                                            {secili && <Check size={14} className="flex-shrink-0 text-moss-600" />}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </SettingsSection>
-
-                                        <SettingsSection
-                                            icon={Key}
-                                            title="Bağlantı"
-                                            description={PROVIDER_LABELS[provider] + ' hesabınızla eşleştirme bilgileri.'}
-                                        >
-                                            <div className="space-y-4">
-                                                {provider === 'custom' && (
-                                                    <SettingsField
-                                                        label="Sunucu adresi (Base URL)"
-                                                        htmlFor="ayar-custom-url"
-                                                        hint="Adresi /v1 olarak ya da doğrudan /chat/completions uç noktası olarak girebilirsiniz."
-                                                    >
-                                                        <input
-                                                            id="ayar-custom-url"
-                                                            type="url"
-                                                            value={customUrl}
-                                                            onChange={e => {
-                                                                const v = e.target.value;
-                                                                setCustomUrl(v);
-                                                                persistAyarlar({ provider, keys, models, customUrl: v });
-                                                                setIsSaved(false);
-                                                            }}
-                                                            placeholder="https://api.example.com/v1"
-                                                            required
-                                                            className={settingsFieldClass}
-                                                        />
-                                                    </SettingsField>
-                                                )}
-
-                                                <SettingsField
-                                                    label={PROVIDER_LABELS[provider] + ' API anahtarı'}
-                                                    htmlFor="ayar-api-key"
-                                                    hint={KEY_HINTS[provider] + '. Yalnızca bu sağlayıcı için geçerlidir; diğerlerinin anahtarları ayrı tutulur.'}
-                                                >
-                                                    <div className="relative">
-                                                        <Key size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sand-600" />
-                                                        <input
-                                                            id="ayar-api-key"
-                                                            type="password"
-                                                            autoComplete="off"
-                                                            value={keys[provider]}
-                                                            onChange={e => {
-                                                                const v = e.target.value;
-                                                                setKeys(prev => ({ ...prev, [provider]: v }));
-                                                                persistAyarlar({ provider, keys: { ...keys, [provider]: v }, models, customUrl });
-                                                                setIsSaved(false);
-                                                            }}
-                                                            placeholder="Anahtarınızı buraya girin"
-                                                            className={settingsFieldClass + ' pl-10 font-mono'}
-                                                        />
-                                                    </div>
-                                                </SettingsField>
-                                            </div>
-                                        </SettingsSection>
-
-                                        <SettingsSection
-                                            icon={Cpu}
-                                            title="Model"
-                                            description="Kaydettiğiniz adlar listede kalır; seçmek için dokunun, silmek için çarpıya basın."
-                                        >
-                                            <div className="space-y-3">
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={yeniModel}
-                                                        onChange={e => setYeniModel(e.target.value)}
-                                                        onKeyDown={e => {
-                                                            if (e.key === 'Enter') {
-                                                                e.preventDefault();
-                                                                handleAddModel();
-                                                            }
-                                                        }}
-                                                        placeholder={DEFAULT_MODELS[provider] || 'Örn. gpt-4o-mini'}
-                                                        aria-label="Model adı"
-                                                        autoCapitalize="none"
-                                                        autoCorrect="off"
-                                                        spellCheck={false}
-                                                        className={settingsFieldClass + ' min-w-0 flex-1 font-mono placeholder:font-sans'}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleAddModel}
-                                                        disabled={!yeniModel.trim()}
-                                                        className="btn btn-secondary flex-shrink-0 px-4 py-2.5 text-sm"
-                                                        title="Model adını listeye ekle ve etkin model yap"
-                                                    >
-                                                        <Plus size={15} /> Ekle
-                                                    </button>
-                                                </div>
-
-                                                {modelLists[provider].length > 0 ? (
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {modelLists[provider].map(ad => {
-                                                            const secili = models[provider] === ad ||
-                                                                (!models[provider] && ad === DEFAULT_MODELS[provider]);
-
-                                                            return (
-                                                                <span
-                                                                    key={ad}
-                                                                    className={'flex items-center gap-1 overflow-hidden rounded-lg border pr-1 font-mono text-xs transition-colors duration-200 ' + (secili
-                                                                        ? 'border-moss-400 bg-moss-50 text-moss-800'
-                                                                        : 'border-sand-200 bg-sand-50 text-sand-700')}
-                                                                >
-                                                                    <button
-                                                                        type="button"
-                                                                        aria-pressed={secili}
-                                                                        onClick={() => {
-                                                                            setModels(prev => ({ ...prev, [provider]: ad }));
-                                                                            persistAyarlar({ provider, keys, models: { ...models, [provider]: ad }, customUrl });
-                                                                            setIsSaved(false);
-                                                                        }}
-                                                                        className="px-2.5 py-1.5"
-                                                                    >
-                                                                        {ad}
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRemoveModel(ad)}
-                                                                        aria-label={ad + ' modelini listeden çıkar'}
-                                                                        className="rounded p-0.5 text-sand-600 transition-colors duration-200 hover:bg-berry-100 hover:text-berry-600"
-                                                                    >
-                                                                        <X size={12} />
-                                                                    </button>
-                                                                </span>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs leading-relaxed text-sand-600">{MODEL_HINTS[provider]}</p>
-                                                        {DEFAULT_MODELS[provider] && (
-                                                            <p className="text-xs leading-relaxed text-sand-600">
-                                                                Henüz kayıtlı model yok. Alanı boş bırakırsanız{' '}
-                                                                <span className="font-mono text-sand-600">{DEFAULT_MODELS[provider]}</span> kullanılır.
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </SettingsSection>
-
-                                        <div className="rounded-2xl border border-sand-200 bg-white p-4 shadow-soft">
-                                            <SettingsNote tone="info">
-                                                API anahtarı bu cihazın yerel deposunda saklanır. Yapay zekâ özelliğini
-                                                kullandığınızda anahtar ve işlenecek metin önce uygulamanın Vercel sunucu
-                                                rotasına, ardından seçtiğiniz sağlayıcıya iletilir.{' '}
-                                                <a href="/gizlilik" className="font-semibold text-clay-800 underline decoration-clay-400 underline-offset-2">
-                                                    Gizlilik politikası
-                                                </a>
-                                            </SettingsNote>
-                                            <div className="mt-4 flex flex-col gap-3 border-t border-sand-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                                                <p className="text-xs leading-relaxed text-sand-600">
-                                                    Değişiklikler bu cihazda anında saklanır; ayrı bir hesap gerekmez.
-                                                </p>
-                                                <button
-                                                    type="submit"
-                                                    disabled={!keys[provider].trim() || (provider === 'custom' && !customUrl.trim())}
-                                                    className="btn btn-primary w-full px-6 py-2.5 text-sm sm:w-auto"
-                                                >
-                                                    {isSaved ? (<><Check size={16} /> Kaydedildi</>) : (<><Check size={16} /> Kaydet</>)}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </>
-                            )}
+                            {activeTab === 'models' && <AiSettings />}
 
                             {activeTab === 'macros' && (
                                 <>
@@ -872,15 +559,19 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                     <SettingsPageHeader
                                         icon={Wrench}
                                         title="Düzenleme araçları"
-                                        description="Yerel metin araçları ve bilgisayar kısayolları tek yerde. Araçlar ve Yapay zekâ satırları varsayılan olarak kapalıdır; aşağıdaki anahtarlarla açılır."
-                                        badge={
-                                            <SettingsPill tone={araclarAcik ? 'moss' : 'clay'}>
-                                                {araclarAcik ? `${enabledToolCount} / ${totalToolCount} etkin` : 'Bölüm kapalı'}
-                                            </SettingsPill>
-                                        }
+                                        description="Editörde görmek istediğiniz araçları seçin."
                                     />
-
-                                    <div className="space-y-4">
+                                    <div role="tablist" aria-label="Düzenleme aracı ayarları" className="mb-4 grid grid-cols-2 gap-1 rounded-2xl border border-sand-200 bg-sand-200/50 p-1">
+                                        {(['local', 'computer'] as const).map((id, index) => <button key={id} type="button" role="tab" id={`tools-settings-tab-${id}`} aria-controls={`tools-settings-panel-${id}`} aria-selected={toolsTab === id} tabIndex={toolsTab === id ? 0 : -1} ref={element => { toolsTabRefs.current[index] = element; }} onClick={() => setToolsTab(id)} onKeyDown={event => {
+                                            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                                            event.preventDefault();
+                                            const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1 - index;
+                                            setToolsTab(next === 0 ? 'local' : 'computer'); toolsTabRefs.current[next]?.focus();
+                                        }} className={'flex min-h-12 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 ' + (toolsTab === id ? 'bg-white text-moss-800 shadow-sm' : 'text-sand-700 hover:bg-white/50')}>
+                                            {id === 'local' ? <Wrench size={17} /> : <MonitorSmartphone size={17} />}{id === 'local' ? 'Yerel araçlar' : 'Bilgisayar araçları'}
+                                        </button>)}
+                                    </div>
+                                    {toolsTab === 'local' ? <div role="tabpanel" id="tools-settings-panel-local" aria-labelledby="tools-settings-tab-local" className="space-y-4">
                                         <SettingsSection
                                             icon={Wrench}
                                             title="Yerel araçlar"
@@ -947,11 +638,12 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                                 </button>
                                             )}
                                         </SettingsSection>
-
+                                    </div> : <div role="tabpanel" id="tools-settings-panel-computer" aria-labelledby="tools-settings-tab-computer" className="space-y-4">
                                         <SettingsSection
                                             icon={MonitorSmartphone}
                                             title="Bilgisayar araçları"
                                             description="Kart veya yardımcı program bağlantısı gerektiren araçlar. Bağlantı ayarları için Bilgisayar bağlantısı bölümüne bakın."
+                                            action={<SettingsSwitch checked={bilgisayarAcik} onChange={value => handleBolumDegistir('bilgisayar', value)} label="Bilgisayar araçlarını editörde göster" />}
                                         >
                                             <RemoteToolCards />
                                         </SettingsSection>
@@ -963,7 +655,23 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                         >
                                             <RemoteMacroTools />
                                         </SettingsSection>
-                                    </div>
+
+                                        <SettingsSection
+                                            icon={FolderKanban}
+                                            title="Profiller ve kısayol düğmeleri"
+                                            description="Makroları profillere ayırın; her kısayol düğmesi editörde bağlı profilin makrolarını açar."
+                                        >
+                                            <RemoteProfileTools />
+                                        </SettingsSection>
+
+                                        <SettingsSection
+                                            icon={LayoutDashboard}
+                                            title="Ekran düzenleri"
+                                            description="Editördeki Ekran aracı için bölmeleri ve oranlarını tasarlayın: fare, yön tuşları, metin yazma ve kısayollar."
+                                        >
+                                            <RemoteScreenTools />
+                                        </SettingsSection>
+                                    </div>}
                                 </>
                             )}
 
@@ -1145,4 +853,3 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
         </div>
     );
 }
-

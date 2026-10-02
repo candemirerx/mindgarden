@@ -7,6 +7,12 @@ def hasReleaseSigning = keystorePropertiesFile.exists()
 if (hasReleaseSigning) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
+// İmzasız yayın paketi Play'e yüklenemez; keystore yoksa sessizce üretmek yerine dur.
+gradle.taskGraph.whenReady { graph ->
+    if (!hasReleaseSigning && graph.allTasks.any { it.name ==~ /(assemble|bundle)Release/ }) {
+        throw new GradleException("android/keystore.properties bulunamadı: yayın paketi imzalanamaz.")
+    }
+}
 
 android {
     namespace "com.notbahcesi.app"
@@ -15,8 +21,8 @@ android {
         applicationId "com.notbahcesi.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 45
-        versionName "2.2.1"
+        versionCode 55
+        versionName "2.2.11"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -43,6 +49,7 @@ android {
             // Play Services kendi kurallarını getirir; ek kurallar
             // proguard-rules.pro içinde.
             minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -68,6 +75,10 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    implementation 'com.google.mediapipe:tasks-genai:0.10.35'
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.17.1'
+    // MediaPipe seçenek sınıflarının annotation referansları R8 tarafından okunur.
+    implementation 'com.google.auto.value:auto-value-annotations:1.11.0'
 }
 
 apply from: 'capacitor.build.gradle'

@@ -58,7 +58,7 @@ function renderTable(rows) {
 }
 
 function markdownToHtml(md) {
-    const lines = md.split('\n');
+    const lines = md.replace(/\r\n?/g, '\n').split('\n');
     const out = [];
     let i = 0;
 
@@ -151,6 +151,8 @@ function markdownToHtml(md) {
             buf.push(lines[i]);
             i++;
         }
+        // A standalone table row or other incomplete block must still advance.
+        if (!buf.length) { buf.push(lines[i]); i++; }
         out.push(`<p>${inline(buf.join(' '))}</p>`);
     }
 

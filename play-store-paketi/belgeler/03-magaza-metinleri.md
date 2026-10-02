@@ -107,20 +107,19 @@ anahtar olmadan da tam çalışır.
 
 ---
 
-## Sürüm notları (2.1.9 — Play Store'a yüklenecek sürüm)
+## Sürüm notları (2.2.11 — Play Store'a yüklenecek sürüm)
+
+Play Console sürüm notu alanı en fazla 500 karakterdir.
 
 ```
-Ayarlar ekranı ve görsel tutarlılık yenilendi.
+Yazmak için tam ekran ve daha akıcı araçlar.
 
-• Ayarlar artık arama kutusu ve gruplanmış bölümlerle tek giriş ekranından kullanılıyor
-• Bölüm adları menüyle birebir aynı; tüm bölümler aynı başlık, kart ve alan düzenini kullanıyor
-• Bilgisayar araçları: fare, dikte, bilgisayara yazma, panoya gönderme ve kısayollar
-• Tema ve görsel tutarlılık iyileştirmeleri
-• Notların kaydedilmesi ve cihazlar arası eşitlenmesi güvenilir hâle getirildi
-• Yedekten geri yükleme artık dosyayı önce doğrular; bozuk yedek mevcut notları silmez
-• Silinen notların içeriği cihazdan ve eşitleme verisinden temizleniyor
-• Misafir olarak yazdığınız notlar hesap açtığınızda kaybolmuyor, hesabınıza aktarılıyor
-• Küçük hata düzeltmeleri
+• Metin editöründe tam ekran yazma modu
+• Son kullandığınız araç sekmesi hatırlanıyor
+• Tuvalde yeni dal veya yaprak eklenince ekran ona odaklanıyor
+• Bilgisayar araçları: sanal klavyeyle kısayol seçme, Ekran aracı, daha akıcı fare
+• Yerel (cihazda çalışan) yapay zekâ modeli desteği
+• Ayarlar ekranında düzen ve kararlılık iyileştirmeleri
 ```
 
 ---

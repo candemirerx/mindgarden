@@ -7,9 +7,11 @@ Bu bölüm en çok reddedilen yerdir; aşağıdaki cevapları birebir gir.
 
 ## Genel bakış
 
-Uygulama **hiçbir veriyi kendi sunucusuna kaydetmez**. Notlar kullanıcının cihazında
-tutulur. Yapay zekâ özelliği kullanıldığında metin, kullanıcının kendi seçtiği
-sağlayıcıya gönderilir. Yedekleme kullanıcının kendi Google Drive hesabına yapılır.
+Uygulama **hiçbir veriyi kendi sunucusunda saklamaz**. Notlar kullanıcının cihazında
+tutulur. Bulut yapay zekâ özelliği kullanıldığında metin ve kullanıcının API anahtarı
+önce Not Bahçesi'nin Vercel üzerindeki sunucu rotasına, oradan kullanıcının seçtiği
+sağlayıcıya iletilir; Vercel rotası isteği yalnızca aktarır, kaydetmez. Yedekleme
+kullanıcının kendi Google Drive hesabına yapılır.
 
 ---
 
@@ -38,6 +40,11 @@ Diğer tüm kategoriler (konum, kişiler, takvim, fotoğraf, dosyalar, sağlık,
 
 ### Cihazda kalan, toplanmayan veriler
 
+Android’de yerel yapay zekâ modeliyle işlenen metin cihazda kalır; Vercel’e veya
+bulut yapay zekâ sağlayıcısına gönderilmez. İlk model indirmesi, kullanıcının
+tarayıcıda Hugging Face hesabıyla kabul ettiği lisans ve hizmet koşullarıyla yapılır.
+Tarayıcıdaki yerel mod metni kullanıcının yapılandırdığı Ollama sunucusuna gönderir.
+
 Aşağıdakiler yalnızca cihazda veya kullanıcının kendi cihazları arasında işlenir;
 uygulamanın bir sunucusuna gönderilmez:
 
@@ -46,7 +53,7 @@ uygulamanın bir sunucusuna gönderilmez:
 | Bluetooth eşleşme bilgisi (cihaz adı/adresi) | Kart veya bilgisayarla bağlantı kurmak | Yalnızca telefon ile eşleşen cihaz arasında |
 | Yerel ağ adresi (kart/PC IP'si) | Wi‑Fi üzerinden bağlanmak | Yalnızca kullanıcının kendi yerel ağı |
 | Panoya gönderilen metin | Bilgisayarın panosuna kopyalamak | Kullanıcının kendi bilgisayarı |
-| Mikrofon sesi | Dikteyi yazıya çevirmek | Cihazdaki Android konuşma tanıma servisi |
+| Mikrofon sesi | Dikteyi yazıya çevirmek | Android'in konuşma tanıma servisi (cihazda ya da servis sağlayıcısının, ör. Google'ın, sunucusunda işlenebilir; bu yüzden yukarıdaki tabloda "Ses kayıtları" toplanıyor ve paylaşılıyor olarak beyan edilir) |
 
 > Bluetooth ve yerel ağ izinleri yalnızca eşleştirme ve bağlantı için kullanılır;
 > arka planda cihaz taraması yapılmaz, listeler hiçbir yere gönderilmez.
@@ -81,10 +88,11 @@ Bu sayfada adım adım silme, silinen veri listesi ve e-posta ile talep yolu anl
 Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:
 
 > Uygulamadaki yapay zekâ özelliği isteğe bağlıdır. Kullanıcı kendi API anahtarını
-> girer ve bir makro çalıştırdığında seçili notun metni, kullanıcının kendi seçtiği
-> yapay zekâ sağlayıcısına (Google, OpenAI, Anthropic veya kullanıcının belirttiği
-> OpenAI uyumlu bir servis) gönderilir. Metin ve anahtar uygulamanın kendi
-> sunucusunda saklanmaz; yalnızca isteği iletmek için kullanılır. Kullanıcı bu
+> girer ve bir makro çalıştırdığında seçili notun metni ve anahtar, Not Bahçesi'nin
+> Vercel üzerindeki sunucu rotası aracılığıyla kullanıcının kendi seçtiği yapay zekâ
+> sağlayıcısına (Google, OpenAI, Anthropic veya kullanıcının belirttiği OpenAI uyumlu
+> bir servis) iletilir. Metin ve anahtar bu sunucuda saklanmaz; yalnızca isteği
+> iletmek için kullanılır. Android'de yerel model seçilirse metin cihazdan çıkmaz. Kullanıcı bu
 > özelliği hiç kullanmayabilir; uygulamanın diğer tüm işlevleri anahtar olmadan çalışır.
 
 ---

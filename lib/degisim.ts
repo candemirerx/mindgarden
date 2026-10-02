@@ -12,7 +12,9 @@ export type DegisimKonusu =
     | 'bolumler'
     | 'remote-prefs'
     /** Sağlayıcı/anahtar/model tercihleri değişti. */
-    | 'ai-tercih';
+    | 'ai-tercih'
+    /** Budanmış notları gösterme tercihi değişti. */
+    | 'budananlar';
 
 const dinleyiciler = new Map<DegisimKonusu, Set<() => void>>();
 

@@ -8,29 +8,44 @@
  * türünde sık kullanılan kombinasyonlar tek dokunuşla doldurulur. Ayarlar
  * listesi ve editördeki kısayol panosu aynı pencereyi kullanır.
  *
+ * Sıralı türde birden çok adım (metin, klavye kısayolu, tıklama veya başka bir
+ * makro) art arda dizilir; adımlar listedeki sırayla çalışır.
+ *
  * Pencere telefonda da tam ekran açılır: arkada ayarlar ekranının göründüğü
  * şeffaf bir şerit kalmaz, başlık ve düğmeler güvenli alanın içinde durur.
  */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Keyboard, MousePointer2, TextCursorInput, X } from 'lucide-react';
-import { KONUM_MERKEZ, konumYuzdesi, type RemoteMacro, type RemotePrefs } from '@/lib/remoteTools';
+import { ArrowDown, ArrowUp, Check, Keyboard, ListOrdered, MousePointer2, Plus, TextCursorInput, Trash2, Wand2, X } from 'lucide-react';
+import { KONUM_MERKEZ, konumYuzdesi, type RemoteMacro, type RemoteMacroStep, type RemotePrefs } from '@/lib/remoteTools';
 import KonumSecici from './KonumSecici';
 import { settingsFieldClass } from '@/components/ui/settings';
+import SanalKlavye from './SanalKlavye';
 
 type MakroTuru = RemoteMacro['type'];
 
 const TURLER: Array<{ id: MakroTuru; anahtar: string; ad: string; Icon: typeof Keyboard }> = [
     { id: 'position', anahtar: 'konum', ad: 'Konum', Icon: MousePointer2 },
     { id: 'shortcut', anahtar: 'kisayol', ad: 'Kısayol', Icon: Keyboard },
-    { id: 'text', anahtar: 'metin', ad: 'Metin', Icon: TextCursorInput }
+    { id: 'text', anahtar: 'metin', ad: 'Metin', Icon: TextCursorInput },
+    { id: 'sequence', anahtar: 'sirali', ad: 'Sıralı', Icon: ListOrdered }
 ];
 
 const TUR_ADI: Record<MakroTuru, string> = {
     position: 'Fare konumu',
     shortcut: 'Klavye kısayolu',
-    text: 'Hazır metin'
+    text: 'Hazır metin',
+    sequence: 'Sıralı makro'
 };
+
+const ADIM_TURLERI: Array<{ id: RemoteMacroStep['type']; ad: string; Icon: typeof Keyboard }> = [
+    { id: 'text', ad: 'Metin', Icon: TextCursorInput },
+    { id: 'shortcut', ad: 'Kısayol', Icon: Keyboard },
+    { id: 'position', ad: 'Tıklama', Icon: MousePointer2 },
+    { id: 'macro', ad: 'Makro', Icon: Wand2 }
+];
+
+const KISAYOL_BICIMI = /^[A-Za-z0-9+_ -]{1,60}$/;
 
 /** Klavye kısayolunda tek dokunuşla doldurulabilen hazır kombinasyonlar. */
 const HAZIR_KISAYOLLAR = ['CTRL+C', 'CTRL+V', 'CTRL+Z', 'CTRL+S', 'ALT+TAB', 'WIN+D', 'ENTER', 'ESC'];
@@ -55,7 +70,12 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
         const gecerli = /^\d{1,5}\s*,\s*\d{1,5}$/.test((makro?.value ?? '').trim());
         return gecerli ? { x: Number(x), y: Number(y) } : { x: KONUM_MERKEZ, y: KONUM_MERKEZ };
     });
-    const [konumAcik, setKonumAcik] = useState(false);
+    const [adimlar, setAdimlar] = useState<RemoteMacroStep[]>(() => makro?.steps?.map((adim) => ({ ...adim })) ?? []);
+    /** Konum seçicinin yazacağı yer: tekil konum makrosu veya bir adımın sırası. */
+    const [konumHedefi, setKonumHedefi] = useState<'tekil' | number | null>(null);
+    const konumAcik = konumHedefi !== null;
+    /** Adımda çağrılabilecek makrolar: kendisi hariç kayıtlı tüm makrolar. */
+    const cagrilabilir = prefs.macros.filter((m) => m.id !== makro?.id);
     const [uyari, setUyari] = useState('');
 
     useEffect(() => {
@@ -73,12 +93,30 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
     const turuDegistir = (sonraki: MakroTuru) => {
         setTur(sonraki);
         setUyari('');
-        if (sonraki !== 'position') setDeger(makro?.type === sonraki ? makro.value : '');
+        if (sonraki !== 'position' && sonraki !== 'sequence') setDeger(makro?.type === sonraki ? makro.value : '');
     };
 
     const kaydet = () => {
         const ham = tur === 'position' ? konum.x + ',' + konum.y : deger.trim();
-        if (tur === 'shortcut' && !/^[A-Za-z0-9+_ -]{1,60}$/.test(ham)) {
+        if (tur === 'sequence') {
+            if (!adimlar.length) { setUyari('En az bir adım ekleyin.'); return; }
+            const hatali = adimlar.findIndex((adim) =>
+                adim.type === 'shortcut' ? !KISAYOL_BICIMI.test(adim.value.trim())
+                    : adim.type === 'text' ? !adim.value
+                        : adim.type === 'macro' ? !cagrilabilir.some((m) => m.id === adim.value)
+                            : !/^\d{1,5},\d{1,5}$/.test(adim.value));
+            if (hatali >= 0) { setUyari((hatali + 1) + '. adım eksik: değerini girin veya seçin.'); return; }
+            onKaydet({
+                id: makro?.id ?? yeniKimlik(),
+                name: ad.trim() || TUR_ADI[tur],
+                type: tur,
+                value: adimlar.length + ' adım',
+                enabled: makro?.enabled ?? true,
+                steps: adimlar.map((adim) => (adim.type === 'shortcut' ? { ...adim, value: adim.value.trim() } : adim))
+            });
+            return;
+        }
+        if (tur === 'shortcut' && !KISAYOL_BICIMI.test(ham)) {
             setUyari('Klavye kısayolunu CTRL+C biçiminde yazın.');
             return;
         }
@@ -170,7 +208,7 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                             <button
                                 type="button"
                                 id="makro-konum-sec"
-                                onClick={() => setKonumAcik(true)}
+                                onClick={() => setKonumHedefi('tekil')}
                                 className="btn btn-secondary min-h-[44px] w-full px-4 text-sm"
                             >
                                 <MousePointer2 size={16} /> Konum seç
@@ -217,6 +255,7 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                                 placeholder="Klavye kısayolu"
                                 className={settingsFieldClass + ' min-h-[44px]'}
                             />
+                            <SanalKlavye kimlik="makro-sanal-klavye" onSec={(kisayol) => { setDeger(kisayol); setUyari(''); }} />
                         </div>
                     )}
 
@@ -234,6 +273,94 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                         </label>
                     )}
 
+                    {tur === 'sequence' && (
+                        <div className="space-y-3">
+                            <p className="text-xs leading-relaxed text-sand-600">
+                                Adımlar yukarıdan aşağıya sırayla çalışır: metin yazdırın, tıklatın, klavye kısayolu gönderin veya kayıtlı bir makroyu çağırın.
+                            </p>
+                            {adimlar.length === 0 && (
+                                <p className="rounded-xl border border-dashed border-sand-300 px-4 py-3 text-xs text-sand-600">Henüz adım yok; aşağıdan ekleyin.</p>
+                            )}
+                            <ol id="makro-adimlar" className="space-y-2">
+                                {adimlar.map((adim, sira) => {
+                                    const degistir = (yeni: Partial<RemoteMacroStep>) => { setAdimlar((liste) => liste.map((a, i) => (i === sira ? { ...a, ...yeni } : a))); setUyari(''); };
+                                    const tasi = (yon: -1 | 1) => setAdimlar((liste) => {
+                                        const sonraki = [...liste];
+                                        [sonraki[sira], sonraki[sira + yon]] = [sonraki[sira + yon], sonraki[sira]];
+                                        return sonraki;
+                                    });
+                                    const turBilgisi = ADIM_TURLERI.find((t) => t.id === adim.type) ?? ADIM_TURLERI[0];
+                                    const AdimIcon = turBilgisi.Icon;
+                                    const [ax, ay] = adim.type === 'position' && adim.value ? adim.value.split(',').map(Number) : [0, 0];
+                                    const etiket = (sira + 1) + '. adım';
+                                    return (
+                                        <li key={sira} data-makro-adim={sira} className="space-y-2 rounded-2xl border border-sand-200 bg-sand-50/70 p-3">
+                                            <div className="flex items-center gap-1">
+                                                <span className="flex min-w-0 flex-1 items-center gap-1.5 text-xs font-semibold text-sand-800">
+                                                    <AdimIcon size={14} className="text-moss-700" aria-hidden="true" /> {etiket} · {turBilgisi.ad}
+                                                </span>
+                                                <button type="button" aria-label={etiket + 'ı yukarı taşı'} disabled={sira === 0} onClick={() => tasi(-1)} className="flex h-10 w-10 items-center justify-center rounded-lg text-sand-600 hover:bg-sand-100 disabled:opacity-30"><ArrowUp size={16} /></button>
+                                                <button type="button" aria-label={etiket + 'ı aşağı taşı'} disabled={sira === adimlar.length - 1} onClick={() => tasi(1)} className="flex h-10 w-10 items-center justify-center rounded-lg text-sand-600 hover:bg-sand-100 disabled:opacity-30"><ArrowDown size={16} /></button>
+                                                <button type="button" aria-label={etiket + 'ı sil'} onClick={() => { setAdimlar((liste) => liste.filter((_, i) => i !== sira)); setUyari(''); }} className="flex h-10 w-10 items-center justify-center rounded-lg text-sand-600 hover:bg-berry-50 hover:text-berry-600"><Trash2 size={15} /></button>
+                                            </div>
+                                            {adim.type === 'text' && (
+                                                <textarea aria-label={etiket + ' metni'} value={adim.value} rows={2} onChange={(olay) => degistir({ value: olay.target.value })}
+                                                    placeholder="Yazılacak metin" className={settingsFieldClass + ' resize-y'} />
+                                            )}
+                                            {adim.type === 'shortcut' && (
+                                                <div className="space-y-2">
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {HAZIR_KISAYOLLAR.map((kisayol) => (
+                                                            <button key={kisayol} type="button" aria-pressed={adim.value === kisayol} onClick={() => degistir({ value: kisayol })}
+                                                                className={'min-h-[36px] rounded-lg border px-2.5 text-xs font-medium transition-colors ' + (adim.value === kisayol ? 'border-moss-500 bg-moss-50 text-moss-800' : 'border-sand-300 bg-white text-sand-700 hover:border-moss-500/50')}>
+                                                                {kisayol}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <input aria-label={etiket + ' klavye kısayolu'} type="text" value={adim.value} onChange={(olay) => degistir({ value: olay.target.value })}
+                                                        placeholder="CTRL+S" className={settingsFieldClass + ' min-h-[44px]'} />
+                                                    <SanalKlavye kimlik={'makro-adim-klavye-' + sira} onSec={(kisayol) => degistir({ value: kisayol })} />
+                                                </div>
+                                            )}
+                                            {adim.type === 'position' && (
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <button type="button" onClick={() => setKonumHedefi(sira)} className="btn btn-secondary min-h-[40px] px-3 text-xs">
+                                                        <MousePointer2 size={14} /> {adim.value ? 'X %' + konumYuzdesi(ax).toFixed(1) + ' · Y %' + konumYuzdesi(ay).toFixed(1) : 'Konum seç'}
+                                                    </button>
+                                                    <div className="flex gap-1 rounded-lg border border-sand-200 bg-white p-0.5" role="group" aria-label={etiket + ' tıklama biçimi'}>
+                                                        {([[1, 'Tek tık'], [2, 'Çift tık']] as const).map(([degerTik, tikAdi]) => (
+                                                            <button key={degerTik} type="button" aria-pressed={(adim.click ?? 1) === degerTik} onClick={() => degistir({ click: degerTik })}
+                                                                className={'min-h-[36px] rounded-md px-3 text-xs font-medium ' + ((adim.click ?? 1) === degerTik ? 'bg-moss-700 text-sand-50' : 'text-sand-600')}>
+                                                                {tikAdi}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {adim.type === 'macro' && (cagrilabilir.length ? (
+                                                <select aria-label={etiket + 'da çalışacak makro'} value={adim.value} onChange={(olay) => degistir({ value: olay.target.value })} className={settingsFieldClass}>
+                                                    <option value="">Makro seçin…</option>
+                                                    {cagrilabilir.map((m) => <option key={m.id} value={m.id}>{m.name} · {TUR_ADI[m.type]}</option>)}
+                                                </select>
+                                            ) : (
+                                                <p className="text-xs text-sand-600">Çağrılacak başka makro yok; önce tekil makrolar ekleyin.</p>
+                                            ))}
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Adım ekle">
+                                {ADIM_TURLERI.map(({ id, ad: turAdi, Icon }) => (
+                                    <button key={id} type="button" id={'makro-adim-ekle-' + id}
+                                        onClick={() => { setAdimlar((liste) => [...liste, id === 'position' ? { type: id, value: '', click: 1 } : { type: id, value: '' }]); setUyari(''); }}
+                                        className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-dashed border-sand-300 px-2 text-xs font-medium text-sand-700 transition-colors hover:border-moss-500/50 hover:text-moss-700">
+                                        <Plus size={14} /><Icon size={14} aria-hidden="true" /> {turAdi}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {uyari && <p role="status" className="text-xs font-medium text-berry-700">{uyari}</p>}
                 </div>
 
@@ -249,11 +376,18 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
 
             {konumAcik && (
                 <KonumSecici
-                    baslangicX={konum.x}
-                    baslangicY={konum.y}
+                    baslangicX={typeof konumHedefi === 'number' && adimlar[konumHedefi]?.value ? Number(adimlar[konumHedefi].value.split(',')[0]) : konum.x}
+                    baslangicY={typeof konumHedefi === 'number' && adimlar[konumHedefi]?.value ? Number(adimlar[konumHedefi].value.split(',')[1]) : konum.y}
                     prefs={prefs}
-                    onKaydet={(x, y) => { setKonum({ x, y }); setKonumAcik(false); }}
-                    onKapat={() => setKonumAcik(false)}
+                    onKaydet={(x, y) => {
+                        if (typeof konumHedefi === 'number') {
+                            const sira = konumHedefi;
+                            setAdimlar((liste) => liste.map((a, i) => (i === sira ? { ...a, value: Math.round(x) + ',' + Math.round(y) } : a)));
+                            setUyari('');
+                        } else setKonum({ x, y });
+                        setKonumHedefi(null);
+                    }}
+                    onKapat={() => setKonumHedefi(null)}
                 />
             )}
         </div>,

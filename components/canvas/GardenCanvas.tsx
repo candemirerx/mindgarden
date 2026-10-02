@@ -14,9 +14,11 @@ interface GardenCanvasProps {
     children: React.ReactNode;
     gardenId?: string;
     initialViewState?: { x: number; y: number; zoom: number };
+    /** Değiştiğinde tuval bu düğümün kartına ortalanır (yeni eklenen not). */
+    ortalanacak?: { id: string; sayac: number } | null;
 }
 
-export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, initialViewState }) => {
+export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, initialViewState, ortalanacak }) => {
     const { setSelectedNode, updateGardenViewState } = useStore();
     const [viewState, setViewState] = useState<ViewState>({
         scale: initialViewState?.zoom || 1,
@@ -352,6 +354,33 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
     }, []);
     const handleZoomIn = useCallback(() => zoomAtCenter(1.2), [zoomAtCenter]);
     const handleZoomOut = useCallback(() => zoomAtCenter(1 / 1.2), [zoomAtCenter]);
+
+    // Yeni kart DOM'a birkaç kare sonra girebilir; bulunana dek kısa süre beklenir.
+    // Ad penceresinin klavyesi kapanınca tuval uzar; bu yüzden kısa süre sonra bir kez daha ortalanır.
+    useEffect(() => {
+        if (!ortalanacak) return;
+        let kare = 0;
+        let istek = 0;
+        let tekrar: ReturnType<typeof setTimeout> | undefined;
+        const dene = (ilk: boolean) => {
+            const container = containerRef.current;
+            const kart = contentRef.current?.querySelector<HTMLElement>(`.dugum-karti[data-node-id="${CSS.escape(ortalanacak.id)}"]`);
+            if (!container || !kart) {
+                if (ilk && ++kare < 30) istek = requestAnimationFrame(() => dene(true));
+                return;
+            }
+            if (ilk) tekrar = setTimeout(() => dene(false), 450);
+            const bounds = container.getBoundingClientRect();
+            const rect = kart.getBoundingClientRect();
+            const controls = container.querySelector('.garden-controls')?.getBoundingClientRect();
+            const altSinir = controls ? controls.top : bounds.bottom;
+            const dx = bounds.left + bounds.width / 2 - (rect.left + rect.width / 2);
+            const dy = bounds.top + (altSinir - bounds.top) / 2 - (rect.top + rect.height / 2);
+            setViewState(prev => ({ ...prev, offset: { x: prev.offset.x + dx, y: prev.offset.y + dy } }));
+        };
+        istek = requestAnimationFrame(() => dene(true));
+        return () => { cancelAnimationFrame(istek); clearTimeout(tekrar); };
+    }, [ortalanacak]);
 
     const handleResetView = useCallback(() => {
         const container = containerRef.current;

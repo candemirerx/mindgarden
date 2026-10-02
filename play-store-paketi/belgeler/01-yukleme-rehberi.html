@@ -86,9 +86,9 @@ strong { color: #1B3A28; }
 <h2>Hazır olanlar</h2>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Gereken</th><th>Durum</th></tr></thead>
-<tbody><tr><td>Yayın paketi (AAB)</td><td>Hazır — <code>uygulama/not-bahcesi-2.2.1.aab</code></td></tr><tr><td>Uygulama ikonu 512×512</td><td>Hazır — <code>gorseller/uygulama-ikonu-512.png</code></td></tr><tr><td>Öne çıkan görsel 1024×500</td><td>Hazır — <code>gorseller/one-cikan-gorsel-1024x500.png</code></td></tr><tr><td>Telefon ekran görüntüleri (4 adet)</td><td>Hazır — <code>gorseller/ekran-1..4-*.png</code> (1080×2160)</td></tr><tr><td>Gizlilik politikası adresi</td><td>Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/gizlilik</td></tr><tr><td>Veri silme talebi adresi</td><td>Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/veri-silme</td></tr><tr><td>Mağaza açıklama metinleri</td><td>Hazır — <code>belgeler/03-magaza-metinleri.md</code></td></tr><tr><td>Veri güvenliği cevapları</td><td>Hazır — <code>belgeler/04-veri-guvenligi.md</code></td></tr><tr><td>İzin gerekçeleri ve inceleme cevapları</td><td>Hazır — <code>belgeler/07-izin-gerekceleri.md</code></td></tr></tbody>
+<tbody><tr><td>Yayın paketi (AAB)</td><td>Hazır — <code>uygulama/not-bahcesi-2.2.11.aab</code></td></tr><tr><td>Uygulama ikonu 512×512</td><td>Hazır — <code>gorseller/uygulama-ikonu-512.png</code></td></tr><tr><td>Öne çıkan görsel 1024×500</td><td>Hazır — <code>gorseller/one-cikan-gorsel-1024x500.png</code></td></tr><tr><td>Telefon ekran görüntüleri (4 adet)</td><td>Hazır — <code>gorseller/ekran-1..4-*.png</code> (1080×2160)</td></tr><tr><td>Gizlilik politikası adresi</td><td>Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/gizlilik</td></tr><tr><td>Veri silme talebi adresi</td><td>Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/veri-silme</td></tr><tr><td>Mağaza açıklama metinleri</td><td>Hazır — <code>belgeler/03-magaza-metinleri.md</code></td></tr><tr><td>Veri güvenliği cevapları</td><td>Hazır — <code>belgeler/04-veri-guvenligi.md</code></td></tr><tr><td>İzin gerekçeleri ve inceleme cevapları</td><td>Hazır — <code>belgeler/07-izin-gerekceleri.md</code></td></tr></tbody>
 </table></div>
-<p><strong>Sürüm bilgisi:</strong> paket adı <code>com.notbahcesi.app</code>, sürüm kodu <code>45</code>, sürüm adı <code>2.2.1</code>, hedef API seviyesi <code>36</code> (Android 16).</p>
+<p><strong>Sürüm bilgisi:</strong> paket adı <code>com.notbahcesi.app</code>, sürüm kodu <code>55</code>, sürüm adı <code>2.2.11</code>, hedef API seviyesi <code>36</code> (Android 16).</p>
 <blockquote>Play, yeni uygulamalarda güncel hedef API seviyesini zorunlu tutar. Paket API 36 hedeflediği için bu şart karşılanmıştır.</blockquote>
 <hr />
 <h2>1. Geliştirici hesabı</h2>
@@ -146,7 +146,7 @@ strong { color: #1B3A28; }
 <p>Kullanıcı verisini uygulama içinden de silebilir: <strong>Ayarlar → Veri yönetimi</strong>.</p>
 <hr />
 <h2>6. AAB'yi yükle (kapalı test)</h2>
-<ol><li>Sol menüden <strong>Test etme → Kapalı test → Yeni sürüm oluştur</strong></li><li>"Play App Signing" şartlarını kabul et</li><li><code>uygulama/not-bahcesi-2.2.1.aab</code> dosyasını yükle</li><li>Sürüm notlarına şunu yaz:</li></ol>
+<ol><li>Sol menüden <strong>Test etme → Kapalı test → Yeni sürüm oluştur</strong></li><li>"Play App Signing" şartlarını kabul et</li><li><code>uygulama/not-bahcesi-2.2.11.aab</code> dosyasını yükle</li><li>Sürüm notlarına şunu yaz:</li></ol>
 <blockquote>Ayarlar ekranı yenilendi: yapay zekâ, makrolar, araçlar, bilgisayar, senkronizasyon ve veri yönetimi artık tek pencerede. Bilgisayar araçları eklendi (fare, dikte, bilgisayara yazma, panoya gönderme). Tema ve görsel tutarlılık iyileştirildi, yedekten geri yükleme artık dosyayı önce doğrular (bozuk yedek notlarınızı silmez), silinen notların içeriği cihazdan temizlenir ve misafir notlarınız hesap açtığınızda hesabınıza aktarılır. Küçük hata düzeltmeleri yapıldı.</blockquote>
 <ol><li><strong>Kaydet → Sürümü incele → Kapalı teste gönder</strong></li></ol>
 <hr />
@@ -174,8 +174,8 @@ strong { color: #1B3A28; }
 <h2>Yeni sürüm çıkarmak istersen</h2>
 <p>Her yeni yüklemede <strong>sürüm kodu artmak zorundadır</strong>. Proje klasöründe:</p>
 <p><code>android/app/build.gradle</code> dosyasını aç, şu iki satırı güncelle:</p>
-<pre><code>versionCode 44       ← her yüklemede 1 artır (43 → 44 → 45 ...)
-versionName "2.2.0"  ← kullanıcıya görünen sürüm</code></pre>
+<pre><code>versionCode 56       ← her yüklemede 1 artır (55 → 56 → 57 ...)
+versionName "2.2.12" ← kullanıcıya görünen sürüm</code></pre>
 <p>Sonra paketi yeniden üret (Windows'ta <code>GRADLE_USER_HOME</code> verilmezse derleme "Could not initialize native services" hatasıyla durur):</p>
 <pre><code>npm run build:android
 cd android

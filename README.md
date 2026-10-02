@@ -4,7 +4,7 @@ Bilgisayar araçları (fare, makro, dikte, USB HID ile yazma ve doğrudan PC pan
 
 Bahçe ve ağaç temalı, modern zihin haritası not tutma uygulaması. Mi Mind'dan ilham alınarak, daha sade ve kullanıcı dostu tasarlanmıştır.
 
-**Sürüm:** 2.2.1 (sürüm kodu 45) · **Platform:** Web (Next.js) + Android (Capacitor)
+**Sürüm:** 2.2.11 (sürüm kodu 55) · **Platform:** Web (Next.js) + Android (Capacitor)
 
 ## Özellikler ✨
 
@@ -143,7 +143,7 @@ gruplanmış bölüm kartları bulunan tek bir giriş ekranıyla açılır:
 |---|---|
 | Kullanım kılavuzu | Adım adım kullanım anlatımı ve ilgili ayara doğrudan geçiş |
 | Hesap ve giriş | Google/e-posta girişi ve bu cihazdaki oturum |
-| Yapay zekâ | Sağlayıcı, model, API anahtarı ve bağlantı testi |
+| Yapay zekâ | Bulut/Yerel sekmeleri; sağlayıcı, model, API anahtarı; Android model dosyası ekleme ve yerel yanıt denemesi |
 | AI makroları | Hazır makroları açıp kapatın, kendi makrolarınızı yazın |
 | Düzenleme araçları | Yerel düzenleme araçları ve bilgisayar araçları |
 | Bilgisayar bağlantısı | PC bağlantı yolu, yardımcı program ve araç davranışı |

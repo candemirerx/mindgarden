@@ -4,11 +4,12 @@ import './studio.css';
 import { useEffect, Suspense, useState, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, MonitorSmartphone, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles } from 'lucide-react';
 import RemoteEditorTools from '@/components/editor/RemoteEditorTools';
 import KisayolPanosu from '@/components/editor/KisayolPanosu';
+import EkranDuzeni from '@/components/editor/EkranDuzeni';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
-import { remotePrefs } from '@/lib/remoteTools';
+import { remotePrefs, sistemCubuklariniGizle } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
@@ -16,10 +17,12 @@ import { readEnabledMacros } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
 import { readEnabledTools, aracMetniniUygula, siraliAd, iceriktenBaslik } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
-import { bolumAcik } from '@/lib/uiPrefs';
+import { aracSekmesiniKaydet, bolumAcik, sonAracSekmesi } from '@/lib/uiPrefs';
 import { dinle } from '@/lib/degisim';
 import { splitIntoChunks } from '@/lib/aiChunks';
-import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl } from '@/lib/aiProvider';
+import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl, providerHazir } from '@/lib/aiProvider';
+import { runCustomProviderDirect, CustomProviderError } from '@/lib/customProvider';
+import { runLocalInference, isOfflineFallbackEnabled } from '@/lib/localLlm';
 import { Capacitor } from '@capacitor/core';
 
 /**
@@ -71,12 +74,16 @@ function EditorPageInner() {
     const { nodes, updateNode, fetchNodes, addNode } = useStore();
     const [content, setContent] = useState('');
     const [remoteMode, setRemoteMode] = useState<RemoteMode>('write');
+    const [ekranDuzeni, setEkranDuzeni] = useState<string | null>(null);
+    /** Kısayol panosu bir kısayol düğmesiyle açıldıysa o düğmenin profili; null → tüm makrolar. */
+    const [kisayolProfili, setKisayolProfili] = useState<string | null>(null);
     const [remoteToolPrefs, setRemoteToolPrefs] = useState(remotePrefs);
     const [settingsOpen, setSettingsOpen] = useState(false);
     /** Ayar penceresi istenen bölümde açılabilsin: kısayol panosu doğrudan makrolara gider. */
     const [settingsBolumu, setSettingsBolumu] = useState<'home' | 'tools'>('home');
     const [focusMode, setFocusMode] = useState(false);
-    const [toolTab, setToolTab] = useState<'tools' | 'ai'>('tools');
+    const [toolTab, setToolTab] = useState<'tools' | 'computer' | 'ai'>('tools');
+    useEffect(() => { setToolTab(sonAracSekmesi()); }, []);
     /** Ayar penceresi kapanınca odak bu düğmeye döner. */
     const ayarDugmesiRef = useRef<HTMLButtonElement>(null);
     const [title, setTitle] = useState('');
@@ -96,6 +103,7 @@ function EditorPageInner() {
     /** Ayarlardan kapatılan bölümler editörde hiç görünmez. */
     const [yapayZekaAcik, setYapayZekaAcik] = useState(false);
     const [araclarAcik, setAraclarAcik] = useState(false);
+    const [bilgisayarAcik, setBilgisayarAcik] = useState(false);
     const [activeMacroId, setActiveMacroId] = useState<string | null>(null);
     const [runningLength, setRunningLength] = useState(0);
     /** Etkin sağlayıcı için anahtar tanımlı mı? Tanımlı değilse istek gönderilmez. */
@@ -137,8 +145,12 @@ function EditorPageInner() {
 
     const currentNode = nodes.find(n => n.id === nodeId);
     const resultPending = pendingSpellCheck !== null || aiCakisma !== null;
-    const activeToolTab = resultPending ? 'ai' : toolTab === 'tools'
-        ? (araclarAcik ? 'tools' : 'ai') : (yapayZekaAcik ? 'ai' : 'tools');
+    const visibleToolTabs = [
+        { id: 'tools' as const, label: 'Yerel araçlar', Icon: Wrench, visible: araclarAcik, disabled: resultPending },
+        { id: 'computer' as const, label: 'Bilgisayar araçları', Icon: MonitorSmartphone, visible: bilgisayarAcik, disabled: resultPending },
+        { id: 'ai' as const, label: 'Yapay zekâ', Icon: Sparkles, visible: yapayZekaAcik || resultPending, disabled: false }
+    ].filter(tab => tab.visible);
+    const activeToolTab = resultPending ? 'ai' : visibleToolTabs.some(tab => tab.id === toolTab) ? toolTab : visibleToolTabs[0]?.id;
 
     // Uzun notlarda ve ekran döndürüldüğünde tek kaydırma yüzeyi korunur.
     useEffect(() => {
@@ -152,6 +164,36 @@ function EditorPageInner() {
         window.addEventListener('resize', resize);
         return () => window.removeEventListener('resize', resize);
     }, [content, remoteMode, focusMode]);
+
+    // Tam ekran: Android sistem çubukları gizlenir, geri tuşu ve Esc tam ekrandan çıkar.
+    useEffect(() => {
+        if (!focusMode) return;
+        let iptal = false;
+        let geriTemizle: (() => void) | null = null;
+        void sistemCubuklariniGizle(true);
+        if (!Capacitor.isNativePlatform() && document.fullscreenEnabled && !document.fullscreenElement) {
+            void document.documentElement.requestFullscreen().catch(() => {});
+        }
+        const tus = (olay: KeyboardEvent) => { if (olay.key === 'Escape') setFocusMode(false); };
+        const tarayiciCikti = () => { if (!document.fullscreenElement) setFocusMode(false); };
+        window.addEventListener('keydown', tus);
+        document.addEventListener('fullscreenchange', tarayiciCikti);
+        (async () => {
+            try {
+                const { App } = await import('@capacitor/app');
+                const dinleyici = await App.addListener('backButton', () => setFocusMode(false));
+                if (iptal) void dinleyici.remove(); else geriTemizle = () => { void dinleyici.remove(); };
+            } catch { /* tarayıcıda geri tuşu yok */ }
+        })();
+        return () => {
+            iptal = true;
+            geriTemizle?.();
+            window.removeEventListener('keydown', tus);
+            document.removeEventListener('fullscreenchange', tarayiciCikti);
+            void sistemCubuklariniGizle(false);
+            if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+        };
+    }, [focusMode]);
 
 
     // Editör sayfası Sidebar içermez; otomatik Drive yedeklemesini burada da başlat.
@@ -396,10 +438,11 @@ function EditorPageInner() {
             setAraclar(readEnabledTools());
             setYapayZekaAcik(bolumAcik('yapayzeka'));
             setAraclarAcik(bolumAcik('araclar'));
+            setBilgisayarAcik(bolumAcik('bilgisayar'));
             setRemoteToolPrefs(remotePrefs());
             // Anahtar/sağlayıcı durumu da tazelenir; ayarlarda anahtar eklenince
             // makro düğmeleri sayfa yeniden açılmadan etkinleşir.
-            setAnahtarVar(readProviderKey(readActiveProvider()).trim().length > 0);
+            setAnahtarVar(providerHazir(readActiveProvider()));
         };
         tazele();
 
@@ -428,11 +471,12 @@ function EditorPageInner() {
         };
     }, []);
     useEffect(() => {
-        if (remoteMode === 'mouse' && (!araclarAcik || !remoteToolPrefs.enabledTools.mouse)) setRemoteMode('write');
+        if (remoteMode === 'mouse' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.mouse || focusMode || activeToolTab !== 'computer')) setRemoteMode('write');
         /* Kısayol panosunda geri düğmesi yok; panoyu açan satır görünmez olursa
            (araç sekmesi değişir, odak modu açılır) nota dönülür. */
-        if (remoteMode === 'shortcuts' && (!araclarAcik || !remoteToolPrefs.enabledTools.shortcuts || focusMode || activeToolTab !== 'tools')) setRemoteMode('write');
-    }, [remoteMode, araclarAcik, remoteToolPrefs.enabledTools.mouse, remoteToolPrefs.enabledTools.shortcuts, focusMode, activeToolTab]);
+        if (remoteMode === 'shortcuts' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.shortcuts || focusMode || activeToolTab !== 'computer')) setRemoteMode('write');
+        if (remoteMode === 'screen' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.screen || focusMode || activeToolTab !== 'computer')) setRemoteMode('write');
+    }, [remoteMode, bilgisayarAcik, remoteToolPrefs.enabledTools.mouse, remoteToolPrefs.enabledTools.shortcuts, remoteToolPrefs.enabledTools.screen, focusMode, activeToolTab]);
 
     /**
      * Yerel araçları çalıştırır.
@@ -509,7 +553,7 @@ function EditorPageInner() {
 
         // Sağlayıcı anahtarı yoksa istek hiç gönderilmez; kullanıcı önce
         // ayarlardan sağlayıcı ve anahtar eklemelidir.
-        if (!readProviderKey(readActiveProvider()).trim()) {
+        if (!providerHazir(readActiveProvider())) {
             alert(
                 'Yapay zekâ özelliği için önce bir sağlayıcı ve API anahtarı tanımlamalısınız.\n\n' +
                     'Ayarlar → Yapay zekâ bölümünden ' +
@@ -538,6 +582,22 @@ function EditorPageInner() {
 
         /** Tek bir metin parçasını sağlayıcıya gönderir. */
         const sendOnce = async (text: string): Promise<string> => {
+            // Özel sunucu telefonda doğrudan cihazdan çağrılır: HTTP, yerel ağ ve
+            // anahtarsız sunucular da çalışır, istek uygulama sunucusuna uğramaz.
+            if (provider === 'custom' && Capacitor.isNativePlatform()) {
+                try {
+                    return await runCustomProviderDirect({
+                        baseUrl: customUrl, apiKey: clientApiKey, model: customModel,
+                        instruction: macro.instruction, text
+                    });
+                } catch (directError) {
+                    if (directError instanceof CustomProviderError) {
+                        (directError as Error & { retryable?: boolean }).retryable = directError.retryable;
+                    }
+                    throw directError;
+                }
+            }
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 90000);
 
@@ -586,29 +646,50 @@ function EditorPageInner() {
             return typeof data.correctedText === 'string' ? data.correctedText : text;
         };
 
+        const runLocal = async (text: string): Promise<string> => {
+            const prompt = `${macro.instruction}\n\nİNCELENECEK METİN:\n${text}\n\nYANIT (Yalnızca işlenmiş/düzeltilmiş nihai metni ver, başka açıklama ekleme):`;
+            const res = await runLocalInference(prompt);
+            return typeof res.text === 'string' && res.text.trim() ? res.text.trim() : text;
+        };
+
         try {
             let correctedText: string;
 
-            // Metin tek istekte gönderilir: bir sayfalık metin tek çağrıda
-            // rahatça işlenir ve bölmek her seferinde fazladan bekleme
-            // demektir. Parçalama yalnızca istek gerçekten başarısız olursa
-            // (zaman aşımı veya sunucu hatası) devreye girer.
-            try {
-                correctedText = await sendOnce(textToCheck);
-            } catch (firstError) {
-                const yenidenDenenebilir =
-                    (firstError as Error & { retryable?: boolean })?.retryable === true;
-                const chunks = yenidenDenenebilir ? splitIntoChunks(textToCheck) : [];
+            if (provider === 'local') {
+                correctedText = await runLocal(textToCheck);
+            } else {
+                try {
+                    correctedText = await sendOnce(textToCheck);
+                } catch (firstError) {
+                    const isNetworkErr =
+                        (typeof navigator !== 'undefined' && !navigator.onLine) ||
+                        (firstError instanceof Error &&
+                            /internet|bağlantı|network|load failed|failed to fetch|abort/i.test(firstError.message));
 
-                if (chunks.length <= 1) throw firstError;
+                    if (isNetworkErr && isOfflineFallbackEnabled()) {
+                        try {
+                            correctedText = await runLocal(textToCheck);
+                        } catch (localErr) {
+                            throw new Error(
+                                `İnternet bağlantısı yok ve yerel yapay zekâ çalıştırılamadı:\n${localErr instanceof Error ? localErr.message : String(localErr)}`
+                            );
+                        }
+                    } else {
+                        const yenidenDenenebilir =
+                            (firstError as Error & { retryable?: boolean })?.retryable === true;
+                        const chunks = yenidenDenenebilir ? splitIntoChunks(textToCheck) : [];
 
-                let birlesik = '';
-                for (let i = 0; i < chunks.length; i++) {
-                    setChunkProgress({ done: i, total: chunks.length });
-                    birlesik += (await sendOnce(chunks[i].text)).trim() + chunks[i].after;
+                        if (chunks.length <= 1) throw firstError;
+
+                        let birlesik = '';
+                        for (let i = 0; i < chunks.length; i++) {
+                            setChunkProgress({ done: i, total: chunks.length });
+                            birlesik += (await sendOnce(chunks[i].text)).trim() + chunks[i].after;
+                        }
+                        setChunkProgress(null);
+                        correctedText = birlesik;
+                    }
                 }
-                setChunkProgress(null);
-                correctedText = birlesik;
             }
 
             // Sonuç girdiyle birebir aynıysa onay ekranı açıp kullanıcıya
@@ -747,7 +828,13 @@ function EditorPageInner() {
     };
 
     return (
-        <div className={`writing-studio min-h-screen flex flex-col ${focusMode ? 'writing-studio--focused' : ''}`}>
+        <div className={`writing-studio min-h-screen flex flex-col ${focusMode ? 'writing-studio--focused' : ''}`} data-tam-ekran={focusMode ? '' : undefined}>
+            {focusMode && (
+                <button type="button" onClick={() => setFocusMode(false)} aria-label="Tam ekrandan çık" title="Tam ekrandan çık"
+                    className="studio-fullscreen-exit fixed right-3 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-sand-200 bg-white/90 text-sand-700 shadow-lift backdrop-blur hover:bg-sand-100">
+                    <Minimize2 size={19} />
+                </button>
+            )}
             {kayitHatasi && (
                 <div
                     role="alert"
@@ -780,17 +867,18 @@ function EditorPageInner() {
                             <ArrowLeft size={20} className="text-sand-600" />
                         </button>
                         <div className="studio-tabs" role="tablist" aria-label="Araç bölümü">
-                            {([{ id: 'tools', label: 'Araçlar', Icon: Wrench, visible: araclarAcik, disabled: resultPending },
-                                { id: 'ai', label: 'Yapay zekâ', Icon: Sparkles, visible: yapayZekaAcik, disabled: false }] as const).filter(tab => tab.visible).map(({ id, label, Icon, disabled }) => (
+                            {visibleToolTabs.map(({ id, label, Icon, disabled }) => (
                                 <button key={id} id={`studio-tab-${id}`} type="button" role="tab"
                                     aria-label={label} title={label} aria-selected={activeToolTab === id}
                                     aria-controls={`studio-panel-${id}`} disabled={disabled}
                                     tabIndex={activeToolTab === id ? 0 : -1}
-                                    onClick={() => { setToolTab(id); setFocusMode(false); }}
+                                    onClick={() => { setToolTab(id); aracSekmesiniKaydet(id); setFocusMode(false); }}
                                     onKeyDown={event => {
                                         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
                                         event.preventDefault();
-                                        const next = event.key === 'Home' ? 'tools' : event.key === 'End' ? 'ai' : id === 'tools' ? 'ai' : 'tools';
+                                        const tabs = visibleToolTabs.filter(tab => !tab.disabled);
+                                        const index = tabs.findIndex(tab => tab.id === id);
+                                        const next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]?.id;
                                         const button = document.getElementById(`studio-tab-${next}`) as HTMLButtonElement | null;
                                         if (button && !button.disabled) { button.click(); button.focus(); }
                                     }}
@@ -810,8 +898,8 @@ function EditorPageInner() {
                     <div className="studio-actions flex shrink-0 items-center justify-end gap-1 sm:gap-2">
                         <button ref={ayarDugmesiRef} onClick={() => { setSettingsBolumu('home'); setSettingsOpen(true); }} className="flex h-11 w-11 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40" title="Ayarlar" aria-label="Ayarları aç"><Settings size={20} /></button>
                         <button type="button" onClick={() => setFocusMode(value => !value)}
-                            aria-label={focusMode ? 'Araçları göster' : 'Odak modunu aç'} aria-pressed={focusMode}
-                            title={focusMode ? 'Araçları göster' : 'Odak modu'}
+                            aria-label={focusMode ? 'Tam ekrandan çık' : 'Tam ekran'} aria-pressed={focusMode}
+                            title={focusMode ? 'Tam ekrandan çık' : 'Tam ekran'}
                             className={`studio-focus flex h-11 w-11 items-center justify-center rounded-xl ${focusMode ? 'bg-moss-100 text-moss-700' : 'text-sand-600 hover:bg-sand-100'}`}>
                             {focusMode ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
                         </button>
@@ -839,10 +927,7 @@ function EditorPageInner() {
 
                             {showExportMenu && (
                                 <div className="absolute right-0 top-full mt-1 bg-white border border-sand-200 rounded-xl shadow-lift py-1.5 min-w-[150px] z-50">
-                                    <button onClick={() => { void handleCopy(); setShowExportMenu(false); }}
-                                        className="studio-menu-copy w-full px-4 py-2.5 text-left text-sm text-sand-700 hover:bg-sand-50">
-                                        İçeriği kopyala
-                                    </button>
+                                    <button type="button" onClick={() => { setFocusMode(value => !value); setShowExportMenu(false); }} className="studio-menu-focus w-full px-4 py-2.5 text-left text-sm text-sand-700 hover:bg-sand-50">{focusMode ? 'Tam ekrandan çık' : 'Tam ekran'}</button>
                                     <button
                                         onClick={handleExportPDF}
                                         className="w-full px-4 py-2.5 text-left text-sm text-sand-700 hover:bg-sand-50 transition-colors"
@@ -1056,8 +1141,15 @@ function EditorPageInner() {
                                     </button>
                                 );
                             })}
-                            <RemoteEditorTools placement="toolbar" content={content} mode={remoteMode} onModeChange={setRemoteMode}
-                                onContentChange={icerikDegistir} />
+                        </div>
+                    </div>
+                )}
+                {bilgisayarAcik && (
+                    <div id="studio-panel-computer" role="tabpanel" aria-labelledby="studio-tab-computer" style={{ display: !focusMode && activeToolTab === 'computer' ? undefined : 'none' }} className="studio-tool-row flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
+                        <span className="studio-tool-label text-moss-700"><MonitorSmartphone size={14} aria-hidden="true" /><span className="hidden sm:inline">Bilgisayar</span></span>
+                        <div className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Bilgisayar araçları">
+                            <RemoteEditorTools placement="toolbar" content={content} mode={remoteMode} onModeChange={setRemoteMode} onContentChange={icerikDegistir}
+                                profilId={kisayolProfili} onProfilChange={setKisayolProfili} />
                         </div>
                     </div>
                 )}
@@ -1070,13 +1162,15 @@ function EditorPageInner() {
                 onContentChange={icerikDegistir} />}
 
             {/* Kısayollar: makro panosu; notu değiştirmez. */}
-            {remoteMode === 'shortcuts' && <KisayolPanosu onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
+            {remoteMode === 'shortcuts' && <KisayolPanosu profilId={kisayolProfili} onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
+
+            {remoteMode === 'screen' && <EkranDuzeni duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
 
             {/* Editor Area */}
             {(remoteMode === 'write' || remoteMode === 'dictation') && (<div className="studio-workspace flex-1 py-4 sm:py-8">
                 <div className="mx-auto w-full max-w-4xl px-3 sm:px-6">
                     <div className="studio-paper bg-white">
-                        <div className="studio-paper-label"><BookOpen size={15} /><span>Düşüncelerine yer aç</span><span className="ml-auto">{focusMode ? 'Odak modu' : 'Not defteri'}</span></div>
+                        <div className="studio-paper-label"><BookOpen size={15} /><span>Düşüncelerine yer aç</span><span className="ml-auto">{focusMode ? 'Tam ekran' : 'Not defteri'}</span></div>
                         {/* Başlık */}
                         <div className="studio-title border-b border-sand-200 px-5 sm:px-12 pt-6 sm:pt-10 pb-5">
                             <input
@@ -1129,6 +1223,10 @@ function EditorPageInner() {
                             <span>Otomatik<span className="hidden sm:inline"> kayıt</span></span>
                         </label>
                         <span>{content.split(/\s+/).filter(w => w.length > 0).length} kelime</span>
+                        <button type="button" onClick={() => setFocusMode(true)} aria-label="Tam ekran" title="Tam ekran"
+                            className="studio-footer-fullscreen -my-2 h-11 w-11 items-center justify-center rounded-lg text-sand-600 hover:bg-sand-100">
+                            <Maximize2 size={18} />
+                        </button>
                         <span className="hidden sm:inline">{content.length} karakter</span>
                     </div>
                 </div>
