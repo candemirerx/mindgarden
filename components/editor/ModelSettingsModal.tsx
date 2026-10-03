@@ -667,7 +667,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                         <SettingsSection
                                             icon={LayoutDashboard}
                                             title="Ekran düzenleri"
-                                            description="Editördeki Ekran aracı için bölmeleri ve oranlarını tasarlayın: fare, yön tuşları, metin yazma ve kısayollar."
+                                            description="Editördeki Ekran aracı için sütun ve bölme sayısını, oranları ve boşlukları tasarlayın: fare, yön tuşları, metin yazma, klavyeler ve kısayollar."
                                         >
                                             <RemoteScreenTools />
                                         </SettingsSection>

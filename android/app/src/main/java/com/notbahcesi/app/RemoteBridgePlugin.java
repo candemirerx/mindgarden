@@ -69,8 +69,8 @@ public class RemoteBridgePlugin extends Plugin {
     private static final UUID SPP = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     private static final UUID PC_SERVICE = UUID.fromString("93c7b30b-d973-4873-bf10-148491968b2c");
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private BluetoothGatt gatt;
-    private BluetoothGattCharacteristic rx;
+    private volatile BluetoothGatt gatt;
+    private volatile BluetoothGattCharacteristic rx;
     private PluginCall connecting;
     private PluginCall writing;
     private ScanCallback scanning;
@@ -199,6 +199,28 @@ public class RemoteBridgePlugin extends Plugin {
         try { scanner.startScan(null, new ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).setReportDelay(0).build(), callback); }
         catch (SecurityException e) { scanning = null; call.reject("Bluetooth izni gerekli."); return; }
+        // Telefon karta zaten bağlıysa (ör. başka bir uygulama bağlantıyı tutuyorsa)
+        // Android tek ortak bağlantı açar ve kart taramada görünmeyebilir. Bağlı
+        // cihazlar hemen listelenir; bu bağlantıya Not Bahçesi de katılabilir.
+        try {
+            BluetoothManager manager = (BluetoothManager) getContext().getSystemService(Context.BLUETOOTH_SERVICE);
+            if (manager != null) {
+                for (BluetoothDevice device : manager.getConnectedDevices(BluetoothProfile.GATT)) {
+                    String name = device.getName();
+                    if (name == null || name.isEmpty() || found.containsKey(device.getAddress())) continue;
+                    JSObject item = new JSObject();
+                    item.put("address", device.getAddress());
+                    item.put("name", name);
+                    item.put("rssi", 0);
+                    item.put("connected", true);
+                    found.put(device.getAddress(), item);
+                    JSObject event = new JSObject();
+                    event.put("scanId", scanId);
+                    event.put("device", item);
+                    notifyListeners("bleScanDevice", event);
+                }
+            }
+        } catch (SecurityException ignored) { /* tarama yine de sürer */ }
         handler.postDelayed(() -> {
             if (scanning != callback) return;
             scanning = null;
@@ -235,6 +257,8 @@ public class RemoteBridgePlugin extends Plugin {
             for (BluetoothDevice device : adapter.getBondedDevices()) {
                 JSObject item = new JSObject(); item.put("address", device.getAddress());
                 item.put("name", device.getName() == null ? "Eşleşmiş cihaz" : device.getName());
+                android.bluetooth.BluetoothClass sinif = device.getBluetoothClass();
+                item.put("computer", sinif != null && sinif.getMajorDeviceClass() == android.bluetooth.BluetoothClass.Device.Major.COMPUTER);
                 item.put("rssi", 0); devices.put(item);
             }
             JSObject result = new JSObject(); result.put("devices", devices); call.resolve(result);
@@ -245,14 +269,16 @@ public class RemoteBridgePlugin extends Plugin {
         BluetoothAdapter adapter = adapter();
         if (adapter == null || !adapter.isEnabled()) throw new IOException("Bluetooth kapalı.");
         if (!BluetoothAdapter.checkBluetoothAddress(address)) throw new IOException("Ayarlardan eşleşmiş bilgisayarınızı seçin.");
-        closeClassic(); closeGatt();
+        // Kartın BLE bağlantısı burada kapatılmaz: kart kipindeyken pano PC'ye
+        // klasik Bluetooth ile gidebiliyor ve bu, kart bağlantısını düşürüyordu.
+        closeClassic();
         adapter.cancelDiscovery();
         BluetoothSocket socket = adapter.getRemoteDevice(address).createRfcommSocketToServiceRecord(service);
         classicSocket = socket;
         Runnable timeout = () -> { if (classicSocket == socket) closeClassic(); };
         handler.postDelayed(timeout, 12000);
         try {
-            socket.connect(); classicAddress = address;
+            socket.connect(); classicAddress = address; classicSonKullanim = System.currentTimeMillis();
             return socket;
         } catch (IOException error) { closeClassic(); throw error; }
         finally { handler.removeCallbacks(timeout); }
@@ -306,26 +332,47 @@ public class RemoteBridgePlugin extends Plugin {
         String address = call.getString("address", "");
         if (body.length() == 0 || body.length() > 32000 || body.getBytes(StandardCharsets.UTF_8).length > 32768 || body.contains("\n")) { call.reject("Bluetooth komutu geçersiz veya çok uzun."); return; }
         classicWorker.execute(() -> {
-            Runnable timeout = null;
             try {
                 BluetoothSocket socket = classicSocket;
-                if (socket == null || !socket.isConnected() || (!address.isEmpty() && !address.equalsIgnoreCase(classicAddress))) socket = openClassic(address);
-                final BluetoothSocket activeSocket = socket;
-                timeout = () -> { if (classicSocket == activeSocket) closeClassic(); };
-                handler.postDelayed(timeout, 10000);
-                OutputStream out = socket.getOutputStream();
-                out.write((body + "\n").getBytes(StandardCharsets.UTF_8)); out.flush();
-                InputStream in = socket.getInputStream();
-                ByteArrayOutputStream reply = new ByteArrayOutputStream();
-                int next;
-                while ((next = in.read()) != '\n' && next != -1 && reply.size() < 512) reply.write(next);
-                if (next != '\n') throw new IOException("PC bağlantıyı kapattı; komut yeniden gönderilmedi.");
-                JSONObject response = new JSONObject(reply.toString("UTF-8"));
+                boolean yeni = socket == null || !socket.isConnected() || (!address.isEmpty() && !address.equalsIgnoreCase(classicAddress));
+                // Uzun süre boşta kalan soket karşı taraf gittiğinde de "bağlı" görünür;
+                // komut yazılır ama hiç uygulanmaz. Önce zararsız bir ping ile sınanır,
+                // yanıt yoksa bağlantı yeniden kurulur. Asıl komut yalnızca bir kez gider.
+                if (!yeni && System.currentTimeMillis() - classicSonKullanim > CLASSIC_BOSTA_MS) {
+                    try { classicSatir(socket, pingSatiri(body), 4000); }
+                    catch (Exception olu) { closeClassic(); yeni = true; }
+                }
+                if (yeni) socket = openClassic(address);
+                JSONObject response = classicSatir(socket, body, 10000);
                 if (!response.optBoolean("ok")) throw new IOException(response.optString("error", "PC komutu reddetti. Erişim anahtarını kontrol edin."));
-                call.resolve();
+                call.resolve(JSObject.fromJSONObject(response));
             } catch (Exception e) { closeClassic(); call.reject("Bluetooth aktarımı başarısız: " + e.getMessage()); }
-            finally { if (timeout != null) handler.removeCallbacks(timeout); }
         });
+    }
+    private static final long CLASSIC_BOSTA_MS = 15000;
+    private volatile long classicSonKullanim;
+    /** Erişim anahtarını gövdeden alıp PC'ye etkisiz bir ping satırı hazırlar. */
+    private static String pingSatiri(String body) throws Exception {
+        JSONObject ping = new JSONObject();
+        ping.put("action", "ping");
+        ping.put("token", new JSONObject(body).optString("token", ""));
+        return ping.toString();
+    }
+    /** Tek satır yazar, tek satır yanıt bekler; süre aşılırsa soket kapatılır ve okuma kesilir. */
+    private JSONObject classicSatir(BluetoothSocket socket, String satir, long sureMs) throws Exception {
+        Runnable timeout = () -> { if (classicSocket == socket) closeClassic(); };
+        handler.postDelayed(timeout, sureMs);
+        try {
+            OutputStream out = socket.getOutputStream();
+            out.write((satir + "\n").getBytes(StandardCharsets.UTF_8)); out.flush();
+            InputStream in = socket.getInputStream();
+            ByteArrayOutputStream reply = new ByteArrayOutputStream();
+            int next;
+            while ((next = in.read()) != '\n' && next != -1 && reply.size() < 512) reply.write(next);
+            if (next != '\n') throw new IOException("PC bağlantıyı kapattı; komut yeniden gönderilmedi.");
+            classicSonKullanim = System.currentTimeMillis();
+            return new JSONObject(reply.toString("UTF-8"));
+        } finally { handler.removeCallbacks(timeout); }
     }
     @SuppressLint("MissingPermission") // Gerekçe: bluetoothHazir() çalışma zamanı iznini doğrular.
     @PluginMethod public void connect(PluginCall call) {
@@ -341,12 +388,20 @@ public class RemoteBridgePlugin extends Plugin {
                 @Override public void onConnectionStateChange(BluetoothGatt remote, int status, int state) {
                     if (remote != gatt) return;
                     if (status == BluetoothGatt.GATT_SUCCESS && state == BluetoothProfile.STATE_CONNECTED) {
-                        if (!remote.discoverServices()) failConnect("Servisler keşfedilemedi.");
+                        // Varsayılan 23 baytlık MTU'da 20 bayttan uzun komutlar uzun yazmaya
+                        // düşüyor ve bazı kartlarda zaman aşımına uğruyordu.
+                        try { remote.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH); } catch (SecurityException ignored) { }
+                        if (!remote.requestMtu(185) && !remote.discoverServices()) failConnect("Servisler keşfedilemedi.");
                     } else if (state == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
                         failConnect("BLE bağlantısı kesildi (" + status + ").");
                         if (writing != null) { writing.reject("BLE bağlantısı kesildi."); writing = null; }
-                        rx = null;
+                        // Kapatılmayan istemci sayısı birikince Android yeni bağlantı açamıyor (133).
+                        handler.post(() -> { if (gatt == remote) closeGatt(); });
                     }
+                }
+                @Override public void onMtuChanged(BluetoothGatt remote, int mtu, int status) {
+                    if (remote != gatt) return;
+                    if (!remote.discoverServices()) failConnect("Servisler keşfedilemedi.");
                 }
                 @Override public void onServicesDiscovered(BluetoothGatt remote, int status) {
                     if (remote != gatt) return;
@@ -368,7 +423,7 @@ public class RemoteBridgePlugin extends Plugin {
             } else {
                 gatt = device.connectGatt(getContext(), false, callback);
             }
-            handler.postDelayed(() -> { if (connecting == call) failConnect("BLE bağlantısı zaman aşımına uğradı."); }, 12000);
+            handler.postDelayed(() -> { if (connecting == call) { failConnect("BLE bağlantısı zaman aşımına uğradı."); closeGatt(); } }, 12000);
         } catch (Exception e) { connecting = null; call.reject("Geçersiz BLE cihazı: " + e.getMessage()); }
     }
     private void failConnect(String message) { if (connecting != null) { connecting.reject(message); connecting = null; } }
@@ -390,13 +445,13 @@ public class RemoteBridgePlugin extends Plugin {
     @SuppressLint("MissingPermission") // Gerekçe: girişte bluetoothIzinleriHazir() doğrulanır.
     private void write(PluginCall call, byte[] data) {
         if (!bluetoothIzinleriHazir()) { call.reject("Bluetooth izni gerekli."); return; }
-        if (gatt == null || rx == null) { call.reject("Önce kartla BLE bağlantısı kurun."); return; }
-        if (writing != null) { call.reject("Önceki BLE komutu henüz tamamlanmadı."); return; }
+        if (gatt == null || rx == null) { call.reject("Kartla BLE bağlantısı yok.", "BLE_NOT_CONNECTED"); return; }
+        if (writing != null) { call.reject("Önceki BLE komutu henüz tamamlanmadı.", "BLE_BUSY"); return; }
         if (data.length == 0 || data.length > 180) { call.reject("BLE komutu 1–180 bayt olmalı."); return; }
         writing = call;
         rx.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
         rx.setValue(data);
-        if (!gatt.writeCharacteristic(rx)) { writing = null; call.reject("BLE yazma başlatılamadı."); return; }
+        if (!gatt.writeCharacteristic(rx)) { writing = null; call.reject("BLE yazma başlatılamadı.", "BLE_NOT_STARTED"); return; }
         handler.postDelayed(() -> { if (writing == call) { writing = null; call.reject("BLE yazma zaman aşımı."); } }, 8000);
     }
     @PluginMethod public void request(PluginCall call) {
@@ -409,14 +464,25 @@ public class RemoteBridgePlugin extends Plugin {
             try {
                 URL url = new URL(address);
                 if (!url.getProtocol().equals("http") && !url.getProtocol().equals("https")) throw new IllegalArgumentException("HTTP(S) gerekli.");
-                connection = (HttpURLConnection) url.openConnection();
-                // BLE and Wi-Fi share airtime on the card. Allow a TCP retry
-                // during a cold connection without replaying input commands.
-                connection.setConnectTimeout(6500); connection.setReadTimeout(10000);
-                connection.setRequestMethod(method);
-                if (!token.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + token);
+                // Telefon Wi‑Fi'si uykudan uyanırken ya da kart BLE ile meşgulken ilk
+                // TCP bağlantısı düşebiliyor. Henüz hiçbir veri gitmediği için yalnız
+                // bağlantı kurma adımı bir kez daha denenir; komut asla iki kez gitmez.
+                for (int deneme = 1; ; deneme++) {
+                    connection = (HttpURLConnection) url.openConnection();
+                    connection.setConnectTimeout(deneme == 1 ? 4000 : 6500); connection.setReadTimeout(10000);
+                    connection.setUseCaches(false);
+                    connection.setRequestProperty("Connection", "close");
+                    connection.setRequestMethod(method);
+                    if (!token.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + token);
+                    if (method.equals("POST")) { connection.setDoOutput(true); connection.setRequestProperty("Content-Type", "text/plain; charset=utf-8"); }
+                    try { connection.connect(); break; }
+                    catch (java.net.ConnectException | java.net.SocketTimeoutException | java.net.NoRouteToHostException hata) {
+                        connection.disconnect(); connection = null;
+                        if (deneme >= 2) throw hata;
+                        Thread.sleep(400);
+                    }
+                }
                 if (method.equals("POST")) {
-                    connection.setDoOutput(true); connection.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
                     try (OutputStream out = connection.getOutputStream()) { out.write(body.getBytes(StandardCharsets.UTF_8)); }
                 }
                 int status = connection.getResponseCode();
@@ -446,30 +512,56 @@ public class RemoteBridgePlugin extends Plugin {
             boolean privateSubnet = first == 10 || (first == 172 && second >= 16 && second <= 31) || (first == 192 && second == 168);
             if (!privateSubnet) { call.reject("Güvenlik için yalnız özel yerel ağlar taranır. Kart IP'sini elle girebilirsiniz."); return; }
             String prefix = first + "." + second + "." + third + ".";
+            // Varsayılan: Kablosuz Bellek kartı (/api/status). PC yardımcısı için
+            // port 8765 ve /hello ile çağrılır. Kart Wi‑Fi ve BLE'yi aynı radyoda
+            // paylaştığı için yanıtı 0,5 sn'yi aşabiliyor; bekleme 1,5 sn.
+            final int port = call.getInt("port", 80);
+            final String path = call.getString("path", "/api/status");
+            final String marker = call.getString("marker", "\"sd\":");
+            final String suffix = port == 80 ? "" : ":" + port;
             List<String> found = Collections.synchronizedList(new ArrayList<>());
-            ExecutorService pool = Executors.newFixedThreadPool(16);
+            List<String> bodies = Collections.synchronizedList(new ArrayList<>());
+            ExecutorService pool = Executors.newFixedThreadPool(32);
             for (int host = 1; host < 255; host++) {
-                final String address = "http://" + prefix + host;
+                final String address = "http://" + prefix + host + suffix;
                 pool.submit(() -> {
                     HttpURLConnection conn = null;
                     try {
-                        conn = (HttpURLConnection) new URL(address + "/api/status").openConnection();
-                        conn.setConnectTimeout(550); conn.setReadTimeout(550);
+                        conn = (HttpURLConnection) new URL(address + path).openConnection();
+                        conn.setConnectTimeout(1500); conn.setReadTimeout(2000);
                         if (conn.getResponseCode() == 200) {
                             ByteArrayOutputStream data = new ByteArrayOutputStream();
                             try (InputStream input = conn.getInputStream()) { byte[] buffer = new byte[1024]; int n = input.read(buffer); if (n > 0) data.write(buffer, 0, n); }
                             String body = data.toString("UTF-8");
-                            if (body.contains("\"fw\":") && body.contains("\"sd\":")) found.add(address);
+                            if (body.contains(marker)) { found.add(address); bodies.add(body); }
                         }
                     } catch (Exception ignored) { }
                     finally { if (conn != null) conn.disconnect(); }
                 });
             }
             pool.shutdown();
-            try { pool.awaitTermination(22, TimeUnit.SECONDS); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+            try { pool.awaitTermination(25, TimeUnit.SECONDS); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
             JSArray cards = new JSArray(); for (String item : found) cards.put(item);
-            JSObject result = new JSObject(); result.put("cards", cards); call.resolve(result);
+            JSArray details = new JSArray(); for (String item : bodies) details.put(item);
+            JSObject result = new JSObject(); result.put("cards", cards); result.put("bodies", details); call.resolve(result);
         }).start();
+    }
+    /** Telefonun Wi‑Fi IPv4 adresi; kartın kendi ağında (192.168.4.x) olup olmadığını anlamak için. */
+    @PluginMethod public void wifiAddress(PluginCall call) {
+        WifiManager wifi = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        int ip = wifi == null || wifi.getConnectionInfo() == null ? 0 : wifi.getConnectionInfo().getIpAddress();
+        JSObject result = new JSObject();
+        result.put("address", ip == 0 ? "" : (ip & 255) + "." + ((ip >> 8) & 255) + "." + ((ip >> 16) & 255) + "." + ((ip >> 24) & 255));
+        call.resolve(result);
+    }
+    /** Eşleştirme için Android'in Bluetooth ayarlarını açar. */
+    @PluginMethod public void openBluetoothSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) { call.reject("Bluetooth ayarları açılamadı: " + e.getMessage()); }
     }
     @PluginMethod public void dictate(PluginCall call) {
         if (getPermissionState("microphone") != com.getcapacitor.PermissionState.GRANTED) {
@@ -822,11 +914,22 @@ public class RemoteBridgePlugin extends Plugin {
                 kontrol.hide(cubuklar);
             } else {
                 kontrol.show(cubuklar);
-                // WebView son kenar boşluğunu (safe-area) önbellekte tutar; sıfırlanmazsa
-                // sayfa durum çubuğu yüksekliği kadar aşağıda kalır.
+                // WebView son kenar boşluğunu (safe-area) önbellekte tutar. WebView çubukların
+                // altına yerleştiyse boşluk sıfırlanır (yoksa sayfa iki kez aşağı kayar);
+                // edge-to-edge zorunlu sürümlerde WebView çubukların arkasına uzandığından
+                // gerçek boşluklar verilir (yoksa üst düğmeler durum çubuğuyla çakışır).
                 android.view.View web = getBridge().getWebView();
-                web.post(() -> androidx.core.view.ViewCompat.dispatchApplyWindowInsets(web,
-                    new androidx.core.view.WindowInsetsCompat.Builder().build()));
+                Runnable boslukYenile = () -> {
+                    androidx.core.view.WindowInsetsCompat kok = androidx.core.view.ViewCompat.getRootWindowInsets(web);
+                    int ust = kok == null ? 0 : kok.getInsets(cubuklar | androidx.core.view.WindowInsetsCompat.Type.displayCutout()).top;
+                    int[] konum = new int[2];
+                    web.getLocationOnScreen(konum);
+                    boolean altta = kok == null || konum[1] >= ust;
+                    androidx.core.view.ViewCompat.dispatchApplyWindowInsets(web, altta
+                        ? new androidx.core.view.WindowInsetsCompat.Builder().build() : kok);
+                };
+                web.postDelayed(boslukYenile, 150);
+                web.postDelayed(boslukYenile, 600);
             }
             call.resolve();
         });

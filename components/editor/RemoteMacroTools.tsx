@@ -10,7 +10,7 @@
  */
 import { useState } from 'react';
 import { ChevronRight, Keyboard, ListOrdered, MousePointer2, Pencil, Play, Plus, TextCursorInput, Trash2 } from 'lucide-react';
-import { konumYuzdesi, makroHazir, runRemoteMacro, saveRemotePrefs, type RemoteMacro } from '@/lib/remoteTools';
+import { beklemeMetni, konumYuzdesi, makroHazir, runRemoteMacro, saveRemotePrefs, type RemoteMacro } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { SettingsNote, SettingsRow, SettingsSwitch } from '@/components/ui/settings';
 import MakroDuzenleyici from './MakroDuzenleyici';
@@ -35,6 +35,7 @@ function makroOzeti(makro: RemoteMacro, tumu: RemoteMacro[]): string {
     if (makro.type === 'sequence') {
         return (makro.steps ?? []).map((adim, sira) => (sira + 1) + '. ' + (
             adim.type === 'macro' ? (tumu.find((m) => m.id === adim.value)?.name ?? 'silinmiş makro')
+                : adim.type === 'wait' ? '⏱ ' + beklemeMetni(Number(adim.value))
                 : adim.type === 'position' ? 'tıklama'
                     : adim.type === 'shortcut' ? adim.value
                         : '"' + (adim.value.length > 20 ? adim.value.slice(0, 20) + '…' : adim.value) + '"'

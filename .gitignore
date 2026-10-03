@@ -67,3 +67,8 @@ scripts/__pycache__/
 /tsc-cikti.txt
 /.pc-helper-test.log
 /.pc-helper-test.err
+scripts/.adb-kablosuz-adresler
+
+# Test betiklerinin ekran görüntüleri
+.claude/*.png
+.claude/baglanti/

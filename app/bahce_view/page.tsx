@@ -5,8 +5,8 @@ import { useEffect, Suspense, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Sprout, Settings, List, TreePine } from 'lucide-react';
-import { BudananlarDugmesi, useBudananlariGoster } from '@/components/ui/BudananlarDugmesi';
-import { budananlariAyikla } from '@/lib/uiPrefs';
+import { useBudamaModu } from '@/components/ui/BudananlarDugmesi';
+import { budamaFiltresi } from '@/lib/uiPrefs';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
@@ -194,8 +194,8 @@ function GardenPageInner() {
     const [ortalanacak, setOrtalanacak] = useState<{ id: string; sayac: number } | null>(null);
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const budananlariGoster = useBudananlariGoster();
-    const gorunenAgaclar = budananlariGoster ? mindRoots : budananlariAyikla(mindRoots);
+    const budamaModu = useBudamaModu();
+    const gorunenAgaclar = budamaFiltresi(mindRoots, budamaModu);
 
     // Modals state
     const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
@@ -586,7 +586,6 @@ function GardenPageInner() {
                 </div>
 
                 <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
-                    <BudananlarDugmesi />
                     <button
                         onClick={() => router.push(`/projeler?id=${gardenId}`)}
                         aria-label="Liste"

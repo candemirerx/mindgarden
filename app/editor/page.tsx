@@ -7,7 +7,7 @@ import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, MonitorSmartphone, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles } from 'lucide-react';
 import RemoteEditorTools from '@/components/editor/RemoteEditorTools';
 import KisayolPanosu from '@/components/editor/KisayolPanosu';
-import EkranDuzeni from '@/components/editor/EkranDuzeni';
+import EkranDuzeni, { EkranSecici } from '@/components/editor/EkranDuzeni';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
 import { remotePrefs, sistemCubuklariniGizle } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
@@ -24,6 +24,7 @@ import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl, 
 import { runCustomProviderDirect, CustomProviderError } from '@/lib/customProvider';
 import { runLocalInference, isOfflineFallbackEnabled } from '@/lib/localLlm';
 import { Capacitor } from '@capacitor/core';
+import { imleciGorunurTut } from '@/lib/imlecGorunur';
 
 /**
  * Yerel taslak: uygulama kapanırken veya arka plana atılırken kayıt yetişmese
@@ -126,6 +127,7 @@ function EditorPageInner() {
     const [aiCakisma, setAiCakisma] = useState<{ corrected: string } | null>(null);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const footerRef = useRef<HTMLElement>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const loadingNodeKeyRef = useRef<string | null>(null);
@@ -157,12 +159,23 @@ function EditorPageInner() {
         const field = textareaRef.current;
         if (!field) return;
         const resize = () => {
+            // 'auto' anlık olarak alanı küçültür; belge kısalınca tarayıcı
+            // kaydırmayı kırpar ve sayfa zıplar. Konum geri yüklenir.
+            const kaydirma = window.scrollY;
             field.style.height = 'auto';
             field.style.height = `${field.scrollHeight}px`;
+            if (window.scrollY !== kaydirma) window.scrollTo({ top: kaydirma });
+            // Uzun metinde imleç klavyenin / alt çubuğun altında kalmasın.
+            imleciGorunurTut(field, footerRef.current);
         };
         resize();
         window.addEventListener('resize', resize);
-        return () => window.removeEventListener('resize', resize);
+        // Klavye açılıp kapanınca görünür alan değişir (window resize gelmeyebilir).
+        window.visualViewport?.addEventListener('resize', resize);
+        return () => {
+            window.removeEventListener('resize', resize);
+            window.visualViewport?.removeEventListener('resize', resize);
+        };
     }, [content, remoteMode, focusMode]);
 
     // Tam ekran: Android sistem çubukları gizlenir, geri tuşu ve Esc tam ekrandan çıkar.
@@ -471,11 +484,11 @@ function EditorPageInner() {
         };
     }, []);
     useEffect(() => {
-        if (remoteMode === 'mouse' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.mouse || focusMode || activeToolTab !== 'computer')) setRemoteMode('write');
+        if (remoteMode === 'mouse' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.mouse || (!focusMode && activeToolTab !== 'computer'))) setRemoteMode('write');
         /* Kısayol panosunda geri düğmesi yok; panoyu açan satır görünmez olursa
-           (araç sekmesi değişir, odak modu açılır) nota dönülür. */
-        if (remoteMode === 'shortcuts' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.shortcuts || focusMode || activeToolTab !== 'computer')) setRemoteMode('write');
-        if (remoteMode === 'screen' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.screen || focusMode || activeToolTab !== 'computer')) setRemoteMode('write');
+           (araç sekmesi değişir) nota dönülür; tam ekranda açık ekran korunur. */
+        if (remoteMode === 'shortcuts' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.shortcuts || (!focusMode && activeToolTab !== 'computer'))) setRemoteMode('write');
+        if (remoteMode === 'screen' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.screen || (!focusMode && activeToolTab !== 'computer'))) setRemoteMode('write');
     }, [remoteMode, bilgisayarAcik, remoteToolPrefs.enabledTools.mouse, remoteToolPrefs.enabledTools.shortcuts, remoteToolPrefs.enabledTools.screen, focusMode, activeToolTab]);
 
     /**
@@ -828,7 +841,7 @@ function EditorPageInner() {
     };
 
     return (
-        <div className={`writing-studio min-h-screen flex flex-col ${focusMode ? 'writing-studio--focused' : ''}`} data-tam-ekran={focusMode ? '' : undefined}>
+        <div className={`writing-studio min-h-screen flex flex-col ${focusMode ? 'writing-studio--focused' : ''} ${remoteMode === 'screen' ? 'writing-studio--screen' : ''}`} data-tam-ekran={focusMode ? '' : undefined}>
             {focusMode && (
                 <button type="button" onClick={() => setFocusMode(false)} aria-label="Tam ekrandan çık" title="Tam ekrandan çık"
                     className="studio-fullscreen-exit fixed right-3 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-sand-200 bg-white/90 text-sand-700 shadow-lift backdrop-blur hover:bg-sand-100">
@@ -1145,9 +1158,10 @@ function EditorPageInner() {
                     </div>
                 )}
                 {bilgisayarAcik && (
-                    <div id="studio-panel-computer" role="tabpanel" aria-labelledby="studio-tab-computer" style={{ display: !focusMode && activeToolTab === 'computer' ? undefined : 'none' }} className="studio-tool-row flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
+                    <div id="studio-panel-computer" role="tabpanel" aria-labelledby="studio-tab-computer" style={{ display: !focusMode && activeToolTab === 'computer' ? undefined : 'none' }} className="studio-tool-row studio-computer flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
                         <span className="studio-tool-label text-moss-700"><MonitorSmartphone size={14} aria-hidden="true" /><span className="hidden sm:inline">Bilgisayar</span></span>
-                        <div className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Bilgisayar araçları">
+                        {remoteMode === 'screen' && <EkranSecici duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onYaziyaDon={() => setRemoteMode('write')} />}
+                        <div className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Bilgisayar araçları" style={remoteMode === 'screen' ? { display: 'none' } : undefined}>
                             <RemoteEditorTools placement="toolbar" content={content} mode={remoteMode} onModeChange={setRemoteMode} onContentChange={icerikDegistir}
                                 profilId={kisayolProfili} onProfilChange={setKisayolProfili} />
                         </div>
@@ -1164,7 +1178,7 @@ function EditorPageInner() {
             {/* Kısayollar: makro panosu; notu değiştirmez. */}
             {remoteMode === 'shortcuts' && <KisayolPanosu profilId={kisayolProfili} onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
 
-            {remoteMode === 'screen' && <EkranDuzeni duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
+            {remoteMode === 'screen' && <EkranDuzeni onYaziyaDon={() => setRemoteMode('write')} duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
 
             {/* Editor Area */}
             {(remoteMode === 'write' || remoteMode === 'dictation') && (<div className="studio-workspace flex-1 py-4 sm:py-8">
@@ -1201,7 +1215,7 @@ function EditorPageInner() {
             </main>
 
             {/* Footer */}
-            <footer className="studio-footer bg-white border-t border-sand-200 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6">
+            <footer ref={footerRef} className="studio-footer bg-white border-t border-sand-200 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6">
                 <div className="flex items-center justify-between text-xs text-sand-600">
                     <span role="status" className="studio-save-status">
                         {kayitHatasi ? 'Kayıt başarısız · taslak korundu' : isSaving ? (

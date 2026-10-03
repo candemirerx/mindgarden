@@ -178,17 +178,18 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
             {prefs.enabledTools.shortcuts && (() => {
                 const tumuAcik = mode === 'shortcuts' && !profilId;
                 return <button id="studio-kisayollar" type="button" aria-pressed={tumuAcik} onClick={() => { onProfilChange?.(null); onModeChange(tumuAcik ? 'write' : 'shortcuts'); }}
-                    title="Kısayollar: makro panosu"
-                    className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${tumuAcik ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
-                    <Wand2 size={16} /><span className="sr-only sm:not-sr-only">{tumuAcik ? ' Yazıya dön' : ' Kısayollar'}</span></button>;
+                    title={tumuAcik ? 'Yazıya dön' : 'Kısayollar: makro panosu'} aria-label={tumuAcik ? 'Yazıya dön' : 'Kısayollar'}
+                    className={`btn h-11 w-11 shrink-0 p-0 ${tumuAcik ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
+                    {tumuAcik ? <Keyboard size={17} aria-hidden="true" /> : <Wand2 size={17} aria-hidden="true" />}</button>;
             })()}
             {prefs.enabledTools.shortcuts && prefs.shortcutButtons.filter(dugme => prefs.profiles.some(p => p.id === dugme.profileId)).map((dugme, index) => {
                 const acik = mode === 'shortcuts' && profilId === dugme.profileId;
                 const ad = dugme.name.trim() || prefs.profiles.find(p => p.id === dugme.profileId)?.name || 'Profil';
-                return <button key={dugme.id} id={'studio-kisayol-dugmesi-' + index} type="button" aria-pressed={acik} title={ad + ' profilinin makroları'}
+                return <button key={dugme.id} id={'studio-kisayol-dugmesi-' + index} type="button" aria-pressed={acik} title={acik ? 'Yazıya dön' : ad + ' profilinin makroları'} aria-label={acik ? 'Yazıya dön' : ad + ' profili'}
                     onClick={() => { if (acik) onModeChange('write'); else { onProfilChange?.(dugme.profileId); onModeChange('shortcuts'); } }}
-                    className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${acik ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-secondary'}`}>
-                    <FolderKanban size={16} aria-hidden="true" /><span className="max-w-28 truncate">{acik ? 'Yazıya dön' : ad}</span></button>;
+                    className={`btn relative h-11 w-11 shrink-0 p-0 ${acik ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-secondary'}`}>
+                    {acik ? <Keyboard size={17} aria-hidden="true" /> : <FolderKanban size={17} aria-hidden="true" />}
+                    <span aria-hidden="true" className="pointer-events-none absolute bottom-0.5 right-1 text-[10px] font-bold leading-none">{ad.charAt(0).toLocaleUpperCase('tr')}</span></button>;
             })}
             {prefs.enabledTools.screen && <button id="studio-ekran" type="button" aria-pressed={mode === 'screen'} onClick={() => onModeChange(mode === 'screen' ? 'write' : 'screen')}
                 title="Ekran: tasarladığın bölmeli düzen"
@@ -214,13 +215,13 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                 className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${kopruYaz ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
                 <Keyboard size={16} /><span className="sr-only sm:not-sr-only">{kopruYaz ? ' Köprü Yaz açık' : ' Köprü Yaz'}</span>
             </button>}
-            {kopruYaz && <span id="studio-kopru-yaz-durum" role="status" className={`max-w-56 shrink-0 text-xs ${kopruHata ? 'text-berry-700' : 'text-moss-700'}`}>{kopruDurum}</span>}
             {kopruYaz && kopruHata && <button type="button" id="studio-kopru-yaz-yeniden" onClick={() => { kopruDurdu.current = false; setKopruHata(false); kopruHedef.current = guncelIcerik.current; void kopruAktar(); }}
                 className="btn btn-secondary min-h-11 shrink-0 px-3 text-sm">Yeniden dene</button>}
             {prefs.enabledTools.computerWrite && <button id="studio-bilgisayara-yaz" type="button" disabled={busy || !content.trim()} onClick={() => void act(() => typeOnComputer(content, prefs), 'Metin bilgisayara yazıldı.')}
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Send size={16} /><span className="sr-only sm:not-sr-only"> Bilgisayara yaz</span></button>}
             {prefs.enabledTools.clipboard && <button id="studio-pc-panosu" type="button" disabled={busy || !content.trim()} onClick={() => void panoyaGonder()}
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Clipboard size={16} /><span className="sr-only sm:not-sr-only"> PC panosu</span></button>}
+            {kopruYaz && <span id="studio-kopru-yaz-durum" role="status" className={`max-w-56 shrink-0 text-xs ${kopruHata ? 'text-berry-700' : 'text-moss-700'}`}>{kopruDurum}</span>}
             {notice && <span role="status" className="max-w-48 shrink-0 text-xs text-sand-700">{notice}</span>}
             {panoBildirim && typeof document !== 'undefined' && createPortal(
                 <div id="studio-pano-bildirim" role="status" aria-live="polite"

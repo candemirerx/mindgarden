@@ -47,8 +47,11 @@ public static class RemoteInput
         if (text == null || text.Length > 32000) throw new ArgumentException("Invalid text length.");
         foreach (char ch in text) {
             if (ch == '\r') continue;
-            if (ch == '\n') { Key(0x0D, 0, 0); Key(0x0D, 0, 0x0002); continue; }
-            Key(0, ch, 0x0004); Key(0, ch, 0x0004 | 0x0002);
+            if (ch == '\n') { Key(0x0D, 0, 0); Key(0x0D, 0, 0x0002); }
+            else { Key(0, ch, 0x0004); Key(0, ch, 0x0004 | 0x0002); }
+            // VK_PACKET karakterleri hedef pencere islemeden ust uste gelirse Windows
+            // onlari son gelen karakterle cevirir ("abc 123" -> "abc 333"). Kisa ara sart.
+            System.Threading.Thread.Sleep(3);
         }
     }
     private static ushort Code(string name) {

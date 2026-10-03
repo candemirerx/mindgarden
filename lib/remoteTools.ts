@@ -8,26 +8,107 @@ export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'bridgeWr
 export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'bridgeWrite', 'computerWrite', 'clipboard', 'shortcuts', 'screen'];
 /**
  * Sıralı makronun tek adımı. 'macro' adımı başka bir makroyu kimliğiyle
- * (value) çağırır; diğer türler tekil makrolarla aynı değeri taşır.
+ * (value) çağırır; 'wait' adımı value milisaniye bekler; diğer türler tekil
+ * makrolarla aynı değeri taşır.
  */
-export type RemoteMacroStep = { type: 'text' | 'shortcut' | 'position' | 'macro'; value: string; click?: 1 | 2 };
+export type RemoteMacroStep = { type: 'text' | 'shortcut' | 'position' | 'macro' | 'wait'; value: string; click?: 1 | 2 };
+/** Bekleme adımının sınırları (ms): 0,05 sn – 10 dk. */
+export const BEKLEME_SINIRI = { min: 50, max: 600000 };
+/** Bekleme süresini kısa Türkçe metne çevirir: 1500 → "1,5 sn", 120000 → "2 dk". */
+export function beklemeMetni(ms: number): string {
+    if (!Number.isFinite(ms)) return '?';
+    if (ms >= 60000 && ms % 60000 === 0) return ms / 60000 + ' dk';
+    const sn = ms / 1000;
+    return (Number.isInteger(sn) ? String(sn) : sn.toLocaleString('tr-TR', { maximumFractionDigits: 2 })) + ' sn';
+}
+export function beklemeGecerli(deger: string): boolean {
+    const ms = Number(deger);
+    return /^\d+$/.test(deger) && ms >= BEKLEME_SINIRI.min && ms <= BEKLEME_SINIRI.max;
+}
 export type RemoteMacro = { id: string; name: string; type: 'text' | 'shortcut' | 'position' | 'sequence'; value: string; enabled?: boolean; click?: 1 | 2; steps?: RemoteMacroStep[] };
 /** Kısayol panosunda birlikte gösterilen makrolar. */
 export type RemoteProfile = { id: string; name: string; macroIds: string[] };
 /** Editörün bilgisayar şeridindeki düğme; dokunulunca bağlı profilin makrolarını açar. */
 export type RemoteShortcutButton = { id: string; name: string; profileId: string };
 /** Ekran düzeninde bir bölmenin içeriği; shortcuts bölmesi isteğe bağlı bir profile bağlanır. */
-export type RemotePaneKind = 'mouse' | 'keys' | 'text' | 'shortcuts' | 'empty';
-export type RemotePane = { kind: RemotePaneKind; profileId?: string };
+export type RemotePaneKind = 'mouse' | 'keys' | 'text' | 'liveKeyboard' | 'phoneKeyboard' | 'computerKeyboard' | 'shortcuts' | 'bridgeDictation' | 'empty';
+export const DEFAULT_NAVIGATION_SHORTCUTS = { topLeft: 'ESC', topRight: 'BACKSPACE', center: 'ENTER', bottomLeft: 'TAB', bottomRight: 'SPACE' };
+export type NavigationShortcutPosition = keyof typeof DEFAULT_NAVIGATION_SHORTCUTS;
+/** weight: aynı sütundaki bölmeler arasında yükseklik payı (göreli). */
+export type RemotePane = { kind: RemotePaneKind; weight?: number; profileId?: string; navigationShortcuts?: Partial<Record<NavigationShortcutPosition, string>> };
+
+export function normalizeNavigationShortcuts(value: unknown): Record<NavigationShortcutPosition, string> {
+    const shortcuts = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+    return Object.fromEntries(Object.entries(DEFAULT_NAVIGATION_SHORTCUTS).map(([position, fallback]) => {
+        const command = shortcuts[position];
+        return [position, typeof command === 'string' && command.trim() && /^[A-Za-z0-9+_ -]{1,60}$/.test(command) ? command.trim() : fallback];
+    })) as Record<NavigationShortcutPosition, string>;
+}
+/** Ekran düzeni sınırları: sütun ve bölme sayısı, boşluk ölçüleri (px). */
+export const EKRAN_SINIRLARI = { sutun: 6, bolme: 8, bosluk: 64, icBosluk: 32, pay: [5, 100] as const };
+export const VARSAYILAN_BOLME_BOSLUGU = 8;
+export const VARSAYILAN_IC_BOSLUK = 8;
+
+export type RemoteScreenColumn = { weight: number; panes: RemotePane[] };
 /**
- * Kullanıcının tasarladığı ekran: iki sütun, her sütunda üst ve alt bölme.
- * Oranlar yüzde olarak tutulur (20–80): sütun genişliği ve her sütunun üst bölme yüksekliği.
+ * Kullanıcının tasarladığı ekran: yan yana sütunlar, her sütunda alt alta bölmeler.
+ * Genişlik ve yükseklikler göreli paydır (5–100); gerçek oran paylardan hesaplanır.
  */
 export type RemoteScreenLayout = {
     id: string; name: string;
-    split: number; leftSplit: number; rightSplit: number;
-    panes: [RemotePane, RemotePane, RemotePane, RemotePane]; // sol üst, sol alt, sağ üst, sağ alt
+    columns: RemoteScreenColumn[];
+    /** Kenarsız: bölmeler arasında çerçeve olmadan tek yüzey gibi görünür. */
+    borderless?: boolean;
+    /** Bölmeler arası boşluk (px). Verilmezse kutulu 8, kenarsız 0. */
+    gap?: number;
+    /** Bölmenin kendi iç boşluğu (px). Verilmezse 8. */
+    innerPadding?: number;
 };
+
+const sinirla = (deger: unknown, alt: number, ust: number, yedek: number): number => {
+    const sayi = typeof deger === 'number' && Number.isFinite(deger) ? Math.round(deger) : yedek;
+    return Math.min(ust, Math.max(alt, sayi));
+};
+const BILINEN_BOLMELER: RemotePaneKind[] = ['mouse', 'keys', 'text', 'liveKeyboard', 'phoneKeyboard', 'computerKeyboard', 'shortcuts', 'bridgeDictation', 'empty'];
+function normalizePane(raw: unknown): RemotePane {
+    const pane = (raw && typeof raw === 'object' ? raw : {}) as RemotePane;
+    const kind = BILINEN_BOLMELER.includes(pane.kind) ? pane.kind : 'empty';
+    const sonuc: RemotePane = { ...pane, kind, weight: sinirla(pane.weight, EKRAN_SINIRLARI.pay[0], EKRAN_SINIRLARI.pay[1], 50) };
+    if (kind === 'keys') sonuc.navigationShortcuts = normalizeNavigationShortcuts(pane.navigationShortcuts);
+    return sonuc;
+}
+/**
+ * Kayıtlı düzeni güvenli biçime getirir. Eski sürümün 4 bölmeli düzeni
+ * (panes + split/leftSplit/rightSplit) iki sütunlu yeni modele dönüştürülür.
+ */
+export function normalizeScreenLayout(raw: unknown): RemoteScreenLayout {
+    const duzen = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
+    let columns: RemoteScreenColumn[];
+    if (Array.isArray(duzen.columns)) {
+        columns = duzen.columns.slice(0, EKRAN_SINIRLARI.sutun).map((sutun: any) => ({
+            weight: sinirla(sutun?.weight, EKRAN_SINIRLARI.pay[0], EKRAN_SINIRLARI.pay[1], 50),
+            panes: (Array.isArray(sutun?.panes) ? sutun.panes : []).slice(0, EKRAN_SINIRLARI.bolme).map(normalizePane)
+        }));
+    } else {
+        const eski: unknown[] = Array.isArray(duzen.panes) ? duzen.panes : [];
+        const oran = (deger: unknown) => sinirla(deger, 20, 80, 50);
+        const bol = (ust: unknown, alt: unknown, ustOran: number): RemotePane[] =>
+            [{ ...normalizePane(ust), weight: ustOran }, { ...normalizePane(alt), weight: 100 - ustOran }];
+        columns = [
+            { weight: oran(duzen.split), panes: bol(eski[0], eski[1], oran(duzen.leftSplit)) },
+            { weight: 100 - oran(duzen.split), panes: bol(eski[2], eski[3], oran(duzen.rightSplit)) }
+        ];
+    }
+    if (!columns.length) columns = [{ weight: 50, panes: [{ kind: 'empty', weight: 50 }] }];
+    return {
+        id: typeof duzen.id === 'string' && duzen.id ? duzen.id : 'ekran-' + Date.now(),
+        name: typeof duzen.name === 'string' ? duzen.name : 'Ekran',
+        columns,
+        borderless: !!duzen.borderless,
+        ...(duzen.gap !== undefined ? { gap: sinirla(duzen.gap, 0, EKRAN_SINIRLARI.bosluk, VARSAYILAN_BOLME_BOSLUGU) } : {}),
+        ...(duzen.innerPadding !== undefined ? { innerPadding: sinirla(duzen.innerPadding, 0, EKRAN_SINIRLARI.icBosluk, VARSAYILAN_IC_BOSLUK) } : {})
+    };
+}
 
 /** Makro panoda ve ayarlarda çalıştırılabilir durumda mı? */
 export function makroHazir(makro: RemoteMacro): boolean {
@@ -51,6 +132,8 @@ export type RemotePrefs = {
     helperUrl: string;
     helperToken: string;
     helperBluetoothAddress: string;
+    /** Eşleştirilen bilgisayarın adı (yardımcının bildirdiği); yalnız gösterim için. */
+    helperName?: string;
     mouseSensitivity: number;
     dictationLanguage: string;
     bridgeDictationSeconds: number;
@@ -79,7 +162,7 @@ export function remotePrefs(): RemotePrefs {
     if (typeof window === 'undefined') return defaults;
     try {
         const data = JSON.parse(localStorage.getItem(key) || '{}');
-        return { ...defaults, ...data, enabledTools: { ...defaults.enabledTools, ...data.enabledTools }, macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts : [] };
+        return { ...defaults, ...data, enabledTools: { ...defaults.enabledTools, ...data.enabledTools }, macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts.map(normalizeScreenLayout) : [] };
     } catch { return defaults; }
 }
 export function saveRemotePrefs(prefs: RemotePrefs) {
@@ -87,14 +170,16 @@ export function saveRemotePrefs(prefs: RemotePrefs) {
     bildir('remote-prefs');
 }
 
-type Device = { address: string; name: string; rssi: number };
+export type Device = { address: string; name: string; rssi: number; computer?: boolean; connected?: boolean };
 type NativeRemote = {
     scan(options?: { scanId: string }): Promise<{ devices: Device[] }>;
     scanPaired(): Promise<{ devices: Device[] }>;
-    discover(): Promise<{ cards: string[] }>;
+    discover(options?: { port?: number; path?: string; marker?: string }): Promise<{ cards: string[]; bodies?: string[] }>;
+    wifiAddress(): Promise<{ address: string }>;
+    openBluetoothSettings(): Promise<void>;
     connect(options: { address: string }): Promise<{ connected: boolean }>;
     connectClassic(options: { address: string }): Promise<{ connected: boolean }>;
-    sendClassic(options: { body: string; address?: string }): Promise<void>;
+    sendClassic(options: { body: string; address?: string }): Promise<{ ok?: boolean; token?: string; name?: string; error?: string } | void>;
     disconnect(): Promise<void>;
     send(options: { command: string }): Promise<void>;
     clickAbsolute(options: { x: number; y: number }): Promise<void>;
@@ -144,11 +229,118 @@ export async function discoverCards(): Promise<string[]> {
     if (!isNative()) throw new Error('Yerel ağ taraması Android uygulamasında kullanılabilir; kart adresini elle girebilirsiniz.');
     return (await native.discover()).cards;
 }
+/** PC yardımcısının Wi‑Fi portu. */
+export const YARDIMCI_PORTU = 8765;
+export type BulunanBilgisayar = { url: string; name: string };
+
+/** Telefonun Wi‑Fi IPv4 adresi; "" = Wi‑Fi ağına bağlı değil, null = bilinemiyor (tarayıcı). */
+export async function telefonWifiAdresi(): Promise<string | null> {
+    if (!isNative()) return null;
+    try { return (await native.wifiAddress()).address || ''; } catch { return ''; }
+}
+/** Telefon kartın kendi ağında mı (kart AP'si 192.168.4.1 dağıtır)? */
+export function kartAginda(adres: string): boolean {
+    return adres.startsWith('192.168.4.');
+}
+export async function bluetoothAyarlariniAc(): Promise<void> {
+    if (!isNative()) throw new Error('Bluetooth ayarları Android uygulamasında açılır.');
+    await native.openBluetoothSettings();
+}
+/**
+ * Yerel ağdaki PC yardımcılarını bulur (anahtarsız /hello ucu). Yardımcı
+ * eşleştirme kodunu gösterdiği sürece listede bilgisayarın adı görünür.
+ */
+export async function bilgisayarlariBul(): Promise<BulunanBilgisayar[]> {
+    if (!isNative()) throw new Error('Ağda bilgisayar arama Android uygulamasında çalışır; adresi elle girebilirsiniz.');
+    const sonuc = await native.discover({ port: YARDIMCI_PORTU, path: '/hello', marker: 'not-bahcesi-clipboard' });
+    return sonuc.cards.map((url, i) => {
+        let name = 'Bilgisayar';
+        try { name = String(JSON.parse(sonuc.bodies?.[i] ?? '{}').name || name); } catch { /* ad yoksa varsayılan */ }
+        return { url, name };
+    });
+}
+/** Elle yazılan adresi doğrular: bu adreste Not Bahçesi yardımcısı var mı? */
+export async function bilgisayarAdresiniSina(adres: string): Promise<BulunanBilgisayar> {
+    const tam = adres.includes('://') ? adres.trim() : 'http://' + adres.trim();
+    const adresUrl = new URL(tam);
+    const url = adresUrl.port ? adresUrl.origin : adresUrl.origin + ':' + YARDIMCI_PORTU;
+    let govde: { app?: string; name?: string };
+    try { govde = JSON.parse(await request(endpoint(url, '/hello'))); }
+    catch { throw new Error(url + ' adresinde yardımcıya ulaşılamadı. Yardımcı açık mı, telefon ve bilgisayar aynı Wi‑Fi ağında mı, güvenlik duvarı izni verildi mi?'); }
+    if (govde.app !== 'not-bahcesi-clipboard') throw new Error('Bu adreste Not Bahçesi yardımcısı yok.');
+    return { url, name: govde.name || 'Bilgisayar' };
+}
+/** Hata gövdesindeki {"error": ...} iletisini okunur hâle getirir. */
+function yardimciHatasi(hata: unknown, yedek: string): Error {
+    const metin = hata instanceof Error ? hata.message : '';
+    const m = /\{.*"error"\s*:\s*"([^"]+)"/.exec(metin);
+    return new Error(m ? m[1] : metin || yedek);
+}
+/** Wi‑Fi ile eşleştirme: 6 haneli kod doğruysa yardımcı erişim anahtarını verir. */
+export async function bilgisayarlaEslestirWifi(url: string, kod: string): Promise<{ helperUrl: string; helperToken: string; helperName: string }> {
+    const pin = kod.replace(/\D/g, '');
+    if (pin.length !== 6) throw new Error('Bilgisayardaki 6 haneli eşleştirme kodunu yazın.');
+    let govde: { ok?: boolean; token?: string; name?: string; error?: string };
+    try { govde = JSON.parse(await request(endpoint(url, '/pair'), 'POST', JSON.stringify({ pin }))); }
+    catch (hata) { throw yardimciHatasi(hata, 'Eşleştirilemedi.'); }
+    if (!govde.ok || !govde.token) throw new Error(govde.error || 'Eşleştirme kodu yanlış.');
+    return { helperUrl: url, helperToken: govde.token, helperName: govde.name || 'Bilgisayar' };
+}
+/** Klasik Bluetooth ile eşleştirme: kod RFCOMM üzerinden yardımcıya gider. */
+export async function bilgisayarlaEslestirBluetooth(address: string, kod: string): Promise<{ helperToken: string; helperName: string }> {
+    if (!isNative()) throw new Error('Bluetooth eşleştirmesi Android uygulamasında çalışır.');
+    const pin = kod.replace(/\D/g, '');
+    if (pin.length !== 6) throw new Error('Bilgisayardaki 6 haneli eşleştirme kodunu yazın.');
+    let yanit;
+    try { yanit = await native.sendClassic({ body: JSON.stringify({ action: 'pair', pin }), address }); }
+    catch (hata) { throw yardimciHatasi(hata, 'Bluetooth ile eşleştirilemedi.'); }
+    if (!yanit || !yanit.ok || !yanit.token) throw new Error((yanit && yanit.error) || 'Eşleştirme kodu yanlış.');
+    return { helperToken: yanit.token, helperName: yanit.name || 'Bilgisayar' };
+}
+/**
+ * Kartı Wi‑Fi'da bulur: telefon kartın kendi ağındaysa (192.168.4.x) adres
+ * 192.168.4.1'dir; değilse yerel ağ taranır.
+ */
+export async function kartiWifidaBul(): Promise<{ urls: string[]; kartAgi: boolean }> {
+    const adres = await telefonWifiAdresi();
+    if (adres && kartAginda(adres)) return { urls: ['http://192.168.4.1'], kartAgi: true };
+    return { urls: await discoverCards(), kartAgi: false };
+}
+
+const KART_ADRESI = 'nb-ble-card';
 export async function connectCard(address: string) {
     if (!isNative()) throw new Error('Bluetooth bağlantısı Android uygulamasını gerektirir.');
     await native.connect({ address });
+    localStorage.setItem(KART_ADRESI, address);
 }
-export async function disconnectCard() { if (isNative()) await native.disconnect(); }
+export async function disconnectCard() {
+    if (!isNative()) return;
+    localStorage.removeItem(KART_ADRESI);
+    await native.disconnect();
+}
+
+let bleSirasi: Promise<unknown> = Promise.resolve();
+/**
+ * Karta BLE yazar. Yazmalar sıraya alınır; aynı anda ikinci yazma yerelde
+ * reddedildiği için hızlı fare hareketlerinde komutlar düşüyordu. Bağlantı
+ * kopmuşsa (kart uyudu, menzil dışına çıkıldı) komut hiç gönderilmeden son kartla
+ * bir kez yeniden bağlanılır ve aynı komut bir kez daha denenir.
+ */
+function bleYaz(yaz: () => Promise<void>): Promise<void> {
+    const is = bleSirasi.then(async () => {
+        try { await yaz(); }
+        catch (hata) {
+            const kod = (hata as { code?: string }).code;
+            const adres = localStorage.getItem(KART_ADRESI);
+            if (!adres || (kod !== 'BLE_NOT_CONNECTED' && kod !== 'BLE_NOT_STARTED')) throw hata;
+            try { await native.connect({ address: adres }); }
+            catch { throw new Error('Kartla BLE bağlantısı koptu ve yeniden kurulamadı. Kart açık ve yakında mı?'); }
+            await yaz();
+        }
+    });
+    bleSirasi = is.catch(() => undefined);
+    return is;
+}
 
 async function request(url: string, method = 'GET', body = '', token = '') {
     if (isNative()) {
@@ -249,8 +441,86 @@ export async function sendCommand(command: string, prefs: RemotePrefs) {
         await pcInput(input, prefs);
         return;
     }
-    if (prefs.connection !== 'bluetooth') throw new Error('Fare ve makro komutları için Ayarlar’dan Bluetooth bağlantısını seçin.');
-    await native.send({ command });
+    if (prefs.connection === 'wifi') { await kartWifiKomutu(command, prefs); return; }
+    await bleYaz(() => native.send({ command }));
+}
+
+/** USB HID kullanım kodları: kartın /api/rkey ucu tuşu bu kodla basar. */
+function hidKodu(ad: string): number {
+    const tus = ad.trim().toUpperCase();
+    if (/^[A-Z]$/.test(tus)) return 0x04 + tus.charCodeAt(0) - 65;
+    if (/^[1-9]$/.test(tus)) return 0x1e + Number(tus) - 1;
+    if (tus === '0') return 0x27;
+    const f = /^F([1-9]|1[0-2])$/.exec(tus);
+    if (f) return 0x3a + Number(f[1]) - 1;
+    const ozel: Record<string, number> = {
+        ENTER: 0x28, ESC: 0x29, ESCAPE: 0x29, BACKSPACE: 0x2a, TAB: 0x2b, SPACE: 0x2c,
+        HOME: 0x4a, DELETE: 0x4c, END: 0x4d, RIGHT: 0x4f, LEFT: 0x50, DOWN: 0x51, UP: 0x52
+    };
+    if (ozel[tus] === undefined) throw new Error('"' + ad + '" tuşu tanınmıyor.');
+    return ozel[tus];
+}
+const DEGISTIRICI_BITI: Record<string, number> = { CTRL: 1, CONTROL: 1, SHIFT: 2, ALT: 4, WIN: 8, GUI: 8, META: 8 };
+/** "CTRL+SHIFT+S" → { mods, code }. Yalnız değiştirici (ör. WIN) de geçerlidir. */
+function kisayolCoz(kisayol: string): { mods: number; code: number } {
+    let mods = 0, code = 0;
+    for (const parca of kisayol.split('+').map(p => p.trim().toUpperCase()).filter(Boolean)) {
+        if (DEGISTIRICI_BITI[parca]) mods |= DEGISTIRICI_BITI[parca];
+        else code = hidKodu(parca);
+    }
+    if (!mods && !code) throw new Error('Geçersiz klavye kısayolu.');
+    return { mods, code };
+}
+/**
+ * Kartın Wi‑Fi yolu: metin /api/keys, tuş /api/rkey, fare /api/rmouse ile gider.
+ * Böylece kart Wi‑Fi'da da kısayol ve fare çalışır (eskiden yalnız BLE'deydi).
+ */
+async function kartWifiKomutu(command: string, prefs: RemotePrefs) {
+    const ayrac = command.indexOf(':');
+    const [kind, value] = [command.slice(0, ayrac), command.slice(ayrac + 1)];
+    const gonder = async (yol: string) => cardResponse(await request(endpoint(prefs.cardUrl, yol), 'POST', ''));
+    if (kind === 't') { await typeOnComputer(value, prefs); return; }
+    if (kind === 'k') {
+        const { mods, code } = kisayolCoz(value);
+        await gonder(`/api/rkey?code=${code}&mods=${mods}`);
+        return;
+    }
+    if (kind === 'mm') {
+        const match = /^(-?\d+),(-?\d+)$/.exec(value);
+        if (!match) throw new Error('Fare hareketi geçersiz.');
+        await gonder(`/api/rmouse?dx=${match[1]}&dy=${match[2]}&b=0`);
+        return;
+    }
+    if (kind === 'mc') {
+        const dugme = Number(value) === 2 ? 2 : 1;
+        await gonder(`/api/rmouse?c=${dugme}&b=0`);
+        return;
+    }
+    if (kind === 'ms') { await gonder(`/api/rmouse?w=${Math.max(-20, Math.min(20, Number(value) || 0))}&b=0`); return; }
+    if (command === 'b') { await deleteOnComputer(1, prefs); return; }
+    throw new Error('Bu komut kartın Wi‑Fi yolunda desteklenmiyor.');
+}
+/** Fare yüzeyinin tek istekte gönderebileceği en büyük adım (kart Wi‑Fi'da istekler yavaş, adım büyük). */
+export function fareAdimSiniri(prefs: RemotePrefs): number {
+    return prefs.connection === 'wifi' ? 1500 : 127;
+}
+/**
+ * Kart (Wi‑Fi ve BLE) metni USB klavye olarak Türkçe Q düzeniyle yazar ve bu
+ * tabloda olmayan karakterleri sessizce atlar. Kart bellenimindeki getTrHid +
+ * ALTGR_TR (2.35.0) ile aynı küme.
+ */
+const KART_KARAKTERLERI = new Set([...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZıİçÇğĞöÖşŞüÜ0123456789.:,;!\'"-_/()?*=+%& \n\t@#$€₺{}[]\\|<>~`^']);
+/** Bağlantı kart ise, kartın yazamayacağı karakterleri döndürür (tekrarsız). */
+export function kartinYazamadiklari(metin: string, prefs: RemotePrefs): string[] {
+    if (prefs.connection !== 'wifi' && prefs.connection !== 'bluetooth') return [];
+    return [...new Set([...metin].filter(k => k !== '\r' && !KART_KARAKTERLERI.has(k)))];
+}
+/**
+ * Tek tuş / tuş birleşimi gönderir (ör. ENTER, CTRL+C). Dört bağlantıda da çalışır;
+ * kartta Delete/Home/End/PgUp/PgDn için bellenim 2.35.0 gerekir.
+ */
+export async function sendKey(keys: string, prefs: RemotePrefs) {
+    await sendCommand('k:' + keys, prefs);
 }
 async function pcInput(input: Record<string, unknown>, prefs: RemotePrefs) {
     if (!prefs.helperToken) throw new Error('PC erişim anahtarını Ayarlar’dan girin.');
@@ -276,7 +546,13 @@ export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zin
         if (!adimlar.length) throw new Error('"' + macro.name + '" makrosunda adım yok.');
         for (let sira = 0; sira < adimlar.length; sira++) {
             const adim = adimlar[sira];
-            if (sira > 0) await new Promise(cozum => setTimeout(cozum, ADIM_ARASI_MS));
+            if (adim.type === 'wait') {
+                // Kullanıcının koyduğu bekleme: adımlar arasındaki kısa ara yerine geçer.
+                if (!beklemeGecerli(adim.value)) throw new Error((sira + 1) + '. adım: bekleme süresi geçersiz.');
+                await new Promise(cozum => setTimeout(cozum, Number(adim.value)));
+                continue;
+            }
+            if (sira > 0 && adimlar[sira - 1].type !== 'wait') await new Promise(cozum => setTimeout(cozum, ADIM_ARASI_MS));
             try {
                 if (adim.type === 'macro') {
                     const hedef = prefs.macros.find(m => m.id === adim.value);
@@ -301,7 +577,7 @@ export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zin
         const tekrar = macro.click === 2 ? 2 : 1;
         for (let i = 0; i < tekrar; i++) {
             if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') await pcInput({ action: 'absolute', x, y, click: true }, prefs);
-            else await native.clickAbsolute({ x, y });
+            else await bleYaz(() => native.clickAbsolute({ x, y }));
         }
     } else if (macro.type === 'shortcut') {
         if (!/^[A-Za-z0-9+_ -]{1,60}$/.test(macro.value)) throw new Error('Geçersiz klavye kısayolu.');
@@ -312,14 +588,14 @@ export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zin
 }
 export async function previewPosition(x: number, y: number, prefs = remotePrefs()) {
     if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') await pcInput({ action: 'absolute', x: Math.round(x), y: Math.round(y), click: false }, prefs);
-    else await native.moveAbsolute({ x: Math.round(x), y: Math.round(y) });
+    else await bleYaz(() => native.moveAbsolute({ x: Math.round(x), y: Math.round(y) }));
 }
 export async function typeOnComputer(text: string, prefs: RemotePrefs) {
     if (!text) throw new Error('Editör metni boş.');
     const encoder = new TextEncoder();
     const chunks: string[] = [];
     let chunk = '';
-    const limit = prefs.connection === 'bluetooth' ? 120 : prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth' ? 3000 : 300;
+    const limit = prefs.connection === 'bluetooth' ? 120 : prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth' ? 1000 : 300; // PC yardımcısı karakter başına ~3 ms bekler; 1000 bayt telefonun 10 sn okuma süresine sığar
     for (const char of text) {
         if (encoder.encode(chunk + char).length > limit) { chunks.push(chunk); chunk = ''; }
         chunk += char;
@@ -331,7 +607,7 @@ export async function typeOnComputer(text: string, prefs: RemotePrefs) {
     }
     if (prefs.connection === 'bluetooth') {
         // BLE NUS satır sınırı: uzun metni UTF-8 güvenli küçük parçalara böl.
-        for (const part of chunks) await native.send({ command: `t:${part}` });
+        for (const part of chunks) await bleYaz(() => native.send({ command: `t:${part}` }));
         return;
     }
     // Kartın mevcut /api/keys sözleşmesi: b64: UTF-8, USB HID üzerinden yazma.
@@ -348,7 +624,7 @@ export async function deleteOnComputer(count: number, prefs: RemotePrefs) {
         return;
     }
     for (let i = 0; i < count; i++) {
-        if (prefs.connection === 'bluetooth') await native.send({ command: 'b' });
+        if (prefs.connection === 'bluetooth') await bleYaz(() => native.send({ command: 'b' }));
         else await sendCommand('k:BACKSPACE', prefs);
     }
 }

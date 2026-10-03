@@ -22,7 +22,7 @@ Ayarlar → Bilgisayar sekmesinde dört yol görünür:
 
 - **Doğrudan PC (Wi‑Fi):** Kart gerekmez. Hedef Windows bilgisayarda [pc_kontrolu_baslat.cmd](../scripts/pc_kontrolu_baslat.cmd) dosyasını açın. Telefonla PC aynı güvenilen yerel ağdayken penceredeki PC adresini ve anahtarı girin. Metin, fare, kısayol ve pano işlemleri PC yardımcısına gider.
 - **PC Bluetooth (klasik):** Kart ve COM portu kurulumu gerekmez. Windows ve Android'i Bluetooth ayarlarında eşleştirin, güncel PC yardımcısını açın. Yardımcı kendi Bluetooth alıcısını yayımlar; `vendor` klasörünü yardımcıyla birlikte tutun. Uygulamada **PC Bluetooth** yolunu seçip bağlantı satırını yapıştırın, eşleşmiş bilgisayarınızı seçin ve **Bağlantıyı dene** ile sınayın. Bilgisayar seçimi kaydedilir; sonraki komutta bağlantı yeniden kurulabilir. Eski yardımcılar için gelen COM portu desteği korunur; `-BluetoothPort COM3` yalnız bu eski yol içindir.
-- **Kart Wi‑Fi:** KablosuzBellek kartını BOOT tuşuna uzun basarak Wi‑Fi moduna alın. Kart AP'sinde varsayılan adres `http://192.168.4.1`'dir; aynı ev/iş ağında kartın aldığı adresi girin veya yerel ağda kart arayın. Kartın USB kablosu hedef PC'de olmalı.
+- **Kart Wi‑Fi:** Metin `/api/keys`, tuş/kısayol `/api/rkey`, fare `/api/rmouse` ile gider; kısayol, fare yüzeyi ve görünen klavyeler kart Wi‑Fi'da da çalışır. Kart her isteği ~0,3–0,7 sn'de yanıtladığı için görünen klavyede hızlı basılan harfler tek istekte birleştirilir. Bellenim 2.34.0 ve sonrası Wi‑Fi, kendi AP'si ve BLE'yi aynı anda açık tutar. KablosuzBellek kartını BOOT tuşuna uzun basarak Wi‑Fi moduna alın (eski 2.33.x yazılımlarda). Kart AP'sinde varsayılan adres `http://192.168.4.1`'dir; aynı ev/iş ağında kartın aldığı adresi girin veya yerel ağda kart arayın. Kartın USB kablosu hedef PC'de olmalı.
 - **Kart BLE:** Kartı BOOT tuşuna uzun basarak Bluetooth moduna alın ve “KablosuzBellek” NUS yayınına bağlanın; eski kartlarda ad “USB HID Klavye” olabilir. Kartın USB kablosu hedef PC'de olmalı. Mevcut 2.33.1 kart yazılımı Bluetooth modunda Wi‑Fi radyosunu kapatır; iki kart yolu aynı anda etkin değildir. Kart güncellendikten sonra bağlantı hemen kesiliyorsa yalnızca ilgili kartın eski eşleştirmesini kaldırıp yeniden eşleştirin.
 
 PC Bluetooth LE (BLE) için Windows bilgisayarın ayrıca uygulamaya uygun GATT sunucusu yayımlaması gerekir. Mevcut PowerShell yardımcısı bunu sağlamaz; doğrudan PC BLE bağlantısı bu sürümde **desteklenmiyor**. Wi‑Fi güç tasarrufu ayrı bir Wi‑Fi protokolü değildir. Uygulama BLE desteği varmış gibi sahte başarı göstermez.
@@ -67,3 +67,45 @@ Makro düzenleyicide kısayol alanının altındaki **Klavyeden seç** düğmesi
 ## İzinler ve yayın kontrolü
 
 Android uygulaması BLE tarama/bağlantı için Yakındaki Cihazlar (Android 12+) veya eski sistemlerde konum; Dikte için mikrofon izni ister. Kamera ve diğer not özellikleri bu izinlerden bağımsızdır. Pano ve kart işlemleri kullanıcı eylemiyle başlar, arka planda metin gönderilmez. Mağaza veri güvenliği ve gizlilik açıklamalarında mikrofon, yerel ağ cihazı iletişimi ve PC pano aktarma özelliğini belirtin. Yayına geçmeden gerçek kart + Windows PC üzerinde BLE yazma/fare/makro, Wi‑Fi yazma ve pano uçtan uca denenmeli; USB kart firmware'i bu değişiklikte güncellenmez.
+
+## Kart yazabildiği karakterler ve bellenim 2.35.0
+
+Kart, metni USB klavye olarak **Türkçe Q** düzeniyle yazar; PC'nin klavye dili Türkçe Q olmalıdır. Bellenim 2.35.0 ile AltGr simgeleri (`@ # $ € ₺ { } [ ] \ | < > ~ ^`) ve BLE yolunda Delete/Home/End/PgUp/PgDn/Insert tuşları eklendi. Daha eski bellenimli kartta bu simgeler ve tuşlar sessizce yok sayılır; kartı güncelleyin. Uygulama, kartın hiç yazamadığı bir karakter gönderilmek istendiğinde sessizce atlamak yerine durum satırında uyarı gösterir.
+
+ESP32-S3 N16R8 gibi SD yuvası olmayan kartlarda 2.35.0, dosyaları 16 MB flash içindeki ~9,9 MB'lık `ffat` bölümünde tutar (`/api/status` → `sd.storage: "flash"`). Web/BLE dosya yöneticisi ve pano dosyaları aynı şekilde çalışır; **USB disk modu yalnız SD kartta** çalışır.
+
+Ekran düzeni testi: `npm run dev` açıkken `node scripts/ekran-duzeni-tur.mjs` (sahte PC yardımcısı ve sahte kartla 31 sınama).
+
+## Uçtan uca doğrulama — 3 Ekim 2026
+
+Kart: ESP32-S3 N16R8, bellenim 2.35.2. Her yol, PC'de odaktaki Not Defteri'ne Türkçe harf, AltGr simgeleri, noktalama ve Enter yazdırılıp pano üzerinden birebir karşılaştırılarak sınandı (odak kartın USB faresiyle verildi):
+
+| Yol | Sonuç |
+|---|---|
+| Kart Wi‑Fi (ev ağı, PC'den) | 7/7: Türkçe, AltGr, noktalama, Enter/Tab, geri sil, Home, tek tek harf |
+| Kart Wi‑Fi (ev ağı, telefondan) | geçti |
+| Kart AP (telefon "can bellek s3" ağında, 192.168.4.1) | geçti |
+| Kart BLE (telefondan) | 3/3 |
+| PC Wi‑Fi (yardımcı) | geçti |
+| PC Bluetooth (klasik, telefondan) | geçti (PC'de Bluetooth açık olmalı) |
+
+Bulunan ve düzeltilen hatalar: kartta USB HID raporları uç nokta meşgulken düşüyordu (Shift/AltGr ve harf kaybı; 2.35.1–2.35.2); PC yardımcısı hızlı Unicode yazımda karakterleri son harfle değiştiriyordu ("abc 123" → "abc 333"; karakter başına 3 ms ara eklendi, uygulamanın PC parça boyutu 1000 bayta indi).
+
+Notlar: Bu PC'de ShareX tek başına `Oemtilde` tuşunu (TR-Q'da `"`) kısayol olarak yakalar; `"` yazılmaz, yakalama penceresi açılır. Aynı telefondaki başka bir uygulama (ör. KablosuzBellek) karta bağlıyken Android tek ortak bağlantı açar; Not Bahçesi bu bağlantıya katılır ve tarama, bağlı kartı da listeler. Cihaz testleri: `gradlew assembleReleaseAndroidTest -PtestBuildType=release`, sonra `am instrument -e class com.notbahcesi.app.CardBleDeviceTest -e cardAddress … -e cardUrl …` (yazma testleri yalnız `typeB64` verilince çalışır).
+
+## Bağlantı kurulumu (2.2.12)
+
+Ayarlar → Bilgisayar bağlantısı ekranı her yol için numaralı adımlar gösterir; her adım tamamlanınca onay işareti alır, hata aynı yerde açıklanır.
+
+- **Bilgisayar · Wi‑Fi:** PC'de yardımcıyı açın; pencere **6 haneli eşleştirme kodu** gösterir. Telefonda "Ağda bilgisayar ara" yardımcıyı yerel ağda bulur (anahtarsız `/hello` ucu, port 8765), kodu yazınca uzun erişim anahtarı `/pair` ucundan alınır. Bulunamazsa adres elle yazılır; eski "bağlantı satırı" yolu Gelişmiş altında durur.
+- **Bilgisayar · Bluetooth:** "Bluetooth ayarlarını aç" ile telefon PC ile eşleştirilir, "Eşleşmiş bilgisayarları göster" önce bilgisayar sınıfındaki cihazları listeler (kulaklık vb. katlanır). Aynı 6 haneli kod RFCOMM üzerinden gider. Wi‑Fi ile eşleşilmişse anahtar ortaktır, kod gerekmez. PC'de Bluetooth açık olmalı.
+- **Kart · Wi‑Fi:** Telefon kartın kendi ağındaysa (192.168.4.x) adres kendiliğinden 192.168.4.1 olur; değilse ev ağı taranır (adres başına 1,5 sn bekleme; kart Wi‑Fi'ı BLE ile radyoyu paylaştığı için yanıtı 0,5 sn'yi aşabiliyor). "Dene" kartın yazılım sürümünü ve ev ağı adresini gösterir.
+- **Kart · Bluetooth:** Taramada kartlar önce gelir; telefona zaten bağlı kart (başka uygulama üzerinden) da listelenir.
+
+Eşleştirme güvenliği: kod her açılışta rastgele üretilir; yanlış denemede 1 sn beklenir, 5 yanlışta kod yenilenir, toplam 20 yanlışta eşleştirme o oturumda kapanır. `/hello` yalnız uygulama ve bilgisayar adını verir.
+
+Testler: `node scripts/baglanti-tur.mjs` (ekran, 20 sınama); cihazda `CardBleDeviceTest#pairsWithPcHelper -e pcPin <kod> [-e pcAddress <PC BT adresi>]` ve `#findsCardOnLocalWifi -e expectCardUrl http://<kart>`.
+
+## Sıralı makroda bekleme
+
+Sıralı makroya **Bekle** adımı eklenebilir: hazır süreler (0,25 · 0,5 · 1 · 2 · 3 · 5 · 10 sn) ya da 0,05 sn – 10 dk arası istenen süre. İki adımın arasındaki **+ Bekleme** düğmesi tam oraya 1 sn'lik bekleme koyar. Bekleme adımı, adımlar arasındaki varsayılan 150 ms'lik aranın yerine geçer. Test: `node scripts/makro-bekleme-tur.mjs` (ölçülen 1,5 sn bekleme ≈ 1509 ms).

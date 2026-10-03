@@ -13,6 +13,7 @@ import {
     Copy, Check, Scissors, Leaf, Sprout
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { MindNode } from '@/lib/types';
 import { BRANCH_COLORS } from '@/lib/branchColors';
 
@@ -130,6 +131,13 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
 
                 {/* Content */}
                 <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] md:p-6">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-sand-200 bg-white px-4 py-3">
+                        <div className="min-w-0">
+                            <p className="text-sm font-semibold text-sand-800">Budanan notlar</p>
+                            <p className="text-xs text-sand-500">Tuvalde ve listede nasıl görünsünler</p>
+                        </div>
+                        <BudananlarDugmesi etiketli />
+                    </div>
                     {trees.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                             <div className="w-20 h-20 rounded-full bg-sand-100 flex items-center justify-center mb-4">
@@ -165,8 +173,8 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                         autoFocus
                                                     />
                                                 ) : (
-                                                    <h3 className="truncate text-lg font-semibold text-sand-800">
-                                                        {tree.title}
+                                                    <h3 className="break-words text-lg font-semibold leading-snug text-sand-900">
+                                                        {tree.title || 'Başlıksız'}
                                                     </h3>
                                                 )}
                                                 <p className="mt-1 text-sm text-sand-500">
@@ -217,13 +225,19 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                         return (
                                                             <div
                                                                 key={dugum.id}
-                                                                className={`flex items-center gap-2 rounded-xl border border-sand-200 bg-white p-2.5 ${
-                                                                    dugum.isPruned ? 'opacity-70' : ''
+                                                                data-dugum-satiri
+                                                                className={`rounded-xl border border-l-4 bg-white p-2.5 ${
+                                                                    dugum.isPruned ? 'border-dashed border-sand-300' : 'border-sand-200'
                                                                 }`}
-                                                                style={{ marginLeft: `${Math.min(dugum.derinlik, 4) * 14}px` }}
+                                                                style={{
+                                                                    marginLeft: `${Math.min(dugum.derinlik, 3) * 10}px`,
+                                                                    borderLeftColor: dalMi ? renk : undefined
+                                                                }}
                                                             >
+                                                                {/* Ad üstte tam genişlikte; dar ekranda düğmeler adı ezmesin. */}
+                                                                <div className="flex items-start gap-2">
                                                                 <span
-                                                                    className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${
+                                                                    className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
                                                                         dalMi
                                                                             ? 'bg-clay-100 text-clay-700'
                                                                             : 'bg-moss-100 text-moss-700'
@@ -235,19 +249,26 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
 
                                                                 <span className="min-w-0 flex-1">
                                                                     <span
-                                                                        className={`block truncate text-sm font-medium ${
+                                                                        className={`block break-words text-[15px] font-semibold leading-snug ${
                                                                             dugum.isPruned
-                                                                                ? 'text-sand-400 line-through'
-                                                                                : 'text-sand-800'
+                                                                                ? 'text-sand-600 line-through decoration-sand-400'
+                                                                                : 'text-sand-900'
                                                                         }`}
                                                                     >
                                                                         {dugum.baslik}
                                                                     </span>
-                                                                    {dugum.isPruned && (
-                                                                        <span className="text-[10px] font-medium text-sand-500">Budandı</span>
-                                                                    )}
+                                                                    <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+                                                                        <span className={dalMi ? 'text-clay-700' : 'text-moss-700'}>
+                                                                            {dugum.derinlik === 0 ? 'Ağaç gövdesi' : dalMi ? 'Dal' : 'Yaprak'}
+                                                                        </span>
+                                                                        {dugum.isPruned && (
+                                                                            <span className="rounded-full bg-sand-200 px-2 py-0.5 text-sand-700">Budandı</span>
+                                                                        )}
+                                                                    </span>
                                                                 </span>
+                                                                </div>
 
+                                                                <div className="mt-1.5 flex items-center justify-end gap-1">
                                                                 {/* Tip değiştir */}
                                                                 <button
                                                                     onClick={() => onToggleType(dugum.id, dugum.nodeType)}
@@ -317,6 +338,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                                 >
                                                                     <X size={17} />
                                                                 </button>
+                                                                </div>
                                                             </div>
                                                         );
                                                     })}

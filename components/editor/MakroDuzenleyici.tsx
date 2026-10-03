@@ -8,16 +8,17 @@
  * türünde sık kullanılan kombinasyonlar tek dokunuşla doldurulur. Ayarlar
  * listesi ve editördeki kısayol panosu aynı pencereyi kullanır.
  *
- * Sıralı türde birden çok adım (metin, klavye kısayolu, tıklama veya başka bir
- * makro) art arda dizilir; adımlar listedeki sırayla çalışır.
+ * Sıralı türde birden çok adım (metin, klavye kısayolu, tıklama, başka bir
+ * makro veya bekleme) art arda dizilir; adımlar listedeki sırayla çalışır.
+ * İki adımın arasına tek dokunuşla bekleme eklenebilir.
  *
  * Pencere telefonda da tam ekran açılır: arkada ayarlar ekranının göründüğü
  * şeffaf bir şerit kalmaz, başlık ve düğmeler güvenli alanın içinde durur.
  */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Check, Keyboard, ListOrdered, MousePointer2, Plus, TextCursorInput, Trash2, Wand2, X } from 'lucide-react';
-import { KONUM_MERKEZ, konumYuzdesi, type RemoteMacro, type RemoteMacroStep, type RemotePrefs } from '@/lib/remoteTools';
+import { ArrowDown, ArrowUp, Check, Keyboard, ListOrdered, MousePointer2, Plus, TextCursorInput, Timer, Trash2, Wand2, X } from 'lucide-react';
+import { BEKLEME_SINIRI, KONUM_MERKEZ, beklemeGecerli, beklemeMetni, konumYuzdesi, type RemoteMacro, type RemoteMacroStep, type RemotePrefs } from '@/lib/remoteTools';
 import KonumSecici from './KonumSecici';
 import { settingsFieldClass } from '@/components/ui/settings';
 import SanalKlavye from './SanalKlavye';
@@ -42,8 +43,14 @@ const ADIM_TURLERI: Array<{ id: RemoteMacroStep['type']; ad: string; Icon: typeo
     { id: 'text', ad: 'Metin', Icon: TextCursorInput },
     { id: 'shortcut', ad: 'Kısayol', Icon: Keyboard },
     { id: 'position', ad: 'Tıklama', Icon: MousePointer2 },
-    { id: 'macro', ad: 'Makro', Icon: Wand2 }
+    { id: 'macro', ad: 'Makro', Icon: Wand2 },
+    { id: 'wait', ad: 'Bekle', Icon: Timer }
 ];
+
+/** Bekleme adımında tek dokunuşla seçilen süreler (ms). */
+const HAZIR_BEKLEMELER = [250, 500, 1000, 2000, 3000, 5000, 10000];
+/** Yeni bekleme adımının varsayılan süresi. */
+const VARSAYILAN_BEKLEME = '1000';
 
 const KISAYOL_BICIMI = /^[A-Za-z0-9+_ -]{1,60}$/;
 
@@ -102,6 +109,7 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
             if (!adimlar.length) { setUyari('En az bir adım ekleyin.'); return; }
             const hatali = adimlar.findIndex((adim) =>
                 adim.type === 'shortcut' ? !KISAYOL_BICIMI.test(adim.value.trim())
+                    : adim.type === 'wait' ? !beklemeGecerli(adim.value)
                     : adim.type === 'text' ? !adim.value
                         : adim.type === 'macro' ? !cagrilabilir.some((m) => m.id === adim.value)
                             : !/^\d{1,5},\d{1,5}$/.test(adim.value));
@@ -276,7 +284,7 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                     {tur === 'sequence' && (
                         <div className="space-y-3">
                             <p className="text-xs leading-relaxed text-sand-600">
-                                Adımlar yukarıdan aşağıya sırayla çalışır: metin yazdırın, tıklatın, klavye kısayolu gönderin veya kayıtlı bir makroyu çağırın.
+                                Adımlar yukarıdan aşağıya sırayla çalışır: metin yazdırın, tıklatın, klavye kısayolu gönderin, kayıtlı bir makroyu çağırın ya da bekleyin. İki adımın arasındaki <strong>+ Bekleme</strong> ile araya süre koyabilirsiniz.
                             </p>
                             {adimlar.length === 0 && (
                                 <p className="rounded-xl border border-dashed border-sand-300 px-4 py-3 text-xs text-sand-600">Henüz adım yok; aşağıdan ekleyin.</p>
@@ -293,7 +301,8 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                                     const AdimIcon = turBilgisi.Icon;
                                     const [ax, ay] = adim.type === 'position' && adim.value ? adim.value.split(',').map(Number) : [0, 0];
                                     const etiket = (sira + 1) + '. adım';
-                                    return (
+                                    const araya = sira < adimlar.length - 1 && adim.type !== 'wait' && adimlar[sira + 1].type !== 'wait';
+                                    return [
                                         <li key={sira} data-makro-adim={sira} className="space-y-2 rounded-2xl border border-sand-200 bg-sand-50/70 p-3">
                                             <div className="flex items-center gap-1">
                                                 <span className="flex min-w-0 flex-1 items-center gap-1.5 text-xs font-semibold text-sand-800">
@@ -337,6 +346,30 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                                                     </div>
                                                 </div>
                                             )}
+                                            {adim.type === 'wait' && (
+                                                <div className="space-y-2">
+                                                    <div className="flex flex-wrap gap-1.5" role="group" aria-label={etiket + ' hazır süreler'}>
+                                                        {HAZIR_BEKLEMELER.map((ms) => (
+                                                            <button key={ms} type="button" aria-pressed={adim.value === String(ms)} onClick={() => degistir({ value: String(ms) })}
+                                                                className={'min-h-[36px] rounded-lg border px-2.5 text-xs font-medium transition-colors ' + (adim.value === String(ms) ? 'border-moss-500 bg-moss-50 text-moss-800' : 'border-sand-300 bg-white text-sand-700 hover:border-moss-500/50')}>
+                                                                {beklemeMetni(ms)}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <label className="flex flex-wrap items-center gap-2 text-xs text-sand-700">
+                                                        Süre
+                                                        <input aria-label={etiket + ' bekleme süresi (saniye)'} type="number" inputMode="decimal" min={BEKLEME_SINIRI.min / 1000} max={BEKLEME_SINIRI.max / 1000} step="0.05"
+                                                            value={adim.value === '' ? '' : Number(adim.value) / 1000}
+                                                            onChange={(olay) => {
+                                                                const sn = Number(olay.target.value.replace(',', '.'));
+                                                                degistir({ value: olay.target.value === '' || !Number.isFinite(sn) ? '' : String(Math.round(sn * 1000)) });
+                                                            }}
+                                                            className={settingsFieldClass + ' min-h-[44px] w-28'} />
+                                                        saniye
+                                                        {adim.value !== '' && !beklemeGecerli(adim.value) && <span className="text-berry-600">0,05 sn – 10 dk</span>}
+                                                    </label>
+                                                </div>
+                                            )}
                                             {adim.type === 'macro' && (cagrilabilir.length ? (
                                                 <select aria-label={etiket + 'da çalışacak makro'} value={adim.value} onChange={(olay) => degistir({ value: olay.target.value })} className={settingsFieldClass}>
                                                     <option value="">Makro seçin…</option>
@@ -345,14 +378,23 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                                             ) : (
                                                 <p className="text-xs text-sand-600">Çağrılacak başka makro yok; önce tekil makrolar ekleyin.</p>
                                             ))}
-                                        </li>
-                                    );
+                                        </li>,
+                                        araya && (
+                                            <li key={'araya-' + sira} className="flex justify-center">
+                                                <button type="button" aria-label={(sira + 1) + '. ve ' + (sira + 2) + '. adımın arasına bekleme ekle'}
+                                                    onClick={() => { setAdimlar((liste) => [...liste.slice(0, sira + 1), { type: 'wait', value: VARSAYILAN_BEKLEME }, ...liste.slice(sira + 1)]); setUyari(''); }}
+                                                    className="flex min-h-[36px] items-center gap-1 rounded-full border border-dashed border-sand-300 bg-white px-3 text-[11px] font-medium text-sand-600 hover:border-moss-500/50 hover:text-moss-700">
+                                                    <Plus size={12} aria-hidden="true" /><Timer size={12} aria-hidden="true" /> Bekleme
+                                                </button>
+                                            </li>
+                                        )
+                                    ];
                                 })}
                             </ol>
-                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Adım ekle">
+                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5" role="group" aria-label="Adım ekle">
                                 {ADIM_TURLERI.map(({ id, ad: turAdi, Icon }) => (
                                     <button key={id} type="button" id={'makro-adim-ekle-' + id}
-                                        onClick={() => { setAdimlar((liste) => [...liste, id === 'position' ? { type: id, value: '', click: 1 } : { type: id, value: '' }]); setUyari(''); }}
+                                        onClick={() => { setAdimlar((liste) => [...liste, id === 'position' ? { type: id, value: '', click: 1 } : { type: id, value: id === 'wait' ? VARSAYILAN_BEKLEME : '' }]); setUyari(''); }}
                                         className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-dashed border-sand-300 px-2 text-xs font-medium text-sand-700 transition-colors hover:border-moss-500/50 hover:text-moss-700">
                                         <Plus size={14} /><Icon size={14} aria-hidden="true" /> {turAdi}
                                     </button>

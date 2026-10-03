@@ -2,7 +2,8 @@
 .studio-header { box-shadow: 0 4px 20px rgb(var(--sand-900) / .025); }
 .studio-topbar { max-width: 1440px; margin: auto; padding: 4px 12px; gap: 4px; }
 .studio-eyebrow { display: block; color: rgb(var(--moss-700)); font-size: 9px; font-weight: 700; letter-spacing: .16em; margin-bottom: 3px; }
-.studio-tools { display: flex; overflow-x: auto; background: rgb(var(--surface)); scrollbar-width: thin; }
+/* relative: içteki sr-only (absolute) etiketler kaydırma alanında kalsın; yoksa sayfayı genişletip Ayarlar'ı da sağa kaydırıyor. */
+.studio-tools { position: relative; display: flex; overflow-x: auto; background: rgb(var(--surface)); scrollbar-width: thin; }
 .studio-tool-row { background: rgb(var(--surface)); flex: 0 0 auto; padding: 2px 6px; gap: 4px; min-width: 0; }
 .studio-tool-row + .studio-tool-row { border-left: 1px solid rgb(var(--sand-200)); }
 .studio-tool-row > .serit-kaydirma { overflow: visible; padding-bottom: 0; gap: 4px; mask-image: none; -webkit-mask-image: none; }
@@ -74,3 +75,22 @@
 .writing-studio--focused .studio-paper { min-height: calc(100dvh - 24px); }
 .studio-fullscreen-exit { top: calc(env(safe-area-inset-top, 0px) + 10px); opacity: .85; }
 .studio-fullscreen-exit:hover, .studio-fullscreen-exit:focus-visible { opacity: 1; }
+/* Ekran modunda araç satırının yerini ekran seçimi alır; tek satır, kaydırmasız. */
+.studio-computer { flex: 1 1 0; width: 100%; }
+.studio-computer > .ekran-secici { flex: 1 1 0; min-width: 0; }
+/* Yalnızca Ekran modu viewport yüksekliğine bağlıdır. */
+.writing-studio--screen { height: 100dvh; min-height: 0; overflow: hidden; }
+.writing-studio--screen .studio-header, .writing-studio--screen .studio-footer { flex-shrink: 0; }
+.writing-studio--screen > main { overflow: hidden; }
+.writing-studio--screen #ekran-duzeni { overflow-y: auto; }
+.writing-studio--screen #ekran-duzeni textarea { min-width: 0; }
+.writing-studio--screen #ekran-duzeni .btn { padding-block: 4px; }
+
+/* Kenarsız ekran düzeni: bölmeler tek yüzey olur, aralarında yalnızca ince çizgi kalır. */
+#ekran-duzeni[data-kenarsiz] .ekran-bolme {
+    border-radius: 0;
+    border-width: 0;
+    box-shadow: none;
+    border-right: 1px solid rgb(var(--sand-200));
+    border-bottom: 1px solid rgb(var(--sand-200));
+}

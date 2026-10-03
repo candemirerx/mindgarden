@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { sendCommand } from '@/lib/remoteTools';
+import { fareAdimSiniri, sendCommand } from '@/lib/remoteTools';
 import type { RemotePrefs } from '@/lib/remoteTools';
 
 /**
@@ -24,8 +24,9 @@ export default function FareYuzeyi({ prefs, onHata, className, children }: {
     const flushMove = () => {
         if (moveTimer.current) { clearTimeout(moveTimer.current); moveTimer.current = null; }
         if (hareketYolda.current) return;
-        const dx = Math.max(-127, Math.min(127, Math.trunc(pendingMove.current.x)));
-        const dy = Math.max(-127, Math.min(127, Math.trunc(pendingMove.current.y)));
+        const sinir = fareAdimSiniri(prefs);
+        const dx = Math.max(-sinir, Math.min(sinir, Math.trunc(pendingMove.current.x)));
+        const dy = Math.max(-sinir, Math.min(sinir, Math.trunc(pendingMove.current.y)));
         if (!dx && !dy) return;
         pendingMove.current.x -= dx;
         pendingMove.current.y -= dy;
