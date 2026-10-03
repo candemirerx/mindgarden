@@ -313,6 +313,134 @@ public class CardBleDeviceTest {
             }
         }
     }
+    /**
+     * Kodsuz PC Bluetooth (yalnız -e btCodeless 1 -e pcAddress … verilince): ayarlar
+     * ekranının yaptığı gibi kodsuz bağlanır, yoklar ve panoya -e panoText gönderir.
+     * Kullanıcının ayarları sonda geri yüklenir.
+     */
+    @Test public void pcBluetoothCodeless() throws Exception {
+        android.os.Bundle a = InstrumentationRegistry.getArguments();
+        org.junit.Assume.assumeNotNull(a.getString("btCodeless"));
+        String pc = a.getString("pcAddress");
+        String pano = new String(android.util.Base64.decode(a.getString("panoB64"), android.util.Base64.DEFAULT), "UTF-8");
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            long son = SystemClock.elapsedRealtime() + 45000;
+            boolean hazir = false;
+            while (!hazir && SystemClock.elapsedRealtime() < son) {
+                try { hazir = "true".equals(js("!!window.__nbUzak")); } catch (AssertionError gecis) { /* yükleniyor */ }
+                if (!hazir) SystemClock.sleep(500);
+            }
+            assertTrue("Test kancası yüklenmedi", hazir);
+            String orijinal = js("JSON.stringify(window.__nbUzak.prefs())");
+            try {
+                // Temiz başlangıç: anahtar yok (yeni kullanıcı gibi).
+                jsCall("window.__nbUzak.ayarla(Object.assign(window.__nbUzak.prefs(),{helperToken:'',helperUrl:'',helperName:'',helperBluetoothAddress:''}))", 5000);
+                JSONObject b = jsCall("window.__nbUzak.eslestirBluetooth(" + JSONObject.quote(pc) + ").then(s=>{window.__nbUzak.ayarla(Object.assign(window.__nbUzak.prefs(),s,{helperBluetoothAddress:" + JSONObject.quote(pc) + ",connection:'pc-bluetooth'}));return s.helperName;})", 30000);
+                basari("bt-kodsuz-baglan " + b.optString("value"), b);
+                JSONObject y = jsCall("window.__nbUzak.yokla()", 30000); basari("bt-yokla", y);
+                assertEquals(y.toString(), "ok", y.getJSONObject("value").getString("tur"));
+                basari("bt-pano", jsCall("window.__nbUzak.pano(" + JSONObject.quote(pano) + ")", 20000));
+            } finally {
+                js("window.__nbUzak.ayarla(JSON.parse(" + orijinal + "))");
+                System.out.println("E2E_PREFS_RESTORED");
+            }
+        }
+    }
+    /**
+     * Programsız Bilgisayar · Bluetooth (yalnız -e btHid 1 -e pcAddress … -e typeB64 … verilince):
+     * telefon Bluetooth klavye olarak bağlanır, yoklar, PC'de odaktaki alana metin + Enter yazar.
+     */
+    @Test public void pcBluetoothHid() throws Exception {
+        android.os.Bundle a = InstrumentationRegistry.getArguments();
+        org.junit.Assume.assumeNotNull(a.getString("btHid"));
+        String pc = a.getString("pcAddress");
+        String metin = new String(android.util.Base64.decode(a.getString("typeB64"), android.util.Base64.DEFAULT), "UTF-8");
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            long son = SystemClock.elapsedRealtime() + 45000;
+            boolean hazir = false;
+            while (!hazir && SystemClock.elapsedRealtime() < son) {
+                try { hazir = "true".equals(js("!!window.__nbUzak")); } catch (AssertionError gecis) { /* yükleniyor */ }
+                if (!hazir) SystemClock.sleep(500);
+            }
+            assertTrue("Test kancası yüklenmedi", hazir);
+            String orijinal = js("JSON.stringify(window.__nbUzak.prefs())");
+            try {
+                JSONObject b = jsCall("window.__nbUzak.btKlavye(" + JSONObject.quote(pc) + ")", 30000); basari("hid-baglan", b);
+                jsCall("window.__nbUzak.ayarla(Object.assign(window.__nbUzak.prefs(),{connection:'pc-bluetooth',helperBluetoothAddress:" + JSONObject.quote(pc) + "}))", 5000);
+                JSONObject y = jsCall("window.__nbUzak.yokla()", 30000); basari("hid-yokla", y);
+                assertEquals(y.toString(), "ok", y.getJSONObject("value").getString("tur"));
+                basari("hid-yaz", jsCall("window.__nbUzak.yaz(" + JSONObject.quote(metin + "\n") + ")", 60000));
+                basari("hid-kisayol-home", jsCall("window.__nbUzak.tus('END')", 10000));
+            } finally {
+                js("window.__nbUzak.ayarla(JSON.parse(" + orijinal + "))");
+                System.out.println("E2E_PREFS_RESTORED");
+            }
+        }
+    }
+    /**
+     * Kart Wi‑Fi fare (yalnız -e udpMouse 1 -e cardUrl … verilince): yoklama UDP portunu
+     * öğrenir; sonra editörün fare yüzeyinin gönderdiği gibi 'mm:' komutları gider
+     * (sağa 10×+20, sola 10×-20). PC tarafı imleç konumunu ölçer.
+     */
+    @Test public void cardUdpMouse() throws Exception {
+        android.os.Bundle a = InstrumentationRegistry.getArguments();
+        org.junit.Assume.assumeNotNull(a.getString("udpMouse"));
+        String kartUrl = a.getString("cardUrl");
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            long son = SystemClock.elapsedRealtime() + 45000;
+            boolean hazir = false;
+            while (!hazir && SystemClock.elapsedRealtime() < son) {
+                try { hazir = "true".equals(js("!!window.__nbUzak")); } catch (AssertionError gecis) { /* yükleniyor */ }
+                if (!hazir) SystemClock.sleep(500);
+            }
+            assertTrue("Test kancası yüklenmedi", hazir);
+            String orijinal = js("JSON.stringify(window.__nbUzak.prefs())");
+            try {
+                jsCall("window.__nbUzak.ayarla(Object.assign(window.__nbUzak.prefs(),{connection:'wifi',cardUrl:" + JSONObject.quote(kartUrl) + "}))", 5000);
+                JSONObject y = jsCall("window.__nbUzak.yokla()", 20000); basari("udp-yokla", y);
+                long t0 = SystemClock.elapsedRealtime();
+                for (int i = 0; i < 10; i++) jsCall("window.__nbUzak.komut('mm:20,0')", 5000);
+                long saga = SystemClock.elapsedRealtime() - t0;
+                System.out.println("E2E_UDP_SAGA_MS " + saga);
+                SystemClock.sleep(1500);
+                t0 = SystemClock.elapsedRealtime();
+                for (int i = 0; i < 10; i++) jsCall("window.__nbUzak.komut('mm:-20,0')", 5000);
+                System.out.println("E2E_UDP_SOLA_MS " + (SystemClock.elapsedRealtime() - t0));
+            } finally {
+                js("window.__nbUzak.ayarla(JSON.parse(" + orijinal + "))");
+                System.out.println("E2E_PREFS_RESTORED");
+            }
+        }
+    }
+    /**
+     * Bluetooth klavye eşleştirme modu (yalnız -e hidPair 1): klavyeyi başlatır, telefonu
+     * görünür yapar ve PC tarafından eşleştirme + klavye bağlantısı gelene kadar (en çok
+     * -e beklemeSn, varsayılan 150) uygulamayı açık tutar.
+     */
+    @Test public void hidPairingMode() throws Exception {
+        android.os.Bundle a = InstrumentationRegistry.getArguments();
+        org.junit.Assume.assumeNotNull(a.getString("hidPair"));
+        int sure = Integer.parseInt(a.getString("beklemeSn", "150"));
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            JSONObject r = call("hidStart", new JSONObject()); basari("hid-basladi", r);
+            basari("gorunur-istendi", call("hidDiscoverable", new JSONObject()));
+            long son = SystemClock.elapsedRealtime() + sure * 1000L;
+            while (SystemClock.elapsedRealtime() < son) {
+                JSONObject d = call("hidStatus", new JSONObject());
+                if (d.getJSONObject("value").optBoolean("bagli")) { System.out.println("E2E_HID_BAGLANDI " + d.getJSONObject("value").optString("adres")); SystemClock.sleep(3000); return; }
+                SystemClock.sleep(1000);
+            }
+            fail("Süre içinde PC klavye olarak bağlanmadı");
+        }
+    }
     /** Kart arama testi (yalnız -e expectCardUrl verilince): yerel ağ taramasında kart bulunmalı. */
     @Test public void findsCardOnLocalWifi() throws Exception {
         String beklenen = InstrumentationRegistry.getArguments().getString("expectCardUrl");

@@ -5,7 +5,7 @@
  * Yeşil: yol gerçekten yanıt veriyor. Kırmızı: kurulu ama ulaşılamıyor.
  * Gri: kurulum eksik. Dokununca hemen yeniden yoklar.
  */
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Link2, Loader2, RefreshCw } from 'lucide-react';
 import { YOL_ADI } from '@/lib/baglantiDurumu';
 import type { BaglantiDurumu } from '@/lib/baglantiDurumu';
 import type { ConnectionMode } from '@/lib/remoteTools';
@@ -30,11 +30,14 @@ export default function BaglantiGostergesi({ yol, durum, bakiliyor, onTazele, ko
     const r = RENK[tur];
     const aciklama = YOL_ADI[yol] + ': ' + (durum ? durum.mesaj + ' (' + ne_zaman(durum.zaman) + ')' : 'denetleniyor…');
     if (kompakt) {
-        return <button type="button" id={id} onClick={onTazele} disabled={bakiliyor} title={aciklama + ' — dokununca yeniden dener'}
-            aria-label={'Bilgisayar bağlantısı: ' + (bakiliyor && !durum ? 'denetleniyor' : r.kisa) + '. ' + aciklama + '. Yeniden denemek için dokunun.'}
-            className={cx('flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold', r.kutu)}>
-            {bakiliyor ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <span aria-hidden="true" className={cx('h-2.5 w-2.5 rounded-full', r.nokta)} />}
-            <span className="max-w-[7.5rem] truncate">{r.kisa}</span>
+        // Yalnız simge: yeşil bağlı, kırmızı bağlı değil, gri kurulmadı. Dokununca
+        // (onTazele yerine verilen) bağlantı ayarları açılır; yer kaplamaz.
+        const renk = tur === 'ok' ? 'text-moss-600' : tur === 'hata' ? 'text-berry-600' : 'text-sand-400';
+        return <button type="button" id={id} onClick={onTazele} title={aciklama + ' — dokununca bağlantı ayarları açılır'}
+            aria-label={'Bilgisayar bağlantısı: ' + (bakiliyor && !durum ? 'denetleniyor' : r.kisa) + '. ' + aciklama + '. Bağlantı ayarlarını aç.'}
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-sand-100">
+            <Link2 size={20} className={renk} aria-hidden="true" />
+            <span aria-hidden="true" className={cx('absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white', bakiliyor && !durum ? 'animate-pulse bg-sand-300' : r.nokta)} />
         </button>;
     }
     return <div id={id} role="status" aria-live="polite" className={cx('flex items-start gap-2.5 rounded-xl border px-3 py-2.5', r.kutu)}>

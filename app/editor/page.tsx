@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, MonitorSmartphone, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles } from 'lucide-react';
 import RemoteEditorTools from '@/components/editor/RemoteEditorTools';
-import KisayolPanosu from '@/components/editor/KisayolPanosu';
+import KisayolPanosu, { KisayolSecici } from '@/components/editor/KisayolPanosu';
 import EkranDuzeni, { EkranSecici } from '@/components/editor/EkranDuzeni';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
 import { remotePrefs, sistemCubuklariniGizle } from '@/lib/remoteTools';
@@ -1161,7 +1161,8 @@ function EditorPageInner() {
                     <div id="studio-panel-computer" role="tabpanel" aria-labelledby="studio-tab-computer" style={{ display: !focusMode && activeToolTab === 'computer' ? undefined : 'none' }} className="studio-tool-row studio-computer flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
                         <span className="studio-tool-label text-moss-700"><MonitorSmartphone size={14} aria-hidden="true" /><span className="hidden sm:inline">Bilgisayar</span></span>
                         {remoteMode === 'screen' && <EkranSecici duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onYaziyaDon={() => setRemoteMode('write')} />}
-                        <div className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Bilgisayar araçları" style={remoteMode === 'screen' ? { display: 'none' } : undefined}>
+                        {remoteMode === 'shortcuts' && <KisayolSecici profilId={kisayolProfili} onProfilChange={setKisayolProfili} onYaziyaDon={() => setRemoteMode('write')} />}
+                        <div className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Bilgisayar araçları" style={remoteMode === 'screen' || remoteMode === 'shortcuts' ? { display: 'none' } : undefined}>
                             <RemoteEditorTools placement="toolbar" content={content} mode={remoteMode} onModeChange={setRemoteMode} onContentChange={icerikDegistir}
                                 profilId={kisayolProfili} onProfilChange={setKisayolProfili}
                                 aktif={!focusMode && activeToolTab === 'computer'}

@@ -45,7 +45,7 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     {
         id: 'usage',
         title: 'Kullanım kılavuzu',
-        description: 'Bahçe, editör, yapay zekâ ve yedekleme adımları',
+        description: 'Başlangıçtan uzmana beş seviyeli öğretim',
         icon: BookOpen,
         group: 'Yardım',
         keywords: ['kullanım', 'kılavuz', 'yardım', 'nasıl', 'başlangıç', 'rehber', 'adım', 'ipucu', 'sss'],

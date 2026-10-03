@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Not Bahçesi — Kullanma Kılavuzu</title>
+<title>Not Bahçesi — Kullanım Kılavuzu</title>
 <style>
 :root { color-scheme: light dark; }
 * { box-sizing: border-box; }
@@ -80,117 +80,132 @@ strong { color: #1B3A28; }
 <body>
 <div class="icerik">
 <a class="geri" href="../basla.html">← Başlangıç sayfası</a>
-<h1>Not Bahçesi — Kullanma Kılavuzu</h1>
+<h1>Not Bahçesi — Kullanım Kılavuzu</h1>
 <p>Not Bahçesi, notlarını bir ağaç gibi büyütmen için tasarlandı. Her bahçe bir konu, her not bir ağaç, her alt not bir dal ya da yaprak.</p>
-<hr />
-<h2>1. İlk açılış ve giriş</h2>
-<p>Uygulamayı ilk açtığın ekran:</p>
-<ul><li><strong>Sol üstteki ağaç simgesi</strong> — kenar çubuğunu açar. Kenar çubuğundaki <strong>Ayarlar</strong></li></ul>
-<p>  kartı (dişli simgesi) tüm ayarların bulunduğu pencereyi açar. Bu kart giriş   yapılmamışken de görünür.</p>
-<ul><li><strong>Yeni Bahçe</strong> — sağ üstteki yeşil düğme.</li></ul>
-<p>Notlarını kaydetmek için giriş yapman gerekir. İki yol var:</p>
-<ol><li><strong>Yerel Modda Gir</strong> — şifre sormaz, veriler yalnızca bu cihazda saklanır.</li></ol>
-<p>   İnternet olmadan da çalışır.</p>
-<ol><li><strong>Google ile Giriş</strong> — notlarını Google Drive'a otomatik yedekler ve</li></ol>
-<p>   diğer cihazlarınla birleştirir.</p>
-<blockquote>Yerel modda başlayıp sonradan Google ile giriş yaparsan, o ana kadar girdiğin notlar silinmez; Drive ile birleştirilir.</blockquote>
-<hr />
-<h2>2. Ayarlar penceresi</h2>
-<p>Tüm ayarlar tek bir pencerede toplandı. Pencereye iki yerden ulaşabilirsin:</p>
-<ul><li><strong>Kenar çubuğu</strong> (sol üstteki ağaç simgesi) → <strong>Ayarlar</strong> kartı</li><li><strong>Editörün sağ üstündeki dişli simgesi</strong></li></ul>
-<p>Pencere, üstte <strong>arama kutusu</strong> ve altında gruplanmış bölüm kartları bulunan bir giriş ekranıyla açılır. Aradığın kelimeyi yazınca liste süzülür:</p>
+<p>Bu kılavuz <strong>beş seviyedir</strong>. Başlangıç yalnız uygulamayı tanıtır; her seviye bir öncekinin üstüne kurulur. İstediğin kadarını öğren: yalnız not tutacaksan ilk iki seviye yeter, telefonu bilgisayarla kullanmak istersen İleri ve Uzman seviyelerine geç. Aynı kılavuz uygulamada <strong>Ayarlar → Kullanım kılavuzu</strong> bölümündedir ve kaldığın yeri hatırlar.</p>
 <div class="tablo-sarmal"><table>
-<thead><tr><th>Bölüm</th><th>Ne yapılır</th></tr></thead>
-<tbody><tr><td><strong>Kullanım kılavuzu</strong></td><td>Adım adım anlatım; ilgili ayara doğrudan geçiş</td></tr><tr><td><strong>Hesap ve giriş</strong></td><td>Google/e-posta ile giriş, bu cihazdaki oturum ve çıkış</td></tr><tr><td><strong>Yapay zekâ</strong></td><td>Sağlayıcı seçimi, API anahtarı ve model listesi</td></tr><tr><td><strong>AI makroları</strong></td><td>Hazır makroları aç/kapat, kendi makronu yaz</td></tr><tr><td><strong>Düzenleme araçları</strong></td><td>Editörde görünecek araçları seç</td></tr><tr><td><strong>Bilgisayar bağlantısı</strong></td><td>Bağlantı yolu, yardımcı program adresi ve erişim anahtarı</td></tr><tr><td><strong>Yedekleme ve senkronizasyon</strong></td><td>Google Drive ile yedekleme</td></tr><tr><td><strong>Veri yönetimi</strong></td><td>Dışa/içe aktarma ve kayıt silme</td></tr><tr><td><strong>Uygulama hakkında</strong></td><td>Sürüm numarası ve gizlilik politikası</td></tr></tbody>
-</table></div>
-<p>Çoğu ayar seçildiği anda kaydedilir; makro düzenleyici gibi bazı akışlarda <strong>Kaydet</strong> düğmesi vardır. Masaüstünde bölümler iki sütunda, telefonda tek sütunda listelenir. <code>Esc</code> tuşu pencereyi kapatır.</p>
-<hr />
-<h2>3. Bahçe oluşturma</h2>
-<ol><li><strong>Yeni Bahçe</strong> düğmesine dokun</li><li>Bahçeye bir ad ver (örn. "Kitap Notları")</li><li><strong>Oluştur</strong></li></ol>
-<p>Yeni oluşturduğun bahçe listenin <strong>en başında</strong> görünür.</p>
-<p>Her bahçe kartında:</p>
-<div class="tablo-sarmal"><table>
-<thead><tr><th>Öğe</th><th>Ne yapar</th></tr></thead>
-<tbody><tr><td>Kartın üstündeki ad</td><td>Son kullandığın görünümü açar (Tuval veya Liste)</td></tr><tr><td><strong>Liste</strong></td><td>Notları hiyerarşik liste hâlinde gösterir</td></tr><tr><td><strong>Tuval</strong></td><td>Notları görsel ağaç olarak gösterir</td></tr><tr><td>Ağaç sayısı</td><td>Bahçede kaç ağaç (en üst seviye not) olduğunu gösterir</td></tr><tr><td>Üç nokta</td><td><em>Yeniden adlandır</em> / <em>Bahçeyi sil</em></td></tr></tbody>
+<thead><tr><th>Seviye</th><th>Dersler</th></tr></thead>
+<tbody><tr><td>1. Başlangıç</td><td>Not Bahçesi nedir? · İlk bahçenizi kurun · İlk notunuzu yazın · Ayarları ve bu kılavuzu bulun</td></tr><tr><td>2. Temel</td><td>Liste görünümünde ağaç kurmak · Tuval: notları ağaç olarak görmek · Editörü tanıyın · Yerel araçlar (internetsiz) · Görünümü kişiselleştirin</td></tr><tr><td>3. Orta</td><td>Google Drive ile yedek ve senkron · Dosya olarak yedek almak · Yapay zekâ ile ilk adım · Kendi yapay zekâ komutlarınız</td></tr><tr><td>4. İleri</td><td>Bilgisayar araçlarını açın · Size uygun bağlantıyı seçin · Bağlantı simgesini okuyun · Bilgisayara yazdırın ve panoya gönderin · Fare ve dikte · PC yardımcısı ne zaman gerekir?</td></tr><tr><td>5. Uzman</td><td>Kişisel kısayollar (makrolar) · Sıralı makro ve bekleme · Düğmeye basınca: dört çalışma biçimi · Profiller ve kısayol düğmeleri · Kendi ekranınızı tasarlayın · Yerel yapay zekâ (internetsiz) · Sorun giderme</td></tr></tbody>
 </table></div>
 <hr />
-<h2>4. Tuval — görsel ağaç görünümü</h2>
-<p>Notlarını dallarıyla birlikte bir ağaç olarak gösterir.</p>
-<ul><li><strong>Düğüme dokun</strong> → üstünde eylem menüsü açılır</li><li><strong>Başka düğüme dokun</strong> → öncekinin menüsü kapanır, yalnızca tek menü açık kalır</li><li><strong>Boş alana dokun</strong> → tüm menüler kapanır</li><li><strong>İki parmakla</strong> büyüt/küçült, <strong>parmakla sürükle</strong> gezin</li><li>Menüdeki simgeler: tam editör, başlığı kopyala, yeni dal ekle, düğüm tipini değiştir</li><li><strong>Ağaç yönetimi</strong> düğmesi ile ağaçları toplu açıp kapatabilirsin</li></ul>
+<h2>1. seviye — Başlangıç</h2>
+<p>Uygulamayı ilk kez açtıysanız buradan başlayın. Bu seviyenin sonunda ilk bahçenizi kurmuş, ilk notunuzu yazmış ve ayarları nerede bulacağınızı öğrenmiş olursunuz. Hesap, internet ya da bilgisayar gerekmez.</p>
+<h3>1.1 Not Bahçesi nedir?</h3>
+<p><em>Bahçe, ağaç, dal ve yaprak ne demek?</em></p>
+<ol><li>Notlarınız <strong>bahçelerde</strong> durur. Her bahçe bir konu ya da proje gibidir: "Kitap", "Ders notları", "İş" gibi.</li><li>Bir bahçenin içinde <strong>ağaçlar</strong> vardır. Ağacın altına <strong>dal</strong> (alt başlık) ve <strong>yaprak</strong> (not) eklersiniz; böylece notlar iç içe, düzenli kalır.</li><li>Notlarınız önce <strong>bu telefonda</strong> saklanır. İnternet olmadan da çalışır.</li></ol>
+<h3>1.2 İlk bahçenizi kurun</h3>
+<p><em>Bir dakikada ilk bahçe.</em></p>
+<ol><li>Ana ekranda <strong>Yeni Bahçe</strong> düğmesine dokunun ve bahçeye bir ad verin.</li><li>Oluşturduğunuz bahçe listenin en başında görünür. Kartına dokunarak açın.</li><li>Karttaki üç nokta menüsünden bahçeyi <strong>yeniden adlandırabilir</strong> veya <strong>silebilirsiniz</strong>.</li></ol>
+<h3>1.3 İlk notunuzu yazın</h3>
+<p><em>Yazın, kaydetmeyi uygulamaya bırakın.</em></p>
+<ol><li>Bahçede <strong>Yeni Ağaç</strong> ile ilk notu açın ve başlığını yazın.</li><li>Notu rahatça yazmak için satırdaki <strong>Editörde aç</strong> simgesine dokunun; metin editörü açılır.</li><li>Editörün altında <strong>Otomatik</strong> işaretliyse yazdıklarınız kendiliğinden kaydedilir; ayrıca bir şey yapmanız gerekmez.</li><li>Sol üstteki geri okuyla bahçeye dönün.</li></ol>
+<blockquote><strong>İpucu:</strong> Otomatik kaydetme kapalıysa sağ üstteki disket simgesiyle kendiniz kaydedin.</blockquote>
+<h3>1.4 Ayarları ve bu kılavuzu bulun</h3>
+<p><em>Kaybolursanız buraya dönün.</em></p>
+<ol><li>Ana ekranın sol üstündeki <strong>ağaç simgesi</strong> ayarları açar. Editörde aynı ekranı <strong>dişli</strong> simgesi açar.</li><li>Ayarlarda üstteki arama kutusuna "tema", "yedek", "bilgisayar" gibi bir kelime yazarak ilgili bölümü bulabilirsiniz.</li><li>Ayarlardaki değişiklikler <strong>anında kaydedilir</strong>; ayrıca Kaydet düğmesi yoktur.</li><li>Bu kılavuz her zaman <strong>Ayarlar → Kullanım kılavuzu</strong>'ndadır. Kaldığınız yeri hatırlar.</li></ol>
 <hr />
-<h2>5. Liste — not listesi görünümü</h2>
-<p>Notlarını hiyerarşik liste hâlinde gösterir. Aradığın notu bulmak için üstteki arama kutusunu kullanabilirsin.</p>
-<h3>Not ekleme</h3>
-<ul><li><strong>Yeni Ağaç</strong> ile en üst seviyede bir not aç</li><li>Bir notun üç nokta menüsünden <strong>Yeni dal ekle</strong> (alt notu varsa) veya</li></ul>
-<p>  <strong>Yeni yaprak ekle</strong> (alt notu yoksa)</p>
-<h3>Üç nokta menüsünde neler var</h3>
-<div class="tablo-sarmal"><table>
-<thead><tr><th>Seçenek</th><th>Ne yapar</th></tr></thead>
-<tbody><tr><td>Tam editörde aç</td><td>Notu büyük metin editöründe açar</td></tr><tr><td>Yeniden adlandır</td><td>Başlığı yerinde düzenlemeni sağlar</td></tr><tr><td>Yeni dal / yaprak ekle</td><td>Altına yeni not ekler</td></tr><tr><td><strong>Dal rengi</strong></td><td>Notun rengini seçer (aşağıya bak)</td></tr><tr><td>Sil</td><td>Notu ve altındaki tüm dalları siler</td></tr></tbody>
-</table></div>
-<h3>Dal rengi</h3>
-<p>Menüde altı hazır renk ve bir <strong>Varsayılan</strong> düğmesi var:</p>
-<ul><li>Yosun yeşili, Bal köşesi, Deniz mavisi, Lavanta, Gül kurusu, Kahve</li><li>Renk seçtiğinde notun simgesi ve yanındaki renk şeridi o renge döner</li><li><strong>Varsayılan</strong> düğmesi rengi seviyeye göre otomatik renge döndürür</li><li>Renkler cihazda saklanır ve Drive yedeklemesiyle diğer cihazlarına da geçer</li></ul>
-<p>Renkleri kullanarak bir bahçedeki farklı konu başlıklarını görsel olarak ayırabilirsin.</p>
+<h2>2. seviye — Temel</h2>
+<p>Notlarınızı düzenlemeyi öğrenin: dallandırma, renkler, arama, tuval görünümü ve dışa aktarma. Bu seviyenin sonunda büyük bir konuyu düzenli bir ağaç hâlinde tutabilirsiniz.</p>
+<h3>2.1 Liste görünümünde ağaç kurmak</h3>
+<p><em>Dal ve yapraklarla iç içe notlar.</em></p>
+<ol><li>Notun yanındaki <strong>üç nokta</strong> (seçenekler) menüsünden <strong>Yeni dal ekle</strong> ya da <strong>Yeni yaprak ekle</strong> ile altına not ekleyin.</li><li>Aynı menüde <strong>Yeniden adlandır</strong>, <strong>Başlığı kopyala</strong> ve <strong>Sil</strong> bulunur. Satırdaki simgelerle içeriği kopyalayabilir ya da notu <strong>editörde açabilirsiniz</strong>.</li><li><strong>Dal rengi</strong> ile konu başlıklarını görsel olarak ayırın; her dokunuşta renk değişir.</li><li>Üstteki <strong>arama kutusu</strong> ile aradığınız nota hızlıca ulaşın.</li></ol>
+<h3>2.2 Tuval: notları ağaç olarak görmek</h3>
+<p><em>Büyük resmi tek ekranda görün.</em></p>
+<ol><li>Bahçe kartından <strong>Tuval</strong> görünümünü açın.</li><li><strong>İki parmakla</strong> yakınlaştırıp uzaklaştırın, <strong>parmağınızla sürükleyerek</strong> gezinin.</li><li>Bir düğüme dokununca eylem menüsü açılır: tam editör, başlığı kopyalama, yeni dal ekleme, düğüm tipini değiştirme.</li><li><strong>Ağaç yönetimi</strong> düğmesiyle tüm ağaçları toplu açıp kapatabilirsiniz. Boş alana dokunmak menüleri kapatır.</li></ol>
+<h3>2.3 Editörü tanıyın</h3>
+<p><em>Kopyala, dışa aktar, tam ekran.</em></p>
+<ol><li>Üst şeritteki simgelerle içeriği <strong>kopyalayabilir</strong>, <strong>PDF</strong> ya da <strong>Word</strong> olarak indirebilirsiniz.</li><li>Sağ alttaki çapraz oklar editörü <strong>tam ekran</strong> yapar; dikkat dağıtan her şey gizlenir.</li><li>Alt bilgi satırında kayıt durumu ve <strong>kelime sayısı</strong> görünür.</li></ol>
+<h3>2.4 Yerel araçlar (internetsiz)</h3>
+<p><em>Başlık üret, numaralandır, boşlukları sadeleştir.</em></p>
+<ol><li>Yerel araçlar yapay zekâ kullanmaz, telefonun içinde çalışır. Varsayılan olarak gizlidir.</li><li><strong>Ayarlar → Düzenleme araçları → Yerel araçlar</strong> sekmesinde <strong>Araçlar bölümünü editörde göster</strong> anahtarını açın.</li><li>Editörde <strong>Araçlar</strong> sekmesi belirir: <strong>İçerikten Başlık</strong> nota kısa bir başlık üretir, <strong>Sıralı Ad</strong> adsız eklenen dala sıra numarası verir; metni numaralandıran ve fazla boşlukları temizleyen araçlar da vardır.</li><li>İstemediğiniz aracı aynı ekrandan kapatabilir ya da silebilirsiniz.</li></ol>
+<h3>2.5 Görünümü kişiselleştirin</h3>
+<p><em>Açık, koyu ya da sistem teması.</em></p>
+<ol><li><strong>Ayarlar → Görünüm → Tema</strong> bölümünden <strong>Açık</strong>, <strong>Koyu</strong> ya da telefonunuzu izleyen <strong>Sistem</strong> temasını seçin.</li></ol>
 <hr />
-<h2>6. Metin editörü ve yapay zekâ</h2>
-<p>Bir notu açtığın büyük editör ekranı.</p>
-<h3>Bulut ve yerel yapay zekâ</h3>
-<p><strong>Ayarlar → Yapay zekâ</strong> bölümünde iki sekme var: <strong>Bulut</strong> ve <strong>Yerel</strong>. Sekme değiştirmek kullanılan motoru değiştirmez. Bulutta sağlayıcını seçip API anahtarını gir, ardından ilgili sağlayıcıyı kullan düğmesine dokun.</p>
-<p>Android’de yerel model için Hugging Face’ten LiteRT-LM uyumlu <strong>.litertlm</strong> veya MediaPipe uyumlu <strong>.task / .bin</strong> dosyasını indir. Modelin lisans koşullarını kontrol et. Uygulamaya dön, <strong>Dosya seç</strong> ile dosyayı seç ve <strong>Etkinleştir</strong> düğmesine dokun. <strong>Modeli dene</strong> ile kısa bir yanıt kontrolü yapabilirsin. İlk indirmeden sonra model internet veya API anahtarı olmadan cihazda çalışır. Modelin kalitesi ve hızı telefonun donanımına göre değişir; ham GGUF / safetensors dosyaları desteklenmez.</p>
-<p>Bilgisayardaki tarayıcıda yerel mod için Ollama sunucu adresini ve kurulu model adını gir. Bulut anahtarların bu seçimden etkilenmez.</p>
-<h3>Temel işlemler</h3>
-<ul><li><strong>Başlık</strong> ve <strong>içerik</strong> alanlarına yaz</li><li><strong>Oto</strong> kutusu açıkken değişiklikler kendiliğinden kaydedilir</li><li>Üstteki düğmeler: geri dön, içeriği kopyala, dışa aktar (PDF / Word) ve</li></ul>
-<p>  <strong>Ayarlar</strong> (dişli simgesi)</p>
-<ul><li><strong>Otomatik kaydetme</strong> kapalıysa Kaydet düğmesini kendin basmalısın</li></ul>
-<h3>Yapay zekâ makroları</h3>
-<p>Üst şeritte <strong>AI</strong> etiketinin yanında makro kutuları görünür. Varsayılan olarak:</p>
-<p><strong>İmla Düzelt · Özetle · Resmileştir · Sadeleştir · Genişlet · İngilizceye Çevir</strong></p>
-<p>Bir kutuya dokunduğunda:</p>
-<ol><li>Notun metni (ya da seçtiğin bölüm) senin API anahtarınla seçtiğin sağlayıcıya gönderilir</li><li>Gelen cevap nota yazılır</li><li>Üstte <strong>Sonuç hazır:</strong> yazısıyla <strong>Onayla</strong> ve <strong>Geri Al</strong> düğmeleri çıkar</li></ol>
-<ul><li><strong>Onayla</strong> → sonucu kalıcı hâle getirir</li><li><strong>Geri Al</strong> → notu eski hâline döndürür</li></ul>
-<blockquote>Metnin bir bölümünü seçtiysen yapay zekâ yalnızca o bölümü işler.</blockquote>
-<h3>Yapay zekâ sağlayıcısını ayarlama</h3>
-<p>Ayarlar → <strong>Yapay zekâ</strong> bölümü</p>
-<ol><li>Sağlayıcı seç: Google Gemini, OpenAI, Anthropic veya <strong>Özel (Custom)</strong></li><li><strong>Özel</strong> seçtiysen:</li></ol>
-<ul><li><strong>Base URL</strong> — örn. <code>https://api.ornek.com/v1</code></li></ul>
-<p>     (<code>/v1</code> adresini ya da doğrudan <code>/chat/completions</code> adresini yazabilirsin)</p>
-<ul><li><strong>Model adı / Model ID</strong> — sağlayıcının panelinde yazan gerçek model kimliği</li></ul>
-<ol><li><strong>API Anahtarı</strong> alanına kendi anahtarını gir</li><li><strong>Sağlayıcıyı Ekle</strong></li></ol>
-<blockquote>API anahtarın yalnızca cihazında saklanır. Yapay zekâyı kullandığında anahtar ve işlenecek metin önce uygulamanın sunucu rotasına, oradan seçtiğin sağlayıcıya iletilir.</blockquote>
-<h3>Makroları yönetme</h3>
-<p>Ayarlar → <strong>AI makroları</strong> bölümü</p>
-<ul><li>Her makronun yanındaki <strong>anahtar</strong> ile makroyu kapatıp açabilirsin</li><li>Kapatılan makro <strong>editörde görünmez</strong>, böylece arayüz kalabalıklaşmaz</li><li>Makroya dokunup <strong>Makroyu kaydet</strong> ile görev metnini değiştirebilirsin</li><li><strong>Makroyu sil</strong> ile kaldırabilirsin</li><li><strong>Yeni makro ekle</strong> ile kendi görevini yazabilirsin (örn. "Bu notu toplantı</li></ul>
-<p>  tutanağına çevir ve kararları madde madde yaz")</p>
-<ul><li><strong>Varsayılanlar</strong> düğmesi hazır makro setini geri getirir</li></ul>
-<p>Makro detay sayfasında üç alan var: <strong>Makro adı</strong> (kutuda görünen ad), <strong>Alt başlık</strong> (ne yaptığının kısa açıklaması) ve <strong>Yapay zekâya gönderilecek görev</strong>.</p>
+<h2>3. seviye — Orta</h2>
+<p>Notlarınızı güvene alın ve yapay zekâdan yardım alın. Bu seviyenin sonunda notlarınız Google Drive'da yedeklenir, başka cihazda da görünür ve metinlerinizi tek dokunuşla özetletip düzelttirebilirsiniz.</p>
+<h3>3.1 Google Drive ile yedek ve senkron</h3>
+<p><em>Telefon kaybolsa da notlar kalsın.</em></p>
+<ol><li><strong>Ayarlar → Hesap ve giriş</strong> bölümünden Google ile giriş yapın.</li><li><strong>Ayarlar → Yedekleme ve senkronizasyon</strong> bölümünde <strong>Drive ile Senkron</strong>, yedekle bu cihazı güvenle birleştirir; <strong>Drive'a Yedekle</strong> cihazdakini yazar.</li><li><strong>Otomatik senkronu aç</strong> anahtarı açıkken değişiklikler kendiliğinden yedeklenir.</li><li>Yedekler Drive'ınızın <strong>uygulamaya özel gizli klasöründe</strong> durur; başka uygulamalar göremez.</li><li>Notların her cihazda aynı olması için her cihazda <strong>aynı Google hesabını</strong> kullanın.</li></ol>
+<blockquote><strong>İpucu:</strong> Giriş yapmadan kullanırsanız notlar yalnız bu telefondadır; uygulamayı kaldırırsanız silinir.</blockquote>
+<h3>3.2 Dosya olarak yedek almak</h3>
+<p><em>Drive kullanmadan taşımak için.</em></p>
+<ol><li><strong>Ayarlar → Veri yönetimi → Dışa Aktar</strong> ile bahçelerinizi <strong>JSON</strong>, <strong>HTML</strong> veya <strong>PDF</strong> olarak kaydedin.</li><li>Yeni telefonda <strong>İçe Aktar</strong> ile JSON yedeğini geri yükleyin.</li><li>Tek bir notu editörden <strong>Word</strong> ya da <strong>PDF</strong> olarak indirebilirsiniz.</li></ol>
+<h3>3.3 Yapay zekâ ile ilk adım</h3>
+<p><em>Özetle, imla düzelt, çevir.</em></p>
+<ol><li><strong>Ayarlar → Yapay zekâ → Bulut</strong> sekmesinde bir sağlayıcı seçip kendi API anahtarınızı girin ve etkinleştirin.</li><li><strong>Ayarlar → Düzenleme araçları</strong>'nda <strong>Yapay zekâ bölümünü editörde göster</strong> anahtarını açın.</li><li>Editörde <strong>AI</strong> satırındaki bir makro kutusuna dokunun (ör. <strong>Özetle</strong>, <strong>İmla Düzelt</strong>).</li><li>Metnin bir bölümünü seçtiyseniz yalnız o bölüm işlenir.</li><li>Gelen sonucu <strong>Onayla</strong> ile kalıcı yapın ya da <strong>Geri Al</strong> ile vazgeçin.</li></ol>
+<blockquote><strong>İpucu:</strong> Yapay zekâ isteğe bağlıdır; kullanmazsanız uygulamanın geri kalanı aynen çalışır.</blockquote>
+<h3>3.4 Kendi yapay zekâ komutlarınız</h3>
+<p><em>Sık yaptığınız işi tek kutuya koyun.</em></p>
+<ol><li><strong>Ayarlar → AI makroları</strong>'nda yeni bir makro ekleyin: ad, kısa açıklama ve yapay zekâya gidecek görevi yazın (ör. "Bu metni resmî bir e-postaya çevir").</li><li>Makro, editördeki AI satırında kutu olarak görünür. İstemediğiniz makroyu kapatabilirsiniz.</li></ol>
 <hr />
-<h2>7. Google Drive yedekleme</h2>
-<p>Ayarlar → <strong>Yedekleme ve senkronizasyon</strong> bölümü</p>
-<div class="tablo-sarmal"><table>
-<thead><tr><th>Düğme</th><th>Ne yapar</th></tr></thead>
-<tbody><tr><td>Google Drive ile Senkron</td><td>Drive'daki yedekle bu cihazı güvenle birleştirir</td></tr><tr><td>Drive'a Yedekle</td><td>Bu cihazdaki her şeyi Drive'a yazar</td></tr><tr><td>Drive'dan Geri Yükle</td><td>Drive'daki yedeği cihaza indirir</td></tr><tr><td>Şimdi Senkronla</td><td>Beklemeden hemen senkron yapar</td></tr><tr><td>Otomatik Senkron</td><td>Açıkken değişiklikler kendiliğinden yedeklenir</td></tr></tbody>
-</table></div>
-<p>Yedekler Drive'ın uygulamaya özel gizli klasöründe tutulur; Drive'ında görünmez. Alt tarafta son yedekleme zamanı yazar.</p>
+<h2>4. seviye — İleri</h2>
+<p>Telefonunuzu bilgisayarın klavyesi, faresi ve panosu gibi kullanın. Bu seviyenin sonunda telefonda yazdığınızı bilgisayara yazdırabilir, panoya gönderebilir ve fareyi telefondan yönetebilirsiniz.</p>
+<h3>4.1 Bilgisayar araçlarını açın</h3>
+<p><em>Editörde Bilgisayar sekmesi.</em></p>
+<ol><li><strong>Ayarlar → Düzenleme araçları → Bilgisayar araçları</strong> sekmesinde <strong>Bilgisayar araçlarını editörde göster</strong> anahtarını açın.</li><li>Aynı ekranda hangi araçların (Fare, Dikte, Köprü Yaz, Panoya Gönder…) görüneceğini tek tek seçebilirsiniz.</li><li>Editörde <strong>Bilgisayar</strong> sekmesine dokunun; araçlar ikinci satırda görünür.</li></ol>
+<h3>4.2 Size uygun bağlantıyı seçin</h3>
+<p><em>Dört yol; çoğu kişi için ilk ikisi yeter.</em></p>
+<ol><li><strong>Ayarlar → Bilgisayar bağlantısı</strong>'nda bir yol seçin ve ekrandaki numaralı adımları sırayla izleyin.</li><li><strong>Bilgisayar · Bluetooth:</strong> bilgisayara <strong>program kurmadan</strong> çalışır. Telefon bilgisayara Bluetooth klavye ve fare olarak bağlanır.</li><li><strong>Bilgisayar · Wi‑Fi:</strong> bilgisayarda <strong>PC yardımcısı</strong> açık olmalıdır; ilk kez bağlanırken penceredeki <strong>6 haneli kodu</strong> bir kez yazarsınız. Telefon ve bilgisayar aynı Wi‑Fi'da olmalı.</li><li><strong>Kart · Wi‑Fi</strong> ve <strong>Kart · Bluetooth:</strong> bilgisayara USB ile takılan Not Bahçesi kartı (ESP32‑S3) içindir; kart bilgisayara klavye ve fare gibi yazar. Kartınız yoksa bu yolları atlayın.</li><li>Yolu seçtikten sonra <strong>Deneyin</strong> adımındaki düğmeyle bağlantıyı sınayın.</li></ol>
+<blockquote><strong>İpucu:</strong> Bluetooth ile ilk kez bağlanırken bilgisayar telefonu klavye olarak tanımazsa ekrandaki "İlk kez mi, ya da bağlanmıyor mu?" adımlarını izleyin: bilgisayarda telefonu kaldırıp "Cihaz ekle" ile yeniden ekleyin.</blockquote>
+<h3>4.3 Bağlantı simgesini okuyun</h3>
+<p><em>Yeşil, kırmızı, gri.</em></p>
+<ol><li>Editörün Bilgisayar satırının başındaki zincir simgesi bağlantının <strong>canlı</strong> durumunu gösterir.</li><li><strong>Yeşil:</strong> bilgisayar gerçekten yanıt veriyor. <strong>Kırmızı:</strong> kurulu ama şu an ulaşılamıyor. <strong>Gri:</strong> kurulum eksik.</li><li>Simgeye dokunmak doğrudan <strong>Bilgisayar bağlantısı</strong> ayarlarını açar.</li></ol>
+<h3>4.4 Bilgisayara yazdırın ve panoya gönderin</h3>
+<p><em>Telefonda yaz, bilgisayarda kullan.</em></p>
+<ol><li>Bilgisayarda yazının gideceği yere (ör. Word) bir kez tıklayın.</li><li>Telefonda notu yazın ve <strong>Bilgisayara yaz</strong> (gönder) düğmesine dokunun: metin, klavyeden yazılmış gibi bilgisayara geçer.</li><li><strong>PC panosu</strong> düğmesi metni bilgisayarın panosuna koyar; bilgisayarda <strong>Ctrl+V</strong> ile istediğiniz yere yapıştırırsınız.</li><li>Gönderim bitince ekranın üstünde kısa bir <strong>"gönderildi ✓"</strong> bildirimi çıkar ve düğme birkaç saniye yeşil tik gösterir. Hata olursa bildirim nedenini yazar.</li></ol>
+<blockquote><strong>İpucu:</strong> Pano için bilgisayarda PC yardımcısı açık olmalıdır (Bilgisayar · Wi‑Fi'da zaten açıktır). Diğer yollarda yardımcıyı bir kez tanıtmak için Bilgisayar bağlantısı → PC panosu bölümünü kullanın; Bluetooth seçerseniz kod gerekmez.</blockquote>
+<h3>4.5 Fare ve dikte</h3>
+<p><em>Telefonu dokunmatik yüzey gibi kullanın.</em></p>
+<ol><li><strong>Fare</strong> aracında yüzeyde parmağınızı kaydırınca imleç hareket eder; dokunmak sol tıktır. Alttaki düğmelerle sağ tık ve kaydırma yapılır.</li><li><strong>Dikte</strong> konuşmanızı yazıya çevirir. Sonucun nota mı, doğrudan bilgisayara mı yazılacağını <strong>Bilgisayar bağlantısı → Araç davranışı</strong>'ndan seçersiniz.</li><li><strong>Köprü Yaz</strong> açıkken notta yazdığınız her şey aynı anda bilgisayara da yazılır.</li><li><strong>Köprü Dikte</strong> konuşurken yazar: sözünüz cümle sonu beklenmeden bilgisayarda görünür. Süresini aynı bölümden ayarlayabilirsiniz.</li></ol>
+<h3>4.6 PC yardımcısı ne zaman gerekir?</h3>
+<p><em>Kısa cevap: Wi‑Fi ve pano için.</em></p>
+<ol><li><strong>Bilgisayar · Wi‑Fi</strong> yolunda yazma, fare ve pano için gerekir.</li><li>Diğer yollarda yazma ve fare programsız çalışır; yardımcı yalnız <strong>panoya göndermek</strong> için gerekir.</li><li>Yardımcıyı <strong>yönetici olarak çalıştırmanız gerekmez</strong>. Windows yalnız ilk seferde, Wi‑Fi için güvenlik duvarı izni sorabilir.</li><li>Bilgisayarı her açtığınızda yardımcıyı yeniden başlatın; pencere kapanınca durur. Eşleşme hatırlanır, kod bir daha sorulmaz.</li></ol>
 <hr />
-<h2>8. Veri yönetimi</h2>
-<p>Ayarlar → <strong>Veri yönetimi</strong> bölümü</p>
-<ul><li><strong>Dışa Aktar</strong> — bahçelerini JSON, HTML veya PDF olarak kaydeder.</li></ul>
-<p>  Hangi bahçelerin dışa aktarılacağını seçebilirsin.</p>
-<ul><li><strong>İçe Aktar</strong> — daha önce aldığın JSON yedeğini geri yükler. Yedek önce doğrulanır;</li></ul>
-<p>  bozuk bir dosya mevcut notlarına dokunmaz.</p>
-<ul><li><strong>Word</strong> çıktısı tek bir not için editörün üst şeridindeki <strong>Word olarak indir</strong></li></ul>
-<p>  düğmesinden alınır.</p>
-<p>Bu yolu cihaz değiştirirken veya Drive kullanmadan yedek almak istediğinde kullan.</p>
+<h2>5. seviye — Uzman</h2>
+<p>Kendi kontrol panelinizi kurun: makrolar, sıralı işler, profiller ve bölmeli ekranlar. Bu seviyenin sonunda tekrarlayan işleri tek dokunuşa indirir, telefonu size özel bir kumanda masasına çevirirsiniz.</p>
+<h3>5.1 Kişisel kısayollar (makrolar)</h3>
+<p><em>Konum, klavye kısayolu, hazır metin.</em></p>
+<ol><li><strong>Ayarlar → Düzenleme araçları → Bilgisayar araçları → Kişisel kısayollar</strong>'da <strong>Makro Ekle</strong>'ye dokunun.</li><li><strong>Konum:</strong> bilgisayar ekranında seçtiğiniz noktaya tek ya da çift tıklar. <strong>Kısayol:</strong> CTRL+S gibi bir tuş birleşimi gönderir; <strong>Klavyeden seç</strong> ile sanal klavyeden de seçebilirsiniz. <strong>Metin:</strong> hazır bir yazıyı yazar.</li><li>Editörde <strong>Kısayollar</strong> (sihirli değnek) aracına dokunun: makrolar bir pano olarak açılır, her biri tek dokunuşla çalışır.</li></ol>
+<blockquote><strong>İpucu:</strong> <strong>Bilgisayar · Bluetooth</strong> yolunda telefon ekranın belirli bir noktasına kendiliğinden gidemez; <strong>Konum</strong> makroları için bilgisayarda PC yardımcısı açık ve bir kez tanıtılmış olmalıdır (PC panosu bölümünden, kod gerekmez). Kısayol ve metin makroları programsız çalışır.</blockquote>
+<h3>5.2 Sıralı makro ve bekleme</h3>
+<p><em>Birçok adımı tek düğmeye bağlayın.</em></p>
+<ol><li>Makro türü olarak <strong>Sıralı</strong>'yı seçin. Adım olarak metin, kısayol, tıklama, başka bir kayıtlı makro ya da <strong>bekleme</strong> ekleyin.</li><li>Adımları oklarla sıralayın. İki adımın arasındaki <strong>+ Bekleme</strong> düğmesi tam oraya süre koyar (0,05 sn – 10 dk).</li><li>Bir adım hata verirse makro durur ve hangi adımın sorunlu olduğunu söyler.</li></ol>
+<h3>5.3 Düğmeye basınca: dört çalışma biçimi</h3>
+<p><em>Normal, Sayılı, Anahtar, Basılı tut.</em></p>
+<ol><li>Sıralı makronun altındaki <strong>Düğmeye basınca</strong> bölümünden seçin.</li><li><strong>Normal:</strong> bir kez çalışır, bilgisayar tuşu gibi. <strong>Sayılı:</strong> belirlediğiniz sayı kadar (1–1000) art arda çalışır.</li><li><strong>Anahtar:</strong> ilk dokunuş açar, siz yeniden dokunup kapatana kadar baştan tekrar eder. <strong>Basılı tut:</strong> parmağınız düğmedeyken tekrar eder, bırakınca durur.</li><li>Tekrarlanan biçimlerde <strong>Turlar arası</strong> bekleme verebilirsiniz. Çalışan makronun düğmesi yeşil çerçeveyle vurgulanır, köşesinde tur sayısı görünür.</li></ol>
+<blockquote><strong>İpucu:</strong> Uzun bir Sayılı ya da Anahtar makroyu durdurmak için düğmesine yeniden dokunmanız yeterlidir.</blockquote>
+<h3>5.4 Profiller ve kısayol düğmeleri</h3>
+<p><em>Makroları işe göre gruplayın.</em></p>
+<ol><li><strong>Profiller ve kısayol düğmeleri</strong> bölümünde "Ofis", "Oyun" gibi profiller oluşturup makroları içlerine sıralayın.</li><li>Editörde <strong>Kısayollar</strong> aracına dokunduğunuzda ikinci satırda <strong>Tümü</strong> ve profil sekmeleri çıkar; sekmeler arasında tek dokunuşla geçersiniz. Klavye simgesi yazıya döndürür.</li><li>Sık kullandığınız profil için ayrıca bir <strong>kısayol düğmesi</strong> ekleyebilirsiniz; düğme Bilgisayar satırında durur.</li></ol>
+<h3>5.5 Kendi ekranınızı tasarlayın</h3>
+<p><em>Bölmeli kumanda masası.</em></p>
+<ol><li><strong>Ekran düzenleri</strong> bölümünde yeni bir düzen açın. Ekranı yan yana <strong>sütunlara</strong>, her sütunu alt alta <strong>bölmelere</strong> ayırın.</li><li>Her bölmeye bir içerik verin: <strong>Fare</strong>, <strong>Yön tuşları</strong>, <strong>Metin yazma</strong>, <strong>Canlı klavye</strong>, görünen <strong>Telefon</strong> ya da <strong>Bilgisayar klavyesi</strong>, <strong>Kısayollar</strong> (bir profile bağlanabilir) veya <strong>Köprü Dikte</strong>.</li><li>Bölmeler arası boşluğu ve iç boşluğu sayı olarak girin; <strong>kenarsız</strong> seçeneği bölmeleri tek yüzey gibi gösterir.</li><li>Editörde <strong>Ekran</strong> aracına dokunun; ikinci satırdan düzenler arasında geçiş yaparsınız.</li></ol>
+<h3>5.6 Yerel yapay zekâ (internetsiz)</h3>
+<p><em>Model telefonda çalışır.</em></p>
+<ol><li><strong>Ayarlar → Yapay zekâ → Yerel</strong> sekmesini açın.</li><li>Hugging Face'ten LiteRT‑LM uyumlu <strong>.litertlm</strong> ya da MediaPipe uyumlu <strong>.task / .bin</strong> model dosyasını indirin.</li><li><strong>Dosya seç → Etkinleştir</strong> adımlarını izleyin, <strong>Modeli dene</strong> ile yanıtı kontrol edin.</li></ol>
+<blockquote><strong>İpucu:</strong> Yerel modeller büyük dosyalardır ve telefonun belleğini kullanır; güçlü telefonlarda daha hızlı çalışır.</blockquote>
+<h3>5.7 Sorun giderme</h3>
+<p><em>Bağlantı kırmızıysa sırayla deneyin.</em></p>
+<ol><li><strong>Wi‑Fi yollarında:</strong> telefon ve bilgisayar aynı ağda mı? Bilgisayarın ağ profili <strong>Özel</strong> mi? PC yardımcısının penceresi açık mı?</li><li><strong>Bluetooth yollarında:</strong> iki cihazda da Bluetooth açık mı? Bilgisayar telefonu klavye olarak tanımıyorsa telefonu bilgisayardan kaldırıp yeniden ekleyin.</li><li>Telefonda başka bir "Bluetooth klavye/fare" uygulaması açıksa kapatın; aynı anda yalnız bir uygulama klavye olabilir.</li><li>Bağlantı simgesine dokunup <strong>Bilgisayar bağlantısı</strong> ekranındaki <strong>Deneyin</strong> düğmesiyle nedeni görün; hata iletisi ne yapmanız gerektiğini söyler.</li></ol>
 <hr />
-<h2>9. Sık sorulanlar</h2>
-<p><strong>Notlarım kaybolur mu?</strong> Yerel modda veriler cihazda tutulur; uygulamayı kaldırırsan silinir. Google ile giriş yapıp otomatik senkronu açarsan Drive'da yedeklenir.</p>
-<p><strong>Telefon ile bilgisayarda aynı notları görebilir miyim?</strong> Evet. İki cihazda da <strong>aynı Google hesabıyla</strong> giriş yap ve otomatik senkronu aç. Notlar birleştirilir; çakışmada en son değiştirilen sürüm geçerli olur.</p>
-<p><strong>Yapay zekâ hata veriyor, ne yapmalıyım?</strong> Hata mesajı sağlayıcının kendi cevabını gösterir. Sık sebepler: anahtar geçersiz, model adı yanlış yazılmış veya hesabında bakiye/kota kalmamış.</p>
-<p><strong>Yapay zekâ kullanmak zorunda mıyım?</strong> Hayır. Hiçbir sağlayıcı tanımlamazsan makro kutuları çalışmaz ama uygulamanın diğer tüm özellikleri normal çalışır.</p>
-<p><strong>İnternet olmadan çalışır mı?</strong> Evet. Notlar cihazda tutulur; yalnızca Drive senkronu ve yapay zekâ internet ister.</p>
-<p><strong>Bir dalın rengini nasıl değiştiririm?</strong> Liste görünümünde notun üç nokta menüsüne dokun → <strong>Dal rengi</strong> seçeneğine bas. Renk sırayla değişir ve kaydedilir; seçtiğin renk uygulamayı kapatıp açsan da korunur.</p>
-<p><strong>Ayarları nereden açarım?</strong> Kenar çubuğundaki <strong>Ayarlar</strong> kartından ya da editörün sağ üstündeki dişli simgesinden. Telefonunu bilgisayarına bağlamak istiyorsan <strong>Bilgisayar bağlantısı</strong> bölümüne bak.</p>
+<h2>Sık sorulanlar</h2>
+<h3>Notlarım kaybolur mu?</h3>
+<p>Giriş yapmadan kullanırsanız notlar yalnız bu cihazdadır; uygulamayı kaldırırsanız silinir. Google ile giriş yapıp otomatik senkronu açarsanız Drive'da yedeklenir.</p>
+<h3>İnternet olmadan çalışır mı?</h3>
+<p>Evet. Notlar cihazda tutulur; yalnız Drive senkronu ve bulut yapay zekâ internet ister. Bilgisayar araçları yerel ağ ya da Bluetooth kullanır.</p>
+<h3>Telefon ve bilgisayarda aynı notları görebilir miyim?</h3>
+<p>İki cihazda da aynı Google hesabıyla giriş yapıp otomatik senkronu açın. Notlar birleştirilir; çakışmada en son değiştirilen sürüm geçerli olur.</p>
+<h3>Yapay zekâ hata veriyor, ne yapmalıyım?</h3>
+<p>Hata iletisi sağlayıcının yanıtını gösterir. Sık sebepler: geçersiz API anahtarı, yanlış model adı, kota ya da bakiye yetersizliği.</p>
+<h3>Bilgisayarıma program kurmam gerekiyor mu?</h3>
+<p>Bilgisayar · Bluetooth yolunda yazma ve fare için hayır. PC yardımcısı yalnız Bilgisayar · Wi‑Fi yolu ve bilgisayar panosuna gönderme için gerekir; kurulum istemez, Windows'un kendi PowerShell'iyle çalışır ve yönetici olarak açmanız gerekmez.</p>
+<h3>Eşleştirme kodu ne işe yarar?</h3>
+<p>PC yardımcısının penceresinde görünen 6 haneli kod, telefonunuzun o bilgisayarı Wi‑Fi üzerinden güvenle tanıması içindir ve bir kez kullanılır. Bluetooth ile eşleşmiş bilgisayarda pano için kod gerekmez.</p>
+<h3>Başka bir bilgisayarda da kullanabilir miyim?</h3>
+<p>Evet. Bluetooth yolunda yeni bilgisayarı telefonla eşleştirip Bilgisayar bağlantısı ekranından seçin. Wi‑Fi yolunda o bilgisayarda PC yardımcısını açıp "Ağda bilgisayar ara" ile bulun ve penceredeki kodu yazın.</p>
+<h3>Panoya gönderdim, nasıl anlarım?</h3>
+<p>Gönderim bitince editörün üstünde kısa bir "gönderildi ✓" bildirimi çıkar ve PC panosu düğmesi birkaç saniye yeşil tik gösterir. Bilgisayarda Ctrl+V ile yapıştırabilirsiniz.</p>
 </div>
 </body>
 </html>

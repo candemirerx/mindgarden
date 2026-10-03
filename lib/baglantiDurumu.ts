@@ -11,8 +11,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul, bleDurumu, connectCard, kartiWifidaBul,
-    kayitliKartAdresi, remotePrefs, saveRemotePrefs, sendKey, sendToComputerClipboard, testCard, testHelper, typeOnComputer
+    bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul, bleDurumu, bluetoothKlavyeBagla, bluetoothKlavyeDurumu, connectCard, kartiWifidaBul,
+    kayitliKartAdresi, remotePrefs, saveRemotePrefs, sendCommand, sendKey, sendToComputerClipboard, testCard, testHelper, typeOnComputer
 } from './remoteTools';
 import type { ConnectionMode, RemotePrefs } from './remoteTools';
 import { bildir, dinle } from './degisim';
@@ -46,9 +46,9 @@ export async function baglantiyiYokla(prefs: RemotePrefs): Promise<BaglantiDurum
             return sonuc('ok', ad + ' ile bağlı (Wi‑Fi).');
         }
         if (yol === 'pc-bluetooth') {
-            if (!prefs.helperBluetoothAddress || !prefs.helperToken) return sonuc('kurulmadi', 'Bilgisayar seçilmedi ya da eşleştirilmedi.');
-            await sureli(testHelper(prefs), 16000, 'Bilgisayar Bluetooth ile yanıt vermedi.');
-            return sonuc('ok', ad + ' ile bağlı (Bluetooth).');
+            if (!prefs.helperBluetoothAddress) return sonuc('kurulmadi', 'Bilgisayar seçilmedi.');
+            await sureli(testHelper(prefs), 20000, 'Bilgisayar Bluetooth klavye bağlantısını kabul etmedi.');
+            return sonuc('ok', (prefs.helperName || 'Bilgisayar') + ' ile Bluetooth klavye/fare olarak bağlı.');
         }
         if (yol === 'wifi') {
             if (!prefs.cardUrl.trim()) return sonuc('kurulmadi', 'Kart adresi yok.');
@@ -127,6 +127,9 @@ if (typeof window !== 'undefined') {
         bul: () => bilgisayarlariBul(),
         eslestirWifi: (url: string, kod: string) => bilgisayarlaEslestirWifi(url, kod),
         eslestirBluetooth: (adres: string, kod: string) => bilgisayarlaEslestirBluetooth(adres, kod),
+        btKlavye: (adres: string) => bluetoothKlavyeBagla(adres),
+        btKlavyeDurumu: () => bluetoothKlavyeDurumu(),
+        komut: (komut: string) => sendCommand(komut, remotePrefs()),
         kartBul: () => kartiWifidaBul()
     };
 }

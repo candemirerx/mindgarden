@@ -17,8 +17,10 @@
  */
 import { useState } from 'react';
 import { Keyboard, ListOrdered, MousePointer2, Settings2, TextCursorInput } from 'lucide-react';
-import { konumYuzdesi, makroHazir, runRemoteMacro, type RemoteMacro } from '@/lib/remoteTools';
+import { konumYuzdesi, makroHazir, type RemoteMacro } from '@/lib/remoteTools';
+import { calismaMetni } from '@/lib/makroCalistirici';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
+import MakroDugmesi from './MakroDugmesi';
 
 /** Panelde makro adının altında görünen kısa ipucu. */
 function makroIpucu(makro: RemoteMacro): string {
@@ -26,7 +28,7 @@ function makroIpucu(makro: RemoteMacro): string {
         const [x, y] = makro.value.split(',').map((parca) => Number(parca.trim()));
         return '%' + Math.round(konumYuzdesi(x)) + ' · %' + Math.round(konumYuzdesi(y)) + (makro.click === 2 ? ' · çift' : '');
     }
-    if (makro.type === 'sequence') return (makro.steps?.length ?? 0) + ' adım';
+    if (makro.type === 'sequence') return [(makro.steps?.length ?? 0) + ' adım', calismaMetni(makro)].filter(Boolean).join(' · ');
     if (makro.type === 'shortcut') return makro.value.trim();
     const tekSatir = makro.value.trim().replace(/\s+/g, ' ');
     return tekSatir.length > 26 ? tekSatir.slice(0, 26) + '…' : tekSatir;
@@ -51,21 +53,6 @@ function makroHatasi(hata: unknown): string {
 export default function KisayolPanosu({ onAyarlarAc, profilId = null }: { onAyarlarAc: () => void; profilId?: string | null }) {
     const prefs = useRemotePrefs();
     const [durum, setDurum] = useState('');
-    const [busy, setBusy] = useState(false);
-
-    const makroCalistir = async (makro: RemoteMacro) => {
-        setBusy(true);
-        setDurum('');
-        try {
-            await runRemoteMacro(makro, prefs);
-            const ad = makro.name.trim() || TUR_ETIKETI[makro.type];
-            setDurum(makro.type === 'text' ? '"' + ad + '" bilgisayara yazıldı.' : '"' + ad + '" bilgisayarda çalıştırıldı.');
-        } catch (error) {
-            setDurum(makroHatasi(error));
-        } finally {
-            setBusy(false);
-        }
-    };
 
     const profil = profilId ? prefs.profiles.find((p) => p.id === profilId) ?? null : null;
     const etkinMakrolar = (profil
@@ -93,22 +80,23 @@ export default function KisayolPanosu({ onAyarlarAc, profilId = null }: { onAyar
                                     const Icon = makro.type === 'position' ? MousePointer2 : makro.type === 'shortcut' ? Keyboard : makro.type === 'sequence' ? ListOrdered : TextCursorInput;
                                     const etiket = makro.name + ' · ' + TUR_ETIKETI[makro.type];
                                     return (
-                                        <button
+                                        <MakroDugmesi
                                             key={makro.id}
+                                            makro={makro}
+                                            prefs={prefs}
+                                            onSonuc={(mesaj) => setDurum(mesaj)}
+                                            hataMetni={makroHatasi}
+                                            basariMesaji={'"' + (makro.name.trim() || TUR_ETIKETI[makro.type]) + (makro.type === 'text' ? '" bilgisayara yazıldı.' : '" bilgisayarda çalıştırıldı.')}
                                             id={'kisayol-makro-' + indeks}
                                             data-makro-id={makro.id}
                                             data-makro-tur={makro.type}
-                                            type="button"
-                                            disabled={busy}
-                                            onClick={() => void makroCalistir(makro)}
                                             aria-label={etiket}
-                                            title={etiket}
                                             className="flex min-h-[84px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-sand-200 bg-white px-2 py-3 text-center shadow-soft transition-colors duration-200 hover:border-moss-500/50 hover:bg-moss-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40 active:scale-[0.98] disabled:opacity-60"
                                         >
                                             <Icon size={20} className="text-moss-700" aria-hidden="true" />
                                             <span className="w-full truncate text-xs font-semibold text-sand-800">{makro.name.trim()}</span>
                                             <span className="w-full truncate text-[10px] text-sand-500">{makroIpucu(makro)}</span>
-                                        </button>
+                                        </MakroDugmesi>
                                     );
                                 })}
                             </div>
@@ -119,4 +107,22 @@ export default function KisayolPanosu({ onAyarlarAc, profilId = null }: { onAyar
             </div>
         </div>
     );
+}
+
+/**
+ * Kısayollar açıkken editörün bilgisayar satırında araçların yerine gösterilen
+ * profil seçimi (Ekran aracındaki ekran seçimi gibi): Tümü + her profil, sonda
+ * yazıya dönüş.
+ */
+export function KisayolSecici({ profilId, onProfilChange, onYaziyaDon }: { profilId: string | null; onProfilChange: (id: string | null) => void; onYaziyaDon: () => void }) {
+    const prefs = useRemotePrefs();
+    const secenekler = [{ id: null as string | null, ad: 'Tümü' }, ...prefs.profiles.map((p) => ({ id: p.id as string | null, ad: p.name || 'Profil' }))];
+    const secili = secenekler.some((s) => s.id === profilId) ? profilId : null;
+    return <div className="ekran-secici flex min-w-0 items-center gap-1">
+        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto" role="tablist" aria-label="Kısayol profilleri">
+            {secenekler.map((s) => <button key={s.id ?? 'tumu'} type="button" role="tab" title={s.ad} aria-selected={s.id === secili} onClick={() => onProfilChange(s.id)}
+                className={`min-w-0 flex-1 truncate ${s.id === secili ? 'border-moss-600 bg-moss-100 font-semibold text-moss-800' : 'bg-white text-sand-700'}`}>{s.ad}</button>)}
+        </div>
+        <button type="button" id="kisayol-yaziya-don" onClick={onYaziyaDon} title="Yazıya dön" aria-label="Yazıya dön" className="shrink-0 bg-white text-sand-700"><Keyboard size={16} aria-hidden="true" /></button>
+    </div>;
 }

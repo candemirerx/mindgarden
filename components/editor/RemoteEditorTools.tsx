@@ -32,6 +32,8 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     const [notice, setNotice] = useState('');
     const [panoBildirim, setPanoBildirim] = useState<{ metin: string; ton: 'sending' | 'ok' | 'error' } | null>(null);
     const panoZamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
+    /** Son başarılı gönderimin düğmesi: birkaç saniye yeşil tik gösterir. */
+    const [basariliDugme, setBasariliDugme] = useState<'pano' | 'yaz' | null>(null);
     /** Köprü Yaz: bilgisayara gönderilmiş metin, gönderilecek son metin ve kilitler. */
     const kopruSon = useRef('');
     const kopruHedef = useRef('');
@@ -58,14 +60,24 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
         ) onModeChange('write');
     }, [mode, onModeChange, prefs.enabledTools.mouse, prefs.enabledTools.dictation, prefs.enabledTools.shortcuts, prefs.enabledTools.screen]);
     useEffect(() => () => { if (panoZamanlayici.current) clearTimeout(panoZamanlayici.current); }, []);
-    const panoyaGonder = async () => {
+    /**
+     * Kısa süreli bildirimle gönderim: sürerken "gönderiliyor", bitince başarı ya
+     * da hatanın kendisi. Bildirim ekranın üstünde çıkar (altta klavyenin
+     * arkasında kalıyordu); düğme de birkaç saniye yeşil tik gösterir.
+     */
+    const bildirimliGonder = async (tur: 'pano' | 'yaz', is: () => Promise<void>, gonderiliyor: string, basari: string) => {
         if (panoZamanlayici.current) clearTimeout(panoZamanlayici.current);
-        setPanoBildirim({ metin: 'Bilgisayar panosuna gönderiliyor…', ton: 'sending' });
-        let tamam = false;
-        await act(async () => { await sendToComputerClipboard(content, prefs); tamam = true; }, 'Metin bilgisayar panosuna aktarıldı.');
-        setPanoBildirim(tamam ? { metin: 'Bilgisayar panosuna gönderildi', ton: 'ok' } : { metin: 'Panoya gönderilemedi; ayrıntı araç çubuğunda.', ton: 'error' });
-        panoZamanlayici.current = setTimeout(() => setPanoBildirim(null), tamam ? 2500 : 4000);
+        setPanoBildirim({ metin: gonderiliyor, ton: 'sending' });
+        setBasariliDugme(null);
+        let hata = '';
+        await act(async () => {
+            try { await is(); } catch (e) { hata = e instanceof Error ? e.message : 'Gönderilemedi.'; throw e; }
+        }, basari);
+        setPanoBildirim(hata ? { metin: hata, ton: 'error' } : { metin: basari, ton: 'ok' });
+        if (!hata) setBasariliDugme(tur);
+        panoZamanlayici.current = setTimeout(() => { setPanoBildirim(null); setBasariliDugme(null); }, hata ? 5000 : 3000);
     };
+    const panoyaGonder = () => bildirimliGonder('pano', () => sendToComputerClipboard(content, prefs), 'Bilgisayar panosuna gönderiliyor…', 'Bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz');
     const act = async (action: () => Promise<void>, success: string) => {
         setBusy(true); setNotice('');
         try { await action(); setNotice(success); }
@@ -183,7 +195,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
 
     if (placement === 'toolbar') return <>
             <BaglantiGostergesi kompakt id="studio-baglanti-durumu" yol={prefs.connection} durum={baglanti.durum} bakiliyor={baglanti.bakiliyor}
-                onTazele={() => { if (baglanti.durum?.tur === 'kurulmadi' && onBaglantiAyarlari) onBaglantiAyarlari(); else void baglanti.tazele(); }} />
+                onTazele={() => { if (onBaglantiAyarlari) onBaglantiAyarlari(); else void baglanti.tazele(); }} />
             {prefs.enabledTools.shortcuts && (() => {
                 const tumuAcik = mode === 'shortcuts' && !profilId;
                 return <button id="studio-kisayollar" type="button" aria-pressed={tumuAcik} onClick={() => { onProfilChange?.(null); onModeChange(tumuAcik ? 'write' : 'shortcuts'); }}
@@ -226,16 +238,16 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
             </button>}
             {kopruYaz && kopruHata && <button type="button" id="studio-kopru-yaz-yeniden" onClick={() => { kopruDurdu.current = false; setKopruHata(false); kopruHedef.current = guncelIcerik.current; void kopruAktar(); }}
                 className="btn btn-secondary min-h-11 shrink-0 px-3 text-sm">Yeniden dene</button>}
-            {prefs.enabledTools.computerWrite && <button id="studio-bilgisayara-yaz" type="button" disabled={busy || !content.trim()} onClick={() => void act(() => typeOnComputer(content, prefs), 'Metin bilgisayara yazıldı.')}
-                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Send size={16} /><span className="sr-only sm:not-sr-only"> Bilgisayara yaz</span></button>}
+            {prefs.enabledTools.computerWrite && <button id="studio-bilgisayara-yaz" type="button" disabled={busy || !content.trim()} onClick={() => void bildirimliGonder('yaz', () => typeOnComputer(content, prefs), 'Bilgisayara yazılıyor…', 'Metin bilgisayara yazıldı ✓')}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'yaz' ? <Check size={16} /> : <Send size={16} />}<span className="sr-only sm:not-sr-only"> Bilgisayara yaz</span></button>}
             {prefs.enabledTools.clipboard && <button id="studio-pc-panosu" type="button" disabled={busy || !content.trim()} onClick={() => void panoyaGonder()}
-                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Clipboard size={16} /><span className="sr-only sm:not-sr-only"> PC panosu</span></button>}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'pano' ? <Check size={16} /> : <Clipboard size={16} />}<span className="sr-only sm:not-sr-only"> PC panosu</span></button>}
             {kopruYaz && <span id="studio-kopru-yaz-durum" role="status" className={`max-w-56 shrink-0 text-xs ${kopruHata ? 'text-berry-700' : 'text-moss-700'}`}>{kopruDurum}</span>}
             {notice && <span role="status" className="max-w-48 shrink-0 text-xs text-sand-700">{notice}</span>}
             {panoBildirim && typeof document !== 'undefined' && createPortal(
                 <div id="studio-pano-bildirim" role="status" aria-live="polite"
-                    className={`pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+16px)] left-1/2 z-[120] flex max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg ${panoBildirim.ton === 'error' ? 'bg-berry-700 text-berry-50' : 'bg-moss-800 text-moss-50'}`}>
-                    {panoBildirim.ton === 'sending' ? <Loader2 size={16} className="animate-spin" /> : panoBildirim.ton === 'ok' ? <Check size={16} /> : <Clipboard size={16} />}
+                    className={`pointer-events-none fixed left-1/2 top-[calc(env(safe-area-inset-top,0px)+7.5rem)] z-[120] flex max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium shadow-lg ${panoBildirim.ton === 'error' ? 'bg-berry-700 text-berry-50' : 'bg-moss-800 text-moss-50'}`}>
+                    {panoBildirim.ton === 'sending' ? <Loader2 size={16} className="animate-spin" /> : panoBildirim.ton === 'ok' ? <Check size={16} className="shrink-0" /> : <Clipboard size={16} className="shrink-0" />}
                     <span>{panoBildirim.metin}</span>
                 </div>, document.body)}
         </>;

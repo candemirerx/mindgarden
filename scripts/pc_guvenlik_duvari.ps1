@@ -5,9 +5,25 @@
 # porta baglanamaz: "PC panosuna gonder", fare, kısayol ve dikte sessizce
 # calismaz. Bu betik izin kuralini bir kez ekler ve ag profili Ozel degilse
 # kullaniciyi acikca uyarir. Yonetici hakki gerektirir.
+#
+# -Denetle: yalniz bakar (yonetici gerekmez). Izin hazirsa 0, eklenmesi
+# gerekiyorsa 1 doner; baslatici yonetici iznini yalniz o zaman bir kez ister.
+param([switch]$Denetle)
 $ErrorActionPreference = 'Stop'
 $kuralAdi = 'Not Bahcesi PC yardimcisi (TCP 8765)'
 $port = 8765
+
+if ($Denetle) {
+    try {
+        $hazir = @(Get-NetFirewallRule -DisplayName $kuralAdi -ErrorAction SilentlyContinue |
+            Where-Object { $_.Enabled -eq 'True' -and $_.Action -eq 'Allow' }).Count -gt 0
+        $psYolu = Join-Path $PSHOME 'powershell.exe'
+        $engel = @(Get-NetFirewallApplicationFilter -Program $psYolu -ErrorAction SilentlyContinue |
+            Get-NetFirewallRule | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' -and $_.Name -like 'TCP Query User*' -and ([int]$_.Profile -band 2) -ne 0 }).Count -gt 0
+        if ($hazir -and -not $engel) { exit 0 }
+    } catch { }
+    exit 1
+}
 
 $kimlik = [System.Security.Principal.WindowsIdentity]::GetCurrent()
 $yonetici = (New-Object System.Security.Principal.WindowsPrincipal($kimlik)).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)

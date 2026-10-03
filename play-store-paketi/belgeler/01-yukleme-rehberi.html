@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Not Bahçesi — Play Store Yükleme Rehberi</title>
+<title>Not Bahçesi — Play Store'a İlk Yükleme Rehberi</title>
 <style>
 :root { color-scheme: light dark; }
 * { box-sizing: border-box; }
@@ -80,117 +80,126 @@ strong { color: #1B3A28; }
 <body>
 <div class="icerik">
 <a class="geri" href="../basla.html">← Başlangıç sayfası</a>
-<h1>Not Bahçesi — Play Store Yükleme Rehberi</h1>
-<p>Bu rehber, uygulamayı Google Play Store'da yayınlayana kadar sırayla yapılacakları anlatır. Her adımı sırasıyla tamamla; bir adım kilitliyse Play Console hangi adımın eksik olduğunu söyler.</p>
+<h1>Not Bahçesi — Play Store'a İlk Yükleme Rehberi</h1>
+<p>Bu rehber, Play Store'a <strong>hiç uygulama yüklememiş</strong> biri için yazıldı. Adımları sırayla izle; her adımın sonunda "✅ Bitti mi?" kontrolü var. Takıldığın yerde dur, ekranda ne yazdığını bana söyle, birlikte çözelim.</p>
 <hr />
-<h2>Hazır olanlar</h2>
+<h2>0. Önce kavramlar (2 dakikalık ders)</h2>
 <div class="tablo-sarmal"><table>
-<thead><tr><th>Gereken</th><th>Durum</th></tr></thead>
-<tbody><tr><td>Yayın paketi (AAB)</td><td>Hazır — <code>uygulama/not-bahcesi-2.2.11.aab</code></td></tr><tr><td>Uygulama ikonu 512×512</td><td>Hazır — <code>gorseller/uygulama-ikonu-512.png</code></td></tr><tr><td>Öne çıkan görsel 1024×500</td><td>Hazır — <code>gorseller/one-cikan-gorsel-1024x500.png</code></td></tr><tr><td>Telefon ekran görüntüleri (4 adet)</td><td>Hazır — <code>gorseller/ekran-1..4-*.png</code> (1080×2160)</td></tr><tr><td>Gizlilik politikası adresi</td><td>Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/gizlilik</td></tr><tr><td>Veri silme talebi adresi</td><td>Yayında ve doğrulandı — https://mindgarden-neon.vercel.app/veri-silme</td></tr><tr><td>Mağaza açıklama metinleri</td><td>Hazır — <code>belgeler/03-magaza-metinleri.md</code></td></tr><tr><td>Veri güvenliği cevapları</td><td>Hazır — <code>belgeler/04-veri-guvenligi.md</code></td></tr><tr><td>İzin gerekçeleri ve inceleme cevapları</td><td>Hazır — <code>belgeler/07-izin-gerekceleri.md</code></td></tr></tbody>
+<thead><tr><th>Kavram</th><th>Ne demek</th></tr></thead>
+<tbody><tr><td><strong>Play Console</strong></td><td>Google'ın geliştirici paneli: uygulamanı buradan yükler, mağaza sayfasını buradan düzenlersin. Adresi: https://play.google.com/console</td></tr><tr><td><strong>AAB</strong> (<code>.aab</code>)</td><td>Play'e yüklenen paket. Google bunu her telefona uygun küçük APK'lara böler. Bizim dosya: <code>uygulama/not-bahcesi-2.2.12.aab</code></td></tr><tr><td><strong>APK</strong> (<code>.apk</code>)</td><td>Doğrudan telefona kurulan paket. Play'e <strong>yüklenmez</strong>; yalnız kendi telefonlarına elle kurmak için.</td></tr><tr><td><strong>Yükleme anahtarı</strong></td><td>AAB'yi senin imzaladığın anahtar (<code>android/app/notbahcesi-release.jks</code>). <strong>Kaybetme!</strong> (bkz. 1.3)</td></tr><tr><td><strong>Play App Signing</strong></td><td>Google, kullanıcıya giden uygulamayı kendi anahtarıyla yeniden imzalar. Bu yüzden Google girişi için Play'in anahtar parmak izini ayrıca eklememiz gerekir (Adım 7).</td></tr><tr><td><strong>Dahili test</strong></td><td>En fazla 100 kişilik, incelemesiz, dakikalar içinde açılan test. Önce kendimiz deneriz.</td></tr><tr><td><strong>Kapalı test</strong></td><td>Kişisel hesaplarda <strong>zorunlu</strong>: en az <strong>12 test kullanıcısı</strong>, kesintisiz <strong>14 gün</strong> boyunca uygulamaya katılmış olmalı.</td></tr><tr><td><strong>Üretim (Production)</strong></td><td>Herkesin Play Store'da görüp indirebildiği sürüm.</td></tr></tbody>
 </table></div>
-<p><strong>Sürüm bilgisi:</strong> paket adı <code>com.notbahcesi.app</code>, sürüm kodu <code>55</code>, sürüm adı <code>2.2.11</code>, hedef API seviyesi <code>36</code> (Android 16).</p>
-<blockquote>Play, yeni uygulamalarda güncel hedef API seviyesini zorunlu tutar. Paket API 36 hedeflediği için bu şart karşılanmıştır.</blockquote>
+<h3>Yol haritası</h3>
+<pre><code>Bugün          → Hesap aç, kimliğini doğrula (Google birkaç gün sürebilir)
+Hesap onaylanınca → Uygulamayı oluştur, formları doldur, dahili teste yükle, kendin dene
+Aynı gün       → Kapalı teste yükle, 12 test kullanıcısını davet et
+14 gün         → Testçiler uygulamada kalır, sen geri bildirim toplarsın
+15. gün        → "Üretime erişim" başvurusu → onay → Üretim sürümü → Play Store'da!</code></pre>
+<hr />
+<h2>Hazır olanlar (senin için hazırladıklarım)</h2>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Gereken</th><th>Dosya / durum</th></tr></thead>
+<tbody><tr><td>Yayın paketi (AAB)</td><td><code>uygulama/not-bahcesi-2.2.12.aab</code> — sürüm kodu <strong>56</strong>, sürüm adı <strong>2.2.12</strong>, yükleme anahtarıyla imzalı</td></tr><tr><td>Kendi telefonun için APK</td><td><code>uygulama/not-bahcesi-2.2.12.apk</code> (Play'e yüklenmez)</td></tr><tr><td>Uygulama ikonu 512×512</td><td><code>gorseller/uygulama-ikonu-512.png</code></td></tr><tr><td>Öne çıkan görsel 1024×500</td><td><code>gorseller/one-cikan-gorsel-1024x500.png</code></td></tr><tr><td>Telefon ekran görüntüleri (7 adet, 1080×2160)</td><td><code>gorseller/ekran-1 … ekran-7</code></td></tr><tr><td>Mağaza metinleri (ad, kısa/tam açıklama, sürüm notu)</td><td><code>belgeler/03-magaza-metinleri.md</code></td></tr><tr><td>Veri güvenliği formu cevapları</td><td><code>belgeler/04-veri-guvenligi.md</code></td></tr><tr><td>İzin gerekçeleri (Bluetooth, mikrofon…)</td><td><code>belgeler/07-izin-gerekceleri.md</code></td></tr><tr><td>Kullanım kılavuzu (5 seviye)</td><td><code>belgeler/02-kullanim-kilavuzu.md</code></td></tr><tr><td>Gizlilik politikası</td><td>https://mindgarden-neon.vercel.app/gizlilik</td></tr><tr><td>Veri silme sayfası</td><td>https://mindgarden-neon.vercel.app/veri-silme</td></tr></tbody>
+</table></div>
+<p><strong>Paket bilgisi:</strong> paket adı <code>com.notbahcesi.app</code> (yüklendikten sonra <strong>asla değişmez</strong>), hedef API 36 (Android 16), en düşük Android 7.0 (API 24).</p>
 <hr />
 <h2>1. Geliştirici hesabı</h2>
-<p>Play Console'a gir: https://play.google.com/console</p>
-<p>Hesabın yoksa oluştur. <strong>Kişisel</strong> hesap seçersen tek seferlik 25 dolar ücret alınır ve üretime geçmeden önce 12 test kullanıcısıyla 14 gün kapalı test şartı vardır. <strong>Kurumsal</strong> hesapta bu şart yoktur ama vergi/şirket bilgisi ister.</p>
+<h3>1.1 Hesabı aç</h3>
+<ol><li>https://play.google.com/console adresine, uygulamayı yayınlayacağın Google hesabıyla gir.</li><li>Hesap türü: <strong>Kişisel (Personal)</strong> seç. (Şirketin yoksa doğru seçim budur.)</li><li>Tek seferlik <strong>25 ABD doları</strong> kayıt ücretini kartla öde.</li><li>Geliştirici adı: mağazada uygulamanın altında görünecek ad (ör. <code>Can Demirer</code>).</li><li>İletişim e-postası ve telefonunu doğrula.</li></ol>
+<h3>1.2 Kimlik ve cihaz doğrulaması</h3>
+<ul><li>Google <strong>kimlik belgesi</strong> (nüfus cüzdanı / pasaport) ister; adın, ödeme kartındaki adla aynı olmalı.</li><li>Ayrıca <strong>Play Console uygulamasını</strong> bir Android telefona kurup hesabınla giriş yapman istenir (cihaz doğrulaması).</li><li>Onay birkaç saatten birkaç güne kadar sürebilir. Onay e-postası gelince devam et.</li></ul>
+<h3>1.3 Anahtarını yedekle (çok önemli)</h3>
+<p>Şu iki dosyayı <strong>USB belleğe ve bulut depolamana</strong> kopyala; kimseyle paylaşma:</p>
+<ul><li><code>C:\projelerim\notbahcesi\android\app\notbahcesi-release.jks</code></li><li><code>C:\projelerim\notbahcesi\android\keystore.properties</code> (şifreleri içerir)</li></ul>
+<p>Bunlar olmadan güncelleme yükleyemezsin (Google destekten anahtar sıfırlatmak haftalar sürer).</p>
+<p>✅ <strong>Bitti mi?</strong> Play Console ana sayfasını görüyorsun ve anahtar yedeğin iki yerde duruyor.</p>
 <hr />
 <h2>2. Uygulamayı oluştur</h2>
-<ol><li><strong>Tüm uygulamalar → Uygulama oluştur</strong></li><li><strong>Uygulama adı:</strong> <code>Not Bahçesi</code></li><li><strong>Varsayılan dil:</strong> Türkçe (tr-TR)</li><li><strong>Uygulama veya oyun:</strong> Uygulama</li><li><strong>Ücretsiz / Ücretli:</strong> Ücretsiz</li><li>Beyan kutularını işaretle → <strong>Uygulama oluştur</strong></li></ol>
-<blockquote>Paket adı sonradan değiştirilemez. İlk AAB yüklendiğinde <code>com.notbahcesi.app</code> olarak kilitlenir.</blockquote>
+<ol><li><strong>Uygulama oluştur</strong> düğmesine bas.</li><li><strong>Uygulama adı:</strong> <code>Not Bahçesi</code></li><li><strong>Varsayılan dil:</strong> Türkçe – tr-TR</li><li><strong>Uygulama mı oyun mu:</strong> Uygulama</li><li><strong>Ücretsiz mi ücretli mi:</strong> Ücretsiz (sonradan ücretliye çevrilemez; ücretsiz doğru seçim)</li><li>Geliştirici Program Politikaları ve ABD ihracat yasaları kutularını işaretle → <strong>Uygulama oluştur</strong></li></ol>
+<p>✅ <strong>Bitti mi?</strong> Sol menüde uygulamanın <strong>Kontrol paneli</strong> açıldı; "Uygulamanızı ayarlayın" görev listesi görünüyor.</p>
 <hr />
-<h2>3. Mağaza girişi (Store listing)</h2>
-<p>Sol menüden <strong>Büyüme → Mağaza girişi → Varsayılan mağaza girişi</strong>.</p>
-<p>Metinleri <code>belgeler/03-magaza-metinleri.md</code> dosyasından kopyala:</p>
-<ul><li><strong>Uygulama adı:</strong> Not Bahçesi (30 karakter sınırı)</li><li><strong>Kısa açıklama:</strong> 80 karakter sınırı</li><li><strong>Tam açıklama:</strong> 4000 karakter sınırı</li></ul>
-<p>Görselleri <code>gorseller/</code> klasöründen yükle:</p>
-<div class="tablo-sarmal"><table>
-<thead><tr><th>Alan</th><th>Dosya</th><th>Zorunlu mu</th></tr></thead>
-<tbody><tr><td>Uygulama ikonu</td><td><code>uygulama-ikonu-512.png</code></td><td>Evet</td></tr><tr><td>Öne çıkan görsel</td><td><code>one-cikan-gorsel-1024x500.png</code></td><td>Evet</td></tr><tr><td>Telefon ekran görüntüleri</td><td><code>ekran-1/2/3/4-*.png</code></td><td>En az 2 tane (bizde 4 tane var)</td></tr></tbody>
-</table></div>
-<p>Ekran görüntüleri 1080×2160 (9:18) hazırdır; Play'in "uzun kenar kısa kenarın en çok 2 katı" kuralına uyar. Sıralama şöyledir: ana sayfa, projeler listesi, editör ve ayarlar.</p>
-<hr />
-<h2>4. Ayarlar arayüzü</h2>
-<p>Uygulamanın ayarları tek bir pencerede toplandı. Pencere iki yerden açılır: editörün sağ üst köşesindeki <strong>dişli (Ayarlar)</strong> düğmesi ve kenar çubuğundaki <strong>Ayarlar</strong> kartı. Kenar çubuğu kartı, hesap girişi yapılmamışken de görünür; böylece yerel modda çalışan kullanıcı da ayarlara erişebilir.</p>
-<p>İlk açılışta üstte bir <strong>arama kutusu</strong>, altında gruplanmış bölüm kartları bulunan bir giriş ekranı görünür. Bölüm adları hem menüde hem açılan sayfanın başlığında aynıdır.</p>
-<div class="tablo-sarmal"><table>
-<thead><tr><th>Bölüm</th><th>Ne işe yarar</th></tr></thead>
-<tbody><tr><td><strong>Kullanım kılavuzu</strong></td><td>Bahçe, editör, yapay zekâ ve yedekleme adımları; ilgili ayara doğrudan geçiş</td></tr><tr><td><strong>Hesap ve giriş</strong></td><td>Google ile giriş, e-posta ile giriş, bu cihazdaki oturum ve çıkış</td></tr><tr><td><strong>Yapay zekâ</strong></td><td>Sağlayıcı (Gemini / OpenAI / Anthropic / Özel), API anahtarı ve model listesi</td></tr><tr><td><strong>AI makroları</strong></td><td>Hazır makroları aç/kapat, kendi makronu yaz</td></tr><tr><td><strong>Düzenleme araçları</strong></td><td>Dört yerel araç + bilgisayar araçları: fare, dikte, bilgisayara yaz, pano, kısayollar</td></tr><tr><td><strong>Bilgisayar bağlantısı</strong></td><td>Bağlantı yolu, PC yardımcı programı adresi ve erişim anahtarı, araç davranışı</td></tr><tr><td><strong>Yedekleme ve senkronizasyon</strong></td><td>Google Drive ile yedekleme ve cihazlar arası birleştirme</td></tr><tr><td><strong>Veri yönetimi</strong></td><td>İçe/dışa aktarma (JSON, HTML, PDF) ve kayıt silme</td></tr><tr><td><strong>Uygulama hakkında</strong></td><td>Sürüm numarası, gizlilik politikası ve veri silme bağlantıları</td></tr></tbody>
-</table></div>
-<p>Arama kutusu yazdığın kelimeye göre bölümleri süzer; liste <strong>Hesabınız</strong>, <strong>Yazma deneyimi</strong>, <strong>Çalışma alanınız</strong>, <strong>Yardım</strong> ve <strong>Uygulama</strong> başlıkları altında gruplanır. Masaüstünde bölümler iki sütunda, telefonda tek sütunda listelenir. Klavyeyle gezilebilir; <code>Esc</code> tuşu pencereyi kapatır, <code>Tab</code> odağı pencerenin içinde tutar. Çoğu ayar seçildiği anda kaydedilir; makro düzenleyici gibi bazı akışlarda <strong>Kaydet</strong> düğmesi vardır.</p>
-<p>Ayrıntılı kullanım: <code>belgeler/02-kullanim-kilavuzu.md</code>. Mağaza görseli: <code>gorseller/ekran-4-ayarlar.png</code>.</p>
-<hr />
-<h2>5. Uygulama içeriği formları</h2>
-<p>Sol menüde <strong>Politikalar → Uygulama içeriği</strong>. Sırayla doldur:</p>
-<h3>5.1 Gizlilik politikası</h3>
+<h2>3. Uygulama içeriği formları</h2>
+<p>Kontrol panelindeki "Uygulamanızı ayarlayın" listesini yukarıdan aşağı doldur (ya da sol menü <strong>Politika ve programlar → Uygulama içeriği</strong>).</p>
+<h3>3.1 Gizlilik politikası</h3>
 <p><code>https://mindgarden-neon.vercel.app/gizlilik</code></p>
-<p>Veri silme talebi adresi (form bunu ayrıca sorar): <code>https://mindgarden-neon.vercel.app/veri-silme</code></p>
-<blockquote><strong>İki adres de 29 Eylül 2026'da yayında ve tarayıcıda doğrulandı.</strong> Form doldurmadan önce bir kez daha açıp güncel metinlerin göründüğünü kontrol et.</blockquote>
-<h3>5.2 Uygulama erişimi</h3>
-<p><strong>"Tüm işlevler kısıtlı olmadan kullanılabiliyor"</strong> seçeneğini işaretle ve açıklamaya şunu yaz:</p>
-<blockquote>Uygulama şifresiz kullanılabilir. Ana ekranda sol üstteki ağaç simgesine dokunup "Giriş Yap" ekranındaki "Yerel Modda Gir" düğmesine basmak yeterlidir; e-posta veya şifre gerekmez. İnceleme için herhangi bir hesap bilgisi gerekmiyor.</blockquote>
-<h3>5.3 Reklamlar</h3>
-<p><strong>"Uygulamamda reklam yok"</strong> seçeneğini işaretle.</p>
-<h3>5.4 İçerik derecelendirmesi</h3>
-<p>Anketi doldur. Soruların tamamına <strong>"Hayır"</strong> cevabı uygundur (şiddet, cinsellik, kumar, uyuşturucu, korku öğesi yok). Kategori: <strong>Herkes / 3+</strong>.</p>
-<h3>5.5 Hedef kitle</h3>
-<p><strong>Yaş aralığı:</strong> 18 ve üzeri. (Çocuklara yönelik değil.) <strong>Çocuklara hitap ediyor mu:</strong> Hayır.</p>
-<h3>5.6 Veri güvenliği</h3>
-<p><code>belgeler/04-veri-guvenligi.md</code> dosyasındaki cevapları birebir gir. Bu bölüm en çok reddedilen yerdir; dosyadaki tabloyu takip et.</p>
-<h3>5.7 Haberler / devlet uygulaması / finans</h3>
-<p>Hepsi <strong>Hayır</strong>.</p>
-<h3>5.8 Veri silme talebi</h3>
-<p><strong>"Uygulama verilerinin silinmesini sağlayın"</strong> seçeneğini işaretle.</p>
-<p><strong>Veri silme URL'i:</strong> <code>https://mindgarden-neon.vercel.app/veri-silme</code></p>
-<p>Bu sayfa üç silme yolunu anlatır: bahçe/not silme, uygulamayı kaldırma ve Drive yedeğini silme; ayrıca e-posta ile talep yolu verir.</p>
-<p>Kullanıcı verisini uygulama içinden de silebilir: <strong>Ayarlar → Veri yönetimi</strong>.</p>
+<h3>3.2 Uygulama erişimi</h3>
+<p><strong>"Tüm işlevler özel erişim olmadan kullanılabilir"</strong> seçeneğini işaretle. Açıklama gerekirse:</p>
+<blockquote>Uygulama hesapsız kullanılabilir. Ana ekranda sol üstteki ağaç simgesine dokunup "Giriş Yap" ekranındaki "Yerel Modda Gir" düğmesine basmak yeterlidir. Bilgisayar araçları isteğe bağlıdır ve bir Windows bilgisayar ya da Bluetooth eşleşmesi gerektirir; uygulamanın geri kalanı bunlar olmadan tam çalışır.</blockquote>
+<h3>3.3 Reklamlar</h3>
+<p><strong>"Hayır, uygulamamda reklam yok."</strong></p>
+<h3>3.4 İçerik derecelendirmesi</h3>
+<ol><li><strong>Anketi başlat</strong> → e-posta adresini yaz → kategori: <strong>Diğer tüm uygulama türleri</strong> (Referans, Verimlilik…).</li><li>Şiddet, cinsellik, kumar, uyuşturucu, korku, kullanıcılar arası iletişim sorularının hepsine <strong>Hayır</strong>.</li></ol>
+<p>   (Uygulamada kullanıcıların birbirine mesaj atması yok.)</p>
+<ol><li><strong>Kaydet → Derecelendirmeyi gönder.</strong> Sonuç genelde "3+ / Herkes" olur.</li></ol>
+<h3>3.5 Hedef kitle ve içerik</h3>
+<ul><li><strong>Hedef yaş:</strong> yalnız <strong>18 ve üzeri</strong> seç. (Çocuklara yönelik uygulama kuralları çok daha sıkıdır; gerek yok.)</li><li>"Uygulama çocukların ilgisini çekebilir mi?" → <strong>Hayır</strong>.</li></ul>
+<h3>3.6 Veri güvenliği</h3>
+<p><code>belgeler/04-veri-guvenligi.md</code> dosyasındaki cevapları <strong>birebir</strong> gir. Bu form en çok ret alınan yerdir; dosyadaki tabloyu satır satır izle.</p>
+<h3>3.7 Diğer beyanlar</h3>
+<ul><li>Haber uygulaması: <strong>Hayır</strong> · Devlet uygulaması: <strong>Hayır</strong> · Finansal özellikler: <strong>Hiçbiri</strong></li><li>Sağlık uygulaması: <strong>Hayır</strong> · COVID-19: <strong>Hayır</strong></li><li>Reklam kimliği (Advertising ID): <strong>Hayır, kullanmıyor</strong></li></ul>
+<h3>3.8 Veri silme</h3>
+<ul><li><strong>Veri silme URL'si:</strong> <code>https://mindgarden-neon.vercel.app/veri-silme</code></li><li>Kullanıcı verisini uygulama içinden de silebilir: <strong>Ayarlar → Veri yönetimi</strong>.</li></ul>
+<h3>3.9 Uygulama kategorisi ve iletişim</h3>
+<p><strong>Büyüme → Mağaza ayarları:</strong> Kategori <strong>Verimlilik</strong>, e-posta adresin, web sitesi <code>https://mindgarden-neon.vercel.app</code>.</p>
+<p>✅ <strong>Bitti mi?</strong> "Uygulama içeriği" sayfasında tüm maddeler yeşil tik.</p>
 <hr />
-<h2>6. AAB'yi yükle (kapalı test)</h2>
-<ol><li>Sol menüden <strong>Test etme → Kapalı test → Yeni sürüm oluştur</strong></li><li>"Play App Signing" şartlarını kabul et</li><li><code>uygulama/not-bahcesi-2.2.11.aab</code> dosyasını yükle</li><li>Sürüm notlarına şunu yaz:</li></ol>
-<blockquote>Ayarlar ekranı yenilendi: yapay zekâ, makrolar, araçlar, bilgisayar, senkronizasyon ve veri yönetimi artık tek pencerede. Bilgisayar araçları eklendi (fare, dikte, bilgisayara yazma, panoya gönderme). Tema ve görsel tutarlılık iyileştirildi, yedekten geri yükleme artık dosyayı önce doğrular (bozuk yedek notlarınızı silmez), silinen notların içeriği cihazdan temizlenir ve misafir notlarınız hesap açtığınızda hesabınıza aktarılır. Küçük hata düzeltmeleri yapıldı.</blockquote>
-<ol><li><strong>Kaydet → Sürümü incele → Kapalı teste gönder</strong></li></ol>
+<h2>4. Mağaza sayfası (Ana mağaza girişi)</h2>
+<p>Sol menü <strong>Büyüme → Mağaza varlığı → Ana mağaza girişi</strong>.</p>
+<div class="tablo-sarmal"><table>
+<thead><tr><th>Alan</th><th>Nereden</th></tr></thead>
+<tbody><tr><td>Uygulama adı</td><td><code>03-magaza-metinleri.md</code> → "Uygulama adı"</td></tr><tr><td>Kısa açıklama (80)</td><td><code>03-magaza-metinleri.md</code> → "Kısa açıklama"</td></tr><tr><td>Tam açıklama (4000)</td><td><code>03-magaza-metinleri.md</code> → "Tam açıklama" (3992 karakter, sığar)</td></tr><tr><td>Uygulama simgesi</td><td><code>gorseller/uygulama-ikonu-512.png</code></td></tr><tr><td>Öne çıkan grafik</td><td><code>gorseller/one-cikan-gorsel-1024x500.png</code></td></tr><tr><td>Telefon ekran görüntüleri</td><td><code>gorseller/ekran-1</code> → <code>ekran-7</code> sırasıyla (en az 2, en çok 8)</td></tr></tbody>
+</table></div>
+<p>Tablet ekran görüntüsü zorunlu değil; boş bırak. <strong>Kaydet</strong>.</p>
+<p>✅ <strong>Bitti mi?</strong> Sayfanın altında "Kaydedildi" yazıyor, hata yok.</p>
 <hr />
-<h2>7. Play App Signing SHA-1 (kritik)</h2>
-<p>Google, uygulamayı kendi anahtarıyla yeniden imzalar. Google ile girişin çalışması için bu anahtarın parmak izini Google Cloud'daki Android istemcisine eklemek zorundasın.</p>
-<ol><li>Play Console → <strong>Sürüm → Kurulum → Uygulama imzalama</strong></li><li><strong>Uygulama imzalama anahtarı sertifikası</strong> altındaki <strong>SHA-1</strong> değerini kopyala</li><li>https://console.cloud.google.com/apis/credentials adresine git</li><li>Android türündeki OAuth istemcini aç (yoksa <strong>Kimlik bilgisi oluştur → OAuth istemci kimliği → Android</strong>)</li><li><strong>Paket adı:</strong> <code>com.notbahcesi.app</code></li><li><strong>SHA-1:</strong> kopyaladığın değeri yapıştır → <strong>Kaydet</strong></li></ol>
-<blockquote>Bu adımı atlarsan uygulama Play Store'dan kurulduğunda "Google ile giriş başarısız" hatası alırsın.</blockquote>
+<h2>5. Önce dahili test (kendin dene)</h2>
+<p>Neden? Play'den indirilen sürüm Google'ın anahtarıyla imzalanır; Google girişi ancak Adım 7'den sonra çalışır. Bunu kapalı testten <strong>önce</strong> kendimiz görmeliyiz.</p>
+<ol><li>Sol menü <strong>Test et ve yayınla → Test → Dahili test → Yeni sürüm oluştur</strong>.</li><li>İlk seferde <strong>Play App Signing</strong>'i kabul et (Google'ın anahtarı yönetmesi — önerilen ve zorunlu).</li><li><strong>Uygulama paketleri</strong> alanına <code>uygulama/not-bahcesi-2.2.12.aab</code> dosyasını sürükle.</li><li><strong>Sürüm adı:</strong> <code>2.2.12</code> (kendiliğinden dolar).</li><li><strong>Sürüm notları:</strong> <code>03-magaza-metinleri.md</code> → "Sürüm notları — ilk sürüm" metnini <code>&lt;tr-TR&gt;</code> etiketleri arasına yapıştır.</li><li><strong>Sonraki → Kaydet ve yayınla.</strong></li><li><strong>Testçiler</strong> sekmesinde bir e-posta listesi oluştur, kendi Gmail adresini ekle.</li><li><strong>Katılım bağlantısını kopyala</strong>, telefonda aç, <strong>Test kullanıcısı ol</strong> → Play Store'dan indir.</li></ol>
+<p>Telefonda dene: yerel mod, not yazma, Bluetooth klavye ile bilgisayara yazma, PC panosu. Google ile giriş henüz hata verebilir — Adım 7 bunu düzeltir.</p>
+<p>✅ <strong>Bitti mi?</strong> Uygulama Play Store'dan telefonuna kuruldu ve açılıyor.</p>
 <hr />
-<h3>Uygulama bağlantıları (assetlinks.json)</h3>
-<p>Uygulama, Google giriş dönüşünü <code>https://mindgarden-neon.vercel.app/auth/callback</code> adresine bağlar. Android'in bu bağlantıyı doğrulayabilmesi için site kökünde <code>/.well-known/assetlinks.json</code> dosyası bulunmalıdır; dosya projede <code>public/.well-known/assetlinks.json</code> olarak duruyor ve yükleme (upload) anahtarının parmak izini içeriyor.</p>
-<p>Play, uygulamayı <strong>kendi uygulama imzalama anahtarıyla</strong> yeniden imzalar. Play'den kurulan uygulamada bağlantının doğrulanması için Play anahtarının parmak izini de ekle:</p>
-<ol><li>Play Console → <strong>Sürüm → Kurulum → Uygulama imzalama</strong></li><li><strong>Uygulama imzalama anahtarı sertifikası</strong> altındaki <strong>SHA-256</strong> değerini kopyala</li><li><code>public/.well-known/assetlinks.json</code> içindeki <code>sha256_cert_fingerprints</code></li></ol>
-<p>   listesine bu değeri ikinci satır olarak ekle</p>
-<ol><li>Değişikliği gönder (<code>git push origin main</code>); Vercel birkaç dakika içinde yayınlar</li><li>Tarayıcıdan doğrula: https://mindgarden-neon.vercel.app/.well-known/assetlinks.json</li></ol>
-<blockquote>Dosya yayında 404 dönüyorsa Google giriş dönüşü tarayıcıya düşer; uygulama çalışır ama bağlantı doğrulanmamış olur.</blockquote>
+<h2>6. Kapalı test ve 12 test kullanıcısı</h2>
+<ol><li><strong>Test → Kapalı test → Kanal oluştur</strong> (adı: <code>Kapalı test</code>) → <strong>Yeni sürüm oluştur</strong>.</li><li><strong>Kitaplıktan ekle</strong> ile dahili teste yüklediğin aynı AAB'yi seç (yeniden yükleme gerekmez).</li><li>Aynı sürüm notunu yapıştır → <strong>Kaydet → İncelemeye gönder</strong>.</li><li><strong>Testçiler</strong> sekmesi: en az <strong>12 kişinin</strong> Gmail adresini bir listeye ekle</li></ol>
+<p>   (en kolayı bir <strong>Google Grubu</strong> açıp grubu eklemek; yeni kişiyi gruba eklemen yeter).</p>
+<ol><li>Kapalı test <strong>incelemeden</strong> geçince (birkaç saat – birkaç gün) katılım bağlantısını testçilere gönder.</li></ol>
+<p><strong>Testçiler ne yapmalı?</strong></p>
+<ul><li>Bağlantıyı açıp <strong>Test kullanıcısı ol</strong>'a basmalı ve uygulamayı Play Store'dan indirmeli.</li><li><strong>14 gün boyunca test programından çıkmamalı</strong> (uygulamayı silse de katılım sayılır ama</li></ul>
+<p>  açıp kullanmaları ve geri bildirim vermeleri başvurunu güçlendirir).</p>
+<ul><li>12 kişiden az kalırsa 14 günlük sayaç durur. Güvenli olmak için <strong>15–20 kişi</strong> davet et.</li></ul>
+<p>Bu 14 günde testçilerden gelen hataları bana getir; düzeltip <strong>yeni sürüm kodu (57, 58…)</strong> ile kapalı teste yeni sürüm yükleriz. Bu, Google'ın "aktif test" şartını da güçlendirir.</p>
+<p>✅ <strong>Bitti mi?</strong> Kapalı test "Yayında", Testçiler sekmesinde 12+ kişi katılmış görünüyor.</p>
 <hr />
-<h2>8. Test kullanıcılarını ekle</h2>
-<p><strong>Kapalı test → Test kullanıcıları</strong> bölümüne en az 12 kişinin Google e-posta adresini ekle. Onlara katılım bağlantısını gönder. Kişisel geliştirici hesabında 14 gün boyunca testçilerin uygulamayı kullanması gerekir; sonra üretime geçebilirsin.</p>
+<h2>7. Google ile giriş için Play anahtarını ekle (kritik)</h2>
+<p>İlk AAB yüklendikten sonra yapılır.</p>
+<ol><li>Play Console → <strong>Test et ve yayınla → Kurulum → Uygulama imzalama</strong>.</li><li><strong>Uygulama imzalama anahtarı sertifikası</strong> altındaki <strong>SHA-1</strong> ve <strong>SHA-256</strong> değerlerini kopyala.</li><li><strong>SHA-1 → Google Cloud:</strong> https://console.cloud.google.com/apis/credentials →</li></ol>
+<p>   Android OAuth istemcisini aç (yoksa <strong>Kimlik bilgisi oluştur → OAuth istemci kimliği → Android</strong>),    paket adı <code>com.notbahcesi.app</code>, SHA-1'i yapıştır → <strong>Kaydet</strong>.    (Mevcut yükleme anahtarının SHA-1'i de kalsın; ikisi birlikte durabilir.)</p>
+<ol><li><strong>SHA-256 → assetlinks.json:</strong> bana değeri ver; <code>public/.well-known/assetlinks.json</code></li></ol>
+<p>   dosyasına ikinci satır olarak ekleyip siteyi yayınlayayım.</p>
+<ol><li>Dahili testteki uygulamada <strong>Google ile giriş</strong>'i yeniden dene.</li></ol>
+<blockquote>Bu adım atlanırsa Play'den kurulan uygulamada "Google ile giriş başarısız" hatası çıkar.</blockquote>
+<p>✅ <strong>Bitti mi?</strong> Play'den kurulan uygulamada Google ile giriş çalışıyor.</p>
 <hr />
-<h2>9. Üretime geçiş</h2>
-<p>14 gün dolduktan sonra:</p>
-<ol><li><strong>Üretim → Yeni sürüm oluştur</strong></li><li>Aynı AAB'yi yükle (veya yeni sürüm koduyla yeni bir tane üret)</li><li>Ülkeleri seç (Türkiye ve istersen tüm ülkeler)</li><li><strong>Sürümü incele → Üretime gönder</strong></li></ol>
-<p>İnceleme genellikle 1–7 gün sürer.</p>
+<h2>8. Üretime erişim başvurusu (14 gün sonra)</h2>
+<p>Kontrol panelinde <strong>"Üretime erişim başvurusunda bulunun"</strong> düğmesi açılır. Google birkaç soru sorar. Dürüst ve somut cevap ver. Örnek cevaplar:</p>
+<ul><li><strong>Testçileri nasıl buldunuz?</strong> "Arkadaşlarım, ailem ve iş çevremden, uygulamayı gerçekten</li></ul>
+<p>  not tutmak ve bilgisayarla birlikte kullanmak isteyen 15 kişiyi Google Grubu ile davet ettim."</p>
+<ul><li><strong>Testçiler uygulamayı nasıl kullandı?</strong> "Bahçe ve not oluşturma, Drive yedekleme, yapay</li></ul>
+<p>  zekâ makroları ve bilgisayar araçlarını (Bluetooth klavye, PC panosu) denediler."</p>
+<ul><li><strong>Geri bildirimleri nasıl topladınız, ne değiştirdiniz?</strong> Testte düzelttiğimiz gerçek</li></ul>
+<p>  hataları yaz (bunları birlikte not alacağız).</p>
+<ul><li><strong>Uygulama üretime hazır mı?</strong> "Evet; testteki hatalar düzeltildi, son sürüm kapalı testte."</li></ul>
+<p>Başvuru incelemesi genelde <strong>7 güne kadar</strong> sürer.</p>
 <hr />
-<h2>Yeni sürüm çıkarmak istersen</h2>
-<p>Her yeni yüklemede <strong>sürüm kodu artmak zorundadır</strong>. Proje klasöründe:</p>
-<p><code>android/app/build.gradle</code> dosyasını aç, şu iki satırı güncelle:</p>
-<pre><code>versionCode 56       ← her yüklemede 1 artır (55 → 56 → 57 ...)
-versionName "2.2.12" ← kullanıcıya görünen sürüm</code></pre>
-<p>Sonra paketi yeniden üret (Windows'ta <code>GRADLE_USER_HOME</code> verilmezse derleme "Could not initialize native services" hatasıyla durur):</p>
-<pre><code>npm run build:android
-cd android
-set GRADLE_USER_HOME=%CD%\..\.gradle-user
-gradlew.bat bundleRelease</code></pre>
-<p>PowerShell kullanıyorsan <code>set</code> yerine:</p>
-<pre><code>$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
-$env:GRADLE_USER_HOME='C:\projelerim\notbahcesi\.gradle-user'
-.\gradlew.bat bundleRelease</code></pre>
-<p>Yeni AAB: <code>android/app/build/outputs/bundle/release/app-release.aab</code></p>
+<h2>9. Üretim sürümü</h2>
+<ol><li><strong>Test et ve yayınla → Üretim → Ülkeler/bölgeler:</strong> Türkiye (istersen tüm ülkeler).</li><li><strong>Yeni sürüm oluştur → Kitaplıktan ekle</strong> → kapalı testteki son AAB.</li><li>Sürüm notu → <strong>Kaydet → İncelemeye gönder</strong>.</li><li><strong>Kademeli yayın</strong> önerisi: önce %20, sorun yoksa %100.</li></ol>
+<p>İnceleme birkaç saat ile 7 gün arası sürer. Onaylanınca uygulama Play Store'da aranabilir olur. 🎉</p>
+<hr />
+<h2>Güncelleme yüklemek (ileride)</h2>
+<p>Her yüklemede <strong>sürüm kodu bir artmalı</strong> (56 → 57 → 58…). Ayrıntı: <code>05-yeni-surum.md</code>. Bana "yeni sürüm hazırla" demen yeterli: sürüm kodunu artırır, paketi üretir, notunu yazarım.</p>
 <hr />
 <h2>Sık karşılaşılan ret sebepleri</h2>
 <div class="tablo-sarmal"><table>
 <thead><tr><th>Ret mesajı</th><th>Çözüm</th></tr></thead>
-<tbody><tr><td>"Veri güvenliği formu eksik/uyumsuz"</td><td><code>04-veri-guvenligi.md</code> dosyasındaki cevapları birebir gir</td></tr><tr><td>"Uygulama erişimi sağlanamadı"</td><td>5.2'deki açıklamayı yaz; yerel mod düğmesini tarif et</td></tr><tr><td>"Gizlilik politikası erişilemiyor"</td><td>Adresin tarayıcıda açıldığını kontrol et</td></tr><tr><td>"Hedef API seviyesi düşük"</td><td>Paket zaten API 36 hedefliyor, sorun olmamalı</td></tr><tr><td>"Minimum işlevsellik"</td><td>Ekran görüntüleri ve açıklama gerçek işlevi gösteriyor</td></tr></tbody>
+<tbody><tr><td>Veri güvenliği formu uyumsuz</td><td><code>04-veri-guvenligi.md</code> cevaplarını birebir gir</td></tr><tr><td>Uygulama erişimi sağlanamadı</td><td>3.2'deki açıklamayı yaz; "Yerel Modda Gir" düğmesini tarif et</td></tr><tr><td>Gizlilik politikası erişilemiyor</td><td>Adresi tarayıcıda aç; açılmıyorsa bana söyle</td></tr><tr><td>İzin gerekçesi eksik (Bluetooth / mikrofon)</td><td><code>07-izin-gerekceleri.md</code> metinlerini kullan</td></tr><tr><td>Kapalı test şartı karşılanmadı</td><td>12+ testçi 14 gün kesintisiz katılımda kalmalı; sayacı Kontrol panelinde izle</td></tr><tr><td>Minimum işlevsellik</td><td>Ekran görüntüleri ve açıklama gerçek işlevi gösteriyor; yeterli</td></tr></tbody>
 </table></div>
 </div>
 </body>

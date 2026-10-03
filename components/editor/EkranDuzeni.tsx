@@ -11,7 +11,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { AudioLines, Keyboard, ListOrdered, MousePointer2, Send, Settings2, TextCursorInput } from 'lucide-react';
-import { DEFAULT_NAVIGATION_SHORTCUTS, VARSAYILAN_BOLME_BOSLUGU, VARSAYILAN_IC_BOSLUK, bridgeDictate, dinleKopruDikte, makroHazir, metinFarkiAktar, normalizeNavigationShortcuts, runRemoteMacro, sendCommand, sendKey, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
+import { DEFAULT_NAVIGATION_SHORTCUTS, VARSAYILAN_BOLME_BOSLUGU, VARSAYILAN_IC_BOSLUK, bridgeDictate, dinleKopruDikte, makroHazir, metinFarkiAktar, normalizeNavigationShortcuts, sendCommand, sendKey, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
+import MakroDugmesi from './MakroDugmesi';
 import type { NavigationShortcutPosition, RemoteMacro, RemotePane, RemotePrefs, RemoteScreenLayout } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import FareYuzeyi from './FareYuzeyi';
@@ -280,11 +281,11 @@ function Bolme({ pane, prefs, durum }: { pane: RemotePane; prefs: RemotePrefs; d
             : <div className="grid min-h-0 flex-1 auto-rows-[minmax(44px,1fr)] grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-1.5 overflow-y-auto">
                 {makrolar.map(makro => {
                     const Icon = makro.type === 'position' ? MousePointer2 : makro.type === 'shortcut' ? Keyboard : makro.type === 'sequence' ? ListOrdered : TextCursorInput;
-                    return <button key={makro.id} type="button" disabled={busy} title={makro.name} onClick={() => void calistir(() => runRemoteMacro(makro, prefs), '"' + makro.name + '" çalıştırıldı.')}
+                    return <MakroDugmesi key={makro.id} makro={makro} prefs={prefs} onSonuc={(mesaj) => durum(mesaj)}
                         className={`${TUS} flex-col gap-0.5 px-1 text-xs`}>
                         <Icon size={16} className="text-moss-700" aria-hidden="true" />
                         <span className="w-full truncate">{makro.name}</span>
-                    </button>;
+                    </MakroDugmesi>;
                 })}
             </div>}
     </div>;

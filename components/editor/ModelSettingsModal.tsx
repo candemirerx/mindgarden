@@ -381,7 +381,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                         icon={BookOpen}
                                         tone="clay"
                                         title="Kullanım kılavuzu"
-                                        description="Not Bahçesi'ni adım adım keşfedin: bahçe oluşturma, editör, yapay zekâ ve yedekleme."
+                                        description="Başlangıçtan uzmana beş seviye: ilk notunuzdan bilgisayar araçlarına kadar istediğiniz kadarını öğrenin."
                                     />
                                     <UsageGuide onNavigate={setActiveTab} />
                                 </>

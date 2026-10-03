@@ -7,8 +7,8 @@
  * işareti alır, hata olursa ne yapılacağı aynı yerde yazar.
  *  - Doğrudan PC (Wi‑Fi): yardımcı ağda bulunur, pencerede görünen 6 haneli
  *    kodla eşleşilir; uzun erişim anahtarı elle taşınmaz.
- *  - PC Bluetooth: eşleşmiş bilgisayar seçilir, aynı 6 haneli kod Bluetooth
- *    üzerinden gönderilir.
+ *  - PC Bluetooth: telefon bilgisayara Bluetooth klavye/fare olarak bağlanır;
+ *    bilgisayara program kurulmaz (pano isteğe bağlı olarak yardımcıyla).
  *  - Kart Wi‑Fi: telefon kartın kendi ağındaysa adres kendiliğinden bulunur,
  *    değilse ev ağı taranır.
  *  - Kart BLE: kartlar önce listelenir, diğer cihazlar katlanır.
@@ -18,7 +18,7 @@ import { Bluetooth, Check, Loader2, MonitorSmartphone, Search, Share2, Wifi } fr
 import { PC_YARDIMCISI_SAYFASI } from '@/lib/config';
 import {
     baglantiSatiriniCoz, bilgisayarAdresiniSina, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul,
-    bluetoothAyarlariniAc, connectCard, disconnectCard, kartAginda, kartiWifidaBul, scanCards, scanPairedComputers,
+    bluetoothAyarlariniAc, bluetoothKlavyeBagla, bluetoothKlavyeyiBaslat, connectCard, telefonuGorunurYap, disconnectCard, kartAginda, kartiWifidaBul, scanCards, scanPairedComputers,
     sendToComputerClipboard, telefonWifiAdresi, testCard, testHelper
 } from '@/lib/remoteTools';
 import type { BulunanBilgisayar, Device, RemotePrefs } from '@/lib/remoteTools';
@@ -209,59 +209,145 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
     </div>;
 }
 
-/** PC Bluetooth: eşleşmiş bilgisayarı seç, kodla eşleş, dene. */
-function PcBluetoothKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
+/**
+ * PC Bluetooth: eşleşmiş bilgisayarı seç → bağlan. Kod gerekmez; yardımcı yalnız
+ * Windows'la eşleşmiş cihazları kabul eder ve anahtarı bu bağlantıdan verir.
+ */
+export function PcBluetoothPano({ prefs, update, yoluSec = true }: { prefs: RemotePrefs; update: Guncelle; yoluSec?: boolean }) {
     const { mesgul, mesaj, calistir } = useIslem();
     const [cihazlar, setCihazlar] = useState<Device[] | null>(null);
     const [kod, setKod] = useState('');
     const bilgisayarlar = (cihazlar ?? []).filter(d => d.computer);
     const digerleri = (cihazlar ?? []).filter(d => !d.computer);
     const secili = prefs.helperBluetoothAddress;
-    const anahtarVar = !!prefs.helperToken;
+    const bagli = !!(secili && prefs.helperToken);
+    /** Seçilen bilgisayara bağlanır, anahtarı alır, yolu seçer ve göstergeyi tazeler. */
+    const baglan = (adres: string, ad: string, pin = '') => void calistir('baglan-' + adres, async () => {
+        const sonuc = await bilgisayarlaEslestirBluetooth(adres, pin);
+        const yeni = { ...prefs, ...sonuc, helperBluetoothAddress: adres, ...(yoluSec ? { connection: 'pc-bluetooth' as const } : {}) };
+        update(yeni); if (yoluSec) void durumuTazele(yeni); setKod('');
+        return (sonuc.helperName || ad) + ' ile Bluetooth üzerinden bağlanıldı. Yazma, fare, kısayollar ve pano hazır.';
+    });
     const cihazSatiri = (d: Device) => {
-        const sec = secili === d.address;
-        return <button key={d.address} type="button" aria-pressed={sec} onClick={() => update({ ...prefs, helperBluetoothAddress: d.address, connection: 'pc-bluetooth' })}
-            className={cx(satir, sec ? 'border-moss-400 bg-moss-50' : 'border-sand-200 bg-white hover:border-sand-300')}>
+        const sec = secili === d.address && bagli;
+        const suruyor = mesgul === 'baglan-' + d.address;
+        return <div key={d.address} className={cx(satir, sec ? 'border-moss-400 bg-moss-50' : 'border-sand-200 bg-white')}>
             {d.computer ? <MonitorSmartphone size={18} className="shrink-0 text-moss-700" aria-hidden="true" /> : <Bluetooth size={18} className="shrink-0 text-sand-500" aria-hidden="true" />}
             <span className="min-w-0 flex-1"><span className="block font-medium text-sand-900">{d.name}</span><span className="block truncate text-xs text-sand-600">{d.address}</span></span>
-            {sec && <Check size={16} className="text-moss-700" aria-hidden="true" />}
-        </button>;
+            {sec
+                ? <span className="flex min-h-[44px] shrink-0 items-center gap-1.5 px-2 font-medium text-moss-700"><Check size={16} aria-hidden="true" /> Bağlı</span>
+                : <button type="button" disabled={!!mesgul} onClick={() => baglan(d.address, d.name)} aria-label={d.name + ' bilgisayarına bağlan'} className={anaDugme + ' shrink-0'}>
+                    <Bekliyor goster={suruyor}>{suruyor ? 'Bağlanıyor…' : 'Bağlan'}</Bekliyor>
+                </button>}
+        </div>;
     };
     return <div className="space-y-3">
         <ol className="space-y-4">
             <Adim no={1} baslik="Bilgisayarda Bluetooth'u ve yardımcıyı açın">
-                <Aciklama>Bilgisayarda Bluetooth açık olmalı ve <strong>Not Bahçesi PC Yardımcısı</strong> çalışmalı. Telefon bilgisayarla daha önce eşleşmediyse önce Android Bluetooth ayarlarından eşleştirin.</Aciklama>
+                <Aciklama>Bilgisayarda Bluetooth açık olmalı ve <strong>Not Bahçesi PC Yardımcısı</strong> çalışmalı. Telefon bu bilgisayarla daha önce eşleşmediyse önce Bluetooth ayarlarından eşleştirin. <strong>Kod gerekmez.</strong></Aciklama>
                 <YardimciIndir />
                 <button type="button" className={ikinciDugme} onClick={() => void calistir('ayar', async () => { await bluetoothAyarlariniAc(); })}>
                     <Bluetooth size={15} aria-hidden="true" /> Bluetooth ayarlarını aç
                 </button>
             </Adim>
-            <Adim no={2} baslik="Bilgisayarınızı seçin" tamam={!!secili}>
+            <Adim no={2} baslik="Bilgisayarınızı seçip bağlanın" tamam={bagli}>
                 <button type="button" disabled={!!mesgul} className={ikinciDugme} onClick={() => void calistir('liste', async () => {
                     const liste = await scanPairedComputers(); setCihazlar(liste);
-                    return liste.some(d => d.computer) ? '' : 'Eşleşmiş bilgisayar görünmüyor. Bilgisayarınız "Diğer cihazlar" altında olabilir ya da önce eşleştirmeniz gerekir.';
+                    return liste.some(d => d.computer) ? '' : 'Eşleşmiş bilgisayar görünmüyor. Bilgisayarınız "Diğer eşleşmiş cihazlar" altında olabilir ya da önce eşleştirmeniz gerekir.';
                 })}><Bekliyor goster={mesgul === 'liste'}>Eşleşmiş bilgisayarları göster</Bekliyor></button>
                 {bilgisayarlar.map(cihazSatiri)}
                 {digerleri.length > 0 && <details className="rounded-xl border border-sand-200">
                     <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">Diğer eşleşmiş cihazlar ({digerleri.length})</summary>
                     <div className="space-y-2 px-3 pb-3">{digerleri.map(cihazSatiri)}</div>
                 </details>}
-                {secili && !cihazlar && <p className="text-xs text-sand-700">Seçili: {secili}</p>}
+                {bagli && !cihazlar && <p className="text-xs text-moss-700">Bağlı: <strong>{prefs.helperName || 'Bilgisayar'}</strong> · {secili}</p>}
             </Adim>
-            <Adim no={3} baslik="Eşleştirme kodunu yazın" tamam={anahtarVar}>
-                {anahtarVar && <p className="text-xs text-moss-700">Anahtar kayıtlı{prefs.helperName ? ' (' + prefs.helperName + ')' : ''}. Aynı bilgisayarla Wi‑Fi'dan eşleştiyseniz kod gerekmez.</p>}
-                {secili
-                    ? <KodAlani id="pc-bt-kod" deger={kod} onDegis={setKod} mesgul={mesgul === 'eslestir'} dugmeMetni={anahtarVar ? 'Yeniden eşleştir' : 'Eşleştir'}
-                        onGonder={() => void calistir('eslestir', async () => {
-                            const sonuc = await bilgisayarlaEslestirBluetooth(secili, kod);
-                            update({ ...prefs, ...sonuc, connection: 'pc-bluetooth' }); setKod('');
-                            return sonuc.helperName + ' ile Bluetooth üzerinden eşleşildi.';
-                        })} />
-                    : <Aciklama>Önce bilgisayarınızı seçin.</Aciklama>}
+            <Adim no={3} baslik="Deneyin">
+                <button type="button" disabled={!!mesgul || !bagli} className={anaDugme} onClick={() => void calistir('dene', async () => {
+                    const deneme = { ...prefs, connection: 'pc-bluetooth' as const }; await testHelper(deneme); if (yoluSec) { update(deneme); void durumuTazele(deneme); } return 'Bilgisayara Bluetooth ile ulaşıldı.';
+                })}><Bekliyor goster={mesgul === 'dene'}>Bağlantıyı dene</Bekliyor></button>
             </Adim>
-            <Adim no={4} baslik="Deneyin">
-                <button type="button" disabled={!!mesgul || !secili || !anahtarVar} className={anaDugme} onClick={() => void calistir('dene', async () => {
-                    const yeni = { ...prefs, connection: 'pc-bluetooth' as const }; await testHelper(yeni); update(yeni); void durumuTazele(yeni); return 'Bilgisayara Bluetooth ile bağlanıldı; araçlar hazır.';
+        </ol>
+        {mesaj && <SettingsNote tone={mesaj.tone}>{mesaj.text}</SettingsNote>}
+        {secili && <details className="rounded-xl border border-sand-200">
+            <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">Eski yardımcı sürümü mü? Kodla bağlan</summary>
+            <div className="space-y-2 px-3 pb-3">
+                <Aciklama>Yardımcı eskiyse kodsuz bağlanma çalışmaz; penceredeki 6 haneli kodu yazın ya da güncel yardımcıyı indirin.</Aciklama>
+                <KodAlani id="pc-bt-kod" deger={kod} onDegis={setKod} mesgul={mesgul === 'baglan-' + secili} dugmeMetni="Kodla bağlan"
+                    onGonder={() => baglan(secili, prefs.helperName || 'Bilgisayar', kod)} />
+            </div>
+        </details>}
+    </div>;
+}
+
+/**
+ * Bilgisayar · Bluetooth: telefon, bilgisayara doğrudan Bluetooth klavye ve fare
+ * olarak bağlanır (HID). Bilgisayara program kurulmaz; Windows telefonu
+ * "Not Bahçesi Klavye" adıyla gerçek bir klavye gibi görür.
+ */
+function BilgisayarBluetoothKlavye({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
+    const { mesgul, mesaj, calistir } = useIslem();
+    const [cihazlar, setCihazlar] = useState<Device[] | null>(null);
+    const [rehber, setRehber] = useState(false);
+    const bilgisayarlar = (cihazlar ?? []).filter(d => d.computer);
+    const digerleri = (cihazlar ?? []).filter(d => !d.computer);
+    const secili = prefs.helperBluetoothAddress;
+    const baglan = (d: Device) => void calistir('baglan-' + d.address, async () => {
+        try { await bluetoothKlavyeBagla(d.address); }
+        catch (hata) { setRehber(true); throw hata; }
+        const yeni = { ...prefs, helperBluetoothAddress: d.address, helperName: d.name, connection: 'pc-bluetooth' as const };
+        update(yeni); void durumuTazele(yeni); setRehber(false);
+        return d.name + ' ile bağlandı: telefon artık bu bilgisayarın Bluetooth klavyesi ve faresi.';
+    });
+    const cihazSatiri = (d: Device) => {
+        const sec = secili === d.address;
+        const suruyor = mesgul === 'baglan-' + d.address;
+        return <div key={d.address} className={cx(satir, sec ? 'border-moss-400 bg-moss-50' : 'border-sand-200 bg-white')}>
+            {d.computer ? <MonitorSmartphone size={18} className="shrink-0 text-moss-700" aria-hidden="true" /> : <Bluetooth size={18} className="shrink-0 text-sand-500" aria-hidden="true" />}
+            <span className="min-w-0 flex-1"><span className="block font-medium text-sand-900">{d.name}</span><span className="block truncate text-xs text-sand-600">{d.address}{sec ? ' · seçili' : ''}</span></span>
+            <button type="button" disabled={!!mesgul} onClick={() => baglan(d)} aria-label={d.name + ' bilgisayarına bağlan'} className={(sec ? ikinciDugme : anaDugme) + ' shrink-0'}>
+                <Bekliyor goster={suruyor}>{suruyor ? 'Bağlanıyor…' : sec ? 'Yeniden bağlan' : 'Bağlan'}</Bekliyor>
+            </button>
+        </div>;
+    };
+    return <div className="space-y-3">
+        <ol className="space-y-4">
+            <Adim no={1} baslik="Bilgisayarın Bluetooth'unu açın">
+                <Aciklama>Bilgisayara <strong>program kurmanız gerekmez</strong>. Telefon bilgisayara <strong>“Not Bahçesi Klavye”</strong> adıyla Bluetooth klavye ve fare olarak bağlanır; yazma, Türkçe karakterler, kısayollar ve fare çalışır. (Pano için aşağıdaki isteğe bağlı bölüme bakın.)</Aciklama>
+            </Adim>
+            <Adim no={2} baslik="Bilgisayarınızı seçip bağlanın" tamam={!!secili}>
+                <button type="button" disabled={!!mesgul} className={ikinciDugme} onClick={() => void calistir('liste', async () => {
+                    const liste = await scanPairedComputers(); setCihazlar(liste);
+                    if (!liste.some(d => d.computer)) setRehber(true);
+                    return liste.some(d => d.computer) ? '' : 'Eşleşmiş bilgisayar görünmüyor. Aşağıdaki adımlarla bilgisayarı bir kez eşleştirin.';
+                })}><Bekliyor goster={mesgul === 'liste'}>Eşleşmiş bilgisayarları göster</Bekliyor></button>
+                {bilgisayarlar.map(cihazSatiri)}
+                {digerleri.length > 0 && <details className="rounded-xl border border-sand-200">
+                    <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">Diğer eşleşmiş cihazlar ({digerleri.length})</summary>
+                    <div className="space-y-2 px-3 pb-3">{digerleri.map(cihazSatiri)}</div>
+                </details>}
+                {secili && !cihazlar && <p className="text-xs text-moss-700">Seçili: <strong>{prefs.helperName || 'Bilgisayar'}</strong> · {secili}</p>}
+                <details open={rehber} className="rounded-xl border border-sand-200 bg-white">
+                    <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">İlk kez mi, ya da bağlanmıyor mu?</summary>
+                    <div className="space-y-2 px-3 pb-3">
+                        <ol className="list-decimal space-y-1 pl-5 text-xs leading-relaxed text-sand-700">
+                            <li>Bilgisayar bu telefonu daha önce eşleştirdiyse, bilgisayarın Bluetooth ayarlarında telefonu <strong>kaldırın</strong> (klavye olarak yeniden tanınması için).</li>
+                            <li>Aşağıdan <strong>Telefonu görünür yap</strong>'a dokunun ve izin verin.</li>
+                            <li>Bilgisayarda: <strong>Ayarlar → Bluetooth ve cihazlar → Cihaz ekle → Bluetooth</strong> → telefonunuzun adını seçin, iki cihazdaki kodu onaylayın.</li>
+                            <li>Buraya dönüp <strong>Eşleşmiş bilgisayarları göster</strong> → <strong>Bağlan</strong>.</li>
+                        </ol>
+                        <button type="button" disabled={!!mesgul} className={ikinciDugme} onClick={() => void calistir('gorunur', async () => {
+                            await bluetoothKlavyeyiBaslat();
+                            await telefonuGorunurYap();
+                            return 'Telefon 2 dakika görünür. Bilgisayarda “Cihaz ekle → Bluetooth” ile telefonu seçin.';
+                        })}><Bekliyor goster={mesgul === 'gorunur'}><Bluetooth size={15} aria-hidden="true" /> Telefonu görünür yap</Bekliyor></button>
+                    </div>
+                </details>
+            </Adim>
+            <Adim no={3} baslik="Deneyin">
+                <button type="button" disabled={!!mesgul || !secili} className={anaDugme} onClick={() => void calistir('dene', async () => {
+                    const yeni = { ...prefs, connection: 'pc-bluetooth' as const }; await testHelper(yeni); update(yeni); void durumuTazele(yeni);
+                    return 'Bluetooth klavye bağlı; editördeki araçlar bu bilgisayara yazar.';
                 })}><Bekliyor goster={mesgul === 'dene'}>Bağlantıyı dene</Bekliyor></button>
             </Adim>
         </ol>
@@ -369,8 +455,8 @@ function KartBleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncel
 }
 
 const YOLLAR = [
-    { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'Aynı ağ · kart gerekmez', Icon: Wifi },
-    { id: 'pc-bluetooth', label: 'Bilgisayar · Bluetooth', detail: 'Eşleşmiş PC · kart gerekmez', Icon: Bluetooth },
+    { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'PC yardımcısı + kod', Icon: Wifi },
+    { id: 'pc-bluetooth', label: 'Bilgisayar · Bluetooth', detail: 'Program gerekmez', Icon: Bluetooth },
     { id: 'wifi', label: 'Kart · Wi‑Fi', detail: 'Ev ağı ya da kartın ağı', Icon: Wifi },
     { id: 'bluetooth', label: 'Kart · Bluetooth', detail: 'Düşük enerji (BLE)', Icon: Bluetooth }
 ] as const;
@@ -378,7 +464,7 @@ const YOLLAR = [
 /** Yol hazır mı? (kayıtlı bilgilere göre; canlı bağlantıyı "Dene" doğrular). */
 function yolHazir(id: RemotePrefs['connection'], prefs: RemotePrefs): boolean {
     if (id === 'pc-wifi') return !!(prefs.helperUrl && prefs.helperToken);
-    if (id === 'pc-bluetooth') return !!(prefs.helperBluetoothAddress && prefs.helperToken);
+    if (id === 'pc-bluetooth') return !!prefs.helperBluetoothAddress;
     if (id === 'wifi') return !!prefs.cardUrl.trim();
     return true;
 }
@@ -409,7 +495,7 @@ export default function BaglantiKurulumu({ prefs, update }: { prefs: RemotePrefs
         </div>
         <div className="rounded-xl border border-sand-200 bg-sand-50/60 p-3">
             {prefs.connection === 'pc-wifi' && <PcWifiEslestirme prefs={prefs} update={update} yoluSec />}
-            {prefs.connection === 'pc-bluetooth' && <PcBluetoothKurulumu prefs={prefs} update={update} />}
+            {prefs.connection === 'pc-bluetooth' && <BilgisayarBluetoothKlavye prefs={prefs} update={update} />}
             {prefs.connection === 'wifi' && <KartWifiKurulumu prefs={prefs} update={update} />}
             {prefs.connection === 'bluetooth' && <KartBleKurulumu prefs={prefs} update={update} />}
         </div>

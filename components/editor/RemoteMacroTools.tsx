@@ -10,10 +10,12 @@
  */
 import { useState } from 'react';
 import { ChevronRight, Keyboard, ListOrdered, MousePointer2, Pencil, Play, Plus, TextCursorInput, Trash2 } from 'lucide-react';
-import { beklemeMetni, konumYuzdesi, makroHazir, runRemoteMacro, saveRemotePrefs, type RemoteMacro } from '@/lib/remoteTools';
+import { beklemeMetni, konumYuzdesi, makroHazir, saveRemotePrefs, type RemoteMacro } from '@/lib/remoteTools';
+import { calismaMetni } from '@/lib/makroCalistirici';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { SettingsNote, SettingsRow, SettingsSwitch } from '@/components/ui/settings';
 import MakroDuzenleyici from './MakroDuzenleyici';
+import MakroDugmesi from './MakroDugmesi';
 
 /** Kısayol türlerinin okunur adları. */
 const TUR_ADI: Record<RemoteMacro['type'], string> = {
@@ -33,7 +35,8 @@ const TUR_IKONU: Record<RemoteMacro['type'], typeof Keyboard> = {
 /** Satırda ve özet alanında gösterilen kısa değer. */
 function makroOzeti(makro: RemoteMacro, tumu: RemoteMacro[]): string {
     if (makro.type === 'sequence') {
-        return (makro.steps ?? []).map((adim, sira) => (sira + 1) + '. ' + (
+        const bicim = calismaMetni(makro);
+        return (bicim ? '[' + bicim + '] ' : '') + (makro.steps ?? []).map((adim, sira) => (sira + 1) + '. ' + (
             adim.type === 'macro' ? (tumu.find((m) => m.id === adim.value)?.name ?? 'silinmiş makro')
                 : adim.type === 'wait' ? '⏱ ' + beklemeMetni(Number(adim.value))
                 : adim.type === 'position' ? 'tıklama'
@@ -52,7 +55,6 @@ function makroOzeti(makro: RemoteMacro, tumu: RemoteMacro[]): string {
 
 export default function RemoteMacroTools() {
     const prefs = useRemotePrefs();
-    const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
     const [acikIndex, setAcikIndex] = useState<number | null>(null);
     /** null → kapalı; { makro: null } → yeni makro; { makro } → düzenleme. */
@@ -65,16 +67,6 @@ export default function RemoteMacroTools() {
         saveRemotePrefs({ ...prefs, macros: liste });
         setDuzenleyici(null);
         setMessage('"' + makro.name + '" kaydedildi.');
-    };
-
-    const run = async (makro: RemoteMacro) => {
-        setBusy(true); setMessage('');
-        try {
-            if (!prefs.enabledTools.shortcuts || makro.enabled === false) throw new Error('Kısayollar aracı kapalı.');
-            await runRemoteMacro(makro, prefs);
-            setMessage(makro.name + ' çalıştırıldı.');
-        } catch (error) { setMessage(error instanceof Error ? error.message : 'Kısayol çalıştırılamadı.'); }
-        finally { setBusy(false); }
     };
 
     return <div className="space-y-2.5">
@@ -141,15 +133,16 @@ export default function RemoteMacroTools() {
                                 >
                                     <Pencil size={15} /> Düzenle
                                 </button>
-                                <button
-                                    type="button"
+                                <MakroDugmesi
+                                    makro={makro}
+                                    prefs={prefs}
                                     id={'kisayol-calistir-' + index}
-                                    disabled={busy || !prefs.enabledTools.shortcuts || !makroHazir(makro)}
-                                    onClick={() => void run(makro)}
+                                    disabled={!prefs.enabledTools.shortcuts || !makroHazir(makro)}
+                                    onSonuc={(mesaj) => setMessage(mesaj)}
                                     className="btn btn-primary min-h-[44px] px-4 text-sm"
                                 >
                                     <Play size={15} /> Çalıştır
-                                </button>
+                                </MakroDugmesi>
                             </div>
                         </div>
                     )}

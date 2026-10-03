@@ -14,7 +14,7 @@ import {
     SettingsSwitch,
     settingsFieldClass
 } from '@/components/ui/settings';
-import BaglantiKurulumu, { PcWifiEslestirme } from './BaglantiKurulumu';
+import BaglantiKurulumu, { PcBluetoothPano, PcWifiEslestirme } from './BaglantiKurulumu';
 
 /** Bağlantı yolunun kısa adı; sekme başlığındaki rozette gösterilir. */
 const CONNECTION_LABELS: Record<RemotePrefs['connection'], string> = {
@@ -30,7 +30,9 @@ export default function RemoteSettings() {
     useEffect(() => { setPrefs(remotePrefs()); void dictationEngines().then(setMotorlar); }, []);
     const update = (next: RemotePrefs) => { setPrefs(next); saveRemotePrefs(next); };
     const kartKipi = prefs.connection === 'wifi' || prefs.connection === 'bluetooth';
-    const pcEslesmis = !!(prefs.helperUrl && prefs.helperToken);
+    const pcEslesmis = !!(prefs.helperToken && (prefs.helperUrl || prefs.helperBluetoothAddress));
+    /** Kart kipinde pano için PC'ye hangi yoldan bağlanılacağı (görünüm tercihi). */
+    const [panoYolu, setPanoYolu] = useState<'bluetooth' | 'wifi'>(() => (prefs.helperUrl ? 'wifi' : 'bluetooth'));
     return <div className="space-y-4">
         <SettingsPageHeader
             icon={Radio}
@@ -42,13 +44,25 @@ export default function RemoteSettings() {
             <BaglantiKurulumu prefs={prefs} update={update} />
         </SettingsSection>
 
-        {kartKipi && <SettingsSection
+        {(kartKipi || prefs.connection === 'pc-bluetooth') && <SettingsSection
             icon={MonitorSmartphone}
             title="PC panosu (isteğe bağlı)"
-            description="Kart yalnız klavye ve fare gibi davranır; bilgisayar panosuna yazamaz. Pano düğmesi için bilgisayardaki yardımcıyla bir kez eşleşin. Eşleşme yoksa daha önce seçtiğiniz PC Bluetooth bağlantısı denenir."
+            description={(kartKipi ? 'Kart' : 'Bluetooth klavye') + ' yazar ve fareyi oynatır ama bilgisayarın panosuna erişemez. Pano düğmesini kullanacaksanız bilgisayarda Not Bahçesi PC Yardımcısı açıkken bir kez bağlanın: Bluetooth ile kod gerekmez, Wi‑Fi ile 6 haneli kod gerekir. Yazma ve fare bundan etkilenmez.'}
             action={<SettingsPill tone={pcEslesmis ? 'moss' : 'sand'}>{pcEslesmis ? 'Eşleşmiş' : 'Kurulum'}</SettingsPill>}
         >
-            <PcWifiEslestirme prefs={prefs} update={update} yoluSec={false} />
+            <div className="space-y-3">
+                <div role="radiogroup" aria-label="Pano bağlantısı" className="grid grid-cols-2 gap-1.5">
+                    {([['bluetooth', 'Bluetooth ile', 'Kod gerekmez'], ['wifi', 'Wi‑Fi ile', '6 haneli kod']] as const).map(([id, ad, alt]) => (
+                        <button key={id} type="button" role="radio" aria-checked={panoYolu === id} id={'pano-yolu-' + id} onClick={() => setPanoYolu(id)}
+                            className={'min-h-[44px] rounded-xl border px-3 py-2 text-left ' + (panoYolu === id ? 'border-moss-600 bg-moss-100 text-moss-800' : 'border-sand-200 bg-white text-sand-700')}>
+                            <span className="block text-sm font-semibold">{ad}</span><span className="block text-[11px] opacity-80">{alt}</span>
+                        </button>
+                    ))}
+                </div>
+                {panoYolu === 'bluetooth'
+                    ? <PcBluetoothPano prefs={prefs} update={update} yoluSec={false} />
+                    : <PcWifiEslestirme prefs={prefs} update={update} yoluSec={false} />}
+            </div>
         </SettingsSection>}
 
         <SettingsSection icon={MousePointer2} title="Araç davranışı">

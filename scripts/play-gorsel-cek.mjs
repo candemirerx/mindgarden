@@ -116,6 +116,40 @@ const ORNEK_VERI = {
     ]
 };
 
+/** Bilgisayar araçları: makrolar, iki profil ve iki sütunlu bir ekran düzeni. */
+const makro = (id, name, type, value, ek = {}) => ({ id, name, type, value, enabled: true, ...ek });
+const ORNEK_BILGISAYAR = {
+    connection: 'pc-bluetooth',
+    macros: [
+        makro('m-kaydet', 'Kaydet', 'shortcut', 'CTRL+S'),
+        makro('m-kopyala', 'Kopyala', 'shortcut', 'CTRL+C'),
+        makro('m-yapistir', 'Yapıştır', 'shortcut', 'CTRL+V'),
+        makro('m-geri', 'Geri al', 'shortcut', 'CTRL+Z'),
+        makro('m-masaustu', 'Masaüstü', 'shortcut', 'WIN+D'),
+        makro('m-imza', 'E-posta imzası', 'text', 'Saygılarımla,\nAd Soyad'),
+        makro('m-rapor', 'Haftalık rapor', 'sequence', '3 adım', {
+            steps: [{ type: 'shortcut', value: 'CTRL+N' }, { type: 'wait', value: '1000' }, { type: 'text', value: 'Haftalık rapor' }],
+            calisma: 'sayili', tekrar: 3
+        }),
+        makro('m-kaydir', 'Sayfayı kaydır', 'sequence', '2 adım', {
+            steps: [{ type: 'shortcut', value: 'PAGEDOWN' }, { type: 'wait', value: '2000' }],
+            calisma: 'anahtar'
+        })
+    ],
+    profiles: [
+        { id: 'p-ofis', name: 'Ofis', macroIds: ['m-kaydet', 'm-kopyala', 'm-yapistir', 'm-geri', 'm-imza', 'm-rapor'] },
+        { id: 'p-okuma', name: 'Okuma', macroIds: ['m-kaydir', 'm-masaustu'] }
+    ],
+    shortcutButtons: [],
+    screenLayouts: [{
+        id: 'ekran-masa', name: 'Masa',
+        columns: [
+            { weight: 55, panes: [{ kind: 'mouse', weight: 60 }, { kind: 'keys', weight: 40 }] },
+            { weight: 45, panes: [{ kind: 'shortcuts', weight: 55, profileId: 'p-ofis' }, { kind: 'text', weight: 45 }] }
+        ]
+    }]
+};
+
 function ekmeBetigi() {
     const kullanici = ORNEK_VERI.kullanici;
     const bahceler = ORNEK_VERI.bahceler.map(([id, name, created_at, updated_at]) => ({
@@ -149,6 +183,9 @@ function ekmeBetigi() {
         'localStorage.setItem("nb-ai-provider", "gemini");',
         'localStorage.setItem("nb-ai-key-gemini", "AIzaSyOrnek-Anahtar-Cekim-Icin");',
         'localStorage.setItem("nb-ai-model-gemini", "gemini-2.5-flash");',
+        // Bilgisayar araçları kareleri için örnek makrolar, profiller ve ekran düzeni.
+        'localStorage.setItem("nb-computer-section", "1");',
+        'localStorage.setItem("nb-remote-prefs-v1", ' + JSON.stringify(JSON.stringify(ORNEK_BILGISAYAR)) + ');',
         '"ekildi"'
     ].join('\n');
 }
@@ -255,6 +292,42 @@ async function main() {
                 returnByValue: true
             });
             await bekle(1600);
+        });
+
+        const calistir = (ifade) => cdp.gonder('Runtime.evaluate', { expression: ifade, returnByValue: true, awaitPromise: true });
+        const tikla = (secici) => calistir('(()=>{const e=' + secici + ';if(e)e.click();return Boolean(e)})()');
+
+        // Bilgisayar araçları: bölmeli ekran düzeni.
+        await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 5000);
+        await cek(['store/screenshot-5-ekran-duzeni.png', 'play-store-paketi/gorseller/ekran-5-ekran-duzeni.png'], async () => {
+            await tikla('document.getElementById("studio-tab-computer")');
+            await bekle(600);
+            await tikla('document.getElementById("studio-ekran")');
+            await bekle(1500);
+        });
+
+        // Kısayol panosu: Ofis profili.
+        await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 5000);
+        await cek(['store/screenshot-6-kisayollar.png', 'play-store-paketi/gorseller/ekran-6-kisayollar.png'], async () => {
+            await tikla('document.getElementById("studio-tab-computer")');
+            await bekle(600);
+            await tikla('document.getElementById("studio-kisayollar")');
+            await bekle(800);
+            await tikla('[...document.querySelectorAll(\'[aria-label="Kısayol profilleri"] button\')].find((b)=>b.innerText==="Ofis")');
+            await bekle(800);
+        });
+
+        // Seviyeli kullanım kılavuzu: İleri seviye, bir ders açık.
+        await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 5000);
+        await cek(['store/screenshot-7-kilavuz.png', 'play-store-paketi/gorseller/ekran-7-kilavuz.png'], async () => {
+            await tikla('[...document.querySelectorAll("button")].find((b)=>b.getAttribute("title")==="Ayarlar")');
+            await bekle(1500);
+            await tikla('[...document.querySelectorAll("button")].find((b)=>b.innerText.trim().startsWith("Kullanım kılavuzu"))');
+            await bekle(1200);
+            await tikla('document.getElementById("kilavuz-seviye-ileri")');
+            await bekle(500);
+            await tikla('[...document.querySelectorAll("[aria-expanded]")].find((b)=>b.innerText.includes("Size uygun bağlantıyı"))');
+            await bekle(800);
         });
 
         console.log('Bitti.');

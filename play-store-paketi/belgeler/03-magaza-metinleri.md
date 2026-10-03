@@ -53,14 +53,16 @@ Metin editöründe hazır makro kutuları vardır: İmla Düzelt, Özetle, Resmi
 
 AYARLARDAN HER ŞEY TEK YERDE
 
-Ayarlar ekranı; üstteki arama kutusu ve gruplanmış bölümlerle tek pencerede açılır. "Hesabınız", "Yazma deneyimi", "Çalışma alanınız" ve "Yardım" başlıkları altında hesap ve giriş, yapay zekâ, AI makroları, düzenleme araçları, bilgisayar bağlantısı, yedekleme ve senkronizasyon, veri yönetimi, uygulama hakkında ve kullanım kılavuzu bölümleri bulunur. Sağlayıcı ve model seçimi, API anahtarı, makrolar, yedekleme ve dışa aktarma artık tek pencerede; editörün sağ üstündeki dişli simgesinden ya da kenar çubuğundaki Ayarlar kartından açılır.
+Arama kutulu tek bir ayarlar ekranı: yapay zekâ, bilgisayar bağlantısı, yedekleme ve veri yönetimi bir arada. Başlangıçtan uzmana beş seviyeli kullanım kılavuzu, uygulamayı istediğiniz kadar öğrenmenizi sağlar.
 
 BİLGİSAYARA BAĞLAN
 
-Telefonunuzu bilgisayarınızın klavyesi, faresi ve panosu gibi kullanabilirsiniz. Bilgisayara Yaz metni doğrudan PC'deki alana yazar, Fare telefonu dokunmatik yüzeye çevirir, Dikte konuşmanızı yazıya çevirip bilgisayara gönderir, Pano ise metni PC panosuna kopyalar. Kendi kısayollarınızı da tanımlayabilirsiniz.
+Telefonunuzu bilgisayarınızın klavyesi, faresi ve panosu gibi kullanabilirsiniz. Bilgisayara Yaz metni doğrudan PC'deki alana yazar, Fare telefonu dokunmatik yüzeye çevirir, Dikte konuşmanızı yazıya çevirip bilgisayara gönderir, Pano ise metni PC panosuna kopyalar. Kendi kısayollarınızı, sıralı makrolarınızı ve bölmeli kumanda ekranlarınızı da tasarlayabilirsiniz.
 
-• Bağlantı seçenekleri: Wi-Fi üzerinden doğrudan PC, klasik Bluetooth veya desteklenen kart köprüsü
-• Bilgisayar tarafında küçük bir yardımcı program çalıştırmanız gerekir; erişim anahtarı cihazınızda ve bilgisayarınızda kalır
+• Bluetooth ile programsız: telefon bilgisayara Bluetooth klavye ve fare olarak bağlanır, Türkçe karakterler dahil
+• Wi-Fi ile: bilgisayarda küçük bir yardımcı program açıp 6 haneli kodla bir kez eşleşirsiniz; pano için de bu yardımcı kullanılır
+• Desteklenen kart köprüsüyle (ESP32-S3) Wi-Fi veya Bluetooth üzerinden
+• Erişim anahtarı yalnız cihazınızda ve bilgisayarınızda kalır
 • Bu iletişim yerel ağınızda şifrelenmeden akar; yalnızca güvendiğiniz ağlarda kullanın
 • Bilgisayar bağlantısı isteğe bağlıdır; uygulamanın geri kalanı bağlantı olmadan da çalışır
 
@@ -93,33 +95,19 @@ anahtar olmadan da tam çalışır.
 
 ---
 
-## Sürüm notları (ilk sürüm)
+## Sürüm notları — ilk sürüm (2.2.12)
+
+Play Console'da **Sürüm notları** alanına <tr-TR> etiketleri arasına yapıştır (en fazla 500 karakter).
 
 ```
-İlk sürüm.
+Not Bahçesi'nin ilk sürümü.
 
-• Ağaç yapılı not tutma ve görsel Tuval görünümü
-• Dallara renk verme
-• Google Drive ile otomatik yedekleme ve cihazlar arası birleştirme
-• Metin editöründe yapay zekâ makroları
-• Çevrimdışı çalışma
-```
-
----
-
-## Sürüm notları (2.2.11 — Play Store'a yüklenecek sürüm)
-
-Play Console sürüm notu alanı en fazla 500 karakterdir.
-
-```
-Yazmak için tam ekran ve daha akıcı araçlar.
-
-• Metin editöründe tam ekran yazma modu
-• Son kullandığınız araç sekmesi hatırlanıyor
-• Tuvalde yeni dal veya yaprak eklenince ekran ona odaklanıyor
-• Bilgisayar araçları: sanal klavyeyle kısayol seçme, Ekran aracı, daha akıcı fare
-• Yerel (cihazda çalışan) yapay zekâ modeli desteği
-• Ayarlar ekranında düzen ve kararlılık iyileştirmeleri
+• Notlarınızı bahçe, ağaç, dal ve yaprak olarak düzenleyin; Liste ve görsel Tuval görünümü
+• Google Drive ile otomatik yedek ve cihazlar arası senkron
+• Yapay zekâ makroları: özetle, imla düzelt, çevir (bulut ya da cihazda)
+• Telefonu bilgisayarın klavyesi, faresi ve panosu gibi kullanın; Bluetooth ile programsız
+• Kendi makrolarınız ve bölmeli kumanda ekranları
+• Başlangıçtan uzmana beş seviyeli kullanım kılavuzu
 ```
 
 ---

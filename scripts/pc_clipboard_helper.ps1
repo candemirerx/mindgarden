@@ -62,8 +62,14 @@ if ($RfcommOnly) {
                     try {
                         if ([System.Text.Encoding]::UTF8.GetByteCount($line) -gt 32768) { throw 'İstek çok uzun.' }
                         $command = $line | ConvertFrom-Json
+                        if ($command.action -eq 'pair' -and [string]::IsNullOrEmpty([string]$command.pin)) {
+                            # Bluetooth'ta kod gerekmez: dinleyici Authenticate=true ile yalnız Windows'la
+                            # önceden eşleşmiş ve doğrulanmış cihazları kabul eder; eşleşme zaten güvendir.
+                            $writer.WriteLine((@{ ok = $true; token = $secret; name = $env:COMPUTERNAME } | ConvertTo-Json -Compress))
+                            continue
+                        }
                         if ($command.action -eq 'pair') {
-                            # Bluetooth ile eşleştirme: kod, Wi‑Fi yardımcısının /pair ucunda denetlenir.
+                            # Kodla eşleştirme (eski uygulama sürümleri): kod, Wi‑Fi yardımcısının /pair ucunda denetlenir.
                             try {
                                 $eslesme = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$Port/pair" -ContentType 'application/json' -Body (@{ pin = [string]$command.pin } | ConvertTo-Json -Compress) -TimeoutSec 8
                                 $writer.WriteLine(($eslesme | ConvertTo-Json -Compress))

@@ -25,6 +25,7 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.os.Bundle;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -59,7 +60,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @CapacitorPlugin(name = "RemoteBridge", permissions = {
-    @Permission(alias = "nearby", strings = {Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT}),
+    @Permission(alias = "nearby", strings = {Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADVERTISE}),
     @Permission(alias = "location", strings = {Manifest.permission.ACCESS_FINE_LOCATION}),
     @Permission(alias = "microphone", strings = {Manifest.permission.RECORD_AUDIO})
 })
@@ -122,6 +123,8 @@ public class RemoteBridgePlugin extends Plugin {
         else if (call.getMethodName().equals("scanPaired")) scanPaired(call);
         else if (call.getMethodName().equals("connectClassic")) connectClassic(call);
         else if (call.getMethodName().equals("sendClassic")) sendClassic(call);
+        else if (call.getMethodName().equals("hidStart")) hidStart(call);
+        else if (call.getMethodName().equals("hidConnect")) hidConnect(call);
         else call.reject("Bluetooth izni gerekli.");
     }
     private BluetoothAdapter adapter() {
@@ -546,6 +549,217 @@ public class RemoteBridgePlugin extends Plugin {
             JSObject result = new JSObject(); result.put("cards", cards); result.put("bodies", details); call.resolve(result);
         }).start();
     }
+    // ---- Bluetooth klavye/fare (HID cihaz profili) --------------------------
+    // Telefon kendini bilgisayara doğrudan Bluetooth klavye + fare olarak tanıtır.
+    // Windows bunu gerçek bir klavye gibi görür; PC'de hiçbir program gerekmez
+    // (kart da USB'den aynı şeyi yapar). Android 9 (API 28) ve sonrası.
+    /** Rapor 1: klavye [değiştirici, 0, 6 tuş]; rapor 2: fare [düğmeler, dx, dy, tekerlek]. */
+    private static final byte[] HID_TANIM = {
+        0x05, 0x01, 0x09, 0x06, (byte) 0xA1, 0x01, (byte) 0x85, 0x01,
+        0x05, 0x07, 0x19, (byte) 0xE0, 0x29, (byte) 0xE7, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, (byte) 0x95, 0x08, (byte) 0x81, 0x02,
+        (byte) 0x95, 0x01, 0x75, 0x08, (byte) 0x81, 0x01,
+        (byte) 0x95, 0x06, 0x75, 0x08, 0x15, 0x00, 0x25, 0x65, 0x05, 0x07, 0x19, 0x00, 0x29, 0x65, (byte) 0x81, 0x00,
+        (byte) 0xC0,
+        0x05, 0x01, 0x09, 0x02, (byte) 0xA1, 0x01, (byte) 0x85, 0x02, 0x09, 0x01, (byte) 0xA1, 0x00,
+        0x05, 0x09, 0x19, 0x01, 0x29, 0x03, 0x15, 0x00, 0x25, 0x01, (byte) 0x95, 0x03, 0x75, 0x01, (byte) 0x81, 0x02,
+        (byte) 0x95, 0x01, 0x75, 0x05, (byte) 0x81, 0x03,
+        0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x09, 0x38, 0x15, (byte) 0x81, 0x25, 0x7F, 0x75, 0x08, (byte) 0x95, 0x03, (byte) 0x81, 0x06,
+        (byte) 0xC0, (byte) 0xC0
+    };
+    private volatile android.bluetooth.BluetoothHidDevice hid;
+    private volatile boolean hidKayitli;
+    private volatile BluetoothDevice hidAna;
+    /** Bağlantının kurulduğu an: Windows yeni klavyeyi kurarken gelen raporları kaçırıyor. */
+    private volatile long hidBaglandiMs;
+    private PluginCall hidKayitCall;
+    private PluginCall hidBaglanCall;
+    private String hidBaglanAdres;
+    private final ExecutorService hidYazici = Executors.newSingleThreadExecutor();
+
+    @SuppressLint({"MissingPermission", "NewApi"})
+    private final android.bluetooth.BluetoothHidDevice.Callback hidGeri = Build.VERSION.SDK_INT < 28 ? null : new android.bluetooth.BluetoothHidDevice.Callback() {
+        @Override public void onAppStatusChanged(BluetoothDevice cihaz, boolean kayitli) {
+            hidKayitli = kayitli;
+            if (!kayitli) hidAna = null;
+            PluginCall c = hidKayitCall; hidKayitCall = null;
+            if (c != null) {
+                if (kayitli) c.resolve(hidDurumNesnesi());
+                else c.reject("Bluetooth klavye başlatılamadı. Telefonda başka bir Bluetooth klavye/fare uygulaması (ör. Bluetooth Keyboard & Mouse) etkin olabilir; onu kapatıp yeniden deneyin.");
+            }
+            notifyListeners("hidDurum", hidDurumNesnesi());
+        }
+        // Windows bağlanırken rapor isteyebilir; yanıtsız kalırsa bazı sürümler klavyeyi
+        // etkinleştirmiyor. Boş (hiçbir tuş basılı değil) rapor döndürülür.
+        @Override public void onGetReport(BluetoothDevice cihaz, byte tur, byte no, int boyut) {
+            try {
+                if (hid != null) hid.replyReport(cihaz, tur, no, no == 2 ? new byte[4] : new byte[8]);
+            } catch (SecurityException ignored) { }
+        }
+        @Override public void onSetReport(BluetoothDevice cihaz, byte tur, byte no, byte[] veri) {
+            try { if (hid != null) hid.reportError(cihaz, android.bluetooth.BluetoothHidDevice.ERROR_RSP_SUCCESS); } catch (SecurityException ignored) { }
+        }
+        @Override public void onConnectionStateChanged(BluetoothDevice cihaz, int durum) {
+            if (durum == BluetoothProfile.STATE_CONNECTED) { hidAna = cihaz; hidBaglandiMs = SystemClock.elapsedRealtime(); }
+            else if (durum == BluetoothProfile.STATE_DISCONNECTED && cihaz != null && cihaz.equals(hidAna)) hidAna = null;
+            PluginCall c = hidBaglanCall;
+            if (c != null && cihaz != null && cihaz.getAddress().equalsIgnoreCase(hidBaglanAdres)) {
+                if (durum == BluetoothProfile.STATE_CONNECTED) { hidBaglanCall = null; c.resolve(hidDurumNesnesi()); }
+                else if (durum == BluetoothProfile.STATE_DISCONNECTED) { hidBaglanCall = null; c.reject("Bilgisayar Bluetooth klavye bağlantısını kabul etmedi."); }
+            }
+            notifyListeners("hidDurum", hidDurumNesnesi());
+        }
+    };
+
+    private JSObject hidDurumNesnesi() {
+        JSObject r = new JSObject();
+        BluetoothDevice ana = hidAna;
+        r.put("destekleniyor", Build.VERSION.SDK_INT >= 28);
+        r.put("kayitli", hidKayitli);
+        r.put("bagli", ana != null);
+        r.put("adres", ana == null ? "" : ana.getAddress());
+        return r;
+    }
+
+    @SuppressLint({"MissingPermission", "NewApi"})
+    private void hidKaydet(PluginCall call) {
+        android.bluetooth.BluetoothHidDeviceAppSdpSettings sdp = new android.bluetooth.BluetoothHidDeviceAppSdpSettings(
+            "Not Bahçesi Klavye", "Telefondan klavye ve fare", "Not Bahçesi",
+            android.bluetooth.BluetoothHidDevice.SUBCLASS1_COMBO, HID_TANIM);
+        hidKayitCall = call;
+        boolean basladi;
+        try { basladi = hid.registerApp(sdp, null, null, Executors.newSingleThreadExecutor(), hidGeri); }
+        catch (SecurityException e) { hidKayitCall = null; call.reject("Bluetooth izni gerekli."); return; }
+        if (!basladi) { hidKayitCall = null; call.reject("Bluetooth klavye başlatılamadı. Başka bir Bluetooth klavye uygulaması etkin olabilir."); return; }
+        handler.postDelayed(() -> { if (hidKayitCall == call) { hidKayitCall = null; call.reject("Bluetooth klavye kaydı zaman aşımına uğradı."); } }, 8000);
+    }
+
+    /** Bluetooth klavyeyi başlatır (uygulama açıkken bir kez). */
+    @SuppressLint({"MissingPermission", "NewApi"})
+    @PluginMethod public void hidStart(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 28) { call.reject("Bu özellik Android 9 ve sonrasında çalışır."); return; }
+        if (!bluetoothHazir(call)) return;
+        BluetoothAdapter adapter = adapter();
+        if (adapter == null || !adapter.isEnabled()) { call.reject("Telefonun Bluetooth'u kapalı."); return; }
+        if (hid != null && hidKayitli) { call.resolve(hidDurumNesnesi()); return; }
+        if (hid != null) { hidKaydet(call); return; }
+        boolean istendi = adapter.getProfileProxy(getContext(), new BluetoothProfile.ServiceListener() {
+            @Override public void onServiceConnected(int profil, BluetoothProfile vekil) {
+                hid = (android.bluetooth.BluetoothHidDevice) vekil;
+                hidKaydet(call);
+            }
+            @Override public void onServiceDisconnected(int profil) { hid = null; hidKayitli = false; hidAna = null; }
+        }, BluetoothProfile.HID_DEVICE);
+        if (!istendi) call.reject("Bu telefon Bluetooth klavye özelliğini desteklemiyor.");
+    }
+
+    /** Eşleşmiş bilgisayara Bluetooth klavye olarak bağlanır. */
+    @SuppressLint({"MissingPermission", "NewApi"})
+    @PluginMethod public void hidConnect(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 28 || hid == null || !hidKayitli) { call.reject("Önce Bluetooth klavyeyi başlatın."); return; }
+        if (!bluetoothHazir(call)) return;
+        String adres = call.getString("address", "");
+        BluetoothDevice ana = hidAna;
+        if (ana != null && ana.getAddress().equalsIgnoreCase(adres)) { call.resolve(hidDurumNesnesi()); return; }
+        try {
+            BluetoothDevice cihaz = adapter().getRemoteDevice(adres);
+            if (ana != null) hid.disconnect(ana);
+            hidBaglanCall = call; hidBaglanAdres = adres;
+            if (!hid.connect(cihaz)) { hidBaglanCall = null; call.reject("Bilgisayara Bluetooth klavye olarak bağlanılamadı."); return; }
+            handler.postDelayed(() -> {
+                if (hidBaglanCall == call) {
+                    hidBaglanCall = null;
+                    call.reject("Bilgisayar yanıt vermedi. Bilgisayarda Bluetooth açık mı? İlk kullanımda bilgisayarın Bluetooth ayarlarında telefonu kaldırıp \"Cihaz ekle\" ile yeniden ekleyin.");
+                }
+            }, 15000);
+        } catch (Exception e) { hidBaglanCall = null; call.reject("Geçersiz Bluetooth adresi: " + e.getMessage()); }
+    }
+
+    @SuppressLint({"MissingPermission", "NewApi"})
+    @PluginMethod public void hidDisconnect(PluginCall call) {
+        BluetoothDevice ana = hidAna;
+        if (Build.VERSION.SDK_INT >= 28 && hid != null && ana != null) { try { hid.disconnect(ana); } catch (SecurityException ignored) { } }
+        call.resolve();
+    }
+
+    @PluginMethod public void hidStatus(PluginCall call) { call.resolve(hidDurumNesnesi()); }
+
+    /**
+     * Raporları sırayla gönderir: reports = [[raporNo, bayt...], ...]; her rapordan
+     * sonra gapMs beklenir (Windows tuş basma/bırakmayı ayrı görsün).
+     */
+    @SuppressLint({"MissingPermission", "NewApi"})
+    @PluginMethod public void hidSend(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 28 || hid == null || hidAna == null) { call.reject("Bilgisayara Bluetooth klavye olarak bağlı değil.", "HID_NOT_CONNECTED"); return; }
+        JSArray raporlar = call.getArray("reports");
+        int ara = Math.max(2, Math.min(60, call.getInt("gapMs", 8)));
+        if (raporlar == null || raporlar.length() == 0 || raporlar.length() > 4000) { call.reject("Rapor listesi geçersiz."); return; }
+        hidYazici.execute(() -> {
+            try {
+                // Yeni bağlantıda Windows klavye sürücüsünü kurarken ilk raporları kaçırıyor
+                // (ilk tuş basılı kalıp tekrarlanıyordu): 2 sn dolana kadar bekle.
+                long gecen = SystemClock.elapsedRealtime() - hidBaglandiMs;
+                if (gecen < 2000) Thread.sleep(2000 - gecen);
+                // Önceki bir gönderimde kalan basılı tuş/düğme olmasın.
+                BluetoothDevice ilk = hidAna;
+                if (ilk != null) { hid.sendReport(ilk, 1, new byte[8]); Thread.sleep(ara); }
+                for (int i = 0; i < raporlar.length(); i++) {
+                    org.json.JSONArray r = raporlar.getJSONArray(i);
+                    int no = r.getInt(0);
+                    byte[] veri = new byte[r.length() - 1];
+                    for (int j = 1; j < r.length(); j++) veri[j - 1] = (byte) r.getInt(j);
+                    BluetoothDevice ana = hidAna;
+                    if (ana == null) throw new IOException("Bluetooth klavye bağlantısı koptu.");
+                    if (!hid.sendReport(ana, no, veri)) {
+                        Thread.sleep(25);
+                        if (!hid.sendReport(ana, no, veri)) throw new IOException("Bilgisayar tuşu almadı.");
+                    }
+                    Thread.sleep(ara);
+                }
+                // sendReport yalnız kuyruğa koyar: son tuşlar (çoğu kez Enter) bağlantı
+                // hemen kapanırsa yolda kalıyordu. Klavye gönderiminde sonda bir kez daha
+                // "hepsi bırakıldı" raporu gider ve kuyruğun boşalması beklenir.
+                BluetoothDevice son = hidAna;
+                if (son != null && raporlar.getJSONArray(raporlar.length() - 1).getInt(0) == 1) {
+                    hid.sendReport(son, 1, new byte[8]);
+                    Thread.sleep(Math.max(60, ara * 3));
+                }
+                call.resolve();
+            } catch (Exception e) { call.reject(e.getMessage() == null ? "Bluetooth klavye gönderimi başarısız." : e.getMessage()); }
+        });
+    }
+
+    /** Telefonu 120 sn görünür yapar: bilgisayarda "Cihaz ekle" ile ilk eşleştirme için. */
+    @PluginMethod public void hidDiscoverable(PluginCall call) {
+        try {
+            Intent istek = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            istek.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
+            istek.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(istek);
+            call.resolve();
+        } catch (Exception e) { call.reject("Telefon görünür yapılamadı: " + e.getMessage()); }
+    }
+
+    // ---- UDP (kartın Wi‑Fi fare kanalı) --------------------------------------
+    // Fare hareketi her seferinde TCP/HTTP bağlantısı kurmasın diye küçük UDP
+    // paketleri gönderilir; yanıt beklenmez (kayıp paket yalnız küçük bir adımdır).
+    private java.net.DatagramSocket udpSoket;
+    private final ExecutorService udpYazici = Executors.newSingleThreadExecutor();
+    @PluginMethod public void udpSend(PluginCall call) {
+        String host = call.getString("host", "");
+        int port = call.getInt("port", 0);
+        JSArray veri = call.getArray("data");
+        if (host.isEmpty() || port <= 0 || port > 65535 || veri == null || veri.length() == 0 || veri.length() > 64) { call.reject("UDP isteği geçersiz."); return; }
+        udpYazici.execute(() -> {
+            try {
+                byte[] bayt = new byte[veri.length()];
+                for (int i = 0; i < bayt.length; i++) bayt[i] = (byte) veri.getInt(i);
+                if (udpSoket == null || udpSoket.isClosed()) udpSoket = new java.net.DatagramSocket();
+                udpSoket.send(new java.net.DatagramPacket(bayt, bayt.length, java.net.InetAddress.getByName(host), port));
+                call.resolve();
+            } catch (Exception e) { call.reject("UDP gönderilemedi: " + e.getMessage()); }
+        });
+    }
+
     /** Kart BLE bağlantısı açık ve NUS yazma özelliği hazır mı? (durum göstergesi için; hiçbir şey göndermez) */
     @PluginMethod public void bleStatus(PluginCall call) {
         JSObject result = new JSObject();

@@ -10,15 +10,17 @@
  *
  * Sıralı türde birden çok adım (metin, klavye kısayolu, tıklama, başka bir
  * makro veya bekleme) art arda dizilir; adımlar listedeki sırayla çalışır.
- * İki adımın arasına tek dokunuşla bekleme eklenebilir.
+ * İki adımın arasına tek dokunuşla bekleme eklenebilir. Sıralı makronun
+ * düğmeye basınca nasıl çalışacağı da burada seçilir: bir kez (normal),
+ * belirlenen sayı kadar, anahtar gibi kapatılana kadar ya da basılı tutuldukça.
  *
  * Pencere telefonda da tam ekran açılır: arkada ayarlar ekranının göründüğü
  * şeffaf bir şerit kalmaz, başlık ve düğmeler güvenli alanın içinde durur.
  */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Check, Keyboard, ListOrdered, MousePointer2, Plus, TextCursorInput, Timer, Trash2, Wand2, X } from 'lucide-react';
-import { BEKLEME_SINIRI, KONUM_MERKEZ, beklemeGecerli, beklemeMetni, konumYuzdesi, type RemoteMacro, type RemoteMacroStep, type RemotePrefs } from '@/lib/remoteTools';
+import { ArrowDown, ArrowUp, Check, Hand, Keyboard, ListOrdered, MousePointer2, Play, Plus, Repeat, TextCursorInput, Timer, ToggleRight, Trash2, Wand2, X } from 'lucide-react';
+import { BEKLEME_SINIRI, KONUM_MERKEZ, TEKRAR_SINIRI, TUR_ARASI_SINIRI, beklemeGecerli, beklemeMetni, konumYuzdesi, type MakroCalisma, type RemoteMacro, type RemoteMacroStep, type RemotePrefs } from '@/lib/remoteTools';
 import KonumSecici from './KonumSecici';
 import { settingsFieldClass } from '@/components/ui/settings';
 import SanalKlavye from './SanalKlavye';
@@ -45,6 +47,14 @@ const ADIM_TURLERI: Array<{ id: RemoteMacroStep['type']; ad: string; Icon: typeo
     { id: 'position', ad: 'Tıklama', Icon: MousePointer2 },
     { id: 'macro', ad: 'Makro', Icon: Wand2 },
     { id: 'wait', ad: 'Bekle', Icon: Timer }
+];
+
+/** Sıralı makronun düğmeye basınca çalışma biçimleri. */
+const CALISMALAR: Array<{ id: MakroCalisma; ad: string; aciklama: string; Icon: typeof Keyboard }> = [
+    { id: 'tek', ad: 'Normal', aciklama: 'Dokununca bir kez çalışır (bilgisayar tuşu gibi).', Icon: Play },
+    { id: 'sayili', ad: 'Sayılı', aciklama: 'Dokununca aşağıdaki sayı kadar art arda çalışır. Çalışırken yeniden dokunmak durdurur.', Icon: Repeat },
+    { id: 'anahtar', ad: 'Anahtar', aciklama: 'İlk dokunuş açar; makro siz yeniden dokunup kapatana kadar baştan tekrar eder.', Icon: ToggleRight },
+    { id: 'basili', ad: 'Basılı tut', aciklama: 'Düğmeyi basılı tuttuğunuz sürece tekrar eder; bırakınca durur.', Icon: Hand }
 ];
 
 /** Bekleme adımında tek dokunuşla seçilen süreler (ms). */
@@ -78,6 +88,10 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
         return gecerli ? { x: Number(x), y: Number(y) } : { x: KONUM_MERKEZ, y: KONUM_MERKEZ };
     });
     const [adimlar, setAdimlar] = useState<RemoteMacroStep[]>(() => makro?.steps?.map((adim) => ({ ...adim })) ?? []);
+    const [calisma, setCalisma] = useState<MakroCalisma>(makro?.calisma ?? 'tek');
+    const [tekrar, setTekrar] = useState(String(makro?.tekrar ?? 3));
+    /** Turlar arası bekleme, saniye olarak yazılır. */
+    const [turArasi, setTurArasi] = useState(makro?.turArasi ? String(makro.turArasi / 1000) : '0');
     /** Konum seçicinin yazacağı yer: tekil konum makrosu veya bir adımın sırası. */
     const [konumHedefi, setKonumHedefi] = useState<'tekil' | number | null>(null);
     const konumAcik = konumHedefi !== null;
@@ -114,13 +128,24 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                         : adim.type === 'macro' ? !cagrilabilir.some((m) => m.id === adim.value)
                             : !/^\d{1,5},\d{1,5}$/.test(adim.value));
             if (hatali >= 0) { setUyari((hatali + 1) + '. adım eksik: değerini girin veya seçin.'); return; }
+            const kez = Number(tekrar);
+            if (calisma === 'sayili' && !(Number.isInteger(kez) && kez >= TEKRAR_SINIRI.min && kez <= TEKRAR_SINIRI.max)) {
+                setUyari('Tekrar sayısı ' + TEKRAR_SINIRI.min + '–' + TEKRAR_SINIRI.max + ' arasında tam sayı olmalı.'); return;
+            }
+            const araMs = Math.round(Number(turArasi.replace(',', '.') || '0') * 1000);
+            if (calisma !== 'tek' && !(Number.isFinite(araMs) && araMs >= TUR_ARASI_SINIRI.min && araMs <= TUR_ARASI_SINIRI.max)) {
+                setUyari('Turlar arası bekleme 0 – 600 saniye olmalı.'); return;
+            }
             onKaydet({
                 id: makro?.id ?? yeniKimlik(),
                 name: ad.trim() || TUR_ADI[tur],
                 type: tur,
                 value: adimlar.length + ' adım',
                 enabled: makro?.enabled ?? true,
-                steps: adimlar.map((adim) => (adim.type === 'shortcut' ? { ...adim, value: adim.value.trim() } : adim))
+                steps: adimlar.map((adim) => (adim.type === 'shortcut' ? { ...adim, value: adim.value.trim() } : adim)),
+                calisma,
+                ...(calisma === 'sayili' ? { tekrar: kez } : {}),
+                ...(calisma !== 'tek' && araMs > 0 ? { turArasi: araMs } : {})
             });
             return;
         }
@@ -399,6 +424,39 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                                         <Plus size={14} /><Icon size={14} aria-hidden="true" /> {turAdi}
                                     </button>
                                 ))}
+                            </div>
+
+                            <div className="space-y-2.5 rounded-2xl border border-sand-200 bg-white p-3.5">
+                                <span className="block text-xs font-semibold text-sand-800">Düğmeye basınca</span>
+                                <div className="grid grid-cols-2 gap-1 rounded-xl border border-sand-200 bg-sand-100 p-1 sm:grid-cols-4" role="group" aria-label="Çalışma biçimi">
+                                    {CALISMALAR.map(({ id, ad: calismaAdi, Icon }) => (
+                                        <button key={id} type="button" id={'makro-calisma-' + id} aria-pressed={calisma === id}
+                                            onClick={() => { setCalisma(id); setUyari(''); }}
+                                            className={'flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-colors ' + (calisma === id ? 'bg-white text-moss-800 shadow-soft ring-1 ring-sand-200' : 'text-sand-600 hover:text-sand-800')}>
+                                            <Icon size={14} aria-hidden="true" /> {calismaAdi}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-xs leading-relaxed text-sand-600">{CALISMALAR.find((c) => c.id === calisma)?.aciklama}</p>
+                                {calisma !== 'tek' && (
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-sand-700">
+                                        {calisma === 'sayili' && (
+                                            <label className="flex items-center gap-2 whitespace-nowrap">
+                                                Kaç kez
+                                                <input id="makro-tekrar" type="number" inputMode="numeric" min={TEKRAR_SINIRI.min} max={TEKRAR_SINIRI.max} step={1}
+                                                    value={tekrar} onChange={(olay) => { setTekrar(olay.target.value); setUyari(''); }}
+                                                    className={settingsFieldClass + ' min-h-[44px] w-24'} />
+                                            </label>
+                                        )}
+                                        <label className="flex items-center gap-2 whitespace-nowrap">
+                                            Turlar arası
+                                            <input id="makro-tur-arasi" type="number" inputMode="decimal" min={0} max={TUR_ARASI_SINIRI.max / 1000} step="0.1"
+                                                value={turArasi} onChange={(olay) => { setTurArasi(olay.target.value); setUyari(''); }}
+                                                className={settingsFieldClass + ' min-h-[44px] w-24'} />
+                                            saniye
+                                        </label>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

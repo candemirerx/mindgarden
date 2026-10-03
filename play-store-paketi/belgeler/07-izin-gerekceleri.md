@@ -19,6 +19,13 @@ dikte köprüsü bu bağlantı üzerinden çalışır. `BLUETOOTH_SCAN` beyanı 
 verilmiştir: tarama konum çıkarımı için kullanılmaz. Arka planda cihaz taraması yapılmaz,
 bulunan cihaz listesi hiçbir yere gönderilmez; yalnızca kullanıcıya gösterilir.
 
+## Bluetooth görünürlüğü — `BLUETOOTH_ADVERTISE`
+
+**Neden:** "Bilgisayar · Bluetooth" özelliğinde telefon, kullanıcının kendi bilgisayarına standart
+Bluetooth klavye ve fare (HID cihaz profili) olarak bağlanır; bilgisayara program kurulmaz. İlk
+eşleştirmede kullanıcı "Telefonu görünür yap" düğmesine dokunduğunda Android'in onay penceresiyle
+telefon 120 saniye görünür olur. Arka planda reklam yapılmaz, konum çıkarımı yoktur.
+
 ## Konum — `ACCESS_FINE_LOCATION` (yalnızca `maxSdkVersion=30`)
 
 **Neden:** Android 11 ve altında BLE taraması için sistem bu izni zorunlu tutar. Uygulama

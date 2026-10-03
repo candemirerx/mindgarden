@@ -2,7 +2,7 @@
  * Bağlantı kurulum ekranı duman testi.
  *
  * Ayarlar → Bilgisayar bağlantısı açılır; dört yolun her biri seçilir ve
- * adımlarının çizildiği, kart kiplerinde PC panosu bölümünün göründüğü,
+ * adımlarının çizildiği, kart kiplerinde ve Bluetooth klavye yolunda PC panosu bölümünün göründüğü,
  * gelişmiş "bağlantı satırı" yolunun ayarları kaydettiği ve konsolda hata
  * olmadığı denetlenir. NB_GORSEL_DIR verilirse her yolun ekran görüntüsü yazılır.
  *
@@ -103,7 +103,7 @@ async function main() {
         sart('Bilgisayar bağlantısı bölümü açıldı', await tikla('[...document.querySelectorAll("button")].find(b => b.innerText.trim().startsWith("Bilgisayar bağlantısı"))'));
         await bekle(1500);
 
-        for (const [id, beklenenAdim, kartKipi] of [['pc-wifi', 4, false], ['pc-bluetooth', 4, false], ['wifi', 3, true], ['bluetooth', 2, true]]) {
+        for (const [id, beklenenAdim, panoVar] of [['pc-wifi', 4, false], ['pc-bluetooth', 3, true], ['wifi', 3, true], ['bluetooth', 2, true]]) {
             const secildi = await tikla(`document.getElementById('baglanti-yolu-${id}')`);
             await bekle(700);
             const durum = await degerlendir(`(() => {
@@ -114,7 +114,7 @@ async function main() {
             })()`);
             sart(id + ': seçildi', secildi && durum.secili, JSON.stringify(durum));
             sart(id + ': ' + beklenenAdim + ' adım çizildi', durum.adim === beklenenAdim, JSON.stringify(durum));
-            sart(id + ': PC panosu bölümü ' + (kartKipi ? 'görünüyor' : 'gizli'), durum.pano === kartKipi, JSON.stringify(durum));
+            sart(id + ': PC panosu bölümü ' + (panoVar ? 'görünüyor' : 'gizli'), durum.pano === panoVar, JSON.stringify(durum));
             const kayit = await degerlendir(`JSON.parse(localStorage.getItem('nb-remote-prefs-v1')).connection`);
             sart(id + ': seçim kaydedildi', kayit === id, String(kayit));
             if (GORSEL) {

@@ -1,6 +1,8 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { Plugin } from '@capacitor/core';
 import { bildir } from './degisim';
+import { fareHareketRaporlari, fareTekerRaporlari, fareTikRaporlari, hidYazamadiklari, kisayolRaporlari, metinRaporlari } from './hidKodlari';
+import type { HidRapor } from './hidKodlari';
 
 export type RemoteMode = 'write' | 'mouse' | 'dictation' | 'shortcuts' | 'screen';
 export type ConnectionMode = 'wifi' | 'bluetooth' | 'pc-wifi' | 'pc-bluetooth';
@@ -25,7 +27,25 @@ export function beklemeGecerli(deger: string): boolean {
     const ms = Number(deger);
     return /^\d+$/.test(deger) && ms >= BEKLEME_SINIRI.min && ms <= BEKLEME_SINIRI.max;
 }
-export type RemoteMacro = { id: string; name: string; type: 'text' | 'shortcut' | 'position' | 'sequence'; value: string; enabled?: boolean; click?: 1 | 2; steps?: RemoteMacroStep[] };
+/**
+ * Sıralı makronun düğmeye basılınca nasıl çalışacağı:
+ * tek — bir kez (bilgisayar tuşu gibi); sayili — `tekrar` kez;
+ * anahtar — ilk dokunuşta başlar, ikinci dokunuşa kadar döner;
+ * basili — düğme basılı tutuldukça döner, bırakınca durur.
+ */
+export type MakroCalisma = 'tek' | 'sayili' | 'anahtar' | 'basili';
+/** Sayılı çalışmada tekrar sayısı ve turlar arası bekleme (ms) sınırları. */
+export const TEKRAR_SINIRI = { min: 1, max: 1000 };
+export const TUR_ARASI_SINIRI = { min: 0, max: 600000 };
+export type RemoteMacro = {
+    id: string; name: string; type: 'text' | 'shortcut' | 'position' | 'sequence'; value: string; enabled?: boolean; click?: 1 | 2; steps?: RemoteMacroStep[];
+    /** Yalnız sıralı makroda; verilmezse 'tek'. */
+    calisma?: MakroCalisma;
+    /** 'sayili' çalışmada kaç kez (varsayılan 3). */
+    tekrar?: number;
+    /** Tekrarlanan çalışmalarda iki tur arası bekleme (ms, varsayılan 0). */
+    turArasi?: number;
+};
 /** Kısayol panosunda birlikte gösterilen makrolar. */
 export type RemoteProfile = { id: string; name: string; macroIds: string[] };
 /** Editörün bilgisayar şeridindeki düğme; dokunulunca bağlı profilin makrolarını açar. */
@@ -177,6 +197,13 @@ type NativeRemote = {
     discover(options?: { port?: number; path?: string; marker?: string }): Promise<{ cards: string[]; bodies?: string[] }>;
     wifiAddress(): Promise<{ address: string }>;
     bleStatus(): Promise<{ connected: boolean; address: string }>;
+    hidStart(): Promise<HidDurum>;
+    hidConnect(options: { address: string }): Promise<HidDurum>;
+    hidDisconnect(): Promise<void>;
+    hidStatus(): Promise<HidDurum>;
+    hidSend(options: { reports: HidRapor[]; gapMs?: number }): Promise<void>;
+    hidDiscoverable(): Promise<void>;
+    udpSend(options: { host: string; port: number; data: number[] }): Promise<void>;
     openBluetoothSettings(): Promise<void>;
     connect(options: { address: string }): Promise<{ connected: boolean }>;
     connectClassic(options: { address: string }): Promise<{ connected: boolean }>;
@@ -288,14 +315,26 @@ export async function bilgisayarlaEslestirWifi(url: string, kod: string): Promis
     return { helperUrl: url, helperToken: govde.token, helperName: govde.name || 'Bilgisayar' };
 }
 /** Klasik Bluetooth ile eşleştirme: kod RFCOMM üzerinden yardımcıya gider. */
-export async function bilgisayarlaEslestirBluetooth(address: string, kod: string): Promise<{ helperToken: string; helperName: string }> {
-    if (!isNative()) throw new Error('Bluetooth eşleştirmesi Android uygulamasında çalışır.');
+/**
+ * Klasik Bluetooth ile bağlanma. Kod gerekmez: PC yardımcısı yalnız Windows'la
+ * eşleşmiş cihazları kabul eder ve anahtarı bu güvenli bağlantı üzerinden verir.
+ * (kod verilirse eski yardımcılar için kodlu eşleşme yapılır.)
+ */
+export async function bilgisayarlaEslestirBluetooth(address: string, kod = ''): Promise<{ helperToken: string; helperName: string }> {
+    if (!isNative()) throw new Error('Bluetooth bağlantısı Android uygulamasında çalışır.');
     const pin = kod.replace(/\D/g, '');
-    if (pin.length !== 6) throw new Error('Bilgisayardaki 6 haneli eşleştirme kodunu yazın.');
     let yanit;
-    try { yanit = await native.sendClassic({ body: JSON.stringify({ action: 'pair', pin }), address }); }
-    catch (hata) { throw yardimciHatasi(hata, 'Bluetooth ile eşleştirilemedi.'); }
-    if (!yanit || !yanit.ok || !yanit.token) throw new Error((yanit && yanit.error) || 'Eşleştirme kodu yanlış.');
+    try { yanit = await native.sendClassic({ body: JSON.stringify(pin ? { action: 'pair', pin } : { action: 'pair' }), address }); }
+    catch (hata) {
+        const ileti = hata instanceof Error ? hata.message : '';
+        if (/bağlantısı kurulamadı|read failed|socket/i.test(ileti)) {
+            throw new Error('Bilgisayara Bluetooth ile ulaşılamadı. Bilgisayarda Not Bahçesi PC Yardımcısı açık mı, Bluetooth açık mı, telefon bu bilgisayarla Windows Bluetooth ayarlarından eşleşmiş mi?');
+        }
+        throw yardimciHatasi(hata, 'Bluetooth ile bağlanılamadı.');
+    }
+    if (!yanit || !yanit.ok || !yanit.token) {
+        throw new Error((yanit && yanit.error) || 'Yardımcı eski sürüm olabilir: güncel PC yardımcısını açın (ya da 6 haneli kodu girin).');
+    }
     return { helperToken: yanit.token, helperName: yanit.name || 'Bilgisayar' };
 }
 /**
@@ -435,10 +474,111 @@ export async function testCard(prefs: RemotePrefs) {
     if (!result || typeof result !== 'object' || !('sd' in result || 'mode' in result || 'mod' in result)) {
         throw new Error('Bu adreste Kablosuz Bellek kartı bulunamadı.');
     }
+    kartUdp.set(kartHost(prefs), typeof result.udp === 'number' ? result.udp : 0);
     return result;
 }
+
+// ---- Kartın UDP fare kanalı (bellenim 2.36.0+) ----
+// Kart başına UDP portu: undefined = henüz bilinmiyor, 0 = yok (eski bellenim).
+const kartUdp = new Map<string, number>();
+const kartUdpSoruluyor = new Set<string>();
+function kartHost(prefs: RemotePrefs): string {
+    try { return new URL(prefs.cardUrl.includes('://') ? prefs.cardUrl : 'http://' + prefs.cardUrl).hostname; } catch { return ''; }
+}
+/** Bilinen UDP portu (0 = yok). Bilinmiyorsa arka planda bir kez öğrenilir; o sırada HTTP kullanılır. */
+function kartUdpPortu(prefs: RemotePrefs): number {
+    const host = kartHost(prefs);
+    if (!host || !isNative()) return 0;
+    const port = kartUdp.get(host);
+    if (port !== undefined) return port;
+    if (!kartUdpSoruluyor.has(host)) {
+        kartUdpSoruluyor.add(host);
+        void testCard(prefs).catch(() => undefined).finally(() => kartUdpSoruluyor.delete(host));
+    }
+    return 0;
+}
+const int8 = (n: number) => Math.max(-127, Math.min(127, Math.trunc(n)));
+/** UDP fare paketi: 'N','B', dx, dy, tekerlek, basılı düğmeler, tık. Büyük adım ±127'lik paketlere bölünür. */
+async function kartUdpFare(prefs: RemotePrefs, port: number, dx: number, dy: number, teker = 0, tik = 0): Promise<void> {
+    const host = kartHost(prefs);
+    let kx = Math.trunc(dx), ky = Math.trunc(dy);
+    let ilk = true;
+    do {
+        const x = int8(kx), y = int8(ky);
+        await native.udpSend({ host, port, data: [78, 66, x & 0xff, y & 0xff, (ilk ? int8(teker) : 0) & 0xff, 0, ilk ? tik : 0] });
+        kx -= x; ky -= y; ilk = false;
+    } while (kx || ky);
+}
+export type HidDurum = { destekleniyor: boolean; kayitli: boolean; bagli: boolean; adres: string };
+
+/**
+ * Bilgisayar · Bluetooth: telefon, seçilen bilgisayara Bluetooth klavye/fare
+ * olarak bağlanır (PC'de program gerekmez). Bağlıysa hiçbir şey yapmaz;
+ * değilse klavyeyi başlatıp kayıtlı bilgisayara bağlanır.
+ */
+export async function bluetoothKlavyeBagla(adres: string): Promise<HidDurum> {
+    if (!isNative()) throw new Error('Bluetooth klavye Android uygulamasında çalışır.');
+    if (!adres) throw new Error('Bilgisayar seçilmedi. Ayarlar → Bilgisayar bağlantısı → Bilgisayar · Bluetooth.');
+    let durum = await native.hidStatus();
+    if (durum.bagli && durum.adres.toUpperCase() === adres.toUpperCase()) return durum;
+    if (!durum.kayitli) durum = await native.hidStart();
+    return native.hidConnect({ address: adres });
+}
+/** Bluetooth klavyeyi başlatır (bilgisayar onu "Cihaz ekle" ile görebilsin). */
+export async function bluetoothKlavyeyiBaslat(): Promise<HidDurum> {
+    if (!isNative()) throw new Error('Bluetooth klavye Android uygulamasında çalışır.');
+    const durum = await native.hidStatus();
+    return durum.kayitli ? durum : native.hidStart();
+}
+export async function bluetoothKlavyeDurumu(): Promise<HidDurum> {
+    if (!isNative()) return { destekleniyor: false, kayitli: false, bagli: false, adres: '' };
+    try { return await native.hidStatus(); } catch { return { destekleniyor: false, kayitli: false, bagli: false, adres: '' }; }
+}
+export async function telefonuGorunurYap(): Promise<void> {
+    if (!isNative()) throw new Error('Android uygulamasında çalışır.');
+    await native.hidDiscoverable();
+}
+/**
+ * Raporları gönderir; bağlantı düşmüşse bir kez yeniden bağlanıp tekrarlar.
+ * Klavye raporları arası 20 ms: daha kısa aralıkta Windows Bluetooth üzerinden
+ * gelen basış/bırakışları birleştirip harf ya da Shift kaçırıyordu. Fare 8 ms.
+ */
+async function hidGonder(raporlar: HidRapor[], prefs: RemotePrefs, gapMs = 20): Promise<void> {
+    if (!raporlar.length) return;
+    for (let i = 0; i < raporlar.length; i += 600) {
+        const parca = raporlar.slice(i, i + 600);
+        try { await native.hidSend({ reports: parca, gapMs }); }
+        catch (hata) {
+            if ((hata as { code?: string }).code !== 'HID_NOT_CONNECTED') throw hata;
+            await bluetoothKlavyeBagla(prefs.helperBluetoothAddress);
+            await native.hidSend({ reports: parca, gapMs });
+        }
+    }
+}
+async function bluetoothKlavyeKomutu(command: string, prefs: RemotePrefs): Promise<void> {
+    const ayrac = command.indexOf(':');
+    const [kind, value] = [command.slice(0, ayrac), command.slice(ayrac + 1)];
+    if (kind === 't') { await typeOnComputer(value, prefs); return; }
+    if (kind === 'k') { const { mods, code } = kisayolCoz(value); await hidGonder(kisayolRaporlari(mods, code), prefs); return; }
+    if (kind === 'mm') {
+        const match = /^(-?\d+),(-?\d+)$/.exec(value);
+        if (!match) throw new Error('Fare hareketi geçersiz.');
+        await hidGonder(fareHareketRaporlari(Number(match[1]), Number(match[2])), prefs, 8);
+        return;
+    }
+    if (kind === 'mc') { await hidGonder(fareTikRaporlari(Number(value)), prefs); return; }
+    if (kind === 'ms') { await hidGonder(fareTekerRaporlari(Number(value) || 0), prefs); return; }
+    if (command === 'b') { await hidGonder(kisayolRaporlari(0, 0x2a), prefs); return; }
+    throw new Error('Bu komut Bluetooth klavye yolunda desteklenmiyor.');
+}
+
 export async function testHelper(prefs: RemotePrefs) {
-    if (prefs.connection === 'pc-bluetooth') { await pcInput({ action: 'ping' }, prefs); return; }
+    if (prefs.connection === 'pc-bluetooth') {
+        await bluetoothKlavyeBagla(prefs.helperBluetoothAddress);
+        // Zararsız rapor: sıfır fare hareketi; bağlantının rapor taşıdığını doğrular.
+        await native.hidSend({ reports: [[2, 0, 0, 0, 0]], gapMs: 2 });
+        return;
+    }
     if (!prefs.helperUrl || !prefs.helperToken) throw new Error('Yardımcı program adresi ve anahtarı gerekli.');
     const result = JSON.parse(await request(endpoint(prefs.helperUrl, '/health'), 'GET', '', prefs.helperToken));
     if (result.app !== 'not-bahcesi-clipboard') throw new Error('Bu adreste pano yardımcı programı bulunamadı.');
@@ -449,7 +589,8 @@ export async function testHelper(prefs: RemotePrefs) {
     }
 }
 export async function sendCommand(command: string, prefs: RemotePrefs) {
-    if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') {
+    if (prefs.connection === 'pc-bluetooth') { await bluetoothKlavyeKomutu(command, prefs); return; }
+    if (prefs.connection === 'pc-wifi') {
         const [kind, value] = [command.slice(0, command.indexOf(':')), command.slice(command.indexOf(':') + 1)];
         let input: Record<string, unknown>;
         if (kind === 'mm') {
@@ -508,24 +649,37 @@ async function kartWifiKomutu(command: string, prefs: RemotePrefs) {
         await gonder(`/api/rkey?code=${code}&mods=${mods}`);
         return;
     }
+    const udp = kartUdpPortu(prefs);
     if (kind === 'mm') {
         const match = /^(-?\d+),(-?\d+)$/.exec(value);
         if (!match) throw new Error('Fare hareketi geçersiz.');
+        if (udp) { await kartUdpFare(prefs, udp, Number(match[1]), Number(match[2])); return; }
         await gonder(`/api/rmouse?dx=${match[1]}&dy=${match[2]}&b=0`);
         return;
     }
     if (kind === 'mc') {
         const dugme = Number(value) === 2 ? 2 : 1;
+        if (udp) { await kartUdpFare(prefs, udp, 0, 0, 0, dugme); return; }
         await gonder(`/api/rmouse?c=${dugme}&b=0`);
         return;
     }
-    if (kind === 'ms') { await gonder(`/api/rmouse?w=${Math.max(-20, Math.min(20, Number(value) || 0))}&b=0`); return; }
+    if (kind === 'ms') {
+        const adim = Math.max(-20, Math.min(20, Number(value) || 0));
+        if (udp) { await kartUdpFare(prefs, udp, 0, 0, adim); return; }
+        await gonder(`/api/rmouse?w=${adim}&b=0`);
+        return;
+    }
     if (command === 'b') { await deleteOnComputer(1, prefs); return; }
     throw new Error('Bu komut kartın Wi‑Fi yolunda desteklenmiyor.');
 }
-/** Fare yüzeyinin tek istekte gönderebileceği en büyük adım (kart Wi‑Fi'da istekler yavaş, adım büyük). */
+/**
+ * Fare yüzeyinin tek gönderimdeki en büyük adımı. Kart Wi‑Fi'da UDP varsa küçük
+ * ve sık adımlar (akıcı); yoksa HTTP yavaş olduğu için biraz büyük ama zıplatmayan
+ * bir sınır (eskiden 1500'dü; birikmiş hareket imleci sıçratıyordu).
+ */
 export function fareAdimSiniri(prefs: RemotePrefs): number {
-    return prefs.connection === 'wifi' ? 1500 : 127;
+    if (prefs.connection !== 'wifi') return 127;
+    return kartUdpPortu(prefs) ? 127 : 400;
 }
 /**
  * Kart (Wi‑Fi ve BLE) metni USB klavye olarak Türkçe Q düzeniyle yazar ve bu
@@ -535,6 +689,7 @@ export function fareAdimSiniri(prefs: RemotePrefs): number {
 const KART_KARAKTERLERI = new Set([...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZıİçÇğĞöÖşŞüÜ0123456789.:,;!\'"-_/()?*=+%& \n\t@#$€₺{}[]\\|<>~`^']);
 /** Bağlantı kart ise, kartın yazamayacağı karakterleri döndürür (tekrarsız). */
 export function kartinYazamadiklari(metin: string, prefs: RemotePrefs): string[] {
+    if (prefs.connection === 'pc-bluetooth') return hidYazamadiklari(metin);
     if (prefs.connection !== 'wifi' && prefs.connection !== 'bluetooth') return [];
     return [...new Set([...metin].filter(k => k !== '\r' && !KART_KARAKTERLERI.has(k)))];
 }
@@ -545,6 +700,22 @@ export function kartinYazamadiklari(metin: string, prefs: RemotePrefs): string[]
 export async function sendKey(keys: string, prefs: RemotePrefs) {
     await sendCommand('k:' + keys, prefs);
 }
+/**
+ * Ekranda mutlak konuma gitme/tıklama. Bluetooth klavye (HID) yalnız göreli
+ * fare hareketi gönderebildiği için Bilgisayar · Bluetooth yolunda bu iş PC
+ * yardımcısıyla yapılır; yardımcı tanıtılmamış ya da kapalıysa ne yapılacağı
+ * açıkça söylenir.
+ */
+async function konumGonder(input: Record<string, unknown>, prefs: RemotePrefs) {
+    if (prefs.connection === 'pc-bluetooth') {
+        const nasil = 'Bluetooth klavye ekranın belirli bir noktasına gidemez; konum makroları için bilgisayarda PC yardımcısını açın ve Ayarlar → Bilgisayar bağlantısı → PC panosu bölümünden bir kez bağlanın (Bluetooth ile kod gerekmez).';
+        if (!prefs.helperToken) throw new Error(nasil);
+        try { await pcInput(input, prefs); }
+        catch { throw new Error('PC yardımcısına ulaşılamadı. ' + nasil); }
+        return;
+    }
+    await pcInput(input, prefs);
+}
 async function pcInput(input: Record<string, unknown>, prefs: RemotePrefs) {
     if (!prefs.helperToken) throw new Error('PC erişim anahtarını Ayarlar’dan girin.');
     if (prefs.connection === 'pc-bluetooth') {
@@ -552,35 +723,85 @@ async function pcInput(input: Record<string, unknown>, prefs: RemotePrefs) {
         return;
     }
     if (!prefs.helperUrl) throw new Error('PC adresini Ayarlar’dan girin.');
-    const result = JSON.parse(await request(endpoint(prefs.helperUrl, '/input'), 'POST', JSON.stringify(input), prefs.helperToken));
+    const result = JSON.parse(await yardimciIstegi(prefs, '/input', JSON.stringify(input)));
     if (!result.ok) throw new Error('Bilgisayar komutu uygulanamadı.');
+}
+
+/**
+ * PC yardımcısına Wi‑Fi isteği. Bilgisayarın adresi değiştiyse (modem yeniden
+ * başladı, DHCP yeni adres verdi) istek ağ hatası verir: o zaman yardımcı ağda
+ * yeniden aranır, aynı anahtarı kabul eden bilgisayar bulunursa adres kaydedilir
+ * ve istek bir kez tekrarlanır. Kullanıcının yeniden eşleştirmesi gerekmez.
+ */
+async function yardimciIstegi(prefs: RemotePrefs, yol: string, govde: string): Promise<string> {
+    try {
+        return await request(endpoint(prefs.helperUrl, yol), 'POST', govde, prefs.helperToken);
+    } catch (hata) {
+        const ileti = hata instanceof Error ? hata.message : '';
+        if (/^HTTP \d+/.test(ileti) || !isNative()) throw hata;
+        const yeni = await yardimciyiYenidenBul(prefs);
+        if (!yeni) throw hata;
+        return request(endpoint(yeni, yol), 'POST', govde, prefs.helperToken);
+    }
+}
+let yenidenAraniyor: Promise<string | null> | null = null;
+async function yardimciyiYenidenBul(prefs: RemotePrefs): Promise<string | null> {
+    if (yenidenAraniyor) return yenidenAraniyor;
+    yenidenAraniyor = (async () => {
+        try {
+            for (const pc of await bilgisayarlariBul()) {
+                if (pc.url === prefs.helperUrl) continue;
+                try {
+                    const saglik = JSON.parse(await request(endpoint(pc.url, '/health'), 'GET', '', prefs.helperToken));
+                    if (saglik.app !== 'not-bahcesi-clipboard') continue;
+                    const guncel = remotePrefs();
+                    saveRemotePrefs({ ...guncel, helperUrl: pc.url, helperName: pc.name || guncel.helperName });
+                    prefs.helperUrl = pc.url;
+                    return pc.url;
+                } catch { /* başka bilgisayar ya da farklı anahtar */ }
+            }
+            return null;
+        } finally { setTimeout(() => { yenidenAraniyor = null; }, 0); }
+    })();
+    return yenidenAraniyor;
 }
 /** Sıralı makroda adımlar arasındaki bekleme; önceki adımın etkisi (pencere değişimi vb.) otursun. */
 const ADIM_ARASI_MS = 150;
+/** Bekler; durdurulursa uzun beklemeyi sonuna kadar sürdürmez (en geç 50 ms'de çıkar). */
+export async function durdurulabilirBekle(ms: number, durdu: () => boolean): Promise<void> {
+    const bitis = Date.now() + ms;
+    while (!durdu()) {
+        const kalan = bitis - Date.now();
+        if (kalan <= 0) return;
+        await new Promise(cozum => setTimeout(cozum, Math.min(50, kalan)));
+    }
+}
 /**
  * Makroyu çalıştırır. Sıralı makroda adımlar kullanıcının belirlediği sırayla
  * tek tek ve bir öncekinin bitmesi beklenerek gönderilir; bir adım hata verirse
  * kalanlar gönderilmez. `zincir` iç içe çağrılarda döngüyü yakalar.
  */
-export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zincir: string[] = []) {
+export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zincir: string[] = [], durdu: () => boolean = () => false) {
     if (macro.type === 'sequence') {
         if (zincir.includes(macro.id)) throw new Error('"' + macro.name + '" makrosu kendini çağırıyor; sıralı adımları düzeltin.');
         const adimlar = macro.steps ?? [];
         if (!adimlar.length) throw new Error('"' + macro.name + '" makrosunda adım yok.');
         for (let sira = 0; sira < adimlar.length; sira++) {
+            if (durdu()) return;
             const adim = adimlar[sira];
             if (adim.type === 'wait') {
                 // Kullanıcının koyduğu bekleme: adımlar arasındaki kısa ara yerine geçer.
                 if (!beklemeGecerli(adim.value)) throw new Error((sira + 1) + '. adım: bekleme süresi geçersiz.');
-                await new Promise(cozum => setTimeout(cozum, Number(adim.value)));
+                await durdurulabilirBekle(Number(adim.value), durdu);
                 continue;
             }
             if (sira > 0 && adimlar[sira - 1].type !== 'wait') await new Promise(cozum => setTimeout(cozum, ADIM_ARASI_MS));
+            if (durdu()) return;
             try {
                 if (adim.type === 'macro') {
                     const hedef = prefs.macros.find(m => m.id === adim.value);
                     if (!hedef) throw new Error('çağrılan makro silinmiş.');
-                    await runRemoteMacro(hedef, prefs, [...zincir, macro.id]);
+                    await runRemoteMacro(hedef, prefs, [...zincir, macro.id], durdu);
                 } else {
                     await runRemoteMacro({ id: macro.id + '-' + sira, name: macro.name, type: adim.type, value: adim.value, click: adim.click }, prefs, [...zincir, macro.id]);
                 }
@@ -599,7 +820,7 @@ export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zin
         // tek tıklama sözleşmesi kullanır.
         const tekrar = macro.click === 2 ? 2 : 1;
         for (let i = 0; i < tekrar; i++) {
-            if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') await pcInput({ action: 'absolute', x, y, click: true }, prefs);
+            if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') await konumGonder({ action: 'absolute', x, y, click: true }, prefs);
             else await bleYaz(() => native.clickAbsolute({ x, y }));
         }
     } else if (macro.type === 'shortcut') {
@@ -610,7 +831,7 @@ export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zin
     }
 }
 export async function previewPosition(x: number, y: number, prefs = remotePrefs()) {
-    if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') await pcInput({ action: 'absolute', x: Math.round(x), y: Math.round(y), click: false }, prefs);
+    if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') await konumGonder({ action: 'absolute', x: Math.round(x), y: Math.round(y), click: false }, prefs);
     else await bleYaz(() => native.moveAbsolute({ x: Math.round(x), y: Math.round(y) }));
 }
 export async function typeOnComputer(text: string, prefs: RemotePrefs) {
@@ -624,7 +845,8 @@ export async function typeOnComputer(text: string, prefs: RemotePrefs) {
         chunk += char;
     }
     if (chunk) chunks.push(chunk);
-    if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') {
+    if (prefs.connection === 'pc-bluetooth') { await hidGonder(metinRaporlari(text), prefs); return; }
+    if (prefs.connection === 'pc-wifi') {
         for (const part of chunks) await pcInput({ action: 'text', text: part }, prefs);
         return;
     }
@@ -677,19 +899,35 @@ export async function metinFarkiAktar(hedef: string, onceki: string, prefs: Remo
 }
 export async function sendToComputerClipboard(text: string, prefs: RemotePrefs) {
     if (!text) throw new Error('Editör metni boş.');
-    if (prefs.connection === 'pc-bluetooth') { await pcInput({ action: 'clipboard', text }, prefs); return; }
-    // Kart panoya yazamaz (yalnız klavye/fare). Kart bağlıyken pano, varsa PC yardımcısına
-    // Wi‑Fi ile, yoksa eşleşmiş PC'ye klasik Bluetooth ile gider.
-    const kart = prefs.connection === 'wifi' || prefs.connection === 'bluetooth';
-    if (kart && !prefs.helperUrl && prefs.helperToken && prefs.helperBluetoothAddress) {
-        await pcInput({ action: 'clipboard', text }, { ...prefs, connection: 'pc-bluetooth' });
-        return;
+    if (prefs.connection === 'pc-bluetooth') {
+        // Bluetooth klavye panoya yazamaz; pano bilgisayardaki yardımcıyla yapılır:
+        // Wi‑Fi eşleşmesi varsa onunla, yoksa yardımcının Bluetooth alıcısıyla.
+        if (prefs.helperUrl && prefs.helperToken) {
+            const result = JSON.parse(await yardimciIstegi(prefs, '/clipboard', text));
+            if (!result.ok) throw new Error('Pano güncellenemedi.');
+            return;
+        }
+        if (prefs.helperToken) { await pcInput({ action: 'clipboard', text }, prefs); return; }
+        throw new Error('Bluetooth klavye yazar ama panoya erişemez. Pano için bilgisayarda Not Bahçesi PC Yardımcısı\'nı açıp Ayarlar → Bilgisayar bağlantısı → "PC panosu" bölümünden bir kez bağlanın.');
     }
-    if (!prefs.helperUrl || !prefs.helperToken) throw new Error(kart
-        ? 'Kart bilgisayar panosuna yazamaz. Pano için Ayarlar → Bilgisayar bağlantısı → "PC panosu (kartla birlikte)" bölümüne PC yardımcısının bağlantı kodunu girin.'
-        : 'Ayarlar → Bilgisayar sekmesinde PC pano yardımcı programını yapılandırın.');
-    const result = JSON.parse(await request(endpoint(prefs.helperUrl, '/clipboard'), 'POST', text, prefs.helperToken));
-    if (!result.ok) throw new Error('Pano güncellenemedi.');
+    // Kart panoya yazamaz (yalnız klavye/fare). Kart bağlıyken pano PC yardımcısına gider:
+    // önce Wi‑Fi (eşleşme varsa), ulaşılamazsa ya da yoksa Bluetooth (bilgisayar seçiliyse).
+    const kart = prefs.connection === 'wifi' || prefs.connection === 'bluetooth';
+    const bluetoothVar = !!(prefs.helperToken && prefs.helperBluetoothAddress);
+    const bluetoothIle = () => pcInput({ action: 'clipboard', text }, { ...prefs, connection: 'pc-bluetooth' });
+    if (!prefs.helperUrl || !prefs.helperToken) {
+        if (kart && bluetoothVar) { await bluetoothIle(); return; }
+        throw new Error(kart
+            ? 'Kart bilgisayar panosuna yazamaz. Pano için Ayarlar → Bilgisayar bağlantısı → "PC panosu" bölümünden bilgisayara bağlanın (Bluetooth ile kod gerekmez).'
+            : 'Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayarı eşleştirin.');
+    }
+    try {
+        const result = JSON.parse(await yardimciIstegi(prefs, '/clipboard', text));
+        if (!result.ok) throw new Error('Pano güncellenemedi.');
+    } catch (hata) {
+        if (kart && bluetoothVar) { await bluetoothIle(); return; }
+        throw hata;
+    }
 }
 export async function dictate(language: string): Promise<string> {
     if (isNative()) return (await native.dictate({ language })).text;
