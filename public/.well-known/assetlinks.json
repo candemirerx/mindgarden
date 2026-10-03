@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.notbahcesi.app",
       "sha256_cert_fingerprints": [
-        "3B:19:EC:C2:B5:C0:E0:CF:12:64:B2:BC:75:F6:B9:CE:18:C7:C5:4A:BC:1C:AF:ED:CA:33:A0:1F:25:69:F0:90"
+        "3B:19:EC:C2:B5:C0:E0:CF:12:64:B2:BC:75:F6:B9:CE:18:C7:C5:4A:BC:1C:AF:ED:CA:33:A0:1F:25:69:F0:90",
+        "D8:98:FC:35:E0:04:5D:1A:21:92:8A:43:64:6E:F7:40:85:53:62:25:EA:35:B9:C2:5D:6C:0D:72:7C:ED:52:9A"
       ]
     }
   }

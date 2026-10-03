@@ -54,6 +54,10 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Yerel (.so) kütüphanelerin sembol tablosu AAB'ye eklenir: Play'in
+            // "hata ayıklama sembolleri yüklemediniz" uyarısı kalkar, çökme
+            // raporları okunur olur. Uygulamanın boyutunu değiştirmez.
+            ndk { debugSymbolLevel 'SYMBOL_TABLE' }
         }
     }
     compileOptions {
