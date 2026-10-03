@@ -146,7 +146,7 @@ işlem kullanıcının bir düğmeye basmasıyla başlar.
 | Kullanıcı silme talebinde bulunabilir mi? | Evet |
 | Bağımsız güvenlik incelemesinden geçti mi? | Hayır |
 | Çocuklara yönelik mi? | Hayır |
-| Play Aile politikalarına uygun mu? | Hayır (hedef kitle 18+) |
+| Play Aile politikalarına uygun mu? | Hayır (hedef kitle 13+; 13 yaş altı seçilmedi) |
 
 ---
 

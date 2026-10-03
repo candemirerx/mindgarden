@@ -117,7 +117,7 @@ Kontrol panelindeki "Uygulamanızı ayarlayın" listesini yukarıdan aşağı do
 3. **Kaydet → Derecelendirmeyi gönder.** Sonuç genelde "3+ / Herkes" olur.
 
 ### 3.5 Hedef kitle ve içerik
-- **Hedef yaş:** yalnız **18 ve üzeri** seç. (Çocuklara yönelik uygulama kuralları çok daha sıkıdır; gerek yok.)
+- **Hedef yaş:** **13-15, 16-17 ve 18 yaş ve üstü** seç; 13 yaş altını seçme. (Yalnız 18+ seçmek uygulamayı yaşı doğrulanmamış kullanıcılardan gizleyebilir; 13 altı ise sıkı Aileler politikasını devreye sokar.)
 - "Uygulama çocukların ilgisini çekebilir mi?" → **Hayır**.
 
 ### 3.6 Veri güvenliği
