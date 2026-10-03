@@ -14,7 +14,8 @@
  *  - Kart BLE: kartlar önce listelenir, diğer cihazlar katlanır.
  */
 import { useEffect, useState } from 'react';
-import { Bluetooth, Check, Loader2, MonitorSmartphone, Search, Wifi } from 'lucide-react';
+import { Bluetooth, Check, Loader2, MonitorSmartphone, Search, Share2, Wifi } from 'lucide-react';
+import { PC_YARDIMCISI_SAYFASI } from '@/lib/config';
 import {
     baglantiSatiriniCoz, bilgisayarAdresiniSina, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul,
     bluetoothAyarlariniAc, connectCard, disconnectCard, kartAginda, kartiWifidaBul, scanCards, scanPairedComputers,
@@ -22,6 +23,8 @@ import {
 } from '@/lib/remoteTools';
 import type { BulunanBilgisayar, Device, RemotePrefs } from '@/lib/remoteTools';
 import { SettingsField, SettingsNote, cx, settingsFieldClass } from '@/components/ui/settings';
+import { durumuTazele, useBaglantiDurumu } from '@/lib/baglantiDurumu';
+import BaglantiGostergesi from './BaglantiGostergesi';
 
 type Mesaj = { tone: 'ok' | 'error' | 'info'; text: string } | null;
 type Guncelle = (next: RemotePrefs) => void;
@@ -65,6 +68,31 @@ function Aciklama({ children }: { children: React.ReactNode }) {
     return <p className="text-xs leading-relaxed text-sand-600">{children}</p>;
 }
 
+/**
+ * Yardımcı bilgisayarda yoksa: indirme sayfasının adresi ve bilgisayara
+ * göndermek için paylaş düğmesi (e-posta, WhatsApp vb.).
+ */
+function YardimciIndir() {
+    const [bilgi, setBilgi] = useState('');
+    const paylas = async () => {
+        try {
+            const { Share } = await import('@capacitor/share');
+            await Share.share({ title: 'Not Bahçesi PC Yardımcısı', text: 'Bilgisayarda açıp yardımcıyı indirin:', url: PC_YARDIMCISI_SAYFASI });
+        } catch {
+            try { await navigator.clipboard.writeText(PC_YARDIMCISI_SAYFASI); setBilgi('Adres panoya kopyalandı.'); }
+            catch { setBilgi('Adresi bilgisayarda elle yazın.'); }
+        }
+    };
+    return <details className="rounded-xl border border-sand-200 bg-white">
+        <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">Yardımcı bilgisayarda yok mu?</summary>
+        <div className="space-y-2 px-3 pb-3">
+            <Aciklama>Bilgisayarın tarayıcısında şu adresi açıp indirin: <strong className="select-all break-all text-sand-900">{PC_YARDIMCISI_SAYFASI.replace(/^https?:\/\//, '')}</strong></Aciklama>
+            <button type="button" className={ikinciDugme} onClick={() => void paylas()}><Share2 size={15} aria-hidden="true" /> Adresi bilgisayara gönder</button>
+            {bilgi && <p className="text-xs text-moss-700">{bilgi}</p>}
+        </div>
+    </details>;
+}
+
 /** Bilgisayardaki 6 haneli eşleştirme kodu alanı. */
 function KodAlani({ id, deger, onDegis, onGonder, mesgul, dugmeMetni }: { id: string; deger: string; onDegis: (v: string) => void; onGonder: () => void; mesgul: boolean; dugmeMetni: string }) {
     return <div className="flex flex-wrap items-stretch gap-2">
@@ -94,7 +122,8 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
     return <div className="space-y-3">
         <ol className="space-y-4">
             <Adim no={1} baslik="Bilgisayarda yardımcıyı açın" tamam={eslesmis}>
-                <Aciklama>Bilgisayarda masaüstündeki <strong>Not Bahçesi PC Yardımcısı</strong> kısayolunu açın (ilk kurulumda <code>pc_yardimcisi_baslat.cmd</code>). Pencerede <strong>6 haneli eşleştirme kodu</strong> görünür. Telefon ve bilgisayar aynı Wi‑Fi ağında olmalı.</Aciklama>
+                <Aciklama>Bilgisayarda <strong>Not Bahçesi PC Yardımcısı</strong>nı açın (<code>pc_yardimcisi_baslat.cmd</code>). Pencerede <strong>6 haneli eşleştirme kodu</strong> görünür. Telefon ve bilgisayar aynı Wi‑Fi ağında olmalı.</Aciklama>
+                <YardimciIndir />
             </Adim>
             <Adim no={2} baslik="Bilgisayarı bulun" tamam={!!hedef}>
                 <div className="flex flex-wrap gap-2">
@@ -144,7 +173,7 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
             <Adim no={4} baslik="Deneyin">
                 <div className="flex flex-wrap gap-2">
                     <button type="button" disabled={!!mesgul || !eslesmis} className={anaDugme} onClick={() => void calistir('dene', async () => {
-                        await testHelper({ ...prefs, connection: 'pc-wifi' }); return 'Bilgisayara bağlanıldı; araçlar hazır.';
+                        await testHelper({ ...prefs, connection: 'pc-wifi' }); if (prefs.connection === 'pc-wifi') void durumuTazele(prefs); return 'Bilgisayara bağlanıldı; araçlar hazır.';
                     })}><Bekliyor goster={mesgul === 'dene'}>Bağlantıyı dene</Bekliyor></button>
                     <button type="button" disabled={!!mesgul || !eslesmis} className={ikinciDugme} onClick={() => void calistir('pano', async () => {
                         await sendToComputerClipboard('Not Bahçesi pano denemesi', { ...prefs, ...(yoluSec ? { connection: 'pc-wifi' as const } : {}) });
@@ -202,6 +231,7 @@ function PcBluetoothKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gu
         <ol className="space-y-4">
             <Adim no={1} baslik="Bilgisayarda Bluetooth'u ve yardımcıyı açın">
                 <Aciklama>Bilgisayarda Bluetooth açık olmalı ve <strong>Not Bahçesi PC Yardımcısı</strong> çalışmalı. Telefon bilgisayarla daha önce eşleşmediyse önce Android Bluetooth ayarlarından eşleştirin.</Aciklama>
+                <YardimciIndir />
                 <button type="button" className={ikinciDugme} onClick={() => void calistir('ayar', async () => { await bluetoothAyarlariniAc(); })}>
                     <Bluetooth size={15} aria-hidden="true" /> Bluetooth ayarlarını aç
                 </button>
@@ -231,7 +261,7 @@ function PcBluetoothKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gu
             </Adim>
             <Adim no={4} baslik="Deneyin">
                 <button type="button" disabled={!!mesgul || !secili || !anahtarVar} className={anaDugme} onClick={() => void calistir('dene', async () => {
-                    await testHelper({ ...prefs, connection: 'pc-bluetooth' }); return 'Bilgisayara Bluetooth ile bağlanıldı; araçlar hazır.';
+                    const yeni = { ...prefs, connection: 'pc-bluetooth' as const }; await testHelper(yeni); update(yeni); void durumuTazele(yeni); return 'Bilgisayara Bluetooth ile bağlanıldı; araçlar hazır.';
                 })}><Bekliyor goster={mesgul === 'dene'}>Bağlantıyı dene</Bekliyor></button>
             </Adim>
         </ol>
@@ -280,7 +310,8 @@ function KartWifiKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gunce
             <Adim no={3} baslik="Deneyin" tamam={dogrulandi}>
                 <button type="button" disabled={!!mesgul || !prefs.cardUrl.trim()} className={anaDugme} onClick={() => void calistir('dene', async () => {
                     const durum = await testCard(prefs);
-                    update({ ...prefs, connection: 'wifi' }); setDogrulandi(true);
+                    const yeni = { ...prefs, connection: 'wifi' as const };
+                    update(yeni); setDogrulandi(true); void durumuTazele(yeni);
                     const ev = durum?.wifi?.ip && durum.wifi.ip !== '-' ? ' · ev ağı adresi ' + durum.wifi.ip : '';
                     return 'Karta erişildi' + (durum?.fw ? ' · yazılım ' + durum.fw : '') + ev + '.';
                 })}><Bekliyor goster={mesgul === 'dene'}>Kart bağlantısını dene</Bekliyor></button>
@@ -309,7 +340,7 @@ function KartBleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncel
             ? <span className="flex min-h-[44px] shrink-0 items-center gap-1.5 px-2 font-medium text-moss-700"><Check size={16} aria-hidden="true" /> Bağlı</span>
             : <button type="button" disabled={!!baglaniyor} className={anaDugme + ' shrink-0'} aria-label={(d.name || d.address) + ' cihazına bağlan'}
                 onClick={() => { setBaglaniyor(d.address); void calistir('baglan', async () => {
-                    await connectCard(d.address); setBagli(d.address); update({ ...prefs, connection: 'bluetooth' });
+                    await connectCard(d.address); setBagli(d.address); const yeni = { ...prefs, connection: 'bluetooth' as const }; update(yeni); void durumuTazele(yeni);
                     return (d.name || 'Kart') + ' bağlandı.';
                 }).finally(() => setBaglaniyor('')); }}>
                 <Bekliyor goster={baglaniyor === d.address}>{baglaniyor === d.address ? 'Bağlanıyor…' : 'Bağlan'}</Bekliyor>
@@ -353,7 +384,9 @@ function yolHazir(id: RemotePrefs['connection'], prefs: RemotePrefs): boolean {
 }
 
 export default function BaglantiKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
+    const { durum, bakiliyor, tazele } = useBaglantiDurumu(prefs, { aralikMs: 20000 });
     return <div className="space-y-4">
+        <BaglantiGostergesi id="baglanti-canli-durum" yol={prefs.connection} durum={durum} bakiliyor={bakiliyor} onTazele={() => void tazele()} />
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Bağlantı yolu">
             {YOLLAR.map(({ id, label, detail, Icon }) => {
                 const secili = prefs.connection === id;
@@ -366,7 +399,11 @@ export default function BaglantiKurulumu({ prefs, update }: { prefs: RemotePrefs
                         <span className={cx('block text-sm font-semibold', secili ? 'text-moss-800' : 'text-sand-800')}>{label}</span>
                         <span className={cx('block text-xs', secili ? 'text-moss-700' : 'text-sand-600')}>{detail}</span>
                     </span>
-                    {hazir && id !== 'bluetooth' && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-moss-500" title="Kurulum bilgileri kayıtlı" aria-label="kurulum kayıtlı" />}
+                    {secili
+                        ? <span className={cx('absolute right-2 top-1.5 rounded-full px-1.5 text-[10px] font-bold',
+                            durum?.tur === 'ok' ? 'bg-moss-600 text-white' : durum?.tur === 'hata' ? 'bg-berry-600 text-white' : 'bg-sand-200 text-sand-700')}>
+                            {durum?.tur === 'ok' ? 'Bağlı' : durum?.tur === 'hata' ? 'Bağlantı yok' : 'Kullanılıyor'}</span>
+                        : hazir && id !== 'bluetooth' && <span className="absolute right-2 top-1.5 text-[10px] font-medium text-sand-500">kurulu</span>}
                 </button>;
             })}
         </div>

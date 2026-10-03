@@ -546,6 +546,14 @@ public class RemoteBridgePlugin extends Plugin {
             JSObject result = new JSObject(); result.put("cards", cards); result.put("bodies", details); call.resolve(result);
         }).start();
     }
+    /** Kart BLE bağlantısı açık ve NUS yazma özelliği hazır mı? (durum göstergesi için; hiçbir şey göndermez) */
+    @PluginMethod public void bleStatus(PluginCall call) {
+        JSObject result = new JSObject();
+        BluetoothGatt aktif = gatt;
+        result.put("connected", aktif != null && rx != null && connecting == null);
+        result.put("address", aktif == null ? "" : aktif.getDevice().getAddress());
+        call.resolve(result);
+    }
     /** Telefonun Wi‑Fi IPv4 adresi; kartın kendi ağında (192.168.4.x) olup olmadığını anlamak için. */
     @PluginMethod public void wifiAddress(PluginCall call) {
         WifiManager wifi = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);

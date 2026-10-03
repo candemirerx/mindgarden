@@ -3,7 +3,9 @@
     [switch]$TestMode,
     [string]$BluetoothPort = 'auto',
     [switch]$SerialOnly,
-    [switch]$RfcommOnly
+    [switch]$RfcommOnly,
+    # Eski "adres|anahtar" satırını pencerede göster (eşleştirme kodu olmadan kurulum için).
+    [switch]$ElleSatir
 )
 
 # Windows PowerShell 5.1 ve .NET ile çalışır; Python veya ek paket gerekmez.
@@ -157,15 +159,24 @@ $script:pairPin = New-PairPin
 $script:pairFails = 0
 $script:pairTotalFails = 0
 function Show-PairPin {
-    Write-Host ("Eşleştirme kodu: {0} {1}" -f $script:pairPin.Substring(0, 3), $script:pairPin.Substring(3)) -ForegroundColor Yellow
-    Write-Host '  Telefonda: Ayarlar → Bilgisayar bağlantısı → bilgisayarı seçin ve bu kodu yazın.'
+    Write-Host ''
+    Write-Host ('   ╔══════════════════════════════╗') -ForegroundColor Yellow
+    Write-Host ('   ║  EŞLEŞTİRME KODU:  {0} {1}  ║' -f $script:pairPin.Substring(0, 3), $script:pairPin.Substring(3)) -ForegroundColor Yellow
+    Write-Host ('   ╚══════════════════════════════╝') -ForegroundColor Yellow
+    Write-Host '   Telefonda: Ayarlar → Bilgisayar bağlantısı → Bilgisayar · Wi‑Fi (veya Bluetooth) → kodu yazın.'
+    Write-Host '   Kod tek kullanımlıktır; bir kez eşleşen telefon bir daha kod sormadan bağlanır.'
+    Write-Host ''
 }
 function Test-PairPin([string]$pin, [string]$secret) {
     if ($script:pairTotalFails -ge 20) { return '{"ok":false,"error":"Çok fazla yanlış kod. Yardımcıyı yeniden açın."}' }
     $temiz = ($pin -replace '\D', '')
     if ($temiz.Length -eq 6 -and (Same-Token $temiz $script:pairPin)) {
         $script:pairFails = 0
-        Write-Host 'Telefon eşleştirildi.' -ForegroundColor Green
+        # Kod tek kullanımlık: kullanılan kod geçersizleşir, başka telefon için yenisi gösterilir.
+        $script:pairPin = New-PairPin
+        Write-Host ('Telefon eşleştirildi ({0}). Yazma ve pano artık kodsuz çalışır.' -f (Get-Date -Format 'HH:mm')) -ForegroundColor Green
+        Write-Host 'Başka bir telefon eşleştirmek isterseniz yeni kod:' -ForegroundColor DarkGray
+        Show-PairPin
         return (@{ ok = $true; token = $secret; name = $env:COMPUTERNAME } | ConvertTo-Json -Compress)
     }
     $script:pairFails++; $script:pairTotalFails++
@@ -323,27 +334,23 @@ if (-not $TestMode) {
     }
 }
 try {
-    Write-Host "Not Bahçesi PC kontrol yardımcısı — Wi‑Fi port $Port" -ForegroundColor Green
+    Write-Host "Not Bahçesi PC Yardımcısı (Wi‑Fi port $Port)" -ForegroundColor Green
+    Write-Host 'Tek program: telefondan bilgisayara yazma, fare, kısayollar ve PANO bununla çalışır.'
+    Write-Host '  · Bilgisayara yaz / klavye / makro: metni Not Defteri''ne elle yazar gibi tuş tuş yazar.'
+    Write-Host '  · Panoya gönder: metni bilgisayar panosuna koyar; Ctrl+V ile yapıştırırsınız.'
     # Bağlantısız hotspot/VPN adresi yerine etkin fiziksel ağ kartını öncele.
     $physical = @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | Select-Object -ExpandProperty ifIndex)
     $active = @(Get-NetIPInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object ConnectionState -eq 'Connected' | Select-Object -ExpandProperty InterfaceIndex)
     $adresler = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
         Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' -and $active -contains $_.InterfaceIndex } |
         Sort-Object @{ Expression = { if ($physical -contains $_.InterfaceIndex) { 0 } else { 1 } } }, InterfaceIndex)
-    $adresler | ForEach-Object { Write-Host "Adres: http://$($_.IPAddress):$Port" }
+    $adresler | ForEach-Object { Write-Host "Adres: http://$($_.IPAddress):$Port" -ForegroundColor DarkGray }
     Show-PairPin
-    Write-Host "Erişim anahtarı (elle kurulum için): $secret"
-    # Telefonda iki alanı elle doldurmak yerine adres ve anahtar tek satırda
-    # panoya konur; uygulamadaki "tek satır bağlantı bilgisi" alanına yapıştırılır.
+    # Panoya artık otomatik bir şey kopyalanmaz (kullanıcının panosunu ezmesin);
+    # eşleştirme kodu yeterli. Elle kurulum satırı istenirse -ElleSatir ile gösterilir.
     $ilkAdres = $adresler | Select-Object -First 1
-    if ($ilkAdres) {
-        $baglantiSatiri = "http://$($ilkAdres.IPAddress):$Port|$secret"
-        try {
-            Set-Clipboard -Value $baglantiSatiri
-            Write-Host 'Bağlantı satırı panoya kopyalandı: Not Bahçesi → Ayarlar → Bilgisayar bağlantısı → "Tek satır bağlantı bilgisi" alanına yapıştırın.' -ForegroundColor Cyan
-        } catch {
-            Write-Host "Bağlantı satırı (elle kopyalayın): $baglantiSatiri"
-        }
+    if ($ilkAdres -and $ElleSatir) {
+        Write-Host ("Elle kurulum satırı (Gelişmiş): http://{0}:{1}|{2}" -f $ilkAdres.IPAddress, $Port, $secret) -ForegroundColor DarkGray
     }
     $serialReady = $false
     if ($serialJob) {

@@ -176,6 +176,7 @@ type NativeRemote = {
     scanPaired(): Promise<{ devices: Device[] }>;
     discover(options?: { port?: number; path?: string; marker?: string }): Promise<{ cards: string[]; bodies?: string[] }>;
     wifiAddress(): Promise<{ address: string }>;
+    bleStatus(): Promise<{ connected: boolean; address: string }>;
     openBluetoothSettings(): Promise<void>;
     connect(options: { address: string }): Promise<{ connected: boolean }>;
     connectClassic(options: { address: string }): Promise<{ connected: boolean }>;
@@ -308,6 +309,15 @@ export async function kartiWifidaBul(): Promise<{ urls: string[]; kartAgi: boole
 }
 
 const KART_ADRESI = 'nb-ble-card';
+/** Kart BLE bağlantısı açık mı? Hiçbir komut göndermez. */
+export async function bleDurumu(): Promise<{ connected: boolean; address: string }> {
+    if (!isNative()) return { connected: false, address: '' };
+    try { return await native.bleStatus(); } catch { return { connected: false, address: '' }; }
+}
+/** Son bağlanılan kartın adresi (editör kopan bağlantıyı buna yeniden kurar). */
+export function kayitliKartAdresi(): string {
+    try { return localStorage.getItem(KART_ADRESI) || ''; } catch { return ''; }
+}
 export async function connectCard(address: string) {
     if (!isNative()) throw new Error('Bluetooth bağlantısı Android uygulamasını gerektirir.');
     await native.connect({ address });
@@ -407,8 +417,21 @@ function cardResponse(raw: string) {
     if (!result.ok) throw new Error(result.msg || result.error || 'Kart isteği reddetti.');
     return result;
 }
+/**
+ * Karta HTTP isteği. Ağ hatasında, PC yardımcısına yönelik genel ileti yerine
+ * kartla ilgili ne yapılacağını söyler (kart HTTP hata kodları olduğu gibi kalır).
+ */
+async function kartIstegi(prefs: RemotePrefs, yol: string, method: string, body = ''): Promise<string> {
+    try {
+        return await request(endpoint(prefs.cardUrl, yol), method, body);
+    } catch (hata) {
+        const ileti = hata instanceof Error ? hata.message : '';
+        if (/^HTTP \d+/.test(ileti)) throw hata;
+        throw new Error('Karta ulaşılamadı (' + prefs.cardUrl.replace(/^https?:\/\//, '') + '). Kart açık mı, telefon kartla aynı ağda mı ya da kartın kendi ağına (can bellek s3) bağlı mı? Ayarlar → Bilgisayar bağlantısı → Kart · Wi‑Fi → "Kartı bul".');
+    }
+}
 export async function testCard(prefs: RemotePrefs) {
-    const result = JSON.parse(await request(endpoint(prefs.cardUrl, '/api/status')));
+    const result = JSON.parse(await kartIstegi(prefs, '/api/status', 'GET'));
     if (!result || typeof result !== 'object' || !('sd' in result || 'mode' in result || 'mod' in result)) {
         throw new Error('Bu adreste Kablosuz Bellek kartı bulunamadı.');
     }
@@ -478,7 +501,7 @@ function kisayolCoz(kisayol: string): { mods: number; code: number } {
 async function kartWifiKomutu(command: string, prefs: RemotePrefs) {
     const ayrac = command.indexOf(':');
     const [kind, value] = [command.slice(0, ayrac), command.slice(ayrac + 1)];
-    const gonder = async (yol: string) => cardResponse(await request(endpoint(prefs.cardUrl, yol), 'POST', ''));
+    const gonder = async (yol: string) => cardResponse(await kartIstegi(prefs, yol, 'POST', ''));
     if (kind === 't') { await typeOnComputer(value, prefs); return; }
     if (kind === 'k') {
         const { mods, code } = kisayolCoz(value);
@@ -614,13 +637,13 @@ export async function typeOnComputer(text: string, prefs: RemotePrefs) {
     for (const part of chunks) {
         const block = encoder.encode(part);
         const b64 = btoa(Array.from(block, b => String.fromCharCode(b)).join(''));
-        cardResponse(await request(endpoint(prefs.cardUrl, '/api/keys'), 'POST', `b64:${b64}`));
+        cardResponse(await kartIstegi(prefs, '/api/keys', 'POST', `b64:${b64}`));
     }
 }
 export async function deleteOnComputer(count: number, prefs: RemotePrefs) {
     if (!Number.isSafeInteger(count) || count < 1 || count > 1000) throw new Error('Silme miktarı geçersiz.');
     if (prefs.connection === 'wifi') {
-        cardResponse(await request(endpoint(prefs.cardUrl, `/api/keys?bs=${count}`), 'POST', 'b64:'));
+        cardResponse(await kartIstegi(prefs, `/api/keys?bs=${count}`, 'POST', 'b64:'));
         return;
     }
     for (let i = 0; i < count; i++) {

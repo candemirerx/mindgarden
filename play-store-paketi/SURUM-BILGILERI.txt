@@ -1,5 +1,5 @@
 NOT BAHCESI - SURUM BILGILERI
-Olusturma: 3 Ekim 2026 13:36
+Olusturma: 3 Ekim 2026 14:29
 
 Surum      : 2.2.12 (surum kodu 56)
 Paket adi  : com.notbahcesi.app
@@ -8,13 +8,13 @@ Imza SHA-256: 3B:19:EC:C2:B5:C0:E0:CF:12:64:B2:BC:75:F6:B9:CE:18:C7:C5:4A:BC:1C:
 
 Play Console'a yuklenecek dosya:
   uygulama/not-bahcesi-2.2.12.aab
-    Boyut  : 68.932.594 bayt
-    SHA-256: 77FCF7C9D42909CF8FF2B456CCD85DE2079C31AA3CA973D4181F9A2F1C1DFC45
+    Boyut  : 69.135.866 bayt
+    SHA-256: 35EAD02EB025B13FE69C1364B71A2F88B7ADDCD8F71F3561DB29803FBA714EA1
 
 Telefonda denemek icin imzali APK:
   uygulama/not-bahcesi-2.2.12.apk
-    Boyut  : 162.039.644 bayt
-    SHA-256: B1FE9C85AD4E72AB09AE3D4240356914D14A23BFA5F2FBBFF025890ADBA005CC
+    Boyut  : 162.242.319 bayt
+    SHA-256: B5D59C9297AA9B30232CEDE5EA67BB3086F850041AC1E648ED49841A3C531A5C
 
 Not: Her yeni yuklemede android/app/build.gradle icindeki versionCode artirilmalidir.
 Yayin adresleri:

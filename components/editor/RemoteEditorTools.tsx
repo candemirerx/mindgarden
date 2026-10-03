@@ -1,5 +1,7 @@
 'use client';
 
+import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
+import BaglantiGostergesi from './BaglantiGostergesi';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AudioLines, Check, Clipboard, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
@@ -8,14 +10,19 @@ import type { RemoteMode } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import FareYuzeyi from './FareYuzeyi';
 
-export default function RemoteEditorTools({ content, onContentChange, mode, onModeChange, placement, profilId = null, onProfilChange }: {
+export default function RemoteEditorTools({ content, onContentChange, mode, onModeChange, placement, profilId = null, onProfilChange, aktif = true, onBaglantiAyarlari }: {
     content: string; onContentChange: (text: string) => void;
     mode: RemoteMode; onModeChange: (mode: RemoteMode) => void;
     placement: 'toolbar' | 'surface';
     /** Kısayol panosunda açık profil; null → tüm makrolar. */
     profilId?: string | null; onProfilChange?: (profilId: string | null) => void;
+    /** Araç satırı ekranda mı? Değilse bağlantı yoklanmaz. */
+    aktif?: boolean;
+    /** Kurulum eksikken göstergeye dokununca bağlantı ayarlarını açar. */
+    onBaglantiAyarlari?: () => void;
 }) {
     const prefs = useRemotePrefs();
+    const baglanti = useBaglantiDurumu(prefs, { aralikMs: 30000, etkin: placement === 'toolbar' && aktif });
     const [busy, setBusy] = useState(false);
     const [bridgeListening, setBridgeListening] = useState(false);
     const [bridgeStopping, setBridgeStopping] = useState(false);
@@ -62,7 +69,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     const act = async (action: () => Promise<void>, success: string) => {
         setBusy(true); setNotice('');
         try { await action(); setNotice(success); }
-        catch (error) { setNotice(error instanceof Error ? error.message : 'İşlem başarısız.'); }
+        catch (error) { setNotice(error instanceof Error ? error.message : 'İşlem başarısız.'); void baglanti.tazele(); }
         finally { setBusy(false); }
     };
     /**
@@ -175,6 +182,8 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     }, [content, kopruYaz]);
 
     if (placement === 'toolbar') return <>
+            <BaglantiGostergesi kompakt id="studio-baglanti-durumu" yol={prefs.connection} durum={baglanti.durum} bakiliyor={baglanti.bakiliyor}
+                onTazele={() => { if (baglanti.durum?.tur === 'kurulmadi' && onBaglantiAyarlari) onBaglantiAyarlari(); else void baglanti.tazele(); }} />
             {prefs.enabledTools.shortcuts && (() => {
                 const tumuAcik = mode === 'shortcuts' && !profilId;
                 return <button id="studio-kisayollar" type="button" aria-pressed={tumuAcik} onClick={() => { onProfilChange?.(null); onModeChange(tumuAcik ? 'write' : 'shortcuts'); }}

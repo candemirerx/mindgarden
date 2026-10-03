@@ -46,3 +46,6 @@ export const getApiUrl = (path: string): string => {
     const base = API_BASE_URL || '';
     return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 };
+
+/** PC yardımcısının indirme sayfası (Play Store kullanıcıları yardımcıyı buradan alır). */
+export const PC_YARDIMCISI_SAYFASI = VERCEL_URL + '/pc';

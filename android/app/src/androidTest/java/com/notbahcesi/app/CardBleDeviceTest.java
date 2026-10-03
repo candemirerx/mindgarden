@@ -21,7 +21,7 @@ public class CardBleDeviceTest {
         CountDownLatch ready = new CountDownLatch(1);
         scenario.onActivity(a -> a.getBridge().getWebView().evaluateJavascript(script,
             value -> { result.set(value); ready.countDown(); }));
-        assertTrue("WebView timeout", ready.await(5, TimeUnit.SECONDS));
+        assertTrue("WebView timeout", ready.await(15, TimeUnit.SECONDS));
         return result.get();
     }
     private JSONObject call(String method, JSONObject args) throws Exception {
@@ -189,6 +189,127 @@ public class CardBleDeviceTest {
                 assertFalse(ping.toString(), ping.has("error"));
                 System.out.println("PC_PAIRED_BLUETOOTH ok");
                 call("disconnect", new JSONObject());
+            }
+        }
+    }
+    /** Sayfadaki bir JS ifadesinin (Promise olabilir) sonucunu bekler. */
+    private JSONObject jsCall(String ifade, long sureMs) throws Exception {
+        js("window.__cardQa=null;Promise.resolve().then(()=>" + ifade + ").then(v=>window.__cardQa={value:(v===undefined?null:v)})"
+            + ".catch(e=>window.__cardQa={error:String(e&&e.message||e)})");
+        long son = SystemClock.elapsedRealtime() + sureMs;
+        while (SystemClock.elapsedRealtime() < son) {
+            String r = js("window.__cardQa");
+            if (!"null".equals(r)) return new JSONObject(r);
+            SystemClock.sleep(150);
+        }
+        throw new AssertionError("JS zaman aşımı: " + ifade);
+    }
+    private void basari(String adim, JSONObject r) {
+        assertFalse(adim + ": " + r, r.has("error"));
+        System.out.println("E2E_OK " + adim);
+    }
+    /**
+     * Editör yolları uçtan uca (yalnız -e e2e 1 verilince): editörün kullandığı
+     * fonksiyonlarla (window.__nbUzak) dört yol sırayla kurulur, yoklanır ve
+     * her birinden PC'de odaktaki metin alanına ayırt edilebilir bir satır
+     * yazılır; kart kipinde PC panosuna metin gönderilir. PC tarafı sonucu
+     * Not Defteri ve panodan karşılaştırır. Kullanıcının ayarları sonda geri yüklenir.
+     * Argümanlar: pcPin, pcAddress, cardAddress, cardUrl, typeB64.
+     */
+    @Test public void editorPathsEndToEnd() throws Exception {
+        android.os.Bundle a = InstrumentationRegistry.getArguments();
+        org.junit.Assume.assumeNotNull(a.getString("e2e"));
+        String pin = a.getString("pcPin"), pc = a.getString("pcAddress"), kart = a.getString("cardAddress"), kartUrl = a.getString("cardUrl");
+        String metin = new String(android.util.Base64.decode(a.getString("typeB64"), android.util.Base64.DEFAULT), "UTF-8");
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            // Kanca (lib/baglantiDurumu) kök düzende her sayfayla yüklenir.
+            // Açılış sırasında WebView kısa süre yanıt vermeyebilir; o anki zaman aşımları sayılmaz.
+            long son = SystemClock.elapsedRealtime() + 45000;
+            boolean hazir = false;
+            while (!hazir && SystemClock.elapsedRealtime() < son) {
+                try { hazir = "true".equals(js("!!window.__nbUzak")); } catch (AssertionError gecis) { /* sayfa yükleniyor */ }
+                if (!hazir) SystemClock.sleep(500);
+            }
+            assertTrue("Test kancası yüklenmedi", hazir);
+            String orijinal = js("JSON.stringify(window.__nbUzak.prefs())");
+            String orijinalKart = js("localStorage.getItem('nb-ble-card')");
+            try {
+                String q = JSONObject.quote(metin);
+                // 1) Bilgisayar · Wi‑Fi: ağda bul + kodla eşleş (ayarlar ekranının yaptığı).
+                JSONObject bul = jsCall("window.__nbUzak.bul()", 40000); basari("bilgisayar-bul", bul);
+                String url = bul.getJSONArray("value").getJSONObject(0).getString("url");
+                JSONObject es = jsCall("window.__nbUzak.eslestirWifi(" + JSONObject.quote(url) + "," + JSONObject.quote(pin) + ").then(s=>{const p=window.__nbUzak.prefs();window.__nbUzak.ayarla(Object.assign(p,s,{connection:'pc-wifi'}));return s.helperName;})", 20000);
+                basari("eslestir-wifi " + es.optString("value"), es);
+                JSONObject y = jsCall("window.__nbUzak.yokla()", 20000); basari("yokla-pc-wifi", y);
+                assertEquals(y.toString(), "ok", y.getJSONObject("value").getString("tur"));
+                basari("yaz-pc-wifi", jsCall("window.__nbUzak.yaz('1 pcwifi '+" + q + "+'\\n')", 30000));
+                // 2) Bilgisayar · Bluetooth: aynı anahtar, eşleşmiş PC adresi.
+                jsCall("window.__nbUzak.ayarla(Object.assign(window.__nbUzak.prefs(),{connection:'pc-bluetooth',helperBluetoothAddress:" + JSONObject.quote(pc) + "}))", 5000);
+                y = jsCall("window.__nbUzak.yokla()", 30000); basari("yokla-pc-bt", y);
+                assertEquals(y.toString(), "ok", y.getJSONObject("value").getString("tur"));
+                basari("yaz-pc-bt", jsCall("window.__nbUzak.yaz('2 pcbt '+" + q + "+'\\n')", 30000));
+                // 3) Kart · Wi‑Fi: kartı bul (ayarlar ekranının yaptığı), sonra yaz.
+                JSONObject kb = jsCall("window.__nbUzak.kartBul()", 40000); basari("kart-bul", kb);
+                assertTrue(kb.toString(), kb.getJSONObject("value").getJSONArray("urls").toString().contains(kartUrl.replace("/", "\\/")));
+                jsCall("window.__nbUzak.ayarla(Object.assign(window.__nbUzak.prefs(),{connection:'wifi',cardUrl:" + JSONObject.quote(kartUrl) + "}))", 5000);
+                y = jsCall("window.__nbUzak.yokla()", 20000); basari("yokla-kart-wifi", y);
+                assertEquals(y.toString(), "ok", y.getJSONObject("value").getString("tur"));
+                basari("yaz-kart-wifi", jsCall("window.__nbUzak.yaz('3 kartwifi '+" + q + "+'\\n')", 30000));
+                // 4) Kart · Bluetooth: kayıtlı kart adresi; yoklama editör gibi yeniden bağlanır.
+                js("localStorage.setItem('nb-ble-card'," + JSONObject.quote(kart) + ")");
+                jsCall("window.__nbUzak.ayarla(Object.assign(window.__nbUzak.prefs(),{connection:'bluetooth'}))", 5000);
+                y = jsCall("window.__nbUzak.yokla()", 30000); basari("yokla-kart-ble", y);
+                assertEquals(y.toString(), "ok", y.getJSONObject("value").getString("tur"));
+                basari("yaz-kart-ble", jsCall("window.__nbUzak.yaz('4 kartble '+" + q + "+'\\n')", 30000));
+                // Kart kipinde pano: eşleşmiş PC yardımcısına gider (aynı anahtar).
+                basari("pano-kart-kipi", jsCall("window.__nbUzak.pano('PANO '+" + q + ")", 20000));
+            } finally {
+                // orijinal, evaluateJavascript'in döndürdüğü tırnaklı JSON metnidir.
+                js("window.__nbUzak.ayarla(JSON.parse(" + orijinal + "))");
+                js(orijinalKart == null || "null".equals(orijinalKart) ? "localStorage.removeItem('nb-ble-card')" : "localStorage.setItem('nb-ble-card'," + orijinalKart + ")");
+                System.out.println("E2E_PREFS_RESTORED");
+            }
+        }
+    }
+    /**
+     * Durum göstergesi dürüst mü? (yalnız -e signals 1 verilince; PC yardımcısı KAPALI olmalı)
+     * Ulaşılamayan yol "hata", eksik kurulum "kurulmadi" dönmeli; asla "ok" değil.
+     */
+    @Test public void statusSignalsAreHonest() throws Exception {
+        android.os.Bundle a = InstrumentationRegistry.getArguments();
+        org.junit.Assume.assumeNotNull(a.getString("signals"));
+        String pcUrl = a.getString("pcUrl");
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            long son = SystemClock.elapsedRealtime() + 45000;
+            boolean hazir = false;
+            while (!hazir && SystemClock.elapsedRealtime() < son) {
+                try { hazir = "true".equals(js("!!window.__nbUzak")); } catch (AssertionError gecis) { /* yükleniyor */ }
+                if (!hazir) SystemClock.sleep(500);
+            }
+            assertTrue("Test kancası yüklenmedi", hazir);
+            String orijinal = js("JSON.stringify(window.__nbUzak.prefs())");
+            try {
+                String[][] durumlar = {
+                    { "{connection:'pc-wifi',helperUrl:" + JSONObject.quote(pcUrl) + ",helperToken:'gecersiz-anahtar'}", "hata", "pc-wifi yardımcı kapalı" },
+                    { "{connection:'pc-wifi',helperUrl:'',helperToken:''}", "kurulmadi", "pc-wifi eşleşme yok" },
+                    { "{connection:'pc-bluetooth',helperBluetoothAddress:'',helperToken:''}", "kurulmadi", "pc-bt seçim yok" },
+                    { "{connection:'wifi',cardUrl:'http://192.168.1.250'}", "hata", "kart-wifi yanlış adres" },
+                    { "{connection:'wifi',cardUrl:''}", "kurulmadi", "kart-wifi adres yok" }
+                };
+                for (String[] d : durumlar) {
+                    jsCall("window.__nbUzak.ayarla(Object.assign(window.__nbUzak.prefs()," + d[0] + "))", 5000);
+                    JSONObject y = jsCall("window.__nbUzak.yokla()", 30000);
+                    assertFalse(y.toString(), y.has("error"));
+                    String tur = y.getJSONObject("value").getString("tur");
+                    System.out.println("SIGNAL " + d[2] + " -> " + tur + " : " + y.getJSONObject("value").optString("mesaj"));
+                    assertEquals(d[2] + ": " + y, d[1], tur);
+                }
+            } finally {
+                js("window.__nbUzak.ayarla(JSON.parse(" + orijinal + "))");
             }
         }
     }

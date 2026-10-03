@@ -81,7 +81,7 @@ function EditorPageInner() {
     const [remoteToolPrefs, setRemoteToolPrefs] = useState(remotePrefs);
     const [settingsOpen, setSettingsOpen] = useState(false);
     /** Ayar penceresi istenen bölümde açılabilsin: kısayol panosu doğrudan makrolara gider. */
-    const [settingsBolumu, setSettingsBolumu] = useState<'home' | 'tools'>('home');
+    const [settingsBolumu, setSettingsBolumu] = useState<'home' | 'tools' | 'remote'>('home');
     const [focusMode, setFocusMode] = useState(false);
     const [toolTab, setToolTab] = useState<'tools' | 'computer' | 'ai'>('tools');
     useEffect(() => { setToolTab(sonAracSekmesi()); }, []);
@@ -1163,7 +1163,9 @@ function EditorPageInner() {
                         {remoteMode === 'screen' && <EkranSecici duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onYaziyaDon={() => setRemoteMode('write')} />}
                         <div className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Bilgisayar araçları" style={remoteMode === 'screen' ? { display: 'none' } : undefined}>
                             <RemoteEditorTools placement="toolbar" content={content} mode={remoteMode} onModeChange={setRemoteMode} onContentChange={icerikDegistir}
-                                profilId={kisayolProfili} onProfilChange={setKisayolProfili} />
+                                profilId={kisayolProfili} onProfilChange={setKisayolProfili}
+                                aktif={!focusMode && activeToolTab === 'computer'}
+                                onBaglantiAyarlari={() => { setSettingsBolumu('remote'); setSettingsOpen(true); }} />
                         </div>
                     </div>
                 )}

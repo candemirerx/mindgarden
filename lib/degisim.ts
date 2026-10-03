@@ -14,7 +14,9 @@ export type DegisimKonusu =
     /** Sağlayıcı/anahtar/model tercihleri değişti. */
     | 'ai-tercih'
     /** Budanmış notları gösterme tercihi değişti. */
-    | 'budananlar';
+    | 'budananlar'
+    /** Bilgisayar bağlantısının canlı durumu yeniden yoklandı. */
+    | 'baglanti-durumu';
 
 const dinleyiciler = new Map<DegisimKonusu, Set<() => void>>();
 
