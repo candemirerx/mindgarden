@@ -149,6 +149,86 @@ function Set-ClipboardRetry([string]$text) {
     }
 }
 
+# ---- Görsel aktarımı ---------------------------------------------------
+# Telefon mini galerisinden gelen görseller (ve metin kartları) parça parça
+# gelir: Bluetooth satırı 32 KB ile sınırlı, Wi‑Fi'de de tek istek kısa tutulur.
+# Parçalar kimliğe göre birleştirilir; "gorseller" eylemi bunları ya Resimler ›
+# Not Bahçesi klasörüne kaydeder ya da panoya koyar (tek görselde resim olarak
+# da, Ctrl+V her yerde çalışsın; birden çoksa dosya listesi olarak).
+$script:parcalar = @{}
+$script:parcaZamani = @{}
+$script:parcaToplam = 0
+function Add-Parca([string]$id, [int]$sira, [string]$veri) {
+    if ($id -notmatch '^[A-Za-z0-9-]{8,48}$') { throw 'Parça kimliği geçersiz.' }
+    # Yarım kalmış eski aktarımlar 5 dakika sonra atılır.
+    foreach ($eski in @($script:parcaZamani.Keys)) {
+        if (((Get-Date) - $script:parcaZamani[$eski]).TotalMinutes -gt 5) {
+            $script:parcaToplam -= $script:parcalar[$eski].Length
+            $script:parcalar[$eski].Dispose(); $script:parcalar.Remove($eski); $script:parcaZamani.Remove($eski)
+        }
+    }
+    $bytes = [Convert]::FromBase64String($veri)
+    if ($sira -eq 0) {
+        if ($script:parcalar.ContainsKey($id)) { $script:parcaToplam -= $script:parcalar[$id].Length; $script:parcalar[$id].Dispose() }
+        if ($script:parcalar.Count -ge 60) { throw 'Çok fazla bekleyen görsel.' }
+        $script:parcalar[$id] = New-Object System.IO.MemoryStream
+    } elseif (-not $script:parcalar.ContainsKey($id)) { throw 'Parça sırası bozuk.' }
+    if ($script:parcaToplam + $bytes.Length -gt 200MB -or $script:parcalar[$id].Length + $bytes.Length -gt 40MB) { throw 'Görsel çok büyük.' }
+    $script:parcalar[$id].Write($bytes, 0, $bytes.Length)
+    $script:parcaToplam += $bytes.Length
+    $script:parcaZamani[$id] = Get-Date
+}
+function Get-GuvenliAd([string]$ad, [string]$varsayilan) {
+    $temiz = ($ad -replace '[\\/:*?"<>|\x00-\x1f]', '_').Trim(' .')
+    if ($temiz.Length -gt 80) { $temiz = $temiz.Substring($temiz.Length - 80) }
+    if ($temiz -notmatch '\.(jpe?g|png|webp|gif|txt)$') { $temiz = $varsayilan }
+    return $temiz
+}
+function Save-Gorseller($ids, $adlar, [string]$klasor) {
+    if (-not (Test-Path -LiteralPath $klasor)) { New-Item -ItemType Directory -Path $klasor -Force | Out-Null }
+    $yollar = @()
+    for ($i = 0; $i -lt $ids.Count; $i++) {
+        $id = [string]$ids[$i]
+        if (-not $script:parcalar.ContainsKey($id)) { throw 'Görsel eksik geldi.' }
+        $ad = Get-GuvenliAd ([string]$adlar[$i]) ('not-bahcesi-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + ($i + 1) + '.jpg')
+        $yol = Join-Path $klasor $ad
+        $taban = [System.IO.Path]::GetFileNameWithoutExtension($ad); $uzanti = [System.IO.Path]::GetExtension($ad)
+        for ($n = 2; Test-Path -LiteralPath $yol; $n++) { $yol = Join-Path $klasor ('{0} ({1}){2}' -f $taban, $n, $uzanti) }
+        [System.IO.File]::WriteAllBytes($yol, $script:parcalar[$id].ToArray())
+        $yollar += $yol
+    }
+    foreach ($id in $ids) {
+        $id = [string]$id
+        if ($script:parcalar.ContainsKey($id)) { $script:parcaToplam -= $script:parcalar[$id].Length; $script:parcalar[$id].Dispose(); $script:parcalar.Remove($id); $script:parcaZamani.Remove($id) }
+    }
+    return ,$yollar
+}
+function Set-ClipboardDosyalar([string[]]$yollar) {
+    Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+    $liste = New-Object System.Collections.Specialized.StringCollection
+    foreach ($y in $yollar) { [void]$liste.Add($y) }
+    $veri = New-Object System.Windows.Forms.DataObject
+    $veri.SetFileDropList($liste)
+    $resim = $null
+    $gorseller = @($yollar | Where-Object { $_ -match '\.(jpe?g|png|webp|gif)$' })
+    if ($yollar.Count -eq 1 -and $gorseller.Count -eq 1) {
+        # Tek görsel: Word, WhatsApp, Paint gibi uygulamalar resim olarak yapıştırsın.
+        try {
+            $resim = [System.Drawing.Image]::FromStream((New-Object System.IO.MemoryStream(,[System.IO.File]::ReadAllBytes($gorseller[0]))))
+            $veri.SetImage($resim)
+            $png = New-Object System.IO.MemoryStream
+            $resim.Save($png, [System.Drawing.Imaging.ImageFormat]::Png)
+            $veri.SetData('PNG', $png)
+        } catch { }
+    }
+    try {
+        for ($deneme = 1; ; $deneme++) {
+            try { [System.Windows.Forms.Clipboard]::SetDataObject($veri, $true); return }
+            catch { if ($deneme -ge 15) { throw }; Start-Sleep -Milliseconds (40 * $deneme) }
+        }
+    } finally { if ($resim) { $resim.Dispose() } }
+}
+
 function Same-Token([string]$candidate, [string]$expected) {
     if ($candidate.Length -ne $expected.Length) { return $false }
     $difference = 0
@@ -256,7 +336,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
             Send-Response $stream ($(if ($cevap -like '{"ok":true*' -or $cevap -like '*"ok":true*') { 200 } else { 403 })) $cevap; return
         }
         if (-not (Same-Token $authorization "Bearer $expectedToken")) { Send-Response $stream 401 '{"ok":false,"error":"Anahtar yanlış"}'; return }
-        if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 '{"ok":true,"app":"not-bahcesi-clipboard"}'; return }
+        if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 '{"ok":true,"app":"not-bahcesi-clipboard","surum":2}'; return }
         if ($parts[0] -ne 'POST' -or @('/clipboard', '/input') -notcontains $parts[1]) { Send-Response $stream 404 '{"ok":false}'; return }
         if ($length -lt 1 -or $length -gt 1048576) { Send-Response $stream 413 '{"ok":false,"error":"Metin 1 MB sınırını aşıyor"}'; return }
         $payload = New-Object byte[] $length
@@ -271,11 +351,37 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
         if ($parts[1] -eq '/clipboard') {
             if (-not $dryRun) { Set-ClipboardRetry $content }
         } else {
-            if ($length -gt 32768) { Send-Response $stream 413 '{"ok":false}'; return }
             $inputAction = $content | ConvertFrom-Json
             if ($null -eq $inputAction -or $null -eq $inputAction.action) { throw 'Eylem gerekli.' }
+            # Yalnız görsel parçaları büyük olabilir; diğer komutlar kısa kalır.
+            if ($length -gt 32768 -and [string]$inputAction.action -ne 'parca') { Send-Response $stream 413 '{"ok":false}'; return }
             switch ([string]$inputAction.action) {
                 'ping' { }
+                'parca' {
+                    if ($inputAction.veri -isnot [string]) { throw 'Parça geçersiz.' }
+                    Add-Parca ([string]$inputAction.id) ([int]$inputAction.sira) $inputAction.veri
+                }
+                'gorseller' {
+                    $ids = @($inputAction.ids); $adlar = @($inputAction.adlar)
+                    if ($ids.Count -lt 1 -or $ids.Count -gt 50 -or $adlar.Count -ne $ids.Count) { throw 'Görsel listesi geçersiz.' }
+                    $hedef = [string]$inputAction.hedef
+                    if ($hedef -notin @('dosya', 'pano')) { throw 'Hedef geçersiz.' }
+                    if (-not $dryRun) {
+                        if ($hedef -eq 'dosya') {
+                            $klasor = Join-Path ([Environment]::GetFolderPath('MyPictures')) 'Not Bahçesi'
+                            $yollar = Save-Gorseller $ids $adlar $klasor
+                            Write-Host ('{0} dosya kaydedildi: {1}' -f $yollar.Count, $klasor) -ForegroundColor Green
+                            # Kaydedilenler Gezgin'de seçili açılır.
+                            try { Start-Process explorer.exe -ArgumentList ('/select,"' + $yollar[0] + '"') } catch { }
+                        } else {
+                            $klasor = Join-Path $env:TEMP 'NotBahcesi-pano'
+                            # Önceki pano dosyaları bir günden eskiyse temizlenir.
+                            if (Test-Path -LiteralPath $klasor) { Get-ChildItem -LiteralPath $klasor -File | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-1) } | Remove-Item -Force -ErrorAction SilentlyContinue }
+                            $yollar = Save-Gorseller $ids $adlar $klasor
+                            Set-ClipboardDosyalar $yollar
+                        }
+                    }
+                }
                 'clipboard' {
                     if ($inputAction.text -isnot [string] -or $inputAction.text.Length -gt 32000) { throw 'Pano metni geçersiz.' }
                     if (-not $dryRun) { Set-ClipboardRetry $inputAction.text }
