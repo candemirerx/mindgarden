@@ -200,9 +200,9 @@ Telefonunuzu bilgisayarın klavyesi, faresi ve panosu gibi kullanın. Bu seviyen
 *Telefonu dokunmatik yüzey gibi kullanın.*
 
 1. **Fare** aracında yüzeyde parmağınızı kaydırınca imleç hareket eder; dokunmak sol tıktır. Alttaki düğmelerle sağ tık ve kaydırma yapılır.
-2. **Dikte** konuşmanızı yazıya çevirir. Sonucun nota mı, doğrudan bilgisayara mı yazılacağını **Bilgisayar bağlantısı → Araç davranışı**'ndan seçersiniz.
+2. **Dikte** konuşmanızı yazıya çevirir. Sonucun **nota**, **bilgisayara** ya da **ikisine birden** yazılacağını **Ayarlar → Düzenleme araçları → Bilgisayar araçları** listesinde Dikte satırındaki **dişli** simgesinden seçersiniz.
 3. **Köprü Yaz** açıkken notta yazdığınız her şey aynı anda bilgisayara da yazılır.
-4. **Köprü Dikte** konuşurken yazar: sözünüz cümle sonu beklenmeden bilgisayarda görünür. Süresini aynı bölümden ayarlayabilirsiniz.
+4. **Köprü Dikte** konuşurken yazar: sözünüz cümle sonu beklenmeden görünür. Nereye yazılacağını (nota, bilgisayara ya da ikisine birden), dinleme süresini ve durdurana kadar dinleme seçeneğini aracın kendi **dişli** simgesinden ayarlarsınız. Ses tanıma motorunu ise **Bilgisayar bağlantısı → Dikte motoru** bölümünden seçersiniz.
 
 ### 4.6 PC yardımcısı ne zaman gerekir?
 

@@ -78,24 +78,10 @@ export default function RemoteSettings() {
                 <SettingsField label="Dikte motoru" htmlFor="dikte-motoru">
                     <DikteMotoruAyari prefs={prefs} update={update} motorlar={motorlar} telefon={Capacitor.isNativePlatform()} />
                 </SettingsField>
-                <SettingsField label="Köprü Dikte süresi (saniye)" htmlFor="remote-kopru-sure" hint="5–3600 saniye. Süre bitmeden araç düğmesine tekrar basarak durdurabilirsiniz.">
-                    <input id="remote-kopru-sure" className={settingsFieldClass} type="number" inputMode="numeric" min="5" max="3600" step="1" disabled={prefs.bridgeDictationUnlimited} value={prefs.bridgeDictationSeconds}
-                        onChange={e => update({ ...prefs, bridgeDictationSeconds: Math.max(5, Math.min(3600, Number(e.target.value) || 5)) })} />
-                </SettingsField>
-                <SettingsRow title="Köprü Dikte'de konuşurken anında yaz" description="Açıkken söz, cümle sonu beklenmeden yazılır ve yanlış tanınan kelime bilgisayarda düzeltilir. Kapalıyken dikte bitince tek seferde yazılır.">
-                    <SettingsSwitch checked={prefs.bridgeDictationLive} onChange={v => update({ ...prefs, bridgeDictationLive: v })} label="Köprü Dikte'de konuşurken anında yaz" />
-                </SettingsRow>
-                <SettingsRow title="Ben durdurana kadar dinle">
-                    <SettingsSwitch checked={prefs.bridgeDictationUnlimited} onChange={v => update({ ...prefs, bridgeDictationUnlimited: v })} label="Ben durdurana kadar dinle" />
-                </SettingsRow>
-                <div className="space-y-2.5" role="radiogroup" aria-labelledby="remote-dikte-hedefi">
-                    <SettingsGroupLabel><span id="remote-dikte-hedefi">Dikte hedefi</span></SettingsGroupLabel>
-                    <label className="flex items-center gap-2.5 text-sm text-sand-800"><input type="radio" className="accent-moss-600" name="dictation-target" checked={prefs.dictationTarget === 'editor'} onChange={() => update({ ...prefs, dictationTarget: 'editor' })} /> Not metnine yaz</label>
-                    <label className="flex items-center gap-2.5 text-sm text-sand-800"><input type="radio" className="accent-moss-600" name="dictation-target" checked={prefs.dictationTarget === 'computer'} onChange={() => update({ ...prefs, dictationTarget: 'computer' })} /> Doğrudan bilgisayara yaz (nota dokunma)</label>
-                </div>
-                {prefs.dictationTarget === 'editor' && <SettingsRow title="Dikte sonucunu mevcut metnin sonuna ekle">
-                    <SettingsSwitch checked={prefs.appendDictation} onChange={v => update({ ...prefs, appendDictation: v })} label="Dikte sonucunu mevcut metnin sonuna ekle" />
-                </SettingsRow>}
+                <p className="rounded-xl border border-sand-200 bg-sand-50/70 px-3.5 py-3 text-xs leading-relaxed text-sand-700">
+                    <strong className="font-semibold text-sand-900">Dikte ve Köprü Dikte ayarları</strong> (nereye yazılacağı, süre, anında yazma):
+                    Ayarlar → Düzenleme araçları → Bilgisayar araçları listesinde, ilgili aracın yanındaki <strong>dişli</strong> simgesinde.
+                </p>
             </div>
         </SettingsSection>
 

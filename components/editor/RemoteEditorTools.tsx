@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AudioLines, Check, Clipboard, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
 import { BULUT_SAGLAYICILAR, SesKaydedici, sesiYaziyaCevir } from '@/lib/bulutDikte';
-import { bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
+import { hedefBilgisayara, hedefNota, bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import FareYuzeyi from './FareYuzeyi';
@@ -98,9 +98,20 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
      * girer ve tek seferde yetişir. Bağlantı koparsa durum yazısı nedeni gösterir.
      */
     const runBridgeDictation = async () => {
-        setBusy(true); setBridgeListening(true); setNotice('Dinleniyor: konuştuklarınız bilgisayara yazılıyor.');
+        setBusy(true); setBridgeListening(true); setNotice('Dinleniyor: konuştuklarınız ' + (prefs.bridgeDictationTarget === 'editor' ? 'nota' : prefs.bridgeDictationTarget === 'both' ? 'nota ve bilgisayara' : 'bilgisayara') + ' yazılıyor.');
         const akis = dikteAkis.current;
         akis.yazilan = ''; akis.hedef = ''; akis.durdu = false; akis.calisiyor = false; akis.coz = null;
+        // Hedef (ayarlardaki dişliden): not metni, bilgisayar ya da ikisi birden.
+        const kHedef = prefs.bridgeDictationTarget;
+        const notaYaz = hedefNota(kHedef), pcYaz = hedefBilgisayara(kHedef);
+        const ilkIcerik = guncelIcerik.current;
+        /** Konuşulan metnin son hâlini hedefe işler. */
+        const hedefYaz = (yeni: string) => {
+            akis.hedef = yeni;
+            if (notaYaz) onContentChange(ilkIcerik && yeni ? ilkIcerik + (/\s$/.test(ilkIcerik) ? '' : ' ') + yeni : (ilkIcerik || yeni));
+            if (pcYaz) void dongu(); else akis.yazilan = yeni;
+        };
+        const yerAdi = kHedef === 'editor' ? 'nota' : kHedef === 'both' ? 'nota ve bilgisayara' : 'bilgisayara';
         const dongu = async (): Promise<void> => {
             if (akis.calisiyor || akis.durdu) return;
             akis.calisiyor = true;
@@ -144,16 +155,15 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                     kuyruk = kuyruk.then(async () => {
                         const metin = await sesiYaziyaCevir(wav, saglayici, prefs.dictationLanguage);
                         if (!metin) return;
-                        akis.hedef = akis.hedef ? akis.hedef + (/\s$/.test(akis.hedef) ? '' : ' ') + metin : metin;
+                        hedefYaz(akis.hedef ? akis.hedef + (/\s$/.test(akis.hedef) ? '' : ' ') + metin : metin);
                         parca++;
                         setNotice('Dinleniyor (' + ad + ') · ' + parca + ' cümle yazıldı');
-                        void dongu();
                     }).catch(error => setNotice(error instanceof Error ? error.message : ad + ' hatası.'));
                 }
             });
             try {
                 await kaydedici.baslat();
-                setNotice('Dinleniyor (' + ad + '): konuşun; her cümle duraklayınca bilgisayara yazılır.');
+                setNotice('Dinleniyor (' + ad + '): konuşun; her cümle duraklayınca ' + yerAdi + ' yazılır.');
                 await new Promise<void>(cozum => {
                     bulutKopruDurdur.current = cozum;
                     if (!prefs.bridgeDictationUnlimited) setTimeout(cozum, prefs.bridgeDictationSeconds * 1000);
@@ -161,10 +171,10 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                 setBridgeStopping(true);
                 await kaydedici.bitir();
                 await kuyruk;
-                void dongu();
+                if (pcYaz) void dongu();
                 await bosal();
-                setNotice(akis.durdu ? 'Köprü Dikte bitti ancak aktarım tamamlanamadı; bağlantıyı kontrol edin.'
-                    : parca ? 'Köprü Dikte bitti; ' + parca + ' cümle bilgisayara yazıldı.' : 'Konuşma duyulmadı.');
+                setNotice(akis.durdu ? 'Köprü Dikte bitti ancak bilgisayara aktarım tamamlanamadı; bağlantıyı kontrol edin.'
+                    : parca ? 'Köprü Dikte bitti; ' + parca + ' cümle ' + yerAdi + ' yazıldı.' : 'Konuşma duyulmadı.');
             } catch (error) {
                 await kaydedici.bitir().catch(() => null);
                 setNotice(error instanceof Error ? error.message : 'Köprü Dikte başarısız.');
@@ -175,17 +185,15 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
             return;
         }
         const tanitici = await dinleKopruDikte(olay => {
-            akis.hedef = guncelPrefs.current.bridgeDictationLive ? olay.text : olay.kesin;
-            void dongu();
+            hedefYaz(guncelPrefs.current.bridgeDictationLive ? olay.text : olay.kesin);
         });
         try {
             const metin = await bridgeDictate(prefs.dictationLanguage, prefs.bridgeDictationUnlimited ? 0 : prefs.bridgeDictationSeconds, prefs.dictationEngine);
-            akis.hedef = metin;
-            void dongu();
+            hedefYaz(metin);
             await bosal();
             setNotice(akis.durdu
-                ? 'Köprü Dikte bitti ancak aktarım tamamlanamadı; bağlantıyı kontrol edin.'
-                : 'Köprü Dikte bitti; konuşma bilgisayara yazıldı, not değişmedi.');
+                ? 'Köprü Dikte bitti ancak bilgisayara aktarım tamamlanamadı; bağlantıyı kontrol edin.'
+                : 'Köprü Dikte bitti; konuşma ' + yerAdi + ' yazıldı' + (notaYaz ? '.' : ', not değişmedi.'));
         } catch (error) { setNotice(error instanceof Error ? error.message : 'Köprü Dikte başarısız.'); }
         finally {
             if (tanitici) await tanitici.remove();
@@ -270,10 +278,11 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                 {mode === 'mouse' ? <Keyboard size={16} /> : <MousePointer2 size={16} />}<span className="sr-only sm:not-sr-only">{mode === 'mouse' ? ' Yazıya dön' : ' Fare'}</span></button>}
             {prefs.enabledTools.dictation && <button id="studio-dikte" type="button" disabled={(busy && bulutDikte !== 'kayit') || bulutDikte === 'gonder'} aria-pressed={bulutDikte === 'kayit'} onClick={() => {
                 const yaz = async (text: string) => {
-                    if (prefs.dictationTarget === 'computer') await typeOnComputer(text, prefs);
-                    else onContentChange(prefs.appendDictation && content ? `${content}${/\s$/.test(content) ? '' : ' '}${text}` : text);
+                    if (hedefNota(prefs.dictationTarget)) onContentChange(prefs.appendDictation && content ? `${content}${/\s$/.test(content) ? '' : ' '}${text}` : text);
+                    if (hedefBilgisayara(prefs.dictationTarget)) await typeOnComputer(text, prefs);
                 };
-                const basari = prefs.dictationTarget === 'computer' ? 'Dikte bilgisayara yazıldı; not değişmedi.' : 'Dikte nota eklendi.';
+                const basari = prefs.dictationTarget === 'computer' ? 'Dikte bilgisayara yazıldı; not değişmedi.'
+                    : prefs.dictationTarget === 'both' ? 'Dikte nota ve bilgisayara yazıldı.' : 'Dikte nota eklendi.';
                 if (prefs.dictationEngine !== 'cloud') { void act(async () => yaz(await dictate(prefs.dictationLanguage)), basari); return; }
                 const ad = BULUT_SAGLAYICILAR.find(b => b.id === prefs.dictationCloud)?.ad ?? 'Bulut';
                 if (bulutDikte === 'kayit' && bulutKaydedici.current) {
