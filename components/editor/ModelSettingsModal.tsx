@@ -58,6 +58,12 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
     closeRef.current = onClose;
     const backRef = useRef<() => void>(() => {});
     backRef.current = () => activeTab === 'home' ? closeRef.current() : setActiveTab('home');
+    // Ayarların içinden başka bir sayfaya geçilirken (ör. deneme ağacı) pencere kapanır.
+    useEffect(() => {
+        const kapat = () => closeRef.current();
+        window.addEventListener('nb-ayarlari-kapat', kapat);
+        return () => window.removeEventListener('nb-ayarlari-kapat', kapat);
+    }, []);
 
     const [macroList, setMacroList] = useState<AiMacro[]>([]);
     const [macroDraft, setMacroDraft] = useState<AiMacro | null>(null);

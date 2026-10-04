@@ -26,6 +26,7 @@ import type { BulunanBilgisayar, Device, RemotePrefs } from '@/lib/remoteTools';
 import { SettingsField, SettingsNote, cx, settingsFieldClass } from '@/components/ui/settings';
 import { durumuTazele, useBaglantiDurumu } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
+import DenemeAgaciDugmesi from './DenemeAgaciDugmesi';
 
 type Mesaj = { tone: 'ok' | 'error' | 'info'; text: string } | null;
 type Guncelle = (next: RemotePrefs) => void;
@@ -511,6 +512,8 @@ export default function BaglantiKurulumu({ prefs, update }: { prefs: RemotePrefs
     const { durum, bakiliyor, tazele } = useBaglantiDurumu(prefs, { aralikMs: 20000 });
     return <div className="space-y-4">
         <BaglantiGostergesi id="baglanti-canli-durum" yol={prefs.connection} durum={durum} bakiliyor={bakiliyor} onTazele={() => void tazele()} />
+        {/* Bağlantı kurulunca: tek dokunuşla gerçek bir notta deneme. */}
+        {durum?.tur === 'ok' && <DenemeAgaciDugmesi tur="baglanti" vurgulu />}
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Bağlantı yolu">
             {YOLLAR.map(({ id, label, detail, Icon }) => {
                 const secili = prefs.connection === id;

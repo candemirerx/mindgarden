@@ -13,6 +13,7 @@ import {
     isOfflineFallbackEnabled, listDiscoveredModels, loadLocalModel,
     runLocalInference, saveDesktopLocalEndpoint, setOfflineFallbackEnabled, unloadLocalModel, type LocalModelFile
 } from '@/lib/localLlm';
+import DenemeAgaciDugmesi from './DenemeAgaciDugmesi';
 import { SettingsField, SettingsNote, SettingsPageHeader, SettingsRow, SettingsSection, SettingsSwitch, settingsFieldClass } from '@/components/ui/settings';
 
 type CloudProvider = Exclude<ProviderType, 'local'>;
@@ -186,6 +187,8 @@ export default function AiSettings() {
                 </div>
                 <Check size={17} className="shrink-0 text-moss-700" aria-hidden />
             </div>
+
+            <DenemeAgaciDugmesi tur="yapayzeka" />
 
             <div role="tablist" aria-label="Yapay zekâ ayarları" className="grid grid-cols-2 gap-1 rounded-2xl border border-sand-200 bg-sand-200/50 p-1">
                 {(['cloud', 'local'] as const).map((id, index) => (
