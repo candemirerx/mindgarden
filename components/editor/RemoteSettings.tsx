@@ -14,6 +14,8 @@ import {
     SettingsSwitch,
     settingsFieldClass
 } from '@/components/ui/settings';
+import { Capacitor } from '@capacitor/core';
+import DikteMotoruAyari from './DikteMotoruAyari';
 import BaglantiKurulumu, { PcBluetoothPano, PcWifiEslestirme } from './BaglantiKurulumu';
 
 /** Bağlantı yolunun kısa adı; sekme başlığındaki rozette gösterilir. */
@@ -73,22 +75,9 @@ export default function RemoteSettings() {
                 <SettingsField label="Dikte dili" htmlFor="remote-dikte-dili">
                     <input id="remote-dikte-dili" className={settingsFieldClass} value={prefs.dictationLanguage} onChange={e => update({ ...prefs, dictationLanguage: e.target.value })} placeholder="tr-TR" />
                 </SettingsField>
-                {motorlar && (motorlar.onDevice || motorlar.system || motorlar.google) && (
-                    <SettingsField label="Köprü Dikte ses tanıma motoru" htmlFor="remote-dikte-motoru"
-                        hint={(motorlar.google
-                            ? 'Google (çevrimiçi) Gboard sesle yazmanın kullandığı motordur; Türkçede en isabetlisi, internet ister. '
-                            : 'Bu telefonda Google uygulamasının ses tanıması bulunamadı. ')
-                            + (motorlar.onDevice ? 'Cihaz içi motor internetsiz ve hızlıdır ama daha az isabetlidir. ' : '')
-                            + 'Otomatik: önce Google, yoksa cihaz içi, o da yoksa telefonun varsayılanı.'}>
-                        <select id="remote-dikte-motoru" className={settingsFieldClass} value={prefs.dictationEngine}
-                            onChange={e => update({ ...prefs, dictationEngine: e.target.value as RemotePrefs['dictationEngine'] })}>
-                            <option value="auto">Otomatik (önerilen)</option>
-                            {motorlar.google && <option value="google">Google – Gboard ile aynı (çevrimiçi)</option>}
-                            {motorlar.onDevice && <option value="device">Yalnızca cihaz içi (internetsiz)</option>}
-                            <option value="system">Telefonun varsayılanı</option>
-                        </select>
-                    </SettingsField>
-                )}
+                <SettingsField label="Dikte motoru" htmlFor="dikte-motoru">
+                    <DikteMotoruAyari prefs={prefs} update={update} motorlar={motorlar} telefon={Capacitor.isNativePlatform()} />
+                </SettingsField>
                 <SettingsField label="Köprü Dikte süresi (saniye)" htmlFor="remote-kopru-sure" hint="5–3600 saniye. Süre bitmeden araç düğmesine tekrar basarak durdurabilirsiniz.">
                     <input id="remote-kopru-sure" className={settingsFieldClass} type="number" inputMode="numeric" min="5" max="3600" step="1" disabled={prefs.bridgeDictationUnlimited} value={prefs.bridgeDictationSeconds}
                         onChange={e => update({ ...prefs, bridgeDictationSeconds: Math.max(5, Math.min(3600, Number(e.target.value) || 5)) })} />

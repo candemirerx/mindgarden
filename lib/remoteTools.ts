@@ -164,7 +164,9 @@ export type RemotePrefs = {
      * Köprü Dikte ses tanıma motoru: auto (önce Google çevrimiçi, yoksa cihaz içi),
      * google (Gboard ile aynı çevrimiçi motor), device (yalnızca cihaz içi), system (telefonun varsayılanı).
      */
-    dictationEngine: 'auto' | 'google' | 'device' | 'system';
+    dictationEngine: 'auto' | 'google' | 'device' | 'system' | 'cloud';
+    /** dictationEngine 'cloud' iken kullanılan servis (kendi API anahtarıyla). */
+    dictationCloud: 'openai' | 'gemini' | 'groq';
     appendDictation: boolean;
     dictationTarget: 'editor' | 'computer';
     enabledTools: Record<RemoteToolId, boolean>;
@@ -177,7 +179,7 @@ export type RemotePrefs = {
 const key = 'nb-remote-prefs-v1';
 const defaults: RemotePrefs = {
     connection: 'wifi', cardUrl: 'http://192.168.4.1', helperUrl: '', helperToken: '', helperBluetoothAddress: '',
-    mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', appendDictation: true, dictationTarget: 'editor',
+    mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', appendDictation: true, dictationTarget: 'editor',
     enabledTools: { mouse: true, dictation: true, bridgeDictation: true, bridgeWrite: true, computerWrite: true, clipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
 };
 
@@ -948,6 +950,7 @@ export async function dictate(language: string): Promise<string> {
 }
 
 export async function bridgeDictate(language: string, seconds: number, engine: RemotePrefs['dictationEngine'] = 'auto'): Promise<string> {
+    if (engine === 'cloud') engine = 'auto'; // bulut motoru telefon tanıyıcısı değil; çağıran ayrıca ele alır
     if (!isNative()) throw new Error('Süreli Köprü Dikte yalnız Android uygulamasında kullanılabilir.');
     return (await native.startBridgeDictation({ language, seconds: seconds === 0 ? 0 : Math.max(5, Math.min(3600, Math.round(seconds) || 30)), engine })).text;
 }

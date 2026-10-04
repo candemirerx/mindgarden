@@ -5,6 +5,7 @@ import BaglantiGostergesi from './BaglantiGostergesi';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AudioLines, Check, Clipboard, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
+import { BULUT_SAGLAYICILAR, SesKaydedici, sesiYaziyaCevir } from '@/lib/bulutDikte';
 import { bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
@@ -26,6 +27,11 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     const [busy, setBusy] = useState(false);
     const [bridgeListening, setBridgeListening] = useState(false);
     const [bridgeStopping, setBridgeStopping] = useState(false);
+    /** Bulut motoruyla Dikte: ilk dokunuş kaydı başlatır, ikincisi bitirip yazıya döker. */
+    const [bulutDikte, setBulutDikte] = useState<'kayit' | 'gonder' | null>(null);
+    const bulutKaydedici = useRef<SesKaydedici | null>(null);
+    /** Bulut Köprü Dikte'yi durdurma işlevi (çalışırken dolu). */
+    const bulutKopruDurdur = useRef<(() => void) | null>(null);
     const [kopruYaz, setKopruYaz] = useState(false);
     const [kopruDurum, setKopruDurum] = useState('');
     const [kopruHata, setKopruHata] = useState(false);
@@ -125,6 +131,49 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
         // Varsayılanda konuşulmakta olan parça da hedefe girer: söz, cümle
         // bitmeden bilgisayarda görünür. Tercih kapatıldığında yalnızca
         // kesinleşmiş cümleler aktarılır.
+        if (prefs.dictationEngine === 'cloud') {
+            // Bulut motoru: konuşma duraklayınca cümle servise gider, dönen metin
+            // biriken hedefe eklenir ve aynı aktarım döngüsüyle bilgisayara yazılır.
+            const saglayici = prefs.dictationCloud;
+            const ad = BULUT_SAGLAYICILAR.find(b => b.id === saglayici)?.ad ?? 'Bulut';
+            let kuyruk: Promise<void> = Promise.resolve();
+            let parca = 0;
+            const kaydedici = new SesKaydedici({
+                bolumle: true,
+                onParca: wav => {
+                    kuyruk = kuyruk.then(async () => {
+                        const metin = await sesiYaziyaCevir(wav, saglayici, prefs.dictationLanguage);
+                        if (!metin) return;
+                        akis.hedef = akis.hedef ? akis.hedef + (/\s$/.test(akis.hedef) ? '' : ' ') + metin : metin;
+                        parca++;
+                        setNotice('Dinleniyor (' + ad + ') · ' + parca + ' cümle yazıldı');
+                        void dongu();
+                    }).catch(error => setNotice(error instanceof Error ? error.message : ad + ' hatası.'));
+                }
+            });
+            try {
+                await kaydedici.baslat();
+                setNotice('Dinleniyor (' + ad + '): konuşun; her cümle duraklayınca bilgisayara yazılır.');
+                await new Promise<void>(cozum => {
+                    bulutKopruDurdur.current = cozum;
+                    if (!prefs.bridgeDictationUnlimited) setTimeout(cozum, prefs.bridgeDictationSeconds * 1000);
+                });
+                setBridgeStopping(true);
+                await kaydedici.bitir();
+                await kuyruk;
+                void dongu();
+                await bosal();
+                setNotice(akis.durdu ? 'Köprü Dikte bitti ancak aktarım tamamlanamadı; bağlantıyı kontrol edin.'
+                    : parca ? 'Köprü Dikte bitti; ' + parca + ' cümle bilgisayara yazıldı.' : 'Konuşma duyulmadı.');
+            } catch (error) {
+                await kaydedici.bitir().catch(() => null);
+                setNotice(error instanceof Error ? error.message : 'Köprü Dikte başarısız.');
+            } finally {
+                bulutKopruDurdur.current = null;
+                setBridgeListening(false); setBridgeStopping(false); setBusy(false);
+            }
+            return;
+        }
         const tanitici = await dinleKopruDikte(olay => {
             akis.hedef = guncelPrefs.current.bridgeDictationLive ? olay.text : olay.kesin;
             void dongu();
@@ -219,15 +268,41 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
             {prefs.enabledTools.mouse && <button id="studio-fare" type="button" aria-pressed={mode === 'mouse'} onClick={() => onModeChange(mode === 'mouse' ? 'write' : 'mouse')}
                 className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${mode === 'mouse' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
                 {mode === 'mouse' ? <Keyboard size={16} /> : <MousePointer2 size={16} />}<span className="sr-only sm:not-sr-only">{mode === 'mouse' ? ' Yazıya dön' : ' Fare'}</span></button>}
-            {prefs.enabledTools.dictation && <button id="studio-dikte" type="button" disabled={busy} onClick={() => void act(async () => {
-                const text = await dictate(prefs.dictationLanguage);
-                if (prefs.dictationTarget === 'computer') await typeOnComputer(text, prefs);
-                else onContentChange(prefs.appendDictation && content ? `${content}${/\s$/.test(content) ? '' : ' '}${text}` : text);
-            }, prefs.dictationTarget === 'computer' ? 'Dikte bilgisayara yazıldı; not değişmedi.' : 'Dikte nota eklendi.')}
-                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm"><Mic size={16} /><span className="sr-only sm:not-sr-only"> Dikte</span></button>}
+            {prefs.enabledTools.dictation && <button id="studio-dikte" type="button" disabled={(busy && bulutDikte !== 'kayit') || bulutDikte === 'gonder'} aria-pressed={bulutDikte === 'kayit'} onClick={() => {
+                const yaz = async (text: string) => {
+                    if (prefs.dictationTarget === 'computer') await typeOnComputer(text, prefs);
+                    else onContentChange(prefs.appendDictation && content ? `${content}${/\s$/.test(content) ? '' : ' '}${text}` : text);
+                };
+                const basari = prefs.dictationTarget === 'computer' ? 'Dikte bilgisayara yazıldı; not değişmedi.' : 'Dikte nota eklendi.';
+                if (prefs.dictationEngine !== 'cloud') { void act(async () => yaz(await dictate(prefs.dictationLanguage)), basari); return; }
+                const ad = BULUT_SAGLAYICILAR.find(b => b.id === prefs.dictationCloud)?.ad ?? 'Bulut';
+                if (bulutDikte === 'kayit' && bulutKaydedici.current) {
+                    const kaydedici = bulutKaydedici.current; bulutKaydedici.current = null;
+                    setBulutDikte('gonder');
+                    void act(async () => {
+                        try {
+                            const wav = await kaydedici.bitir();
+                            if (!wav) throw new Error('Konuşma duyulmadı.');
+                            setNotice(ad + ' yazıya döküyor…');
+                            const metin = await sesiYaziyaCevir(wav, prefs.dictationCloud, prefs.dictationLanguage);
+                            if (!metin) throw new Error('Konuşma anlaşılamadı.');
+                            await yaz(metin);
+                        } finally { setBulutDikte(null); }
+                    }, basari);
+                    return;
+                }
+                const kaydedici = new SesKaydedici({ bolumle: false });
+                void kaydedici.baslat().then(() => {
+                    bulutKaydedici.current = kaydedici; setBulutDikte('kayit');
+                    setNotice('Dinleniyor (' + ad + '): bitirince Dikte düğmesine tekrar dokunun.');
+                }).catch(error => setNotice(error instanceof Error ? error.message : 'Mikrofon açılamadı.'));
+            }}
+                className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${bulutDikte ? 'border border-berry-300 bg-berry-50 text-berry-700 hover:bg-berry-100' : 'btn-primary'}`}>
+                {bulutDikte === 'gonder' ? <Loader2 size={16} className="animate-spin" /> : <Mic size={16} />}<span className="sr-only sm:not-sr-only">{bulutDikte === 'kayit' ? ' Dikteyi bitir' : bulutDikte === 'gonder' ? ' Yazıya dökülüyor…' : ' Dikte'}</span></button>}
             {prefs.enabledTools.bridgeDictation && <button id="studio-kopru-dikte" type="button" disabled={bridgeStopping || (busy && !bridgeListening)}
                 onClick={() => {
-                    if (bridgeListening) { setBridgeStopping(true); void stopBridgeDictation().catch(error => { setBridgeStopping(false); setNotice(error.message); }); }
+                    if (bridgeListening && bulutKopruDurdur.current) { setBridgeStopping(true); bulutKopruDurdur.current(); }
+                    else if (bridgeListening) { setBridgeStopping(true); void stopBridgeDictation().catch(error => { setBridgeStopping(false); setNotice(error.message); }); }
                     else void runBridgeDictation();
                 }} className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${bridgeListening ? 'border border-berry-300 bg-berry-50 text-berry-700 hover:bg-berry-100' : 'btn-primary'}`}>
                 <AudioLines size={16} /><span className="sr-only sm:not-sr-only">{bridgeListening ? (bridgeStopping ? ' Bitiriliyor…' : ' Dikteyi bitir') : ' Köprü Dikte'}</span>
