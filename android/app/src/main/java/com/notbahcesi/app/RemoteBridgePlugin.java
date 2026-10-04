@@ -980,10 +980,16 @@ public class RemoteBridgePlugin extends Plugin {
      * olmayabildiği için doğrudan bu bileşen seçilir; kurulu değilse null.
      */
     private ComponentName googleTanima() {
+        // Yeni telefonlarda servis "Google Konuşma Hizmetleri"nde (tts), eskilerde
+        // Google uygulamasında; ikisi de çevrimiçi Google tanımasını kullanır.
+        String[] paketler = { "com.google.android.tts", "com.google.android.googlequicksearchbox" };
         try {
-            for (ResolveInfo r : getContext().getPackageManager().queryIntentServices(new Intent(RecognitionService.SERVICE_INTERFACE), 0)) {
-                if (r.serviceInfo != null && "com.google.android.googlequicksearchbox".equals(r.serviceInfo.packageName))
-                    return new ComponentName(r.serviceInfo.packageName, r.serviceInfo.name);
+            java.util.List<ResolveInfo> servisler = getContext().getPackageManager().queryIntentServices(new Intent(RecognitionService.SERVICE_INTERFACE), 0);
+            for (String paket : paketler) {
+                for (ResolveInfo r : servisler) {
+                    if (r.serviceInfo != null && paket.equals(r.serviceInfo.packageName))
+                        return new ComponentName(r.serviceInfo.packageName, r.serviceInfo.name);
+                }
             }
         } catch (Exception ignored) { }
         return null;
