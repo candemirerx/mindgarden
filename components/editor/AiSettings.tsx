@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Check, Cloud, Cpu, Download, Eye, EyeOff, FilePlus2, Key, Loader2, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2, WifiOff, X } from 'lucide-react';
+import { Check, Cloud, Copy, Cpu, Download, ExternalLink, Eye, EyeOff, FilePlus2, Key, Loader2, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2, WifiOff, X } from 'lucide-react';
 import {
     DEFAULT_MODELS, KEY_HINTS, PROVIDER_LABELS, readActiveProvider, readCustomUrl,
     readModelList, readProviderKey, readProviderModel, readRawProviderModel, saveActiveProvider,
@@ -28,6 +28,54 @@ const secondaryClass = actionClass + ' border border-sand-300 bg-white text-sand
 const errorText = (error: unknown) => error instanceof Error ? error.message : 'İşlem tamamlanamadı. Lütfen tekrar deneyin.';
 
 /** Sekmeler yalnızca görünümü değiştirir; kullanılan motor ayrı, açık bir seçimdir. */
+/** Kopyalanabilir tek satır komut. */
+function Komut({ metin }: { metin: string }) {
+    const [kopyalandi, setKopyalandi] = useState(false);
+    return <div className="flex items-stretch gap-1.5">
+        <code className="min-w-0 flex-1 select-all overflow-x-auto whitespace-nowrap rounded-lg bg-sand-900 px-3 py-2.5 font-mono text-xs text-sand-50">{metin}</code>
+        <button type="button" aria-label="Komutu kopyala" onClick={() => { void navigator.clipboard?.writeText(metin).then(() => { setKopyalandi(true); setTimeout(() => setKopyalandi(false), 1500); }); }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-sand-300 bg-white text-sand-700 hover:bg-sand-100">
+            {kopyalandi ? <Check size={16} className="text-moss-700" /> : <Copy size={16} />}
+        </button>
+    </div>;
+}
+
+/**
+ * Bilgisayar tarayıcısında yerel yapay zekâ için Ollama kurulum rehberi.
+ * Tarayıcı yerel modeli doğrudan çalıştıramadığı için bilgisayarda Ollama
+ * gerekir; telefonda (Android) model cihazın içinde çalıştığı için gösterilmez.
+ */
+function OllamaRehberi({ acik }: { acik: boolean }) {
+    const site = typeof window !== 'undefined' ? window.location.origin : 'https://mindgarden-neon.vercel.app';
+    const mac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || navigator.userAgent);
+    const adim = 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-moss-100 text-xs font-bold text-moss-800';
+    return <details open={acik} className="rounded-2xl border border-moss-200 bg-moss-50/60">
+        <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-semibold text-moss-900">Kurulum adımları (bilgisayarda bir kez)</summary>
+        <ol className="space-y-4 px-4 pb-4 text-xs leading-relaxed text-sand-700">
+            <li className="flex gap-3"><span className={adim}>1</span><div className="min-w-0 flex-1 space-y-2">
+                <p><strong>Ollama'yı kurun.</strong> Ücretsiz, Windows / macOS / Linux için. Tarayıcı yapay zekâ modelini kendisi çalıştıramadığı için modeli bu küçük program çalıştırır.</p>
+                <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer" className="btn btn-secondary inline-flex min-h-[44px] gap-1.5 px-4 text-sm"><ExternalLink size={15} /> Ollama'yı indir</a>
+            </div></li>
+            <li className="flex gap-3"><span className={adim}>2</span><div className="min-w-0 flex-1 space-y-2">
+                <p><strong>Bir model indirin.</strong> {mac ? 'Terminal' : 'Komut İstemi'}'ne yapıştırın (bilgisayarın belleğine göre seçin):</p>
+                <p className="font-medium text-sand-800">8 GB RAM · hızlı</p><Komut metin="ollama pull gemma3:1b" />
+                <p className="font-medium text-sand-800">16 GB RAM · önerilen (telefondakinin 4 katı)</p><Komut metin="ollama pull gemma3:4b" />
+                <p className="font-medium text-sand-800">32 GB RAM ya da 12 GB+ ekran kartı · en akıllı</p><Komut metin="ollama pull gemma3:12b" />
+            </div></li>
+            <li className="flex gap-3"><span className={adim}>3</span><div className="min-w-0 flex-1 space-y-2">
+                <p><strong>Bu siteye izin verin.</strong> Ollama varsayılan olarak web sitelerinin bağlanmasını engeller; şu komut yalnız bu siteye izin verir:</p>
+                <Komut metin={mac ? `launchctl setenv OLLAMA_ORIGINS "${site}"` : `setx OLLAMA_ORIGINS "${site}"`} />
+                <p>Ardından Ollama'yı <strong>kapatıp yeniden açın</strong> ({mac ? 'menü çubuğundaki' : 'saatin yanındaki sistem tepsisindeki'} lama simgesi → Quit, sonra yeniden başlatın).</p>
+            </div></li>
+            <li className="flex gap-3"><span className={adim}>4</span><div className="min-w-0 flex-1 space-y-1">
+                <p><strong>Aşağıyı doldurun:</strong> sunucu adresi <code>http://localhost:11434</code>, model adı indirdiğiniz model (ör. <code>gemma3:4b</code>) → <strong>Yerel modu kullan</strong> → <strong>Modeli dene</strong>.</p>
+                <p>Tarayıcı "yerel ağdaki cihazlara erişim" izni sorarsa <strong>İzin ver</strong> deyin.</p>
+            </div></li>
+        </ol>
+        <p className="border-t border-moss-200 px-4 py-3 text-xs leading-relaxed text-sand-600">Kurulum istemeyen seçenek: <strong>Bulut</strong> sekmesinden kendi API anahtarınızla Gemini, OpenAI veya Anthropic kullanın.</p>
+    </details>;
+}
+
 export default function AiSettings() {
     const [tab, setTab] = useState<'cloud' | 'local'>('cloud');
     const [active, setActive] = useState<ProviderType>('gemini');
@@ -245,12 +293,13 @@ export default function AiSettings() {
                             </div>)}</div> : <div className="py-3 text-center"><Cpu size={25} className="mx-auto mb-2 text-sand-400" /><p className="text-sm font-medium text-sand-800">Henüz model eklenmedi</p><p className="mt-1 text-xs text-sand-600">İndirdiğiniz dosyayı yukarıdaki düğmeden seçin.</p></div>}
                             {supported === false && <div className="mt-3"><SettingsNote tone="error">Yerel motor bu sürümde kullanılamıyor. Güncel Android uygulamasını yükleyin.</SettingsNote></div>}
                         </SettingsSection>
-                    </> : <SettingsSection icon={Cpu} title="Ollama bağlantısı" description="Ollama çalışan bilgisayarın adresi ve kurulu model adı.">
+                    </> : <SettingsSection icon={Cpu} title="Ollama bağlantısı" description="Bilgisayarda yerel yapay zekâ Ollama programıyla çalışır; ilk kullanımda aşağıdaki adımları bir kez izleyin.">
                         <div className="space-y-4">
+                            <OllamaRehberi acik={active !== 'local'} />
                             <SettingsField label="Sunucu adresi" htmlFor="ai-ollama-url"><input id="ai-ollama-url" type="url" value={endpoint} onChange={event => { setEndpoint(event.target.value); saveDesktopLocalEndpoint(event.target.value); }} placeholder="http://localhost:11434" className={settingsFieldClass} /></SettingsField>
                             <SettingsField label="Ollama modeli" htmlFor="ai-ollama-model"><input id="ai-ollama-model" value={ollamaModel} autoCapitalize="none" spellCheck={false} onChange={event => { setOllamaModel(event.target.value); saveProviderModel('local', event.target.value); }} placeholder="gemma3:1b" className={settingsFieldClass} /></SettingsField>
                             <button type="button" disabled={!localReady} onClick={() => { saveProviderModel('local', ollamaModel); activate('local'); }} className={primaryClass + ' w-full'}>{active === 'local' ? <><Check size={16} /> Yerel mod kullanılıyor</> : <><Cpu size={16} /> Yerel modu kullan</>}</button>
-                            <p className="text-xs leading-relaxed text-sand-600">Ollama açık ve model kurulu olmalıdır. Tarayıcının ağ izinleri veya HTTPS kısıtlamaları bağlantıyı engelleyebilir.</p>
+                            <p className="text-xs leading-relaxed text-sand-600">Bağlanamıyorsa: Ollama açık mı, model adı doğru mu, 3. adımdaki izin komutu çalıştırılıp Ollama yeniden başlatıldı mı?</p>
                         </div>
                     </SettingsSection>}
                     {busy && <div role="status" aria-live="polite" className="flex items-center gap-2 rounded-xl bg-sand-200/50 px-4 py-3 text-sm text-sand-800"><Loader2 size={17} className="shrink-0 animate-spin" />{busy}</div>}
