@@ -1,7 +1,7 @@
 'use client';
 import './studio.css';
 
-import { useEffect, Suspense, useState, useRef, useCallback } from 'react';
+import { useEffect, Suspense, useState, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, MonitorSmartphone, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles } from 'lucide-react';
@@ -25,6 +25,7 @@ import { runCustomProviderDirect, CustomProviderError } from '@/lib/customProvid
 import { runLocalInference, isOfflineFallbackEnabled } from '@/lib/localLlm';
 import { Capacitor } from '@capacitor/core';
 import { imleciGorunurTut } from '@/lib/imlecGorunur';
+import { DENEME_AGACLARI, denemeTuru } from '@/lib/denemeAgaci';
 
 /**
  * Yerel taslak: uygulama kapanırken veya arka plana atılırken kayıt yetişmese
@@ -69,8 +70,10 @@ function taslakOku(nodeId: string): { title: string; content: string } | null {
 function EditorPageInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const gardenId = searchParams.get('id') || '';
-    const nodeId = searchParams.get('nodeId') || '';
+    // Deneme modu (/editor?deneme=baglanti): ayarlardan açılan, hiçbir bahçeye yazılmayan bellek içi not.
+    const deneme = denemeTuru(searchParams.get('deneme'));
+    const gardenId = deneme ? '' : searchParams.get('id') || '';
+    const nodeId = deneme ? 'deneme-' + deneme : searchParams.get('nodeId') || '';
 
     const { nodes, updateNode, fetchNodes, addNode } = useStore();
     const [content, setContent] = useState('');
@@ -145,7 +148,8 @@ function EditorPageInner() {
     });
     const saveRef = useRef<() => Promise<boolean>>(async () => true);
 
-    const currentNode = nodes.find(n => n.id === nodeId);
+    const sanalDugum = useMemo(() => deneme ? { id: 'deneme-' + deneme, content: DENEME_AGACLARI[deneme].baslik + '\n' + DENEME_AGACLARI[deneme].metin } : null, [deneme]);
+    const currentNode = sanalDugum ?? nodes.find(n => n.id === nodeId);
     const resultPending = pendingSpellCheck !== null || aiCakisma !== null;
     const visibleToolTabs = [
         { id: 'tools' as const, label: 'Yerel araçlar', Icon: Wrench, visible: araclarAcik, disabled: resultPending },
@@ -283,7 +287,8 @@ function EditorPageInner() {
         const icerik = content;
         setIsSaving(true);
         try {
-            const sonuc = await (updateNode(nodeId, `${baslik}\n${icerik}`) as Promise<unknown>);
+            // Deneme notu hiçbir yere kaydedilmez; kayıt her zaman başarılı sayılır.
+            const sonuc = await (deneme ? Promise.resolve(null) : updateNode(nodeId, `${baslik}\n${icerik}`) as Promise<unknown>);
             const hata = (sonuc as { error?: string } | null | undefined)?.error;
             if (hata) {
                 setKayitHatasi(String(hata));
@@ -306,7 +311,7 @@ function EditorPageInner() {
         } finally {
             setIsSaving(false);
         }
-    }, [title, content, nodeId, updateNode, hasChanges]);
+    }, [title, content, nodeId, updateNode, hasChanges, deneme]);
 
     // Otomatik kaydetme
     useEffect(() => {
@@ -336,13 +341,21 @@ function EditorPageInner() {
             content,
             hasChanges,
             // Onay bekleyen AI önizlemesi kullanıcı verisi değildir; taslağa yazılmaz.
-            taslakYazilabilir: pendingSpellCheck === null && aiCakisma === null
+            // Deneme notu ayrıca taslak olarak da saklanmaz.
+            taslakYazilabilir: pendingSpellCheck === null && aiCakisma === null && !deneme
         };
-    }, [nodeId, title, content, hasChanges, pendingSpellCheck, aiCakisma]);
+    }, [nodeId, title, content, hasChanges, pendingSpellCheck, aiCakisma, deneme]);
 
     useEffect(() => {
         saveRef.current = saveContent;
     }, [saveContent]);
+
+    // Ayarlardan deneme notuna geçilirken yazılmakta olan not önce kaydedilir.
+    useEffect(() => {
+        const kaydet = () => { void saveRef.current(); };
+        window.addEventListener('nb-editor-kaydet', kaydet);
+        return () => window.removeEventListener('nb-editor-kaydet', kaydet);
+    }, []);
 
     /**
      * Uygulama arka plana atıldığında, sekme kapatıldığında veya editörden

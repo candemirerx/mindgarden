@@ -2,7 +2,7 @@
 
 /**
  * "Deneme ağacında dene" kartı: bağlantı ya da yapay zekâ kurulduktan sonra
- * ayarlardan tek dokunuşla "Deneme" bahçesindeki sabit adlı ağaca geçer;
+ * ayarlardan tek dokunuşla bellek içi deneme notuna (bahçeye yazılmaz) geçer;
  * editör ilgili araç bölümü açık ve seçili açılır. Ayarlar penceresi kapanır.
  */
 import { useState } from 'react';
@@ -14,12 +14,12 @@ import { cx } from '@/components/ui/settings';
 const METIN: Record<DenemeTuru, { baslik: string; aciklama: string; dugme: string }> = {
     baglanti: {
         baslik: 'Bağlantıyı bir notta deneyin',
-        aciklama: '"Deneme" bahçesindeki "Bağlantı deneme" ağacı, bilgisayar araçları açık olarak metin editöründe açılır.',
+        aciklama: 'Bilgisayar araçları açık bir "Bağlantı deneme" notu editörde açılır. Not hiçbir bahçeye kaydedilmez; çıkınca kaybolur.',
         dugme: 'Bağlantı deneme ağacını aç'
     },
     yapayzeka: {
         baslik: 'Yapay zekâyı bir notta deneyin',
-        aciklama: '"Deneme" bahçesindeki "Yapay zekâ deneme" ağacı, yapay zekâ bölümü açık olarak metin editöründe açılır. İçinde bilerek yazım hataları olan bir paragraf vardır.',
+        aciklama: 'Yapay zekâ bölümü açık bir "Yapay zekâ deneme" notu editörde açılır; içinde bilerek yazım hataları olan bir paragraf vardır. Not hiçbir bahçeye kaydedilmez; çıkınca kaybolur.',
         dugme: 'Yapay zekâ deneme ağacını aç'
     }
 };
@@ -33,6 +33,7 @@ export default function DenemeAgaciDugmesi({ tur, vurgulu = false }: { tur: Dene
         setMesgul(true); setHata('');
         try {
             const adres = await denemeAgaciAdresi(tur);
+            window.dispatchEvent(new Event('nb-editor-kaydet')); // açık gerçek not varsa önce kaydedilir
             window.dispatchEvent(new Event('nb-ayarlari-kapat'));
             router.push(adres);
         } catch (e) {
