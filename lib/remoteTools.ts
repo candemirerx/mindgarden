@@ -9,13 +9,18 @@ export type RemoteMode = 'write' | 'mouse' | 'dictation' | 'shortcuts' | 'screen
 export type DikteHedefi = 'editor' | 'computer' | 'both';
 export const DIKTE_HEDEFLERI: DikteHedefi[] = ['editor', 'computer', 'both'];
 export const dikteHedefiGecerli = (v: unknown, yedek: DikteHedefi): DikteHedefi => DIKTE_HEDEFLERI.includes(v as DikteHedefi) ? v as DikteHedefi : yedek;
+/**
+ * Bilgisayara Yaz'ın biçimi: dugme (düğmeye basınca notun tamamı bir kerede)
+ * ya da canli (notta yazdıkça bilgisayara yansır; eski Köprü Yaz).
+ */
+export type YazBicimi = 'dugme' | 'canli';
 /** Hedef not metnini içeriyor mu / bilgisayarı içeriyor mu. */
 export const hedefNota = (h: DikteHedefi) => h !== 'computer';
 export const hedefBilgisayara = (h: DikteHedefi) => h !== 'editor';
 
 export type ConnectionMode = 'wifi' | 'bluetooth' | 'pc-wifi' | 'pc-bluetooth';
-export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'bridgeWrite' | 'computerWrite' | 'clipboard' | 'shortcuts' | 'screen';
-export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'bridgeWrite', 'computerWrite', 'clipboard', 'shortcuts', 'screen'];
+export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'clipboard' | 'shortcuts' | 'screen';
+export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'computerWrite', 'clipboard', 'shortcuts', 'screen'];
 /**
  * Sıralı makronun tek adımı. 'macro' adımı başka bir makroyu kimliğiyle
  * (value) çağırır; 'wait' adımı value milisaniye bekler; diğer türler tekil
@@ -179,6 +184,9 @@ export type RemotePrefs = {
     dictationTarget: DikteHedefi;
     /** Köprü Dikte'nin yazacağı yer; varsayılan yalnız bilgisayar. */
     bridgeDictationTarget: DikteHedefi;
+    /** Bilgisayara Yaz (eski Köprü Yaz ile birleşik): biçim ve hedef. */
+    writeMode: YazBicimi;
+    writeTarget: DikteHedefi;
     enabledTools: Record<RemoteToolId, boolean>;
     macros: RemoteMacro[];
     profiles: RemoteProfile[];
@@ -189,15 +197,26 @@ export type RemotePrefs = {
 const key = 'nb-remote-prefs-v1';
 const defaults: RemotePrefs = {
     connection: 'wifi', cardUrl: 'http://192.168.4.1', helperUrl: '', helperToken: '', helperBluetoothAddress: '',
-    mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', appendDictation: true, dictationTarget: 'editor', bridgeDictationTarget: 'computer',
-    enabledTools: { mouse: true, dictation: true, bridgeDictation: true, bridgeWrite: true, computerWrite: true, clipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
+    mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', appendDictation: true, dictationTarget: 'editor', bridgeDictationTarget: 'computer', writeMode: 'dugme', writeTarget: 'both',
+    enabledTools: { mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, clipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
 };
 
+/**
+ * Kayıtlı araç açıklıkları. Eski sürümde ayrı olan "Köprü Yaz" (bridgeWrite) ve
+ * "Bilgisayara Yaz" tek araçta birleşti: ikisinden biri açıksa birleşik araç açık.
+ */
+function araclariBirlestir(kayitli: unknown): RemotePrefs['enabledTools'] {
+    const k = (kayitli && typeof kayitli === 'object' ? kayitli : {}) as Record<string, unknown>;
+    const arac = { ...defaults.enabledTools, ...k } as Record<string, boolean>;
+    if ('bridgeWrite' in k || 'computerWrite' in k) arac.computerWrite = k.computerWrite !== false || k.bridgeWrite !== false;
+    delete arac.bridgeWrite;
+    return arac as RemotePrefs['enabledTools'];
+}
 export function remotePrefs(): RemotePrefs {
     if (typeof window === 'undefined') return defaults;
     try {
         const data = JSON.parse(localStorage.getItem(key) || '{}');
-        return { ...defaults, ...data, dictationTarget: dikteHedefiGecerli(data.dictationTarget, defaults.dictationTarget), bridgeDictationTarget: dikteHedefiGecerli(data.bridgeDictationTarget, defaults.bridgeDictationTarget), enabledTools: { ...defaults.enabledTools, ...data.enabledTools }, macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts.map(normalizeScreenLayout) : [] };
+        return { ...defaults, ...data, dictationTarget: dikteHedefiGecerli(data.dictationTarget, defaults.dictationTarget), bridgeDictationTarget: dikteHedefiGecerli(data.bridgeDictationTarget, defaults.bridgeDictationTarget), writeMode: data.writeMode === 'canli' ? 'canli' : 'dugme', writeTarget: dikteHedefiGecerli(data.writeTarget, defaults.writeTarget), enabledTools: araclariBirlestir(data.enabledTools), macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts.map(normalizeScreenLayout) : [] };
     } catch { return defaults; }
 }
 export function saveRemotePrefs(prefs: RemotePrefs) {

@@ -233,7 +233,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 description: 'Editörde Bilgisayar sekmesi.',
                 adimlar: [
                     '**Ayarlar → Düzenleme araçları → Bilgisayar araçları** sekmesinde **Bilgisayar araçlarını editörde göster** anahtarını açın.',
-                    'Aynı ekranda hangi araçların (Fare, Dikte, Köprü Yaz, Panoya Gönder…) görüneceğini tek tek seçebilirsiniz.',
+                    'Aynı ekranda hangi araçların (Fare, Dikte, Bilgisayara Yaz, Panoya Gönder…) görüneceğini tek tek seçebilirsiniz.',
                     'Editörde **Bilgisayar** sekmesine dokunun; araçlar ikinci satırda görünür.',
                 ],
                 ayarId: 'tools',
@@ -287,7 +287,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 adimlar: [
                     '**Fare** aracında yüzeyde parmağınızı kaydırınca imleç hareket eder; dokunmak sol tıktır. Alttaki düğmelerle sağ tık ve kaydırma yapılır.',
                     '**Dikte** konuşmanızı yazıya çevirir. Sonucun **nota**, **bilgisayara** ya da **ikisine birden** yazılacağını **Ayarlar → Düzenleme araçları → Bilgisayar araçları** listesinde Dikte satırındaki **dişli** simgesinden seçersiniz.',
-                    '**Köprü Yaz** açıkken notta yazdığınız her şey aynı anda bilgisayara da yazılır.',
+                    '**Bilgisayara Yaz** notu bilgisayara yazar. Aracın dişlisinden biçimi seçersiniz: **Düğmeyle** (notun tamamı bir kerede) ya da **Yazdıkça canlı** (notta yazdığınız her şey anında bilgisayara da yazılır). Hedef olarak bilgisayar, not metni ya da ikisi birden seçilebilir.',
                     '**Köprü Dikte** konuşurken yazar: sözünüz cümle sonu beklenmeden görünür. Nereye yazılacağını (nota, bilgisayara ya da ikisine birden), dinleme süresini ve durdurana kadar dinleme seçeneğini aracın kendi **dişli** simgesinden ayarlarsınız. Ses tanıma motorunu ise **Bilgisayar bağlantısı → Dikte motoru** bölümünden seçersiniz.',
                 ],
             },

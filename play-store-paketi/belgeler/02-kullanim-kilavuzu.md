@@ -161,7 +161,7 @@ Telefonunuzu bilgisayarın klavyesi, faresi ve panosu gibi kullanın. Bu seviyen
 *Editörde Bilgisayar sekmesi.*
 
 1. **Ayarlar → Düzenleme araçları → Bilgisayar araçları** sekmesinde **Bilgisayar araçlarını editörde göster** anahtarını açın.
-2. Aynı ekranda hangi araçların (Fare, Dikte, Köprü Yaz, Panoya Gönder…) görüneceğini tek tek seçebilirsiniz.
+2. Aynı ekranda hangi araçların (Fare, Dikte, Bilgisayara Yaz, Panoya Gönder…) görüneceğini tek tek seçebilirsiniz.
 3. Editörde **Bilgisayar** sekmesine dokunun; araçlar ikinci satırda görünür.
 
 ### 4.2 Size uygun bağlantıyı seçin
@@ -201,7 +201,7 @@ Telefonunuzu bilgisayarın klavyesi, faresi ve panosu gibi kullanın. Bu seviyen
 
 1. **Fare** aracında yüzeyde parmağınızı kaydırınca imleç hareket eder; dokunmak sol tıktır. Alttaki düğmelerle sağ tık ve kaydırma yapılır.
 2. **Dikte** konuşmanızı yazıya çevirir. Sonucun **nota**, **bilgisayara** ya da **ikisine birden** yazılacağını **Ayarlar → Düzenleme araçları → Bilgisayar araçları** listesinde Dikte satırındaki **dişli** simgesinden seçersiniz.
-3. **Köprü Yaz** açıkken notta yazdığınız her şey aynı anda bilgisayara da yazılır.
+3. **Bilgisayara Yaz** notu bilgisayara yazar. Aracın dişlisinden biçimi seçersiniz: **Düğmeyle** (notun tamamı bir kerede) ya da **Yazdıkça canlı** (notta yazdığınız her şey anında bilgisayara da yazılır). Hedef olarak bilgisayar, not metni ya da ikisi birden seçilebilir.
 4. **Köprü Dikte** konuşurken yazar: sözünüz cümle sonu beklenmeden görünür. Nereye yazılacağını (nota, bilgisayara ya da ikisine birden), dinleme süresini ve durdurana kadar dinleme seçeneğini aracın kendi **dişli** simgesinden ayarlarsınız. Ses tanıma motorunu ise **Bilgisayar bağlantısı → Dikte motoru** bölümünden seçersiniz.
 
 ### 4.6 PC yardımcısı ne zaman gerekir?

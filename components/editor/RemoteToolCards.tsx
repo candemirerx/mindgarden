@@ -19,15 +19,14 @@ const items = {
     mouse: { title: 'Fare', subtitle: 'Dokunarak sol tık, sürükleyerek fare hareketi ve kaydırma.', Icon: MousePointer2 },
     dictation: { title: 'Dikte', subtitle: 'Sesi nota, bilgisayara ya da ikisine birden yaz; hedefi dişliden seç.', Icon: Mic },
     bridgeDictation: { title: 'Köprü Dikte', subtitle: 'Belirlenen süre konuş; söz nota, bilgisayara ya da ikisine birden yazılır. Süre ve hedef dişlide.', Icon: AudioLines },
-    bridgeWrite: { title: 'Köprü Yaz', subtitle: 'Notta yazarken aynı metin bilgisayara da yazılır; açıp kapatmak için editördeki düğmeyi kullan.', Icon: Keyboard },
-    computerWrite: { title: 'Bilgisayara Yaz', subtitle: 'Not metnini kartın klavyesiyle bilgisayardaki odaklı alana yaz.', Icon: Keyboard },
+    computerWrite: { title: 'Bilgisayara Yaz', subtitle: 'Notu bilgisayardaki odaklı alana yazar: düğmeye basınca bir kerede ya da yazdıkça canlı. Biçim ve hedef dişlide.', Icon: Keyboard },
     clipboard: { title: 'Bilgisayar Panosuna Gönder', subtitle: 'Not metnini PC pano yardımcısına gönder.', Icon: Clipboard },
     shortcuts: { title: 'Kısayollar', subtitle: 'Kişisel klavye, metin ve konum makrolarını editördeki panodan çalıştır.', Icon: Wand2 },
     screen: { title: 'Ekran', subtitle: 'Kendi tasarladığın bölmeli ekran: fare, yön tuşları, metin ve kısayollar bir arada.', Icon: LayoutDashboard }
 } satisfies Record<RemoteToolId, { title: string; subtitle: string; Icon: typeof MousePointer2 }>;
 
 /** Kendi ayarı olan araçlar: satırdaki dişli, ayar panelini açar. */
-const AYARLI = ['dictation', 'bridgeDictation'] as const;
+const AYARLI = ['dictation', 'bridgeDictation', 'computerWrite'] as const;
 type AyarliArac = typeof AYARLI[number];
 const ayarli = (id: RemoteToolId): id is AyarliArac => (AYARLI as readonly string[]).includes(id);
 

@@ -42,6 +42,11 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     const [basariliDugme, setBasariliDugme] = useState<'pano' | 'yaz' | null>(null);
     /** Köprü Yaz: bilgisayara gönderilmiş metin, gönderilecek son metin ve kilitler. */
     const kopruSon = useRef('');
+    /** Canlı yazma açıldığındaki not (hedef yalnız bilgisayarsa kapanınca geri yüklenir). */
+    const kopruIlk = useRef<string | null>(null);
+    const kopruMesaji = (hedef: string) => hedef === 'computer'
+        ? 'Canlı yazma açık: yazdıklarınız bilgisayara yazılıyor; kapatınca not eski hâline döner.'
+        : 'Canlı yazma açık: notta yazdıklarınız bilgisayara da yazılıyor.';
     const kopruHedef = useRef('');
     const kopruCalisiyor = useRef(false);
     const kopruDurdu = useRef(false);
@@ -53,10 +58,12 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     const guncelPrefs = useRef(prefs);
     guncelPrefs.current = prefs;
     useEffect(() => {
-        if (kopruYaz && (!prefs.enabledTools.bridgeWrite || (mode !== 'write' && mode !== 'dictation'))) {
-            setKopruYaz(false); setKopruDurum(''); setKopruHata(false);
+        // Canlı yazma yalnız araç açık, biçim canlı ve hedef bilgisayarı içeriyorken sürer.
+        if (kopruYaz && (!(prefs.enabledTools.computerWrite && prefs.writeMode === 'canli' && hedefBilgisayara(prefs.writeTarget)) || (mode !== 'write' && mode !== 'dictation'))) {
+            kopruKapat();
         }
-    }, [kopruYaz, mode, prefs.enabledTools.bridgeWrite]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [kopruYaz, mode, prefs.enabledTools.computerWrite, prefs.writeMode, prefs.writeTarget]);
     useEffect(() => {
         if (
             (mode === 'mouse' && !prefs.enabledTools.mouse) ||
@@ -215,7 +222,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                 kopruSon.current = await metinFarkiAktar(kopruHedef.current, kopruSon.current, guncelPrefs.current, yazilan => { kopruSon.current = yazilan; });
             }
             setKopruHata(false);
-            setKopruDurum('Köprü Yaz açık: notta yazdıklarınız bilgisayara da yazılıyor.');
+            setKopruDurum(kopruMesaji(guncelPrefs.current.writeTarget));
         } catch (error) {
             kopruDurdu.current = true;
             setKopruHata(true);
@@ -226,20 +233,24 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
         }
     };
 
-    /** Köprü Yaz düğmesi: açılırken o anki not gönderilmez, sonrası aktarılır. */
+    /** Canlı yazmayı kapatır; hedef yalnız bilgisayarsa not açıldığı hâline döner. */
+    function kopruKapat() {
+        kopruDurdu.current = true;
+        setKopruYaz(false); setKopruDurum(''); setKopruHata(false);
+        if (guncelPrefs.current.writeTarget === 'computer' && kopruIlk.current !== null) onContentChange(kopruIlk.current);
+        kopruIlk.current = null;
+    }
+    /** Bilgisayara Yaz'ın canlı biçimi: açılırken o anki not gönderilmez, sonrası aktarılır. */
     const kopruYazDegistir = () => {
         setNotice('');
         setKopruHata(false);
+        if (kopruYaz) { kopruKapat(); return; }
         kopruDurdu.current = false;
-        if (kopruYaz) {
-            setKopruYaz(false);
-            setKopruDurum('');
-            return;
-        }
+        kopruIlk.current = guncelIcerik.current;
         kopruSon.current = guncelIcerik.current;
         kopruHedef.current = guncelIcerik.current;
         setKopruYaz(true);
-        setKopruDurum('Köprü Yaz açık: notta yazdıklarınız bilgisayara da yazılıyor.');
+        setKopruDurum(kopruMesaji(guncelPrefs.current.writeTarget));
     };
 
     useEffect(() => {
@@ -316,17 +327,21 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                 }} className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${bridgeListening ? 'border border-berry-300 bg-berry-50 text-berry-700 hover:bg-berry-100' : 'btn-primary'}`}>
                 <AudioLines size={16} /><span className="sr-only sm:not-sr-only">{bridgeListening ? (bridgeStopping ? ' Bitiriliyor…' : ' Dikteyi bitir') : ' Köprü Dikte'}</span>
             </button>}
-            {prefs.enabledTools.bridgeWrite && <button id="studio-kopru-yaz" type="button" aria-pressed={kopruYaz} onClick={kopruYazDegistir}
-                className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${kopruYaz ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
-                <Keyboard size={16} /><span className="sr-only sm:not-sr-only">{kopruYaz ? ' Köprü Yaz açık' : ' Köprü Yaz'}</span>
-            </button>}
+            {prefs.enabledTools.computerWrite && (() => {
+                const pcDisi = !hedefBilgisayara(prefs.writeTarget);
+                const ipucu = pcDisi ? 'Hedef yalnız not metni: bilgisayara gönderilmez (ayar: dişli)' : prefs.writeMode === 'canli' ? 'Canlı: notta yazdıkça bilgisayara yazılır' : 'Notu bilgisayara yaz';
+                if (prefs.writeMode === 'canli') return <button id="studio-bilgisayara-yaz" type="button" aria-pressed={kopruYaz} disabled={pcDisi} title={ipucu} onClick={kopruYazDegistir}
+                    className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${kopruYaz ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
+                    <Keyboard size={16} /><span className="sr-only sm:not-sr-only">{kopruYaz ? ' Canlı yazma açık' : ' Bilgisayara yaz (canlı)'}</span>
+                </button>;
+                return <button id="studio-bilgisayara-yaz" type="button" disabled={busy || !content.trim() || pcDisi} title={ipucu} onClick={() => void bildirimliGonder('yaz', () => typeOnComputer(content, prefs), 'Bilgisayara yazılıyor…', 'Metin bilgisayara yazıldı ✓')}
+                    className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'yaz' ? <Check size={16} /> : <Send size={16} />}<span className="sr-only sm:not-sr-only"> Bilgisayara yaz</span></button>;
+            })()}
             {kopruYaz && kopruHata && <button type="button" id="studio-kopru-yaz-yeniden" onClick={() => { kopruDurdu.current = false; setKopruHata(false); kopruHedef.current = guncelIcerik.current; void kopruAktar(); }}
                 className="btn btn-secondary min-h-11 shrink-0 px-3 text-sm">Yeniden dene</button>}
-            {prefs.enabledTools.computerWrite && <button id="studio-bilgisayara-yaz" type="button" disabled={busy || !content.trim()} onClick={() => void bildirimliGonder('yaz', () => typeOnComputer(content, prefs), 'Bilgisayara yazılıyor…', 'Metin bilgisayara yazıldı ✓')}
-                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'yaz' ? <Check size={16} /> : <Send size={16} />}<span className="sr-only sm:not-sr-only"> Bilgisayara yaz</span></button>}
+            {kopruYaz && <span id="studio-kopru-yaz-durum" role="status" className={`max-w-56 shrink-0 text-xs ${kopruHata ? 'text-berry-700' : 'text-moss-700'}`}>{kopruDurum}</span>}
             {prefs.enabledTools.clipboard && <button id="studio-pc-panosu" type="button" disabled={busy || !content.trim()} onClick={() => void panoyaGonder()}
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'pano' ? <Check size={16} /> : <Clipboard size={16} />}<span className="sr-only sm:not-sr-only"> PC panosu</span></button>}
-            {kopruYaz && <span id="studio-kopru-yaz-durum" role="status" className={`max-w-56 shrink-0 text-xs ${kopruHata ? 'text-berry-700' : 'text-moss-700'}`}>{kopruDurum}</span>}
             {notice && <span role="status" className="max-w-48 shrink-0 text-xs text-sand-700">{notice}</span>}
             {panoBildirim && typeof document !== 'undefined' && createPortal(
                 <div id="studio-pano-bildirim" role="status" aria-live="polite"

@@ -400,9 +400,12 @@ async function main() {
         await assert('!document.querySelector("[data-kisayol-panosu]") && !!document.querySelector(".studio-paper")','pressing the tool again returns to the note');
         // Kopru Yaz: ayri bir panel yok; notun kendi yazi alani yerinde kalir
         // ve oraya yazilan metin ayni anda bilgisayara da gonderilir.
-        await evaluate('document.querySelector("#studio-kopru-yaz").click()');
+        // Köprü Yaz artık Bilgisayara Yaz aracının "Yazdıkça canlı" biçimi.
+        await evaluate('(()=>{const p=JSON.parse(localStorage.getItem("nb-remote-prefs-v1"));p.writeMode="canli";p.writeTarget="both";p.enabledTools.computerWrite=true;localStorage.setItem("nb-remote-prefs-v1",JSON.stringify(p));window.dispatchEvent(new Event("focus"));return true})()');
+        await bekle(400);
+        await evaluate('document.querySelector("#studio-bilgisayara-yaz").click()');
         await bekle(300);
-        await assert('document.querySelector("#studio-kopru-yaz").getAttribute("aria-pressed") === "true"','bridge write turns on from its button');
+        await assert('document.querySelector("#studio-bilgisayara-yaz").getAttribute("aria-pressed") === "true"','bridge write turns on from its button');
         await assert('!document.querySelector("#kopru-yaz-paneli") && !document.querySelector("#kopru-yaz-alani")','bridge write opens no separate panel');
         await assert('!!document.querySelector("#studio-kopru-yaz-durum") && !!document.querySelector(".studio-text")','the note stays in place and the status line shows');
         await evaluate('(()=>{const t=document.querySelector(".studio-text");Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,"value").set.call(t,t.value+" Kopru deneme");t.dispatchEvent(new Event("input",{bubbles:true}));return true})()');
@@ -410,9 +413,9 @@ async function main() {
         await assert('document.querySelector(".studio-text").value.trim().endsWith("Kopru deneme")','typing stays in the note while bridge write is on');
         await assert('document.querySelector("#studio-kopru-yaz-durum").textContent.trim().length > 10','bridge write reports its transfer status');
         await cek(['docs/reviews/studio/kopru-yaz.png']);
-        await evaluate('document.querySelector("#studio-kopru-yaz").click()');
+        await evaluate('document.querySelector("#studio-bilgisayara-yaz").click()');
         await bekle(300);
-        await assert('document.querySelector("#studio-kopru-yaz").getAttribute("aria-pressed") === "false" && !document.querySelector("#studio-kopru-yaz-durum")','bridge write turns off from the same button');
+        await assert('document.querySelector("#studio-bilgisayara-yaz").getAttribute("aria-pressed") === "false" && !document.querySelector("#studio-kopru-yaz-durum")','bridge write turns off from the same button');
         await evaluate('(()=>{const t=document.querySelector("textarea");Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,"value").set.call(t,"Verified studio note ".repeat(300));t.dispatchEvent(new Event("input",{bubbles:true}));})()');
         await bekle(2000);
         await assert('document.querySelector("textarea").value.startsWith("Verified studio note")','typing');
