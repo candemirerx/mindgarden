@@ -11,7 +11,13 @@ const isMobileApp = isClient && (
 
 // Production Vercel URL'i - mobil uygulama için
 // not-bahcesi.vercel.app kaldırılmıştı (404 dönüyordu), ayakta olan dağıtım kullanılıyor.
-const VERCEL_URL = process.env.NEXT_PUBLIC_VERCEL_URL || 'https://mindgarden-neon.vercel.app';
+// NEXT_PUBLIC_VERCEL_URL kullanılmaz: Vercel bu adı kendisi doldurur (derlemeye
+// özel, korumalı ve https'siz adres), web sürümündeki indirme bağlantısı 404
+// veriyordu. Kalıcı site adresi NEXT_PUBLIC_SITE_URL ile verilir.
+const VERCEL_URL = (() => {
+    const adres = (process.env.NEXT_PUBLIC_SITE_URL || 'https://mindgarden-neon.vercel.app').trim().replace(/\/+$/, '');
+    return /^https?:\/\//.test(adres) ? adres : 'https://' + adres;
+})();
 
 // API Base URL belirleme
 export const API_BASE_URL = (() => {

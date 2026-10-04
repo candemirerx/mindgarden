@@ -38,11 +38,13 @@ $secret = [System.IO.File]::ReadAllText($tokenPath, [System.Text.Encoding]::ASCI
 if ($secret.Length -lt 32) { throw 'Anahtar dosyası geçersiz. Yardımcı programı başlatmadan önce kontrol edin.' }
 
 if ($RfcommOnly) {
-    Add-Type -Path (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll')
+    try { Add-Type -Path (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll') }
+    catch { Write-Output ('BluetoothError:' + $_.Exception.Message); exit 3 }
     # Bluetooth radyosu uyuyup uyandığında veya Windows yığını sıfırlandığında
     # dinleyici hata verir. Önceden döngü bitiyor ve Bluetooth yardımcı yeniden
     # açılana kadar çalışmıyordu; artık dinleyici kısa beklemeyle yeniden kurulur.
     $hazirYazildi = $false
+    $hataYazildi = $false
     while ($true) {
     $bluetooth = $null
     try {
@@ -93,6 +95,8 @@ if ($RfcommOnly) {
             }
         }
     } catch {
+        # Sebep ana pencereye bir kez bildirilir (Bluetooth yok/kapalı vb.); dinleyici denemeyi sürdürür.
+        if (-not $hataYazildi) { Write-Output ('BluetoothError:' + $_.Exception.Message); $hataYazildi = $true }
         Start-Sleep -Seconds 2
     } finally { if ($bluetooth) { try { $bluetooth.Stop() } catch { } } }
     }
@@ -364,17 +368,33 @@ try {
     }
     $serialReady = $false
     if ($serialJob) {
-        $deadline = [DateTime]::UtcNow.AddSeconds(8)
+        # Yavaş bilgisayarda alt süreç C# bileşenini derleyip kütüphaneyi yüklerken 8 sn yetmiyordu.
+        Write-Host 'Bluetooth hazırlanıyor…' -ForegroundColor DarkGray
+        $deadline = [DateTime]::UtcNow.AddSeconds(25)
         do {
             $jobOutput = @(Receive-Job $serialJob -Keep -ErrorAction SilentlyContinue)
             $readyMarker = if ($directBluetooth) { 'BluetoothReady:RFCOMM' } else { "BluetoothReady:$BluetoothPort" }
             $serialReady = @($jobOutput | Where-Object { "$_" -eq $readyMarker }).Count -gt 0
-            if (-not $serialReady) { Start-Sleep -Milliseconds 200 }
-        } while (-not $serialReady -and $serialJob.State -eq 'Running' -and [DateTime]::UtcNow -lt $deadline)
+            $btHata = @($jobOutput | Where-Object { "$_" -like 'BluetoothError:*' } | Select-Object -First 1)
+            if (-not $serialReady -and -not $btHata) { Start-Sleep -Milliseconds 200 }
+        } while (-not $serialReady -and -not $btHata -and $serialJob.State -eq 'Running' -and [DateTime]::UtcNow -lt $deadline)
     }
     if ($serialReady -and $directBluetooth) { Write-Host 'Klasik Bluetooth: doğrudan alıcı hazır; COM portu gerekmez. Windows ve telefonu eşleştirin.' }
     elseif ($serialReady) { Write-Host "Klasik Bluetooth: gelen $BluetoothPort portu hazır (Windows ile önce eşleştirin)." }
-    elseif ($serialJob) { Write-Warning "Bluetooth $BluetoothPort açılamadı. Portu başka bir program kullanıyorsa kapatıp yardımcıyı yeniden açın." }
+    elseif ($serialJob) {
+        $sebep = if ($btHata) { ("$($btHata[0])" -replace '^BluetoothError:', '').Trim() } else { '' }
+        $radyo = @(Get-PnpDevice -Class Bluetooth -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.FriendlyName -match 'Adapter|Radio|Bağdaştırıcı|Wireless Bluetooth|Generic Bluetooth' -or $_.InstanceId -like 'USB*' })
+        if (-not $radyo) {
+            Write-Warning 'Bu bilgisayarda Bluetooth bulunamadı (ya da sürücüsü yok). Wi‑Fi ile bağlanabilirsiniz; Bluetooth için bir Bluetooth adaptörü gerekir.'
+        } elseif ($sebep -match 'No supported Bluetooth protocol stack|radio|radyo|not available|kullanılamıyor|10050|10051') {
+            Write-Warning 'Bluetooth KAPALI. Windows > Ayarlar > Bluetooth ve cihazlar > Bluetooth''u açın, sonra bu pencereyi kapatıp yardımcıyı yeniden başlatın. Wi‑Fi bu arada çalışır.'
+        } elseif ($sebep) {
+            Write-Warning "Bluetooth alıcısı açılamadı: $sebep"
+            Write-Host 'Wi‑Fi çalışır. Bluetooth için: Bluetooth açık mı, başka bir Not Bahçesi yardımcısı penceresi açık mı? Kapatıp bunu yeniden başlatın.' -ForegroundColor Yellow
+        } else {
+            Write-Warning 'Bluetooth alıcısı zamanında hazır olmadı. Wi‑Fi çalışır; Bluetooth için yardımcıyı kapatıp yeniden açın.'
+        }
+    }
     else { Write-Host 'Bluetooth için Windows > Diğer Bluetooth ayarları > COM Bağlantı Noktaları > Ekle > Gelen seçin; ardından yardımcıyı yeniden açın.' }
     if ($TestMode) { Write-Warning 'TestMode: gelen metin gerçek panoya yazılmaz.' }
     Write-Host 'Yalnız güvenilen Özel ağda kullanın. Kapatmak için Ctrl+C.'
