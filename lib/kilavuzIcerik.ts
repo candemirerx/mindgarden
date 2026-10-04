@@ -113,7 +113,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 adimlar: [
                     'Bahçe kartından **Tuval** görünümünü açın.',
                     '**İki parmakla** yakınlaştırıp uzaklaştırın, **parmağınızla sürükleyerek** gezinin.',
-                    'Bir düğüme dokununca eylem menüsü açılır: tam editör, başlığı kopyalama, yeni dal ekleme, düğüm tipini değiştirme.',
+                    'Bir düğüme dokununca eylem menüsü açılır: tam editör, içeriği kopyalama, ekleme ve budama. Kök notta **Ağaç Ekle** yanına yeni bir ağaç koyar, alttaki **+** ise ona dal ekler; dalda alttaki **+** yaprak, üstteki artı yanına yeni dal ekler.',
                     '**Ağaç yönetimi** düğmesiyle tüm ağaçları toplu açıp kapatabilirsiniz. Boş alana dokunmak menüleri kapatır.',
                 ],
             },

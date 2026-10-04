@@ -19,8 +19,8 @@ export const hedefNota = (h: DikteHedefi) => h !== 'computer';
 export const hedefBilgisayara = (h: DikteHedefi) => h !== 'editor';
 
 export type ConnectionMode = 'wifi' | 'bluetooth' | 'pc-wifi' | 'pc-bluetooth';
-export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'clipboard' | 'shortcuts' | 'screen';
-export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'computerWrite', 'clipboard', 'shortcuts', 'screen'];
+export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'enter' | 'clipboard' | 'shortcuts' | 'screen';
+export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'computerWrite', 'enter', 'clipboard', 'shortcuts', 'screen'];
 /**
  * Sıralı makronun tek adımı. 'macro' adımı başka bir makroyu kimliğiyle
  * (value) çağırır; 'wait' adımı value milisaniye bekler; diğer türler tekil
@@ -198,7 +198,7 @@ const key = 'nb-remote-prefs-v1';
 const defaults: RemotePrefs = {
     connection: 'wifi', cardUrl: 'http://192.168.4.1', helperUrl: '', helperToken: '', helperBluetoothAddress: '',
     mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', appendDictation: true, dictationTarget: 'editor', bridgeDictationTarget: 'computer', writeMode: 'dugme', writeTarget: 'both',
-    enabledTools: { mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, clipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
+    enabledTools: { mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, enter: true, clipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
 };
 
 /**

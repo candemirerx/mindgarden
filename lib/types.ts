@@ -57,7 +57,7 @@ export interface StoreState {
     deleteGarden: (id: string) => Promise<void>;
     fetchGardens: () => Promise<void>;
     setNodes: (nodes: TreeNode[]) => void;
-    addNode: (gardenId: string, content: string, parentId?: string | null, position?: { x: number; y: number }) => Promise<TreeNode | null>;
+    addNode: (gardenId: string, content: string, parentId?: string | null, position?: { x: number; y: number }, createdAt?: string) => Promise<TreeNode | null>;
     updateNode: (id: string, content: string) => Promise<void>;
     updateNodePosition: (id: string, x: number, y: number) => Promise<void>;
     deleteNode: (id: string) => Promise<void>;

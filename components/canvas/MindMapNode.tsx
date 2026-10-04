@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Pencil, Plus, ChevronDown, TreePine, Leaf, Check, Scissors, GitBranch } from 'lucide-react';
+import { Copy, Pencil, Plus, ChevronDown, TreePine, Leaf, Check, Scissors, GitBranch, Sprout } from 'lucide-react';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 
@@ -38,6 +38,8 @@ interface MindMapNodeProps {
     node: MindNode;
     onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
     onAddSibling?: (siblingId: string, direction: 'left' | 'right') => void;
+    /** Yalnız kök ağaçta: bu ağacın hemen yanına yeni bir ağaç ekler. */
+    onAddTree?: (rootId: string) => void;
     onEdit: (node: MindNode) => void;
     depth: number;
 }
@@ -46,6 +48,7 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     node,
     onAddChild,
     onAddSibling,
+    onAddTree,
     onEdit,
     depth
 }) => {
@@ -205,15 +208,17 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         >
                             {showContentCopied ? <Check size={18} className="text-moss-600" /> : <Copy size={18} />}
                         </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                            className="flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-moss-700 transition-colors duration-150 hover:bg-moss-100 active:scale-95 touch-manipulation outline-none focus-visible:bg-moss-100"
-                            title="Alt dal ekle"
-                            aria-label="Alt dal ekle"
-                        >
-                            <Plus size={18} />
-                            <span>Dal Ekle</span>
-                        </button>
+                        {onAddTree && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onAddTree(node.id); }}
+                                className="flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-moss-700 transition-colors duration-150 hover:bg-moss-100 active:scale-95 touch-manipulation outline-none focus-visible:bg-moss-100"
+                                title="Bu ağacın yanına yeni ağaç ekle"
+                                aria-label="Ağaç ekle"
+                            >
+                                <Sprout size={18} />
+                                <span>Ağaç Ekle</span>
+                            </button>
+                        )}
                         <button
                             onClick={togglePruned}
                             className={`${ARAC_DUGMESI} ${
@@ -383,8 +388,8 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                         <button
                             onClick={(e) => { e.stopPropagation(); onAddSibling(node.id, 'right'); }}
                             className={`${ARAC_DUGMESI} text-clay-700 hover:bg-clay-100`}
-                            title="Yan dal ekle"
-                            aria-label="Yan dal ekle"
+                            title={depth === 1 ? 'Yan dal ekle' : 'Yan yaprak ekle'}
+                            aria-label={depth === 1 ? 'Yan dal ekle' : 'Yan yaprak ekle'}
                         >
                             <Plus size={18} />
                         </button>
@@ -486,8 +491,8 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
                     <button
                         onClick={(e) => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
                         className={`${EKLE_DUGMESI} ${showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-                        title="Alt dal veya yaprak ekle"
-                        aria-label="Alt dal veya yaprak ekle"
+                        title="Yaprak ekle"
+                        aria-label="Yaprak ekle"
                     >
                         <span className={`${EKLE_DAIRESI} border-moss-300 text-moss-600`}><Plus size={16} /></span>
                     </button>

@@ -175,7 +175,9 @@ export const useStore = create<StoreState>((set, get) => ({
         gardenId: string,
         content: string,
         parentId: string | null = null,
-        position = { x: 250, y: 100 }
+        position = { x: 250, y: 100 },
+        /** Verilirse kayıt bu oluşturma zamanıyla eklenir (kök ağaçların sırası created_at ile belirlenir). */
+        createdAt?: string
     ) => {
         try {
             const now = new Date().toISOString();
@@ -190,6 +192,7 @@ export const useStore = create<StoreState>((set, get) => ({
                     is_expanded: true,
                     updated_at: now,
                     deleted_at: null,
+                    ...(createdAt ? { created_at: createdAt } : {}),
                 }])
                 .select()
                 .single();

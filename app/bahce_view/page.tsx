@@ -208,7 +208,9 @@ function GardenPageInner() {
         if (nodes.length === 0) return [];
 
         // Tüm root node'ları bul (parent_id === null)
-        const rootNodes = nodes.filter(n => n.parent_id === null);
+        // Ağaçlar oluşturulma zamanına göre yan yana dizilir (stabil sıralama).
+        const rootNodes = nodes.filter(n => n.parent_id === null)
+            .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')));
 
         const buildTree = (nodeId: string): MindNode => {
             const node = nodes.find(n => n.id === nodeId);
@@ -317,15 +319,61 @@ function GardenPageInner() {
         return null;
     };
 
+    /** Düğümün derinliği: kök 0, kökün çocukları (dallar) 1, daha derinler (yapraklar) 2+. */
+    const derinlikBul = (nodeId: string): number => {
+        const ara = (dugum: MindNode, d: number): number => {
+            if (dugum.id === nodeId) return d;
+            for (const cocuk of dugum.children) { const b = ara(cocuk, d + 1); if (b >= 0) return b; }
+            return -1;
+        };
+        for (const kok of mindRoots) { const d = ara(kok, 0); if (d >= 0) return d; }
+        return -1;
+    };
+
+    // Bir ağacın hemen yanına yeni ağaç ekle (kök düğümün "Ağaç Ekle" düğmesi)
+    const handleAddTreeBeside = (rootId: string) => {
+        const adIzinli = siraliAdEtkin();
+        const varsayilan = 'Yeni Ağaç';
+        setPromptConfig({
+            isOpen: true,
+            title: 'Ağaç Ekle',
+            placeholder: adIzinli
+                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
+                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            allowEmpty: true,
+            onConfirm: async (title) => {
+                setPromptConfig(prev => ({ ...prev, isOpen: false }));
+                const ad = title || (adIzinli ? siraliAd(null, nodes) : varsayilan);
+                // Ağaçlar oluşturulma sırasıyla yan yana dizilir: yeni ağaç, bu ağaçla
+                // sonraki ağacın arasına düşecek bir oluşturma zamanı alır.
+                const kokler = nodes.filter(n => n.parent_id === null)
+                    .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')));
+                const sira = kokler.findIndex(n => n.id === rootId);
+                let createdAt: string | undefined;
+                if (sira >= 0 && sira < kokler.length - 1) {
+                    const t0 = Date.parse(kokler[sira].created_at), t1 = Date.parse(kokler[sira + 1].created_at);
+                    if (Number.isFinite(t0) && Number.isFinite(t1)) createdAt = new Date(t0 + Math.max(1, Math.floor((t1 - t0) / 2))).toISOString();
+                }
+                const yeni = await addNode(gardenId, ad, null, { x: 0, y: 0 }, createdAt);
+                if (yeni) {
+                    setSelectedNode(yeni.id);
+                    setOrtalanacak(o => ({ id: yeni.id, sayac: (o?.sayac ?? 0) + 1 }));
+                }
+            }
+        });
+    };
+
     // Alt node ekle
     const handleAddChild = (parentId: string, direction: 'left' | 'right' = 'right') => {
         if (mindRoots.length === 0) return;
 
         const adIzinli = siraliAdEtkin();
-        const varsayilan = 'Yeni Dal';
+        // Kökün altına dal, dalın ve yaprağın altına yaprak eklenir.
+        const yaprak = derinlikBul(parentId) >= 1;
+        const varsayilan = yaprak ? 'Yeni Yaprak' : 'Yeni Dal';
         setPromptConfig({
             isOpen: true,
-            title: 'Dal Ekle',
+            title: yaprak ? 'Yaprak Ekle' : 'Dal Ekle',
             placeholder: adIzinli
                 ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
                 : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
@@ -631,6 +679,7 @@ function GardenPageInner() {
                                     <MindMapNode
                                         node={root}
                                         onAddChild={handleAddChild}
+                                        onAddTree={handleAddTreeBeside}
                                         onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
                                         depth={0}
                                     />

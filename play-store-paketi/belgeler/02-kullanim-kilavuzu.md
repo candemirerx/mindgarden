@@ -79,7 +79,7 @@ Notlarınızı düzenlemeyi öğrenin: dallandırma, renkler, arama, tuval gör�
 
 1. Bahçe kartından **Tuval** görünümünü açın.
 2. **İki parmakla** yakınlaştırıp uzaklaştırın, **parmağınızla sürükleyerek** gezinin.
-3. Bir düğüme dokununca eylem menüsü açılır: tam editör, başlığı kopyalama, yeni dal ekleme, düğüm tipini değiştirme.
+3. Bir düğüme dokununca eylem menüsü açılır: tam editör, içeriği kopyalama, ekleme ve budama. Kök notta **Ağaç Ekle** yanına yeni bir ağaç koyar, alttaki **+** ise ona dal ekler; dalda alttaki **+** yaprak, üstteki artı yanına yeni dal ekler.
 4. **Ağaç yönetimi** düğmesiyle tüm ağaçları toplu açıp kapatabilirsiniz. Boş alana dokunmak menüleri kapatır.
 
 ### 2.3 Editörü tanıyın

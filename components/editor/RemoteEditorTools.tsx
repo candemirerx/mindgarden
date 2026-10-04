@@ -4,9 +4,9 @@ import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AudioLines, Check, Clipboard, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
+import { AudioLines, Check, Clipboard, CornerDownLeft, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
 import { BULUT_SAGLAYICILAR, SesKaydedici, sesiYaziyaCevir } from '@/lib/bulutDikte';
-import { hedefBilgisayara, hedefNota, bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
+import { hedefBilgisayara, hedefNota, sendKey, bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import FareYuzeyi from './FareYuzeyi';
@@ -39,7 +39,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     const [panoBildirim, setPanoBildirim] = useState<{ metin: string; ton: 'sending' | 'ok' | 'error' } | null>(null);
     const panoZamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
     /** Son başarılı gönderimin düğmesi: birkaç saniye yeşil tik gösterir. */
-    const [basariliDugme, setBasariliDugme] = useState<'pano' | 'yaz' | null>(null);
+    const [basariliDugme, setBasariliDugme] = useState<'pano' | 'yaz' | 'enter' | null>(null);
     /** Köprü Yaz: bilgisayara gönderilmiş metin, gönderilecek son metin ve kilitler. */
     const kopruSon = useRef('');
     /** Canlı yazma açıldığındaki not (hedef yalnız bilgisayarsa kapanınca geri yüklenir). */
@@ -78,7 +78,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
      * da hatanın kendisi. Bildirim ekranın üstünde çıkar (altta klavyenin
      * arkasında kalıyordu); düğme de birkaç saniye yeşil tik gösterir.
      */
-    const bildirimliGonder = async (tur: 'pano' | 'yaz', is: () => Promise<void>, gonderiliyor: string, basari: string) => {
+    const bildirimliGonder = async (tur: 'pano' | 'yaz' | 'enter', is: () => Promise<void>, gonderiliyor: string, basari: string) => {
         if (panoZamanlayici.current) clearTimeout(panoZamanlayici.current);
         setPanoBildirim({ metin: gonderiliyor, ton: 'sending' });
         setBasariliDugme(null);
@@ -340,6 +340,9 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
             {kopruYaz && kopruHata && <button type="button" id="studio-kopru-yaz-yeniden" onClick={() => { kopruDurdu.current = false; setKopruHata(false); kopruHedef.current = guncelIcerik.current; void kopruAktar(); }}
                 className="btn btn-secondary min-h-11 shrink-0 px-3 text-sm">Yeniden dene</button>}
             {kopruYaz && <span id="studio-kopru-yaz-durum" role="status" className={`max-w-56 shrink-0 text-xs ${kopruHata ? 'text-berry-700' : 'text-moss-700'}`}>{kopruDurum}</span>}
+            {prefs.enabledTools.enter && <button id="studio-enter" type="button" disabled={busy} title="Bilgisayara Enter tuşunu gönder" aria-label="Bilgisayara Enter gönder"
+                onClick={() => void bildirimliGonder('enter', () => sendKey('ENTER', prefs), 'Enter gönderiliyor…', 'Enter bilgisayara gönderildi ✓')}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'enter' ? <Check size={16} /> : <CornerDownLeft size={16} />}<span className="sr-only sm:not-sr-only"> Enter</span></button>}
             {prefs.enabledTools.clipboard && <button id="studio-pc-panosu" type="button" disabled={busy || !content.trim()} onClick={() => void panoyaGonder()}
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'pano' ? <Check size={16} /> : <Clipboard size={16} />}<span className="sr-only sm:not-sr-only"> PC panosu</span></button>}
             {notice && <span role="status" className="max-w-48 shrink-0 text-xs text-sand-700">{notice}</span>}
