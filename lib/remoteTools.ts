@@ -160,8 +160,11 @@ export type RemotePrefs = {
     bridgeDictationUnlimited: boolean;
     /** Köprü Dikte'de tanınan söz, cümle sonu beklenmeden bilgisayara yazılır. */
     bridgeDictationLive: boolean;
-    /** Köprü Dikte ses tanıma motoru: auto (cihaz içi varsa o), device (yalnızca cihaz içi), system (çevrimiçi). */
-    dictationEngine: 'auto' | 'device' | 'system';
+    /**
+     * Köprü Dikte ses tanıma motoru: auto (önce Google çevrimiçi, yoksa cihaz içi),
+     * google (Gboard ile aynı çevrimiçi motor), device (yalnızca cihaz içi), system (telefonun varsayılanı).
+     */
+    dictationEngine: 'auto' | 'google' | 'device' | 'system';
     appendDictation: boolean;
     dictationTarget: 'editor' | 'computer';
     enabledTools: Record<RemoteToolId, boolean>;
@@ -209,13 +212,13 @@ type NativeRemote = {
     connectClassic(options: { address: string }): Promise<{ connected: boolean }>;
     sendClassic(options: { body: string; address?: string }): Promise<{ ok?: boolean; token?: string; name?: string; error?: string } | void>;
     disconnect(): Promise<void>;
-    send(options: { command: string }): Promise<void>;
+    send(options: { command: string; fast?: boolean }): Promise<void>;
     clickAbsolute(options: { x: number; y: number }): Promise<void>;
     moveAbsolute(options: { x: number; y: number }): Promise<void>;
     request(options: { url: string; method: string; body?: string; token?: string }): Promise<{ status: number; body: string }>;
     dictate(options: { language: string }): Promise<{ text: string }>;
     startBridgeDictation(options: { language: string; seconds: number; engine?: string }): Promise<{ text: string }>;
-    getDictationEngines(): Promise<{ onDevice: boolean; system: boolean }>;
+    getDictationEngines(): Promise<{ onDevice: boolean; system: boolean; google?: boolean }>;
     stopBridgeDictation(): Promise<void>;
     setImmersive(options: { enabled: boolean }): Promise<void>;
 };
@@ -606,7 +609,8 @@ export async function sendCommand(command: string, prefs: RemotePrefs) {
         return;
     }
     if (prefs.connection === 'wifi') { await kartWifiKomutu(command, prefs); return; }
-    await bleYaz(() => native.send({ command }));
+    // Fare hareketi ve tekerlek onaysız (hızlı) gider; metin ve kısayollar onaylı.
+    await bleYaz(() => native.send({ command, fast: /^m[ms]:/.test(command) }));
 }
 
 /** USB HID kullanım kodları: kartın /api/rkey ucu tuşu bu kodla basar. */
@@ -948,7 +952,7 @@ export async function bridgeDictate(language: string, seconds: number, engine: R
     return (await native.startBridgeDictation({ language, seconds: seconds === 0 ? 0 : Math.max(5, Math.min(3600, Math.round(seconds) || 30)), engine })).text;
 }
 
-export async function dictationEngines(): Promise<{ onDevice: boolean; system: boolean }> {
+export async function dictationEngines(): Promise<{ onDevice: boolean; system: boolean; google?: boolean }> {
     if (!isNative()) return { onDevice: false, system: false };
     try { return await native.getDictationEngines(); } catch { return { onDevice: false, system: true }; }
 }

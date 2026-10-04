@@ -17,6 +17,9 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
+import android.content.ComponentName;
+import android.content.pm.ResolveInfo;
+import android.speech.RecognitionService;
 import android.content.Context;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
@@ -433,7 +436,9 @@ public class RemoteBridgePlugin extends Plugin {
     @PluginMethod public void disconnect(PluginCall call) { closeGatt(); closeClassic(); call.resolve(); }
     @PluginMethod public void send(PluginCall call) {
         String command = call.getString("command", "");
-        write(call, command.getBytes(StandardCharsets.UTF_8));
+        // fast: fare hareketi/tekerlek onaysız yazılır (kartın "aldım" cevabı
+        // beklenmez); her hareket bir bağlantı aralığı kadar gecikmiyordu.
+        write(call, command.getBytes(StandardCharsets.UTF_8), call.getBoolean("fast", false));
     }
     @PluginMethod public void clickAbsolute(PluginCall call) {
         int x = call.getInt("x", -1), y = call.getInt("y", -1);
@@ -446,13 +451,17 @@ public class RemoteBridgePlugin extends Plugin {
         write(call, new byte[] {1, (byte) x, (byte) (x >> 8), (byte) y, (byte) (y >> 8)});
     }
     @SuppressLint("MissingPermission") // Gerekçe: girişte bluetoothIzinleriHazir() doğrulanır.
-    private void write(PluginCall call, byte[] data) {
+    private void write(PluginCall call, byte[] data) { write(call, data, false); }
+    @SuppressLint("MissingPermission") // Gerekçe: girişte bluetoothIzinleriHazir() doğrulanır.
+    private void write(PluginCall call, byte[] data, boolean onaysiz) {
         if (!bluetoothIzinleriHazir()) { call.reject("Bluetooth izni gerekli."); return; }
         if (gatt == null || rx == null) { call.reject("Kartla BLE bağlantısı yok.", "BLE_NOT_CONNECTED"); return; }
         if (writing != null) { call.reject("Önceki BLE komutu henüz tamamlanmadı.", "BLE_BUSY"); return; }
         if (data.length == 0 || data.length > 180) { call.reject("BLE komutu 1–180 bayt olmalı."); return; }
         writing = call;
-        rx.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+        // Onaysız yazma yalnız kart özelliği destekliyorsa (NUS RX: WRITE | WRITE_NR).
+        boolean nr = onaysiz && (rx.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0;
+        rx.setWriteType(nr ? BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE : BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
         rx.setValue(data);
         if (!gatt.writeCharacteristic(rx)) { writing = null; call.reject("BLE yazma başlatılamadı.", "BLE_NOT_STARTED"); return; }
         handler.postDelayed(() -> { if (writing == call) { writing = null; call.reject("BLE yazma zaman aşımı."); } }, 8000);
@@ -823,7 +832,7 @@ public class RemoteBridgePlugin extends Plugin {
             bridgePartial = "";
             bridgeLanguage = call.getString("language", "tr-TR");
             String istenen = call.getString("engine", "auto");
-            bridgeMotor = "device".equals(istenen) || "system".equals(istenen) ? istenen : "auto";
+            bridgeMotor = "device".equals(istenen) || "system".equals(istenen) || "google".equals(istenen) ? istenen : "auto";
             bridgeStopping = false;
             bridgeErrors = 0;
             sessizlestir();
@@ -965,13 +974,36 @@ public class RemoteBridgePlugin extends Plugin {
         return Build.VERSION.SDK_INT >= 33 && SpeechRecognizer.isOnDeviceRecognitionAvailable(getContext());
     }
     /**
-     * İstenen motora göre tanıyıcı kurar. Cihaz içi motor internet ve sunucu
-     * sınırı gerektirmez, gecikmesi düşüktür. Otomatikte cihaz içi motor tercih
-     * edilir, yoksa sistem tanıyıcısı kullanılır; "device" seçiliyken cihaz içi
-     * yoksa null döner.
+     * Google uygulamasının çevrimiçi tanıma servisi (Gboard sesle yazmanın
+     * kullandığı motor). Türkçede cihaz içi modelden belirgin şekilde daha
+     * isabetlidir. Samsung gibi telefonlarda varsayılan sistem servisi Google
+     * olmayabildiği için doğrudan bu bileşen seçilir; kurulu değilse null.
+     */
+    private ComponentName googleTanima() {
+        try {
+            for (ResolveInfo r : getContext().getPackageManager().queryIntentServices(new Intent(RecognitionService.SERVICE_INTERFACE), 0)) {
+                if (r.serviceInfo != null && "com.google.android.googlequicksearchbox".equals(r.serviceInfo.packageName))
+                    return new ComponentName(r.serviceInfo.packageName, r.serviceInfo.name);
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+    /**
+     * İstenen motora göre tanıyıcı kurar:
+     *  - google: Google çevrimiçi (Gboard ile aynı); yoksa sistem tanıyıcısı.
+     *  - auto: önce Google çevrimiçi, yoksa cihaz içi, o da yoksa sistem.
+     *  - device: yalnız cihaz içi (internetsiz); yoksa null.
+     *  - system: telefonun ayarlardaki varsayılan tanıyıcısı.
      */
     private SpeechRecognizer bridgeTanimaOlustur() {
         bridgeCihazIci = false;
+        if ("google".equals(bridgeMotor) || "auto".equals(bridgeMotor)) {
+            ComponentName google = googleTanima();
+            if (google != null) {
+                try { return SpeechRecognizer.createSpeechRecognizer(getContext(), google); } catch (Exception ignored) { }
+            }
+            if ("google".equals(bridgeMotor)) return SpeechRecognizer.createSpeechRecognizer(getContext());
+        }
         if (!"system".equals(bridgeMotor) && cihazIciTanimaVar()) {
             try {
                 SpeechRecognizer yerel = SpeechRecognizer.createOnDeviceSpeechRecognizer(getContext());
@@ -1010,6 +1042,7 @@ public class RemoteBridgePlugin extends Plugin {
     @PluginMethod public void getDictationEngines(PluginCall call) {
         JSObject sonuc = new JSObject();
         sonuc.put("onDevice", cihazIciTanimaVar());
+        sonuc.put("google", googleTanima() != null);
         sonuc.put("system", SpeechRecognizer.isRecognitionAvailable(getContext()));
         call.resolve(sonuc);
     }

@@ -26,7 +26,7 @@ const CONNECTION_LABELS: Record<RemotePrefs['connection'], string> = {
 
 export default function RemoteSettings() {
     const [prefs, setPrefs] = useState<RemotePrefs>(remotePrefs);
-    const [motorlar, setMotorlar] = useState<{ onDevice: boolean; system: boolean } | null>(null);
+    const [motorlar, setMotorlar] = useState<{ onDevice: boolean; system: boolean; google?: boolean } | null>(null);
     useEffect(() => { setPrefs(remotePrefs()); void dictationEngines().then(setMotorlar); }, []);
     const update = (next: RemotePrefs) => { setPrefs(next); saveRemotePrefs(next); };
     const kartKipi = prefs.connection === 'wifi' || prefs.connection === 'bluetooth';
@@ -73,16 +73,19 @@ export default function RemoteSettings() {
                 <SettingsField label="Dikte dili" htmlFor="remote-dikte-dili">
                     <input id="remote-dikte-dili" className={settingsFieldClass} value={prefs.dictationLanguage} onChange={e => update({ ...prefs, dictationLanguage: e.target.value })} placeholder="tr-TR" />
                 </SettingsField>
-                {motorlar && (motorlar.onDevice || motorlar.system) && (
+                {motorlar && (motorlar.onDevice || motorlar.system || motorlar.google) && (
                     <SettingsField label="Köprü Dikte ses tanıma motoru" htmlFor="remote-dikte-motoru"
-                        hint={motorlar.onDevice
-                            ? 'Cihaz içi motor internet gerektirmez ve çevrimiçi servisin kesintilerinden etkilenmez. Otomatik: cihaz içi motor varsa o kullanılır.'
-                            : 'Bu telefon cihaz içi ses tanımayı desteklemiyor; çevrimiçi sistem tanıyıcısı kullanılır.'}>
-                        <select id="remote-dikte-motoru" className={settingsFieldClass} value={motorlar.onDevice ? prefs.dictationEngine : 'system'} disabled={!motorlar.onDevice}
+                        hint={(motorlar.google
+                            ? 'Google (çevrimiçi) Gboard sesle yazmanın kullandığı motordur; Türkçede en isabetlisi, internet ister. '
+                            : 'Bu telefonda Google uygulamasının ses tanıması bulunamadı. ')
+                            + (motorlar.onDevice ? 'Cihaz içi motor internetsiz ve hızlıdır ama daha az isabetlidir. ' : '')
+                            + 'Otomatik: önce Google, yoksa cihaz içi, o da yoksa telefonun varsayılanı.'}>
+                        <select id="remote-dikte-motoru" className={settingsFieldClass} value={prefs.dictationEngine}
                             onChange={e => update({ ...prefs, dictationEngine: e.target.value as RemotePrefs['dictationEngine'] })}>
                             <option value="auto">Otomatik (önerilen)</option>
-                            <option value="device">Yalnızca cihaz içi</option>
-                            <option value="system">Çevrimiçi (sistem)</option>
+                            {motorlar.google && <option value="google">Google – Gboard ile aynı (çevrimiçi)</option>}
+                            {motorlar.onDevice && <option value="device">Yalnızca cihaz içi (internetsiz)</option>}
+                            <option value="system">Telefonun varsayılanı</option>
                         </select>
                     </SettingsField>
                 )}
