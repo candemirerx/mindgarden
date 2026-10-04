@@ -49,3 +49,5 @@ export const getApiUrl = (path: string): string => {
 
 /** PC yardımcısının indirme sayfası (Play Store kullanıcıları yardımcıyı buradan alır). */
 export const PC_YARDIMCISI_SAYFASI = VERCEL_URL + '/pc';
+/** Yardımcının doğrudan indirme adresi (scripts/yardimci-zip.mjs üretir). */
+export const PC_YARDIMCISI_ZIP = VERCEL_URL + '/indir/not-bahcesi-pc-yardimcisi.zip';

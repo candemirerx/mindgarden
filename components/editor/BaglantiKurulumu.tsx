@@ -14,8 +14,9 @@
  *  - Kart BLE: kartlar önce listelenir, diğer cihazlar katlanır.
  */
 import { useEffect, useState } from 'react';
-import { Bluetooth, Check, Loader2, MonitorSmartphone, Search, Share2, Wifi } from 'lucide-react';
-import { PC_YARDIMCISI_SAYFASI } from '@/lib/config';
+import { Capacitor } from '@capacitor/core';
+import { Bluetooth, Check, Copy, Download, Loader2, MonitorSmartphone, Search, Share2, Wifi } from 'lucide-react';
+import { PC_YARDIMCISI_SAYFASI, PC_YARDIMCISI_ZIP } from '@/lib/config';
 import {
     baglantiSatiriniCoz, bilgisayarAdresiniSina, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul,
     bluetoothAyarlariniAc, bluetoothKlavyeBagla, bluetoothKlavyeyiBaslat, connectCard, telefonuGorunurYap, disconnectCard, kartAginda, kartiWifidaBul, scanCards, scanPairedComputers,
@@ -69,28 +70,65 @@ function Aciklama({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Yardımcı bilgisayarda yoksa: indirme sayfasının adresi ve bilgisayara
- * göndermek için paylaş düğmesi (e-posta, WhatsApp vb.).
+ * PC yardımcısını indirme kartı. Yardımcı Windows programı olduğu için asıl
+ * hedef bilgisayardır:
+ *  - Telefonda: indirme sayfasını bilgisayara gönder (paylaş), adresi kopyala
+ *    ya da zip'i telefona indirip Quick Share/USB ile aktar.
+ *  - Bilgisayarın tarayıcısında: doğrudan "İndir".
+ * Yardımcı henüz kurulmamışsa açık ve belirgin durur; kurulduktan sonra
+ * küçük bir "Yardımcıyı indir" satırına katlanır.
  */
-function YardimciIndir() {
+function YardimciIndir({ kurulu = false }: { kurulu?: boolean }) {
     const [bilgi, setBilgi] = useState('');
+    const telefon = Capacitor.isNativePlatform();
+    const kisaAdres = PC_YARDIMCISI_SAYFASI.replace(/^https?:\/\//, '');
+    const kopyala = async () => {
+        try { await navigator.clipboard.writeText(PC_YARDIMCISI_SAYFASI); setBilgi('Adres kopyalandı. Bilgisayarın tarayıcısına yapıştırın.'); }
+        catch { setBilgi('Adresi bilgisayarda elle yazın: ' + kisaAdres); }
+    };
     const paylas = async () => {
         try {
             const { Share } = await import('@capacitor/share');
-            await Share.share({ title: 'Not Bahçesi PC Yardımcısı', text: 'Bilgisayarda açıp yardımcıyı indirin:', url: PC_YARDIMCISI_SAYFASI });
-        } catch {
-            try { await navigator.clipboard.writeText(PC_YARDIMCISI_SAYFASI); setBilgi('Adres panoya kopyalandı.'); }
-            catch { setBilgi('Adresi bilgisayarda elle yazın.'); }
+            await Share.share({ title: 'Not Bahçesi PC Yardımcısı', text: 'Not Bahçesi PC Yardımcısı (Windows). Bilgisayarda açıp "Yardımcıyı indir"e basın:', url: PC_YARDIMCISI_SAYFASI, dialogTitle: 'Bilgisayara gönder' });
+            setBilgi('');
+        } catch (hata) {
+            // Kullanıcı paylaşımı iptal ettiyse sessiz kal; paylaşım yoksa adresi kopyala.
+            if (!/cancel/i.test(String((hata as Error)?.message ?? ''))) await kopyala();
         }
     };
-    return <details className="rounded-xl border border-sand-200 bg-white">
-        <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">Yardımcı bilgisayarda yok mu?</summary>
-        <div className="space-y-2 px-3 pb-3">
-            <Aciklama>Bilgisayarın tarayıcısında şu adresi açıp indirin: <strong className="select-all break-all text-sand-900">{PC_YARDIMCISI_SAYFASI.replace(/^https?:\/\//, '')}</strong></Aciklama>
-            <button type="button" className={ikinciDugme} onClick={() => void paylas()}><Share2 size={15} aria-hidden="true" /> Adresi bilgisayara gönder</button>
-            {bilgi && <p className="text-xs text-moss-700">{bilgi}</p>}
+    const telefonaIndir = async () => {
+        try {
+            const { Browser } = await import('@capacitor/browser');
+            await Browser.open({ url: PC_YARDIMCISI_ZIP });
+            setBilgi('İndirme tarayıcıda başladı. Dosyayı Quick Share, e-posta ya da USB ile bilgisayara aktarın.');
+        } catch { window.open(PC_YARDIMCISI_ZIP, '_blank'); }
+    };
+    const icerik = <div className="space-y-2.5">
+        <Aciklama>
+            Yardımcı küçük bir <strong>Windows</strong> programıdır (~0,2 MB), kurulum istemez ve yönetici izni gerektirmez.
+            {telefon ? <> Bilgisayarda şu adresi açıp <strong>Yardımcıyı indir</strong>'e basın: <strong className="select-all break-all text-sand-900">{kisaAdres}</strong></> : <> İndirip zip'i bir klasöre çıkarın, içindeki <strong>pc_yardimcisi_baslat</strong> dosyasına çift tıklayın.</>}
+        </Aciklama>
+        <div className="flex flex-wrap gap-2">
+            {telefon ? <>
+                <button type="button" id="yardimci-bilgisayara-gonder" className={anaDugme} onClick={() => void paylas()}><Share2 size={15} aria-hidden="true" /> Bilgisayara gönder</button>
+                <button type="button" className={ikinciDugme} onClick={() => void kopyala()}><Copy size={15} aria-hidden="true" /> Adresi kopyala</button>
+                <button type="button" className={ikinciDugme} onClick={() => void telefonaIndir()}><Download size={15} aria-hidden="true" /> Telefona indir</button>
+            </> : <>
+                <a id="yardimci-indir" href={PC_YARDIMCISI_ZIP} download className={anaDugme}><Download size={15} aria-hidden="true" /> Yardımcıyı indir (Windows)</a>
+                <a href={PC_YARDIMCISI_SAYFASI} target="_blank" rel="noopener" className={ikinciDugme}>Kurulum adımları</a>
+            </>}
         </div>
+        {telefon && <p className="text-[11px] leading-relaxed text-sand-500">"Bilgisayara gönder" ile bağlantıyı kendinize WhatsApp, e-posta ya da Quick Share ile gönderip bilgisayarda açın.</p>}
+        {bilgi && <p role="status" className="text-xs text-moss-700">{bilgi}</p>}
+    </div>;
+    if (kurulu) return <details className="rounded-xl border border-sand-200 bg-white">
+        <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700"><Download size={13} className="mr-1 inline" aria-hidden="true" /> Yardımcıyı indir (başka bilgisayar için)</summary>
+        <div className="px-3 pb-3">{icerik}</div>
     </details>;
+    return <div id="yardimci-indir-karti" className="rounded-xl border border-moss-200 bg-moss-50/60 p-3">
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-moss-800"><Download size={14} aria-hidden="true" /> Yardımcı bilgisayarda yok mu? İndirin</p>
+        {icerik}
+    </div>;
 }
 
 /** Bilgisayardaki 6 haneli eşleştirme kodu alanı. */
@@ -122,8 +160,8 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
     return <div className="space-y-3">
         <ol className="space-y-4">
             <Adim no={1} baslik="Bilgisayarda yardımcıyı açın" tamam={eslesmis}>
-                <Aciklama>Bilgisayarda <strong>Not Bahçesi PC Yardımcısı</strong>nı açın (<code>pc_yardimcisi_baslat.cmd</code>). Pencerede <strong>6 haneli eşleştirme kodu</strong> görünür. Telefon ve bilgisayar aynı Wi‑Fi ağında olmalı.</Aciklama>
-                <YardimciIndir />
+                <Aciklama>Bilgisayarda <strong>Not Bahçesi PC Yardımcısı</strong>nı açın (<code>pc_yardimcisi_baslat</code>). Pencerede <strong>6 haneli eşleştirme kodu</strong> görünür. Telefon ve bilgisayar aynı Wi‑Fi ağında olmalı.</Aciklama>
+                <YardimciIndir kurulu={eslesmis} />
             </Adim>
             <Adim no={2} baslik="Bilgisayarı bulun" tamam={!!hedef}>
                 <div className="flex flex-wrap gap-2">
@@ -245,7 +283,7 @@ export function PcBluetoothPano({ prefs, update, yoluSec = true }: { prefs: Remo
         <ol className="space-y-4">
             <Adim no={1} baslik="Bilgisayarda Bluetooth'u ve yardımcıyı açın">
                 <Aciklama>Bilgisayarda Bluetooth açık olmalı ve <strong>Not Bahçesi PC Yardımcısı</strong> çalışmalı. Telefon bu bilgisayarla daha önce eşleşmediyse önce Bluetooth ayarlarından eşleştirin. <strong>Kod gerekmez.</strong></Aciklama>
-                <YardimciIndir />
+                <YardimciIndir kurulu={bagli} />
                 <button type="button" className={ikinciDugme} onClick={() => void calistir('ayar', async () => { await bluetoothAyarlariniAc(); })}>
                     <Bluetooth size={15} aria-hidden="true" /> Bluetooth ayarlarını aç
                 </button>
