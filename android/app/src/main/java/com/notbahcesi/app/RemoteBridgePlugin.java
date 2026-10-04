@@ -17,6 +17,10 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.net.Uri;
+import android.util.Base64;
 import android.content.ComponentName;
 import android.content.pm.ResolveInfo;
 import android.speech.RecognitionService;
@@ -1151,6 +1155,47 @@ public class RemoteBridgePlugin extends Plugin {
             }
         }
         sessizAkislar.clear();
+    }
+    /**
+     * Telefon panosunu okur: metin varsa metni, görsel (içerik adresi) varsa
+     * görselin kendisini base64 olarak döndürür. Android 10+ panoyu yalnız ön
+     * plandaki uygulamaya okutur; çağrı kullanıcının dokunuşuyla yapılır.
+     */
+    @PluginMethod public void readClipboard(PluginCall call) {
+        Activity activity = getActivity();
+        if (activity == null) { call.reject("Pano okunamadı."); return; }
+        activity.runOnUiThread(() -> {
+            try {
+                ClipboardManager pano = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = pano == null ? null : pano.getPrimaryClip();
+                JSObject sonuc = new JSObject();
+                if (clip == null || clip.getItemCount() == 0) { call.resolve(sonuc); return; }
+                ClipData.Item oge = clip.getItemAt(0);
+                Uri uri = oge.getUri();
+                String tur = uri == null ? null : activity.getContentResolver().getType(uri);
+                if (uri != null && tur != null && tur.startsWith("image/")) {
+                    new Thread(() -> {
+                        try (InputStream giris = activity.getContentResolver().openInputStream(uri)) {
+                            if (giris == null) throw new IOException("Görsel açılamadı.");
+                            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                            byte[] tampon = new byte[16384]; int okunan;
+                            while ((okunan = giris.read(tampon)) != -1) {
+                                bytes.write(tampon, 0, okunan);
+                                if (bytes.size() > 30 * 1024 * 1024) throw new IOException("Panodaki görsel çok büyük.");
+                            }
+                            JSObject g = new JSObject();
+                            g.put("mime", tur);
+                            g.put("data", Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP));
+                            call.resolve(g);
+                        } catch (Exception e) { call.reject("Panodaki görsel okunamadı: " + e.getMessage()); }
+                    }).start();
+                    return;
+                }
+                CharSequence metin = oge.coerceToText(activity);
+                if (metin != null && metin.length() > 0) sonuc.put("text", metin.toString());
+                call.resolve(sonuc);
+            } catch (Exception e) { call.reject("Pano okunamadı: " + e.getMessage()); }
+        });
     }
     /** Editör tam ekranı: sistem çubuklarını gizler; kenardan kaydırınca geçici görünür. */
     @PluginMethod public void setImmersive(PluginCall call) {

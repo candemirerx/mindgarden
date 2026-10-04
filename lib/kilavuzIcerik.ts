@@ -276,6 +276,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     'Telefonda notu yazın ve **Bilgisayara yaz** (gönder) düğmesine dokunun: metin, klavyeden yazılmış gibi bilgisayara geçer.',
                     '**PC panosu** düğmesi metni bilgisayarın panosuna koyar; bilgisayarda **Ctrl+V** ile istediğiniz yere yapıştırırsınız.',
                     'Gönderim bitince ekranın üstünde kısa bir **"gönderildi ✓"** bildirimi çıkar ve düğme birkaç saniye yeşil tik gösterir. Hata olursa bildirim nedenini yazar.',
+                    'Editörün sol altındaki üç simge notun **mini galerisi**dir: galeri, **kamera** (çekilen fotoğraf doğrudan galeriye) ve **telefon galerisinden aktarım**. Galeride bir görsele **basılı tutarak** seçim yapın ya da **Tümünü seç**e dokunun; üstteki araçlarla seçilenleri **bilgisayara** (Resimler › Not Bahçesi klasörü) ya da **PC panosuna** gönderin. Aynı satırda not metnini ve telefon panosunu da PC panosuna gönderebilirsiniz. Alttaki küçük kutuya panodan görsel ya da metin yapıştırıp galeriye ekleyebilirsiniz.',
                 ],
                 ipucu: 'Pano için bilgisayarda PC yardımcısı açık olmalıdır (Bilgisayar · Wi‑Fi\'da zaten açıktır). Diğer yollarda yardımcıyı bir kez tanıtmak için Bilgisayar bağlantısı → PC panosu bölümünü kullanın; Bluetooth seçerseniz kod gerekmez.',
             },

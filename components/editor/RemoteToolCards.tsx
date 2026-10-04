@@ -8,7 +8,7 @@
  * listeleri aynı satır görünümünü paylaşır.
  */
 import { useState } from 'react';
-import { AudioLines, Clipboard, CornerDownLeft, Keyboard, LayoutDashboard, Mic, MousePointer2, Settings2, Wand2 } from 'lucide-react';
+import { AudioLines, Clipboard, ClipboardCopy, ClipboardPaste, CornerDownLeft, MonitorUp, Keyboard, LayoutDashboard, Mic, MousePointer2, Settings2, Wand2 } from 'lucide-react';
 import { REMOTE_TOOL_IDS, saveRemotePrefs } from '@/lib/remoteTools';
 import type { RemoteToolId } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
@@ -22,6 +22,9 @@ const items = {
     computerWrite: { title: 'Bilgisayara Yaz', subtitle: 'Notu bilgisayardaki odaklı alana yazar: düğmeye basınca bir kerede ya da yazdıkça canlı. Biçim ve hedef dişlide.', Icon: Keyboard },
     enter: { title: 'Enter', subtitle: 'Bilgisayara yalnızca Enter tuşunu gönderir; yazdırdığınız metinden sonra satırı bitirmek için.', Icon: CornerDownLeft },
     clipboard: { title: 'Bilgisayar Panosuna Gönder', subtitle: 'Not metnini PC pano yardımcısına gönder.', Icon: Clipboard },
+    imageToComputer: { title: 'Görselleri Bilgisayara Gönder', subtitle: 'Telefondan seçtiğiniz görseller bilgisayarda Resimler › Not Bahçesi klasörüne kaydedilir. Notun mini galerisinden de gönderilebilir.', Icon: MonitorUp },
+    imageToClipboard: { title: 'Görseli PC Panosuna Gönder', subtitle: 'Seçtiğiniz görsel bilgisayar panosuna konur; Ctrl+V ile yapıştırırsınız (birden çoksa dosya olarak).', Icon: ClipboardCopy },
+    phoneClipboard: { title: 'Telefon Panosu → PC Panosu', subtitle: 'Telefonda kopyaladığınız metin ya da görsel bilgisayar panosuna geçer.', Icon: ClipboardPaste },
     shortcuts: { title: 'Kısayollar', subtitle: 'Kişisel klavye, metin ve konum makrolarını editördeki panodan çalıştır.', Icon: Wand2 },
     screen: { title: 'Ekran', subtitle: 'Kendi tasarladığın bölmeli ekran: fare, yön tuşları, metin ve kısayollar bir arada.', Icon: LayoutDashboard }
 } satisfies Record<RemoteToolId, { title: string; subtitle: string; Icon: typeof MousePointer2 }>;

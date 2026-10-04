@@ -4,9 +4,9 @@ import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AudioLines, Check, Clipboard, CornerDownLeft, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
+import { AudioLines, Check, Clipboard, ClipboardCopy, ClipboardPaste, CornerDownLeft, MonitorUp, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
 import { BULUT_SAGLAYICILAR, SesKaydedici, sesiYaziyaCevir } from '@/lib/bulutDikte';
-import { hedefBilgisayara, hedefNota, sendKey, bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
+import { dosyalariBilgisayaraGonder, telefonPanosunuBilgisayaraGonder, hedefBilgisayara, hedefNota, sendKey, bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import FareYuzeyi from './FareYuzeyi';
@@ -39,7 +39,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     const [panoBildirim, setPanoBildirim] = useState<{ metin: string; ton: 'sending' | 'ok' | 'error' } | null>(null);
     const panoZamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
     /** Son başarılı gönderimin düğmesi: birkaç saniye yeşil tik gösterir. */
-    const [basariliDugme, setBasariliDugme] = useState<'pano' | 'yaz' | 'enter' | null>(null);
+    const [basariliDugme, setBasariliDugme] = useState<'pano' | 'yaz' | 'enter' | 'gorsel' | 'gorselPano' | 'telefonPanosu' | null>(null);
     /** Köprü Yaz: bilgisayara gönderilmiş metin, gönderilecek son metin ve kilitler. */
     const kopruSon = useRef('');
     /** Canlı yazma açıldığındaki not (hedef yalnız bilgisayarsa kapanınca geri yüklenir). */
@@ -78,17 +78,33 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
      * da hatanın kendisi. Bildirim ekranın üstünde çıkar (altta klavyenin
      * arkasında kalıyordu); düğme de birkaç saniye yeşil tik gösterir.
      */
-    const bildirimliGonder = async (tur: 'pano' | 'yaz' | 'enter', is: () => Promise<void>, gonderiliyor: string, basari: string) => {
+    const bildirimliGonder = async (tur: 'pano' | 'yaz' | 'enter' | 'gorsel' | 'gorselPano' | 'telefonPanosu', is: () => Promise<void | string>, gonderiliyor: string, basari: string) => {
         if (panoZamanlayici.current) clearTimeout(panoZamanlayici.current);
         setPanoBildirim({ metin: gonderiliyor, ton: 'sending' });
         setBasariliDugme(null);
         let hata = '';
         await act(async () => {
-            try { await is(); } catch (e) { hata = e instanceof Error ? e.message : 'Gönderilemedi.'; throw e; }
+            // İş kendi başarı iletisini döndürebilir (ör. panoda metin mi görsel mi vardı).
+            try { const ileti = await is(); if (ileti) basari = ileti; } catch (e) { hata = e instanceof Error ? e.message : 'Gönderilemedi.'; throw e; }
         }, basari);
         setPanoBildirim(hata ? { metin: hata, ton: 'error' } : { metin: basari, ton: 'ok' });
         if (!hata) setBasariliDugme(tur);
         panoZamanlayici.current = setTimeout(() => { setPanoBildirim(null); setBasariliDugme(null); }, hata ? 5000 : 3000);
+    };
+    /** Telefondan görsel seçtirip bilgisayara (dosya ya da pano) gönderir. */
+    const gorselSecici = useRef<HTMLInputElement>(null);
+    const gorselHedefi = useRef<'dosya' | 'pano'>('dosya');
+    const gorselSec = (hedef: 'dosya' | 'pano') => { gorselHedefi.current = hedef; gorselSecici.current?.click(); };
+    const gorselleriGonder = (dosyalar: FileList | null) => {
+        const liste = Array.from(dosyalar ?? []).filter(d => d.type.startsWith('image/'));
+        if (!liste.length) return;
+        const hedef = gorselHedefi.current;
+        const ad = (d: File, i: number) => d.name && /\.(jpe?g|png|webp|gif)$/i.test(d.name) ? d.name : 'not-bahcesi-' + Date.now() + '-' + (i + 1) + '.jpg';
+        void bildirimliGonder(hedef === 'dosya' ? 'gorsel' : 'gorselPano',
+            () => dosyalariBilgisayaraGonder(liste.map((d, i) => ({ ad: ad(d, i), veri: d })), hedef, prefs,
+                oran => setPanoBildirim({ metin: (hedef === 'dosya' ? 'Bilgisayara gönderiliyor… %' : 'Panoya gönderiliyor… %') + Math.round(oran * 100), ton: 'sending' })),
+            liste.length + ' görsel gönderiliyor…',
+            hedef === 'dosya' ? liste.length + ' görsel bilgisayarda Resimler › Not Bahçesi klasörüne kaydedildi ✓' : 'Görsel bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz');
     };
     const panoyaGonder = () => bildirimliGonder('pano', () => sendToComputerClipboard(content, prefs), 'Bilgisayar panosuna gönderiliyor…', 'Bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz');
     const act = async (action: () => Promise<void>, success: string) => {
@@ -345,6 +361,17 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'enter' ? <Check size={16} /> : <CornerDownLeft size={16} />}<span className="sr-only sm:not-sr-only"> Enter</span></button>}
             {prefs.enabledTools.clipboard && <button id="studio-pc-panosu" type="button" disabled={busy || !content.trim()} onClick={() => void panoyaGonder()}
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'pano' ? <Check size={16} /> : <Clipboard size={16} />}<span className="sr-only sm:not-sr-only"> PC panosu</span></button>}
+            {prefs.enabledTools.imageToComputer && <button id="studio-gorsel-bilgisayara" type="button" disabled={busy} title="Telefondan görsel seçip bilgisayara gönder (Resimler › Not Bahçesi)" aria-label="Görselleri bilgisayara gönder"
+                onClick={() => gorselSec('dosya')}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'gorsel' ? <Check size={16} /> : <MonitorUp size={16} />}<span className="sr-only sm:not-sr-only"> Görsel → PC</span></button>}
+            {prefs.enabledTools.imageToClipboard && <button id="studio-gorsel-panoya" type="button" disabled={busy} title="Telefondan görsel seçip bilgisayar panosuna gönder" aria-label="Görseli bilgisayar panosuna gönder"
+                onClick={() => gorselSec('pano')}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'gorselPano' ? <Check size={16} /> : <ClipboardCopy size={16} />}<span className="sr-only sm:not-sr-only"> Görsel → pano</span></button>}
+            {prefs.enabledTools.phoneClipboard && <button id="studio-telefon-panosu" type="button" disabled={busy} title="Telefon panosundaki metni ya da görseli bilgisayar panosuna gönder" aria-label="Telefon panosunu bilgisayar panosuna gönder"
+                onClick={() => void bildirimliGonder('telefonPanosu', () => telefonPanosunuBilgisayaraGonder(prefs), 'Telefon panosu bilgisayara gönderiliyor…', 'Telefon panosu bilgisayar panosuna gönderildi ✓')}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'telefonPanosu' ? <Check size={16} /> : <ClipboardPaste size={16} />}<span className="sr-only sm:not-sr-only"> Telefon panosu</span></button>}
+            {(prefs.enabledTools.imageToComputer || prefs.enabledTools.imageToClipboard) && <input ref={gorselSecici} type="file" accept="image/*" multiple hidden
+                onChange={e => { gorselleriGonder(e.target.files); e.target.value = ''; }} />}
             {notice && <span role="status" className="max-w-48 shrink-0 text-xs text-sand-700">{notice}</span>}
             {panoBildirim && typeof document !== 'undefined' && createPortal(
                 <div id="studio-pano-bildirim" role="status" aria-live="polite"

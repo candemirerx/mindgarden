@@ -21,7 +21,7 @@
 .studio-text { display: block; min-height: 48dvh; line-height: 1.85; caret-color: rgb(var(--moss-600)); }
 .studio-text::selection { background: rgb(var(--moss-100)); }
 .studio-footer { position: sticky; bottom: 0; z-index: 10; margin-top: auto; }
-.studio-save-status { max-width: 50%; line-height: 1.5; }
+.studio-galeri { max-width: 60%; }
 .writing-studio button:focus-visible { outline: 2px solid rgb(var(--moss-500)); outline-offset: 3px; }
 .writing-studio--focused .studio-paper { border-color: rgb(var(--moss-200)); }
 .studio-tool-label { width: auto; padding: 0 4px; }
@@ -51,8 +51,8 @@
   .studio-text { min-height: max(240px, calc(100dvh - 250px)); line-height: 1.7; }
   .studio-paper-label { padding: 12px 20px; }
   .studio-footer > div { flex-wrap: wrap; gap: 0 12px; font-size: 10px; }
-  .studio-footer > div > div { margin-left: auto; }
-  .studio-save-status { max-width: 100%; }
+  .studio-footer > div > div:last-child { margin-left: auto; }
+  .studio-galeri { max-width: 100%; }
 }
 @media (max-width: 379px) {
   .studio-topbar { padding-inline: 2px; gap: 0; }

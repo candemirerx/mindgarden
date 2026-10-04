@@ -28,7 +28,8 @@ export function useMobileShell(): boolean {
                 const { App } = await import('@capacitor/app');
                 const listener = await App.addListener('backButton', () => {
                     // Tam ekran ayarlar kendi bölüm → liste → kapat sırasını yönetir.
-                    if (document.querySelector('[data-settings-screen]')) return;
+                    // Kendi geri sırasını yöneten tam sayfa ekranlar (ör. mini galeri) de.
+                    if (document.querySelector('[data-settings-screen], [data-geri-yonetir]')) return;
                     // Editör tam ekrandaysa geri tuşu yalnızca tam ekrandan çıkar.
                     if (document.querySelector('[data-tam-ekran]')) return;
                     if (window.history.length > 1) {

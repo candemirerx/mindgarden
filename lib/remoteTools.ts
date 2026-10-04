@@ -19,8 +19,8 @@ export const hedefNota = (h: DikteHedefi) => h !== 'computer';
 export const hedefBilgisayara = (h: DikteHedefi) => h !== 'editor';
 
 export type ConnectionMode = 'wifi' | 'bluetooth' | 'pc-wifi' | 'pc-bluetooth';
-export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'enter' | 'clipboard' | 'shortcuts' | 'screen';
-export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'computerWrite', 'enter', 'clipboard', 'shortcuts', 'screen'];
+export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'enter' | 'clipboard' | 'imageToComputer' | 'imageToClipboard' | 'phoneClipboard' | 'shortcuts' | 'screen';
+export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'computerWrite', 'enter', 'clipboard', 'imageToComputer', 'imageToClipboard', 'phoneClipboard', 'shortcuts', 'screen'];
 /**
  * Sıralı makronun tek adımı. 'macro' adımı başka bir makroyu kimliğiyle
  * (value) çağırır; 'wait' adımı value milisaniye bekler; diğer türler tekil
@@ -198,7 +198,7 @@ const key = 'nb-remote-prefs-v1';
 const defaults: RemotePrefs = {
     connection: 'wifi', cardUrl: 'http://192.168.4.1', helperUrl: '', helperToken: '', helperBluetoothAddress: '',
     mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', appendDictation: true, dictationTarget: 'editor', bridgeDictationTarget: 'computer', writeMode: 'dugme', writeTarget: 'both',
-    enabledTools: { mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, enter: true, clipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
+    enabledTools: { mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, enter: true, clipboard: true, imageToComputer: true, imageToClipboard: true, phoneClipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
 };
 
 /**
@@ -252,6 +252,7 @@ type NativeRemote = {
     getDictationEngines(): Promise<{ onDevice: boolean; system: boolean; google?: boolean }>;
     stopBridgeDictation(): Promise<void>;
     setImmersive(options: { enabled: boolean }): Promise<void>;
+    readClipboard(): Promise<{ text?: string; mime?: string; data?: string }>;
 };
 const native = registerPlugin<NativeRemote & Plugin>('RemoteBridge');
 const isNative = () => Capacitor.isNativePlatform();
@@ -964,6 +965,113 @@ export async function sendToComputerClipboard(text: string, prefs: RemotePrefs) 
         throw hata;
     }
 }
+/** Bilgisayara giden dosya: mini galerideki görsel ya da metin kartı. */
+export type GonderilecekDosya = { ad: string; veri: Blob };
+
+const blobBase64 = (blob: Blob) => new Promise<string>((coz, red) => {
+    const okuyucu = new FileReader();
+    okuyucu.onload = () => coz(String(okuyucu.result).replace(/^data:[^,]*,/, ''));
+    okuyucu.onerror = () => red(new Error('Dosya okunamadı.'));
+    okuyucu.readAsDataURL(blob);
+});
+
+/**
+ * Görselleri (ve metin kartlarını .txt olarak) PC yardımcısına gönderir.
+ * `dosya`: Resimler › Not Bahçesi klasörüne kaydedilir; `pano`: panoya konur
+ * (tek görsel resim olarak da, Ctrl+V her uygulamada çalışsın).
+ *
+ * Pano metni gibi her bağlantıda yardımcı üzerinden gider: Wi‑Fi eşleşmesi varsa
+ * Wi‑Fi ile (büyük parçalar), yoksa ya da ulaşılamazsa yardımcının Bluetooth
+ * alıcısıyla (satır sınırı yüzünden küçük parçalar). Parçalar 4'ün katıdır;
+ * yardımcı her parçayı ayrı çözer.
+ */
+export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], hedef: 'dosya' | 'pano', prefs: RemotePrefs, ilerleme?: (oran: number) => void) {
+    if (!dosyalar.length) throw new Error('Önce görsel seçin.');
+    if (dosyalar.length > 50) throw new Error('Bir seferde en çok 50 öğe gönderilebilir.');
+    if (!prefs.helperToken) throw new Error('Görsel göndermek için bilgisayarda Not Bahçesi PC Yardımcısı gerekir: Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayara bağlanın.');
+    const wifiVar = !!prefs.helperUrl;
+    const bluetoothVar = prefs.connection === 'pc-bluetooth' || !!prefs.helperBluetoothAddress;
+    if (!wifiVar && !bluetoothVar) throw new Error('Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayarı eşleştirin.');
+    const veriler = await Promise.all(dosyalar.map(d => blobBase64(d.veri)));
+    const toplam = veriler.reduce((t, v) => t + v.length, 0) || 1;
+    const aktar = async (yol: 'wifi' | 'bluetooth') => {
+        const gonder = (girdi: Record<string, unknown>) => yol === 'wifi'
+            ? pcInput(girdi, { ...prefs, connection: 'pc-wifi' })
+            : pcInput(girdi, { ...prefs, connection: 'pc-bluetooth' });
+        const parca = yol === 'wifi' ? 256 * 1024 : 22000;
+        const ids: string[] = [];
+        let giden = 0;
+        for (const veri of veriler) {
+            const id = 'nb' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+            ids.push(id);
+            for (let i = 0, sira = 0; i < veri.length || sira === 0; i += parca, sira++) {
+                const dilim = veri.slice(i, i + parca);
+                try { await gonder({ action: 'parca', id, sira, veri: dilim }); }
+                catch (hata) {
+                    // Eski yardımcı "parca" eylemini tanımaz ve isteği reddeder.
+                    if (sira === 0 && giden === 0 && /HTTP 400|reddedildi|reddetti/i.test(hata instanceof Error ? hata.message : '')) {
+                        throw new Error('Bilgisayardaki PC Yardımcısı eski: görsel gönderebilmek için Ayarlar → Bilgisayar bağlantısı bölümünden yardımcının yeni sürümünü indirip açın.');
+                    }
+                    throw hata;
+                }
+                giden += dilim.length;
+                ilerleme?.(Math.min(0.99, giden / toplam));
+            }
+        }
+        await gonder({ action: 'gorseller', ids, adlar: dosyalar.map(d => d.ad), hedef });
+        ilerleme?.(1);
+    };
+    if (!wifiVar) { await aktar('bluetooth'); return; }
+    try { await aktar('wifi'); }
+    catch (hata) {
+        const ileti = hata instanceof Error ? hata.message : '';
+        if (!bluetoothVar || /eski|HTTP 4\d\d/.test(ileti)) throw hata;
+        await aktar('bluetooth');
+    }
+}
+
+/** Telefon panosunu okur: metin ya da görsel. */
+export async function telefonPanosunuOku(): Promise<{ metin?: string; gorsel?: Blob }> {
+    if (isNative()) {
+        const pano = await native.readClipboard();
+        if (pano.data && pano.mime) {
+            const ikili = atob(pano.data);
+            const bayt = new Uint8Array(ikili.length);
+            for (let i = 0; i < ikili.length; i++) bayt[i] = ikili.charCodeAt(i);
+            return { gorsel: new Blob([bayt], { type: pano.mime }) };
+        }
+        return { metin: pano.text || undefined };
+    }
+    const pano = navigator.clipboard as Clipboard | undefined;
+    if (!pano) throw new Error('Bu tarayıcı panoyu okumaya izin vermiyor.');
+    try {
+        if (pano.read) {
+            for (const oge of await pano.read()) {
+                const tur = oge.types.find(t => t.startsWith('image/'));
+                if (tur) return { gorsel: await oge.getType(tur) };
+                if (oge.types.includes('text/plain')) return { metin: await (await oge.getType('text/plain')).text() };
+            }
+            return {};
+        }
+        return { metin: await pano.readText() };
+    } catch {
+        throw new Error('Pano okunamadı: tarayıcı izin vermedi.');
+    }
+}
+
+/** Telefon panosundakini (metin ya da görsel) bilgisayar panosuna gönderir; başarı iletisini döndürür. */
+export async function telefonPanosunuBilgisayaraGonder(prefs: RemotePrefs): Promise<string> {
+    const pano = await telefonPanosunuOku();
+    if (pano.gorsel) {
+        const uzanti = pano.gorsel.type.includes('png') ? 'png' : pano.gorsel.type.includes('webp') ? 'webp' : pano.gorsel.type.includes('gif') ? 'gif' : 'jpg';
+        await dosyalariBilgisayaraGonder([{ ad: 'pano-' + Date.now() + '.' + uzanti, veri: pano.gorsel }], 'pano', prefs);
+        return 'Telefon panosundaki görsel bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz';
+    }
+    if (!pano.metin) throw new Error('Telefon panosu boş.');
+    await sendToComputerClipboard(pano.metin, prefs);
+    return 'Telefon panosundaki metin bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz';
+}
+
 export async function dictate(language: string): Promise<string> {
     if (isNative()) return (await native.dictate({ language })).text;
     const BrowserRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;

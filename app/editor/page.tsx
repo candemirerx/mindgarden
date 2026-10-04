@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, MonitorSmartphone, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles } from 'lucide-react';
 import RemoteEditorTools from '@/components/editor/RemoteEditorTools';
+import GaleriDugmeleri from '@/components/editor/GaleriDugmeleri';
 import KisayolPanosu, { KisayolSecici } from '@/components/editor/KisayolPanosu';
 import EkranDuzeni, { EkranSecici } from '@/components/editor/EkranDuzeni';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
@@ -115,7 +116,7 @@ function EditorPageInner() {
     const [chunkProgress, setChunkProgress] = useState<{ done: number; total: number } | null>(null);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
-    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [, setLastSaved] = useState<Date | null>(null);
     const [loadedNodeKey, setLoadedNodeKey] = useState<string | null>(null);
     const [confirmConfig, setConfirmConfig] = useState<{
         isOpen: boolean;
@@ -843,16 +844,6 @@ function EditorPageInner() {
         URL.revokeObjectURL(url);
     };
 
-    // Son kaydetme zamanını formatla
-    const formatLastSaved = () => {
-        if (!lastSaved) return null;
-        const now = new Date();
-        const diff = Math.floor((now.getTime() - lastSaved.getTime()) / 1000);
-        if (diff < 5) return 'Az önce kaydedildi';
-        if (diff < 60) return `${diff} sn önce kaydedildi`;
-        return `${Math.floor(diff / 60)} dk önce kaydedildi`;
-    };
-
     return (
         <div className={`writing-studio min-h-screen flex flex-col ${focusMode ? 'writing-studio--focused' : ''} ${remoteMode === 'screen' ? 'writing-studio--screen' : ''}`} data-tam-ekran={focusMode ? '' : undefined}>
             {focusMode && (
@@ -1233,20 +1224,10 @@ function EditorPageInner() {
             {/* Footer */}
             <footer ref={footerRef} className="studio-footer bg-white border-t border-sand-200 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6">
                 <div className="flex items-center justify-between text-xs text-sand-600">
-                    <span role="status" className="studio-save-status">
-                        {kayitHatasi ? 'Kayıt başarısız · taslak korundu' : isSaving ? (
-                            <span className="flex items-center gap-1">
-                                <Loader2 size={12} className="animate-spin" />
-                                Kaydediliyor...
-                            </span>
-                        ) : autoSave ? (
-                            hasChanges ? 'Kaydedilmeyi bekliyor…' : formatLastSaved() || 'Otomatik kaydetme açık'
-                        ) : hasChanges ? (
-                            '● Kaydedilmemiş değişiklikler'
-                        ) : (
-                            'Kaydedildi'
-                        )}
-                    </span>
+                    {/* Sol alt: mini galeri, kamera, telefon galerisi. Kayıt zamanı yazılmaz;
+                        yalnız kayıt başarısızsa ya da otomatik kayıt kapalıyken bekleyen değişiklik varsa uyarı çıkar. */}
+                    <GaleriDugmeleri notId={nodeId} editorMetni={content}
+                        uyari={kayitHatasi ? 'Kayıt başarısız · taslak korundu' : !autoSave && hasChanges ? '● Kaydedilmedi' : undefined} />
                     <div className="flex items-center gap-3 sm:gap-6">
                         <label className="studio-autosave flex min-h-[44px] cursor-pointer items-center gap-2" title="Otomatik kaydet">
                             <input type="checkbox" checked={autoSave} onChange={e => setAutoSave(e.target.checked)} aria-label="Otomatik kaydetmeyi aç/kapat" className="h-4 w-4 accent-moss-600" />
