@@ -11,6 +11,9 @@ cd /d "%~dp0.."
 
 echo.
 echo Not Bahcesi PC yardimcisi hazirlaniyor...
+rem Indirilen dosyalardaki "internetten geldi" isaretini kaldirir: Windows'un
+rem "Yayimci dogrulanamadi" uyarisi bir daha cikmaz, Bluetooth kutuphanesi yuklenir.
+powershell.exe -NoProfile -Command "Get-ChildItem -LiteralPath '%~dp0..' -Recurse -File | Unblock-File -ErrorAction SilentlyContinue"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0pc_guvenlik_duvari.ps1" -Denetle
 if errorlevel 1 (
     echo Wi-Fi icin guvenlik duvari izni bir kez eklenecek.

@@ -12,6 +12,10 @@
 # Yalnız güvenilen Özel ağlarda kullanın. Telefonun Ayarlar bölümüne aşağıda
 # gösterilen IPv4 adresini ve anahtarı girin. Ctrl+C ile kapatın.
 $ErrorActionPreference = 'Stop'
+# İnternetten indirilen zip'ten çıkan dosyalar "internetten geldi" işareti taşır;
+# .NET işaretli DLL'i yüklemez (0x80131515) ve Bluetooth dinleyicisi açılmaz.
+# Yardımcı kendi klasöründeki işaretleri kaldırır (yönetici izni gerekmez).
+Get-ChildItem -LiteralPath $PSScriptRoot -Recurse -File -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
 Add-Type -Path (Join-Path $PSScriptRoot 'RemoteInput.cs')
 $tokenPath = Join-Path $PSScriptRoot '.pc_clipboard_token'
 if (-not (Test-Path -LiteralPath $tokenPath)) {
