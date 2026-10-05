@@ -54,3 +54,11 @@
 @media (max-width: 767px) {
   .tuval-cubuk--y { bottom: calc(76px + max(48px, env(safe-area-inset-bottom, 0px))); }
 }
+
+/* Tuval zemini: kâğıt üzerinde yumuşak yeşil ve krem ışık */
+.garden-page .garden-zemin {
+  background:
+    radial-gradient(900px 560px at 8% -8%, rgb(var(--moss-100) / .55), transparent 62%),
+    radial-gradient(820px 520px at 108% 108%, rgb(var(--clay-100) / .5), transparent 60%),
+    rgb(var(--sand-50));
+}

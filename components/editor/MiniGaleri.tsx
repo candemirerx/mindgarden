@@ -21,6 +21,7 @@ import BaglantiGostergesi from './BaglantiGostergesi';
 import { dosyalariGaleriyeEkle, galeridenSil, galeriyeEkle, gorseliHazirla, metinKarti, useMiniGaleri } from '@/lib/miniGaleri';
 import type { GaleriOgesi } from '@/lib/miniGaleri';
 import { cx } from '@/components/ui/settings';
+import Kamera from './Kamera';
 
 type Durum = { metin: string; ton: 'sending' | 'ok' | 'error' } | null;
 
@@ -47,6 +48,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
     const onizleme = useOnizlemeler(ogeler);
     const [secili, setSecili] = useState<Set<string>>(new Set());
     const [buyuk, setBuyuk] = useState<GaleriOgesi | null>(null);
+    const [kamera, setKamera] = useState(false);
     const [durum, setDurum] = useState<Durum>(null);
     const [mesgul, setMesgul] = useState(false);
     const [taslak, setTaslak] = useState('');
@@ -63,7 +65,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
     }, [ogeler]);
     // Geri tuşu / Esc: önce büyük görünüm, sonra seçim, en son galeri kapanır.
     const geri = useRef(() => { });
-    geri.current = () => { if (buyuk) setBuyuk(null); else if (secimKipi) setSecili(new Set()); else onKapat(); };
+    geri.current = () => { if (kamera) setKamera(false); else if (buyuk) setBuyuk(null); else if (secimKipi) setSecili(new Set()); else onKapat(); };
     useEffect(() => {
         const tus = (e: KeyboardEvent) => { if (e.key === 'Escape') geri.current(); };
         window.addEventListener('keydown', tus);
@@ -266,7 +268,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                         <p className="text-sm text-sand-600">Fotoğraf çekin, telefon galerisinden aktarın ya da aşağıdaki kutuya panodan yapıştırın.</p>
                     </div>
                     <div className="flex gap-2">
-                        <button type="button" onClick={() => kameraRef.current?.click()} className="btn btn-primary min-h-11 gap-1.5 px-4 text-sm"><Camera size={16} /> Fotoğraf çek</button>
+                        <button type="button" onClick={() => setKamera(true)} className="btn btn-primary min-h-11 gap-1.5 px-4 text-sm"><Camera size={16} /> Fotoğraf çek</button>
                         <button type="button" onClick={() => galeriRef.current?.click()} className="btn btn-secondary min-h-11 gap-1.5 px-4 text-sm"><ImagePlus size={16} /> Galeriden</button>
                     </div>
                 </div>
@@ -306,7 +308,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
             </div>}
             <div className="flex items-end gap-1.5">
                 <div className="flex shrink-0 items-center">
-                    <button type="button" id="galeri-kamera" onClick={() => kameraRef.current?.click()} aria-label="Fotoğraf çek" title="Fotoğraf çek" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><Camera size={20} /></button>
+                    <button type="button" id="galeri-kamera" onClick={() => setKamera(true)} aria-label="Fotoğraf çek" title="Fotoğraf çek" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><Camera size={20} /></button>
                     <button type="button" id="galeri-telefondan" onClick={() => galeriRef.current?.click()} aria-label="Telefon galerisinden ekle" title="Telefon galerisinden ekle" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><ImagePlus size={20} /></button>
                 </div>
                 <div className="flex min-h-11 min-w-0 flex-1 items-end rounded-3xl border border-sand-200 bg-sand-50 pl-3.5 pr-1 focus-within:border-moss-400">
@@ -325,6 +327,10 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
 
         <input ref={kameraRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { void dosyaEkle(e.target.files); e.target.value = ''; }} />
         <input ref={galeriRef} type="file" accept="image/*" multiple hidden onChange={e => { void dosyaEkle(e.target.files); e.target.value = ''; }} />
+
+        {kamera && <Kamera geriTusu={false} onKapat={() => setKamera(false)}
+            onCek={foto => { void dosyalariGaleriyeEkle(notId, [foto]).catch(e => bildir({ metin: e instanceof Error ? e.message : 'Eklenemedi.', ton: 'error' })); }}
+            onSistemKamerasi={() => { setKamera(false); kameraRef.current?.click(); }} />}
 
         {/* Büyük görünüm */}
         {buyuk && <div className="absolute inset-0 z-20 flex flex-col bg-black/95" role="dialog" aria-label="Önizleme">

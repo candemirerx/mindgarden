@@ -507,7 +507,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                     setViewState(prev => ({ ...prev, offset: { x: prev.offset.x + move.x, y: prev.offset.y + move.y } }));
                 }
             }}
-            className={`w-full h-full overflow-hidden relative bg-paper cursor-grab select-none ${isDragging ? 'cursor-grabbing' : ''} touch-none`}
+            className={`garden-zemin w-full h-full overflow-hidden relative bg-paper cursor-grab select-none ${isDragging ? 'cursor-grabbing' : ''} touch-none`}
             onMouseDown={handlePointerDown}
             onMouseMove={handlePointerMove}
             onMouseUp={handlePointerUp}

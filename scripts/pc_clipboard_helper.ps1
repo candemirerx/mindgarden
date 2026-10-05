@@ -336,7 +336,25 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
             Send-Response $stream ($(if ($cevap -like '{"ok":true*' -or $cevap -like '*"ok":true*') { 200 } else { 403 })) $cevap; return
         }
         if (-not (Same-Token $authorization "Bearer $expectedToken")) { Send-Response $stream 401 '{"ok":false,"error":"Anahtar yanlış"}'; return }
-        if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 '{"ok":true,"app":"not-bahcesi-clipboard","surum":2}'; return }
+        if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 (@{ ok = $true; app = 'not-bahcesi-clipboard'; surum = 3; phoneStorage = $script:phoneDriveReady } | ConvertTo-Json -Compress); return }
+        if ($parts[0] -eq 'POST' -and $parts[1] -eq '/phone-storage') {
+            if (-not $script:phoneDriveReady) { Send-Response $stream 503 '{"ok":false,"error":"PC dosya paylaşım bileşeni açılamadı."}'; return }
+            if ($length -lt 1 -or $length -gt 8192) { Send-Response $stream 413 '{"ok":false}'; return }
+            $body = New-Object byte[] $length
+            $offset = 0
+            while ($offset -lt $length) { $n = $stream.Read($body, $offset, $length - $offset); if ($n -le 0) { throw 'Eksik dosya bağlantısı isteği.' }; $offset += $n }
+            try {
+                $config = [Text.Encoding]::UTF8.GetString($body) | ConvertFrom-Json
+                switch ([string]$config.action) {
+                    'connect' { $reply = [PhoneDrive]::Register([string]$config.url, [string]$config.token, [string]$config.client, [string]$config.name) }
+                    'disconnect' { $reply = [PhoneDrive]::Disconnect([string]$config.client) }
+                    'status' { $reply = [PhoneDrive]::Status() }
+                    default { throw 'Dosya bağlantısı eylemi geçersiz.' }
+                }
+                Send-Response $stream 200 $reply
+            } catch { Send-Response $stream 400 (@{ ok = $false; error = $_.Exception.Message } | ConvertTo-Json -Compress) }
+            return
+        }
         if ($parts[0] -ne 'POST' -or @('/clipboard', '/input') -notcontains $parts[1]) { Send-Response $stream 404 '{"ok":false}'; return }
         if ($length -lt 1 -or $length -gt 1048576) { Send-Response $stream 413 '{"ok":false,"error":"Metin 1 MB sınırını aşıyor"}'; return }
         $payload = New-Object byte[] $length
@@ -430,6 +448,13 @@ catch {
     exit 3
 }
 # Port zaten kullaniliyorsa ikinci bir Bluetooth alicisi baslatma.
+$script:phoneDriveReady = $false
+try {
+    Add-Type -Path (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll')
+    Add-Type -Path (Join-Path $PSScriptRoot 'PhoneDrive.cs') -ReferencedAssemblies @('System.dll', 'System.Core.dll', 'System.Web.Extensions.dll', 'System.ServiceProcess.dll', (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll'))
+    [PhoneDrive]::Start(8787, (-not [bool]$TestMode))
+    $script:phoneDriveReady = $true
+} catch { Write-Warning ('Telefon belleği bileşeni açılamadı: ' + $_.Exception.Message) }
 $serialJob = $null
 $directBluetooth = $false
 if (-not $TestMode) {
@@ -511,5 +536,6 @@ try {
     }
 } finally {
     $listener.Stop()
+    if ($script:phoneDriveReady) { [PhoneDrive]::Stop() }
     if ($serialJob) { Stop-Job $serialJob -ErrorAction SilentlyContinue; Remove-Job $serialJob -Force -ErrorAction SilentlyContinue }
 }

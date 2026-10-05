@@ -17,6 +17,9 @@
          kısa süre görünür olur (ACTION_REQUEST_DISCOVERABLE, Android 12+). -->
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Mini galerinin uygulama içi kamerası (ön kamerada önizlemede göründüğü gibi kaydeder). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Köprü Dikte boyunca ses tanıyıcının açılış/kapanış tonunu susturmak
          için ses düzeyleri geçici olarak sıfırlanır. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />

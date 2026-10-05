@@ -222,6 +222,7 @@ function GardenPageInner() {
 
             const children = nodes
                 .filter(n => n.parent_id === nodeId)
+                .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')))
                 .map(child => buildTree(child.id));
 
             return {
@@ -368,7 +369,18 @@ function GardenPageInner() {
     };
 
     // Alt node ekle
-    const handleAddChild = (parentId: string, direction: 'left' | 'right' = 'right') => {
+    /**
+     * Yan not: verilen notun hemen yanına (sonrasına) kardeş ekler. Kardeşler
+     * oluşturulma zamanına göre dizildiği için yeni not, bu notla bir sonraki
+     * kardeşin arasına düşecek bir zaman alır.
+     */
+    const handleAddSiblingAfter = (siblingId: string) => {
+        const kardes = nodes.find(n => n.id === siblingId);
+        if (!kardes || !kardes.parent_id) return;
+        handleAddChild(kardes.parent_id, 'right', siblingId);
+    };
+
+    const handleAddChild = (parentId: string, direction: 'left' | 'right' = 'right', sonrasina?: string) => {
         if (mindRoots.length === 0) return;
 
         const adIzinli = siraliAdEtkin();
@@ -386,8 +398,19 @@ function GardenPageInner() {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
                 // Sıralı ad aracı açıkken boş ad, seviyedeki sıra numarasına dönüşür.
                 const ad = title || (adIzinli ? siraliAd(parentId, nodes) : varsayilan);
+                // Yan not: bu kardeşle sonraki kardeşin arasına düşecek oluşturma zamanı
+                let createdAt: string | undefined;
+                if (sonrasina) {
+                    const kardesler = nodes.filter(n => n.parent_id === parentId)
+                        .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')));
+                    const sira = kardesler.findIndex(n => n.id === sonrasina);
+                    if (sira >= 0 && sira < kardesler.length - 1) {
+                        const t0 = Date.parse(kardesler[sira].created_at), t1 = Date.parse(kardesler[sira + 1].created_at);
+                        if (Number.isFinite(t0) && Number.isFinite(t1)) createdAt = new Date(t0 + Math.max(1, Math.floor((t1 - t0) / 2))).toISOString();
+                    }
+                }
                 // Supabase'e kaydet ve gerçek node'u al
-                const newNode = await addNode(gardenId, ad, parentId, { x: 0, y: 0 });
+                const newNode = await addNode(gardenId, ad, parentId, { x: 0, y: 0 }, createdAt);
 
                 if (newNode) {
                     const newMindNode: MindNode = {
@@ -400,7 +423,7 @@ function GardenPageInner() {
                     };
 
                     // Hangi ağaçta olduğunu bul
-                    const result = findNodeInTrees(parentId);
+                    const result = sonrasina ? null : findNodeInTrees(parentId);
                     if (result) {
                         const { tree, treeIndex } = result;
                         // UI'da ekle
@@ -693,6 +716,7 @@ function GardenPageInner() {
                                     ) : (
                                         <YeniAgac
                                             node={root}
+                                            onAddSiblingAfter={handleAddSiblingAfter}
                                             duzen={tuval.gosterim}
                                             onizleme={tuval.onizleme}
                                             onAddChild={handleAddChild}
