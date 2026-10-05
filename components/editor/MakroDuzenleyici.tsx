@@ -20,7 +20,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, Check, Hand, Keyboard, ListOrdered, MousePointer2, Play, Plus, Repeat, TextCursorInput, Timer, ToggleRight, Trash2, Wand2, X } from 'lucide-react';
-import { BEKLEME_SINIRI, KONUM_MERKEZ, TEKRAR_SINIRI, TUR_ARASI_SINIRI, beklemeGecerli, beklemeMetni, konumYuzdesi, type MakroCalisma, type RemoteMacro, type RemoteMacroStep, type RemotePrefs } from '@/lib/remoteTools';
+import { BEKLEME_SINIRI, CAPA_ADI, KONUM_MERKEZ, TEKRAR_SINIRI, TUR_ARASI_SINIRI, beklemeGecerli, beklemeMetni, konumYuzdesi, type KonumEkrani, type MakroCalisma, type RemoteMacro, type RemoteMacroStep, type RemotePrefs } from '@/lib/remoteTools';
 import KonumSecici from './KonumSecici';
 import { settingsFieldClass } from '@/components/ui/settings';
 import SanalKlavye from './SanalKlavye';
@@ -87,6 +87,7 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
         const gecerli = /^\d{1,5}\s*,\s*\d{1,5}$/.test((makro?.value ?? '').trim());
         return gecerli ? { x: Number(x), y: Number(y) } : { x: KONUM_MERKEZ, y: KONUM_MERKEZ };
     });
+    const [konumEkrani, setKonumEkrani] = useState<KonumEkrani | undefined>(makro?.type === 'position' ? makro.ekran : undefined);
     const [adimlar, setAdimlar] = useState<RemoteMacroStep[]>(() => makro?.steps?.map((adim) => ({ ...adim })) ?? []);
     const [calisma, setCalisma] = useState<MakroCalisma>(makro?.calisma ?? 'tek');
     const [tekrar, setTekrar] = useState(String(makro?.tekrar ?? 3));
@@ -163,7 +164,7 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
             type: tur,
             value: ham,
             enabled: makro?.enabled ?? true,
-            ...(tur === 'position' ? { click: tik } : {})
+            ...(tur === 'position' ? { click: tik, ...(konumEkrani ? { ekran: konumEkrani } : {}) } : {})
         });
     };
 
@@ -237,6 +238,7 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                             </p>
                             <p id="makro-konum-deger" className="text-sm font-medium text-sand-800">
                                 X %{konumYuzdesi(konum.x).toFixed(1)} · Y %{konumYuzdesi(konum.y).toFixed(1)}
+                                {konumEkrani && <span className="block text-xs font-normal text-sand-600">{konumEkrani.w} × {konumEkrani.h} ekran · {CAPA_ADI[konumEkrani.capa].toLowerCase()}</span>}
                             </p>
                             <button
                                 type="button"
@@ -478,13 +480,14 @@ export default function MakroDuzenleyici({ makro, prefs, onKaydet, onKapat }: {
                 <KonumSecici
                     baslangicX={typeof konumHedefi === 'number' && adimlar[konumHedefi]?.value ? Number(adimlar[konumHedefi].value.split(',')[0]) : konum.x}
                     baslangicY={typeof konumHedefi === 'number' && adimlar[konumHedefi]?.value ? Number(adimlar[konumHedefi].value.split(',')[1]) : konum.y}
+                    baslangicEkran={typeof konumHedefi === 'number' ? adimlar[konumHedefi]?.ekran : konumEkrani}
                     prefs={prefs}
-                    onKaydet={(x, y) => {
+                    onKaydet={(x, y, ekran) => {
                         if (typeof konumHedefi === 'number') {
                             const sira = konumHedefi;
-                            setAdimlar((liste) => liste.map((a, i) => (i === sira ? { ...a, value: Math.round(x) + ',' + Math.round(y) } : a)));
+                            setAdimlar((liste) => liste.map((a, i) => (i === sira ? { ...a, value: Math.round(x) + ',' + Math.round(y), ekran } : a)));
                             setUyari('');
-                        } else setKonum({ x, y });
+                        } else { setKonum({ x, y }); setKonumEkrani(ekran); }
                         setKonumHedefi(null);
                     }}
                     onKapat={() => setKonumHedefi(null)}

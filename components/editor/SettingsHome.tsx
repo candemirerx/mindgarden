@@ -1,36 +1,56 @@
 'use client';
 
+/**
+ * Ayarlar ana ekranı.
+ *
+ * Üstte iki hızlı kart: kullanım kılavuzu ve deneme ağacı (bağlantıyı ya da
+ * yapay zekâyı kaydedilmeyen bir notta denemek için). Altında ayarlar
+ * başlıklar hâlinde düğme ızgarası olarak dizilir: Araçlar (makrolar, yerel
+ * ve bilgisayar araçları, kısayollar), Bağlantılar (bilgisayar, yapay zekâ,
+ * hesap, yedekleme) ve Uygulama. Arama yazılınca düz sonuç listesi çıkar.
+ */
 import { useId, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     BookOpen,
     ChevronRight,
     Cloud,
     Database,
     Info,
+    Keyboard,
+    Loader2,
     Monitor,
+    MonitorSmartphone,
     Palette,
     Search,
-    SlidersHorizontal,
     Sparkles,
     TreePine,
     UserCircle2,
     Wand2,
+    Wrench,
     X,
     type LucideIcon,
 } from 'lucide-react';
 import { APP_VERSION } from '@/lib/config';
+import { denemeAgaciAdresi, type DenemeTuru } from '@/lib/denemeAgaci';
 
 export type SettingsSectionId =
     | 'account'
     | 'models'
     | 'macros'
     | 'gorunum'
+    /** Eski bağlantılar için: bilgisayar araçlarına yönlenir. */
     | 'tools'
+    | 'yerel'
+    | 'pcAraclari'
+    | 'kisayollar'
     | 'remote'
     | 'sync'
     | 'data'
     | 'about'
     | 'usage';
+
+type Ton = 'moss' | 'clay' | 'bark' | 'berry';
 
 interface SettingsSectionDefinition {
     id: SettingsSectionId;
@@ -38,96 +58,74 @@ interface SettingsSectionDefinition {
     description: string;
     icon: LucideIcon;
     group: string;
+    ton: Ton;
     keywords: string[];
 }
 
 export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
-    {
-        id: 'usage',
-        title: 'Kullanım kılavuzu',
-        description: 'Başlangıçtan uzmana beş seviyeli öğretim',
-        icon: BookOpen,
-        group: 'Yardım',
-        keywords: ['kullanım', 'kılavuz', 'yardım', 'nasıl', 'başlangıç', 'rehber', 'adım', 'ipucu', 'sss'],
-    },
-    {
-        id: 'account',
-        title: 'Hesap ve giriş',
-        description: 'Hesabınız ve oturum tercihleriniz',
-        icon: UserCircle2,
-        group: 'Hesabınız',
-        keywords: ['google', 'e-posta', 'email', 'giriş', 'çıkış', 'oturum', 'profil'],
-    },
-    {
-        id: 'models',
-        title: 'Yapay zekâ',
-        description: 'Bulut bağlantısı veya cihazınızda çalışan yerel model',
-        icon: Sparkles,
-        group: 'Yazma deneyimi',
-        keywords: ['ai', 'model', 'chatgpt', 'openai', 'gemini', 'claude', 'api', 'anahtar', 'yerel', 'çevrimdışı', 'mediapipe', 'gemma', 'edge'],
-    },
-    {
-        id: 'macros',
-        title: 'AI makroları',
-        description: 'Yazılarınıza özel hazır komutlar',
-        icon: Wand2,
-        group: 'Yazma deneyimi',
-        keywords: ['yapay zekâ', 'makro', 'komut', 'prompt', 'özet', 'çeviri'],
-    },
-    {
-        id: 'gorunum',
-        title: 'Görünüm',
-        description: 'Açık, koyu veya sistem teması',
-        icon: Palette,
-        group: 'Yazma deneyimi',
-        keywords: ['tema', 'koyu', 'açık', 'gece', 'görünüm', 'renk', 'kontrast', 'dark'],
-    },
-    {
-        id: 'tools',
-        title: 'Düzenleme araçları',
-        description: 'Editörde kullanacağınız araçları seçin',
-        icon: SlidersHorizontal,
-        group: 'Çalışma alanınız',
-        keywords: ['editör', 'araç çubuğu', 'yazım', 'imla', 'biçim', 'tercihler'],
-    },
-    {
-        id: 'remote',
-        title: 'Bilgisayar bağlantısı',
-        description: 'Telefon ve bilgisayar arasında çalışın',
-        icon: Monitor,
-        group: 'Çalışma alanınız',
-        keywords: ['uzak', 'remote', 'bluetooth', 'kablosuz', 'köprü', 'dikte', 'mikrofon'],
-    },
-    {
-        id: 'sync',
-        title: 'Yedekleme ve senkronizasyon',
-        description: 'Notlarınızı cihazlarınız arasında taşıyın',
-        icon: Cloud,
-        group: 'Hesabınız',
-        keywords: ['yedek', 'bulut', 'google', 'drive', 'eşitle', 'senkron', 'sync'],
-    },
-    {
-        id: 'data',
-        title: 'Veri yönetimi',
-        description: 'Notlarınızı dışa aktarın veya geri yükleyin',
-        icon: Database,
-        group: 'Uygulama',
-        keywords: ['yedek', 'dosya', 'json', 'indir', 'yükle', 'sil', 'saklama', 'depolama'],
-    },
-    {
-        id: 'about',
-        title: 'Uygulama hakkında',
-        description: 'Sürüm bilgisi ve gizlilik politikası',
-        icon: Info,
-        group: 'Uygulama',
-        keywords: ['not bahçesi', 'sürüm', 'versiyon', 'gizlilik', 'güvenlik', 'hakkında'],
-    },
+    { id: 'macros', title: 'AI makroları', description: 'Yazılarınıza hazır yapay zekâ komutları', icon: Wand2, group: 'Araçlar', ton: 'clay', keywords: ['yapay zekâ', 'makro', 'komut', 'prompt', 'özet', 'çeviri', 'imla'] },
+    { id: 'yerel', title: 'Yerel araçlar', description: 'İnternetsiz metin araçları', icon: Wrench, group: 'Araçlar', ton: 'moss', keywords: ['editör', 'araç', 'numaralandır', 'başlık', 'temizle', 'sıra'] },
+    { id: 'pcAraclari', title: 'Bilgisayar araçları', description: 'Fare, dikte, yazma, pano, görsel', icon: MonitorSmartphone, group: 'Araçlar', ton: 'bark', keywords: ['fare', 'dikte', 'köprü', 'yaz', 'pano', 'enter', 'görsel', 'araç'] },
+    { id: 'kisayollar', title: 'Kısayollar ve ekranlar', description: 'Makrolar, profiller, ekran düzenleri', icon: Keyboard, group: 'Araçlar', ton: 'berry', keywords: ['kısayol', 'makro', 'profil', 'ekran', 'numpad', 'konum', 'düzen'] },
+    { id: 'remote', title: 'Bilgisayar bağlantısı', description: 'Kart, Wi‑Fi, Bluetooth, PC yardımcısı', icon: Monitor, group: 'Bağlantılar', ton: 'bark', keywords: ['uzak', 'remote', 'bluetooth', 'kablosuz', 'kart', 'yardımcı', 'eşleştir', 'dikte motoru'] },
+    { id: 'models', title: 'Yapay zekâ', description: 'Bulut anahtarı ya da yerel model', icon: Sparkles, group: 'Bağlantılar', ton: 'clay', keywords: ['ai', 'model', 'chatgpt', 'openai', 'gemini', 'claude', 'api', 'anahtar', 'yerel', 'çevrimdışı', 'gemma', 'ollama'] },
+    { id: 'account', title: 'Hesap ve giriş', description: 'Google hesabı ve oturum', icon: UserCircle2, group: 'Bağlantılar', ton: 'moss', keywords: ['google', 'e-posta', 'email', 'giriş', 'çıkış', 'oturum', 'profil'] },
+    { id: 'sync', title: 'Yedekleme', description: 'Google Drive ile eşitleme', icon: Cloud, group: 'Bağlantılar', ton: 'moss', keywords: ['yedek', 'bulut', 'google', 'drive', 'eşitle', 'senkron', 'sync'] },
+    { id: 'gorunum', title: 'Görünüm', description: 'Açık, koyu ya da sistem teması', icon: Palette, group: 'Uygulama', ton: 'moss', keywords: ['tema', 'koyu', 'açık', 'gece', 'görünüm', 'renk', 'dark'] },
+    { id: 'data', title: 'Veri yönetimi', description: 'Dışa aktar, geri yükle', icon: Database, group: 'Uygulama', ton: 'moss', keywords: ['yedek', 'dosya', 'json', 'indir', 'yükle', 'sil', 'depolama', 'pdf', 'docx'] },
+    { id: 'about', title: 'Uygulama hakkında', description: 'Sürüm ve gizlilik', icon: Info, group: 'Uygulama', ton: 'moss', keywords: ['not bahçesi', 'sürüm', 'versiyon', 'gizlilik', 'güvenlik', 'hakkında'] },
+    { id: 'usage', title: 'Kullanım kılavuzu', description: 'Başlangıçtan uzmana beş seviye', icon: BookOpen, group: 'Yardım', ton: 'clay', keywords: ['kullanım', 'kılavuz', 'yardım', 'nasıl', 'başlangıç', 'rehber', 'sss'] },
 ];
 
-const GROUPS = ['Hesabınız', 'Yazma deneyimi', 'Çalışma alanınız', 'Yardım', 'Uygulama'];
+/** Eski bölüm kimliklerini günceline çevirir. */
+export const bolumuNormallestir = (id: SettingsSectionId | 'home'): SettingsSectionId | 'home' => id === 'tools' ? 'pcAraclari' : id;
+
+const GRUPLAR: { ad: string; aciklama: string; izgara: boolean }[] = [
+    { ad: 'Araçlar', aciklama: 'Editörde kullandığınız araçlar', izgara: true },
+    { ad: 'Bağlantılar', aciklama: 'Bilgisayar, yapay zekâ ve hesap', izgara: true },
+    { ad: 'Uygulama', aciklama: '', izgara: false },
+];
+
+const TON: Record<Ton, string> = {
+    moss: 'bg-moss-50 text-moss-700 ring-moss-200/60',
+    clay: 'bg-clay-50 text-clay-700 ring-clay-200/70',
+    bark: 'bg-bark-50 text-bark-700 ring-bark-200/70',
+    berry: 'bg-berry-50 text-berry-700 ring-berry-100',
+};
 
 function normalizeSearch(value: string) {
-    return value.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return value.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/** Deneme ağacını açar: açık not kaydedilir, ayarlar kapanır, editör deneme modunda açılır. */
+function DenemeKarti() {
+    const router = useRouter();
+    const [mesgul, setMesgul] = useState<DenemeTuru | null>(null);
+    const ac = async (tur: DenemeTuru) => {
+        setMesgul(tur);
+        try {
+            const adres = await denemeAgaciAdresi(tur);
+            window.dispatchEvent(new Event('nb-editor-kaydet'));
+            window.dispatchEvent(new Event('nb-ayarlari-kapat'));
+            router.push(adres);
+        } finally { setMesgul(null); }
+    };
+    const dugme = 'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-white px-3 text-[13px] font-semibold text-sand-800 ring-1 ring-clay-200 transition-colors hover:bg-clay-50 active:scale-[.98] disabled:opacity-60';
+    return (
+        <div id="ayar-deneme-agaci" className="relative overflow-hidden rounded-2xl border border-clay-200/80 bg-gradient-to-br from-clay-50 to-white px-4 py-3.5 shadow-soft">
+            <TreePine aria-hidden="true" size={88} strokeWidth={1} className="pointer-events-none absolute -right-4 -top-4 text-clay-300/30" />
+            <p className="relative text-xs font-semibold uppercase tracking-[0.14em] text-clay-700">Deneme ağacı</p>
+            <p className="relative mt-0.5 text-sm leading-snug text-sand-700">Kaydedilmeyen bir notta hemen deneyin.</p>
+            <div className="relative mt-3 flex gap-2">
+                <button type="button" disabled={!!mesgul} onClick={() => void ac('baglanti')} className={dugme}>
+                    {mesgul === 'baglanti' ? <Loader2 size={15} className="animate-spin" /> : <Monitor size={15} className="text-bark-600" />} Bağlantı
+                </button>
+                <button type="button" disabled={!!mesgul} onClick={() => void ac('yapayzeka')} className={dugme}>
+                    {mesgul === 'yapayzeka' ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} className="text-clay-600" />} Yapay zekâ
+                </button>
+            </div>
+        </div>
+    );
 }
 
 export default function SettingsHome({ onSelect }: { onSelect: (id: SettingsSectionId) => void }) {
@@ -145,118 +143,115 @@ export default function SettingsHome({ onSelect }: { onSelect: (id: SettingsSect
         searchRef.current?.focus();
     }
 
-    return (
-        <div className="space-y-5 sm:space-y-6">
-            <button
-                type="button"
-                onClick={() => onSelect('usage')}
-                className="group relative isolate flex w-full items-center gap-3 overflow-hidden rounded-2xl bg-moss-900 px-4 py-3.5 text-left text-white shadow-card transition-colors hover:bg-moss-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 focus-visible:ring-offset-2 sm:gap-4 sm:px-5 sm:py-4"
-            >
-                <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-                    <span className="absolute -right-16 -top-20 h-44 w-44 rounded-full border border-moss-200/10" />
-                    <TreePine className="absolute -bottom-7 right-3 h-24 w-24 -rotate-12 text-moss-200/[0.07] sm:right-16 sm:h-28 sm:w-28" strokeWidth={1} />
+    const satir = ({ id, title, description, icon: Icon, ton }: SettingsSectionDefinition) => (
+        <li key={id} className="border-b border-sand-100 last:border-b-0">
+            <button type="button" onClick={() => onSelect(id)}
+                className="group flex min-h-[64px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-moss-50/70 focus-visible:bg-moss-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-moss-500 active:bg-moss-100/60">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ${TON[ton]}`} aria-hidden="true"><Icon size={19} strokeWidth={1.8} /></span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold leading-5 text-sand-900">{title}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-sand-600">{description}</span>
                 </span>
-                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-moss-200/15 text-moss-100 ring-1 ring-inset ring-moss-200/20">
-                    <TreePine size={20} aria-hidden="true" />
-                </span>
-                <span className="relative min-w-0 flex-1">
-                    <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-moss-200">
-                        Kullanım kılavuzu
-                    </span>
-                    <span className="mt-0.5 block truncate font-display text-lg leading-snug tracking-tight sm:text-xl">
-                        Bahçeniz, sizin düzeniniz.
-                    </span>
-                    <span className="mt-0.5 hidden text-xs leading-relaxed text-moss-100 sm:block">
-                        Uygulamayı adım adım nasıl kullanacağınızı görün.
-                    </span>
-                </span>
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-moss-100 transition-colors group-hover:bg-white/20">
-                    <ChevronRight size={17} aria-hidden="true" />
+                <ChevronRight size={17} className="shrink-0 text-sand-500 transition-colors group-hover:text-moss-600" aria-hidden="true" />
+            </button>
+        </li>
+    );
+
+    const kutu = ({ id, title, description, icon: Icon, ton }: SettingsSectionDefinition) => (
+        <li key={id}>
+            <button type="button" id={'ayar-kutu-' + id} onClick={() => onSelect(id)}
+                className="group flex h-full min-h-[118px] w-full flex-col items-start gap-2.5 rounded-2xl border border-sand-200 bg-white p-3.5 text-left shadow-soft transition-all hover:-translate-y-0.5 hover:border-moss-300 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 active:translate-y-0 active:scale-[.98]">
+                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-inset ${TON[ton]}`} aria-hidden="true"><Icon size={19} strokeWidth={1.8} /></span>
+                <span className="min-w-0">
+                    <span className="block text-[13.5px] font-semibold leading-tight text-sand-900">{title}</span>
+                    <span className="mt-1 block text-[11.5px] leading-snug text-sand-600">{description}</span>
                 </span>
             </button>
+        </li>
+    );
+
+    return (
+        <div className="space-y-6">
+            {/* Hızlı kartlar: kılavuz ve deneme ağacı */}
+            <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                    type="button"
+                    onClick={() => onSelect('usage')}
+                    className="group relative isolate flex w-full items-center gap-3 overflow-hidden rounded-2xl bg-moss-900 px-4 py-3.5 text-left text-white shadow-card transition-colors hover:bg-moss-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 focus-visible:ring-offset-2"
+                >
+                    <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+                        <span className="absolute -right-16 -top-20 h-44 w-44 rounded-full border border-moss-200/10" />
+                        <TreePine className="absolute -bottom-7 right-3 h-24 w-24 -rotate-12 text-moss-200/[0.07]" strokeWidth={1} />
+                    </span>
+                    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-moss-200/15 text-moss-100 ring-1 ring-inset ring-moss-200/20">
+                        <BookOpen size={20} aria-hidden="true" />
+                    </span>
+                    <span className="relative min-w-0 flex-1">
+                        <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-moss-200">Kullanım kılavuzu</span>
+                        <span className="mt-0.5 block truncate font-display text-lg leading-snug tracking-tight">Bahçeniz, sizin düzeniniz.</span>
+                        <span className="mt-0.5 block text-xs leading-relaxed text-moss-100/90">Başlangıçtan uzmana adım adım.</span>
+                    </span>
+                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-moss-100 transition-colors group-hover:bg-white/20">
+                        <ChevronRight size={17} aria-hidden="true" />
+                    </span>
+                </button>
+                <DenemeKarti />
+            </div>
 
             <div>
-                <label htmlFor={searchId} className="mb-2 block text-sm font-semibold text-sand-800">
-                    Ayarlarda ara
-                </label>
+                <label htmlFor={searchId} className="sr-only">Ayarlarda ara</label>
                 <div className="relative">
-                    <Search aria-hidden="true" size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sand-600" />
+                    <Search aria-hidden="true" size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sand-500" />
                     <input
                         ref={searchRef}
                         id={searchId}
                         type="search"
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Örn. yapay zekâ, yedekleme…"
+                        placeholder="Ayarlarda ara: yapay zekâ, pano, yedek…"
                         autoComplete="off"
                         spellCheck={false}
                         aria-controls={`${searchId}-results`}
-                        className="h-14 w-full rounded-2xl border border-sand-300 bg-white pl-11 pr-14 text-base text-sand-900 shadow-soft outline-none transition-shadow placeholder:text-sand-600 focus:border-moss-500 focus:ring-4 focus:ring-moss-500/10 [&::-webkit-search-cancel-button]:appearance-none"
+                        className="h-12 w-full rounded-2xl border border-sand-200 bg-white pl-11 pr-12 text-[15px] text-sand-900 shadow-soft outline-none transition-shadow placeholder:text-sand-500 focus:border-moss-500 focus:ring-4 focus:ring-moss-500/10 [&::-webkit-search-cancel-button]:appearance-none"
                     />
                     {query && (
-                        <button
-                            type="button"
-                            onClick={clearSearch}
-                            aria-label="Aramayı temizle"
-                            className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-sand-600 transition-colors hover:bg-sand-100 hover:text-sand-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500"
-                        >
+                        <button type="button" onClick={clearSearch} aria-label="Aramayı temizle"
+                            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-sand-600 transition-colors hover:bg-sand-100 hover:text-sand-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500">
                             <X size={18} aria-hidden="true" />
                         </button>
                     )}
                 </div>
-                <p role="status" className="sr-only">
-                    {terms.length > 0 ? `${sections.length} ayar bölümü bulundu.` : ''}
-                </p>
+                <p role="status" className="sr-only">{terms.length > 0 ? `${sections.length} ayar bölümü bulundu.` : ''}</p>
             </div>
 
             <div id={`${searchId}-results`}>
-                {sections.length > 0 ? (
-                    <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-x-6 lg:gap-y-7">
-                        {GROUPS.map((group, groupIndex) => {
-                            const groupSections = sections.filter((section) => section.group === group);
-                            if (groupSections.length === 0) return null;
-
+                {terms.length > 0 ? (
+                    sections.length > 0 ? (
+                        <ul className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">{sections.map(satir)}</ul>
+                    ) : (
+                        <div className="rounded-2xl border border-dashed border-sand-300 bg-white px-5 py-8 text-center">
+                            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-sand-100 text-sand-600" aria-hidden="true"><Search size={22} /></span>
+                            <h3 className="text-base font-semibold text-sand-900">Bir ayar bulunamadı</h3>
+                            <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-sand-600">Başka bir kelime deneyin veya aramayı temizleyin.</p>
+                            <button type="button" onClick={clearSearch} className="mt-4 min-h-[44px] rounded-xl bg-moss-50 px-4 py-2.5 text-sm font-semibold text-moss-800 transition-colors hover:bg-moss-100">Aramayı temizle</button>
+                        </div>
+                    )
+                ) : (
+                    <div className="space-y-6">
+                        {GRUPLAR.map((grup, i) => {
+                            const ogeler = SETTINGS_SECTIONS.filter(s => s.group === grup.ad);
                             return (
-                                <section key={group} aria-labelledby={`${searchId}-group-${groupIndex}`} className="min-w-0">
-                                    <h3 id={`${searchId}-group-${groupIndex}`} className="mb-2.5 px-1 text-xs font-semibold uppercase tracking-wider text-sand-600">
-                                        {group}
-                                    </h3>
-                                    <ul className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">
-                                        {groupSections.map(({ id, title, description, icon: Icon }) => (
-                                            <li key={id} className="border-b border-sand-100 last:border-b-0">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onSelect(id)}
-                                                    className="group flex min-h-[88px] w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-moss-50/70 focus-visible:bg-moss-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-moss-500 active:bg-moss-100/60 sm:gap-3.5 sm:px-5"
-                                                >
-                                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-moss-50 text-moss-700 ring-1 ring-inset ring-moss-200/40 transition-colors group-hover:bg-moss-100" aria-hidden="true">
-                                                        <Icon size={20} strokeWidth={1.8} />
-                                                    </span>
-                                                    <span className="min-w-0 flex-1">
-                                                        <span className="block text-sm font-semibold leading-5 text-sand-900">{title}</span>
-                                                        <span className="mt-1 block text-xs leading-relaxed text-sand-600">{description}</span>
-                                                    </span>
-                                                    <ChevronRight size={17} className="shrink-0 text-sand-600 transition-colors group-hover:text-moss-600" aria-hidden="true" />
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                <section key={grup.ad} aria-labelledby={`${searchId}-grup-${i}`}>
+                                    <div className="mb-2.5 flex items-baseline justify-between gap-3 px-1">
+                                        <h3 id={`${searchId}-grup-${i}`} className="text-[13px] font-bold uppercase tracking-[0.12em] text-sand-700">{grup.ad}</h3>
+                                        {grup.aciklama && <p className="truncate text-xs text-sand-500">{grup.aciklama}</p>}
+                                    </div>
+                                    {grup.izgara
+                                        ? <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">{ogeler.map(kutu)}</ul>
+                                        : <ul className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft">{ogeler.map(satir)}</ul>}
                                 </section>
                             );
                         })}
-                    </div>
-                ) : (
-                    <div className="rounded-2xl border border-dashed border-sand-300 bg-white px-5 py-8 text-center">
-                        <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-sand-100 text-sand-600" aria-hidden="true">
-                            <Search size={22} />
-                        </span>
-                        <h3 className="text-base font-semibold text-sand-900">Bir ayar bulunamadı</h3>
-                        <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-sand-600">
-                            Başka bir kelime deneyin veya tüm ayarları görmek için aramayı temizleyin.
-                        </p>
-                        <button type="button" onClick={clearSearch} className="mt-4 min-h-[44px] rounded-xl bg-moss-50 px-4 py-2.5 text-sm font-semibold text-moss-800 transition-colors hover:bg-moss-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 focus-visible:ring-offset-2">
-                            Aramayı temizle
-                        </button>
                     </div>
                 )}
             </div>

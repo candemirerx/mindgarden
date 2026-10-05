@@ -139,8 +139,8 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     'Editörde **Araçlar** sekmesi belirir: **İçerikten Başlık** nota kısa bir başlık üretir, **Sıralı Ad** adsız eklenen dala sıra numarası verir; metni numaralandıran ve fazla boşlukları temizleyen araçlar da vardır.',
                     'İstemediğiniz aracı aynı ekrandan kapatabilir ya da silebilirsiniz.',
                 ],
-                ayarId: 'tools',
-                ayarEtiketi: 'Düzenleme araçlarını aç',
+                ayarId: 'yerel',
+                ayarEtiketi: 'Yerel araçları aç',
             },
             {
                 id: 't-gorunum',
@@ -236,8 +236,8 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     'Aynı ekranda hangi araçların (Fare, Dikte, Bilgisayara Yaz, Panoya Gönder…) görüneceğini tek tek seçebilirsiniz.',
                     'Editörde **Bilgisayar** sekmesine dokunun; araçlar ikinci satırda görünür.',
                 ],
-                ayarId: 'tools',
-                ayarEtiketi: 'Düzenleme araçlarını aç',
+                ayarId: 'pcAraclari',
+                ayarEtiketi: 'Bilgisayar araçlarını aç',
             },
             {
                 id: 'i-yol',
@@ -323,8 +323,8 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     'Editörde **Kısayollar** (sihirli değnek) aracına dokunun: makrolar bir pano olarak açılır, her biri tek dokunuşla çalışır.',
                 ],
                 ipucu: '**Bilgisayar · Bluetooth** yolunda telefon ekranın belirli bir noktasına kendiliğinden gidemez; **Konum** makroları için bilgisayarda PC yardımcısı açık ve bir kez tanıtılmış olmalıdır (PC panosu bölümünden, kod gerekmez). Kısayol ve metin makroları programsız çalışır.',
-                ayarId: 'tools',
-                ayarEtiketi: 'Düzenleme araçlarını aç',
+                ayarId: 'kisayollar',
+                ayarEtiketi: 'Kısayolları aç',
             },
             {
                 id: 'u-sirali',

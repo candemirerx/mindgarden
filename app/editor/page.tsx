@@ -85,7 +85,7 @@ function EditorPageInner() {
     const [remoteToolPrefs, setRemoteToolPrefs] = useState(remotePrefs);
     const [settingsOpen, setSettingsOpen] = useState(false);
     /** Ayar penceresi istenen bölümde açılabilsin: kısayol panosu doğrudan makrolara gider. */
-    const [settingsBolumu, setSettingsBolumu] = useState<'home' | 'tools' | 'remote'>('home');
+    const [settingsBolumu, setSettingsBolumu] = useState<'home' | 'tools' | 'remote' | 'kisayollar'>('home');
     const [focusMode, setFocusMode] = useState(false);
     const [toolTab, setToolTab] = useState<'tools' | 'computer' | 'ai'>('tools');
     useEffect(() => { setToolTab(sonAracSekmesi()); }, []);
@@ -1183,9 +1183,9 @@ function EditorPageInner() {
                 onContentChange={icerikDegistir} />}
 
             {/* Kısayollar: makro panosu; notu değiştirmez. */}
-            {remoteMode === 'shortcuts' && <KisayolPanosu profilId={kisayolProfili} onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
+            {remoteMode === 'shortcuts' && <KisayolPanosu profilId={kisayolProfili} onAyarlarAc={() => { setSettingsBolumu('kisayollar'); setSettingsOpen(true); }} />}
 
-            {remoteMode === 'screen' && <EkranDuzeni onYaziyaDon={() => setRemoteMode('write')} duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onAyarlarAc={() => { setSettingsBolumu('tools'); setSettingsOpen(true); }} />}
+            {remoteMode === 'screen' && <EkranDuzeni onYaziyaDon={() => setRemoteMode('write')} duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onAyarlarAc={() => { setSettingsBolumu('kisayollar'); setSettingsOpen(true); }} />}
 
             {/* Editor Area */}
             {(remoteMode === 'write' || remoteMode === 'dictation') && (<div className="studio-workspace flex-1 py-4 sm:py-8">

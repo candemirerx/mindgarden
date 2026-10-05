@@ -26,7 +26,15 @@ export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDic
  * (value) çağırır; 'wait' adımı value milisaniye bekler; diğer türler tekil
  * makrolarla aynı değeri taşır.
  */
-export type RemoteMacroStep = { type: 'text' | 'shortcut' | 'position' | 'macro' | 'wait'; value: string; click?: 1 | 2 };
+/**
+ * Konumun hangi ekrana göre kaydedildiği. capa 'oran' ise konum ekranın
+ * oranıdır (her ekranda aynı oranda yer). Köşe çapalarında konum o köşeye
+ * piksel uzaklığıyla sabitlenir: ör. sekme kapatma sağ üstten 46 px'tir ve
+ * hangi boyutta ekran olursa olsun oraya denk gelir.
+ */
+export type KonumCapasi = 'oran' | 'sol-ust' | 'sag-ust' | 'sol-alt' | 'sag-alt';
+export type KonumEkrani = { w: number; h: number; capa: KonumCapasi };
+export type RemoteMacroStep = { type: 'text' | 'shortcut' | 'position' | 'macro' | 'wait'; value: string; click?: 1 | 2; ekran?: KonumEkrani };
 /** Bekleme adımının sınırları (ms): 0,05 sn – 10 dk. */
 export const BEKLEME_SINIRI = { min: 50, max: 600000 };
 /** Bekleme süresini kısa Türkçe metne çevirir: 1500 → "1,5 sn", 120000 → "2 dk". */
@@ -52,6 +60,8 @@ export const TEKRAR_SINIRI = { min: 1, max: 1000 };
 export const TUR_ARASI_SINIRI = { min: 0, max: 600000 };
 export type RemoteMacro = {
     id: string; name: string; type: 'text' | 'shortcut' | 'position' | 'sequence'; value: string; enabled?: boolean; click?: 1 | 2; steps?: RemoteMacroStep[];
+    /** Konum makrosunun kaydedildiği ekran (yoksa oran olarak). */
+    ekran?: KonumEkrani;
     /** Yalnız sıralı makroda; verilmezse 'tek'. */
     calisma?: MakroCalisma;
     /** 'sayili' çalışmada kaç kez (varsayılan 3). */
@@ -154,6 +164,42 @@ export const KONUM_MAX = 32767;
 /** Ekranın ortası: 0–32767 aralığının ortası. */
 export const KONUM_MERKEZ = 16384;
 
+/** Yaygın ekran boyutları (Windows ölçeklenmiş masaüstü boyutu). */
+export const YAYGIN_EKRANLAR: { w: number; h: number; ad: string }[] = [
+    { w: 1920, h: 1080, ad: '1920 × 1080 · Full HD (%100)' },
+    { w: 1536, h: 864, ad: '1536 × 864 · Full HD dizüstü (%125)' },
+    { w: 1366, h: 768, ad: '1366 × 768 · HD dizüstü' },
+    { w: 1280, h: 720, ad: '1280 × 720 · Full HD (%150)' },
+    { w: 2560, h: 1440, ad: '2560 × 1440 · QHD (%100)' },
+    { w: 1440, h: 900, ad: '1440 × 900' },
+    { w: 1600, h: 900, ad: '1600 × 900' },
+    { w: 1280, h: 1024, ad: '1280 × 1024 · eski 5:4' }
+];
+export const CAPA_ADI: Record<KonumCapasi, string> = {
+    'oran': 'Oranla (ekranın aynı oranı)', 'sol-ust': 'Sol üst köşeye', 'sag-ust': 'Sağ üst köşeye', 'sol-alt': 'Sol alt köşeye', 'sag-alt': 'Sağ alt köşeye'
+};
+/** Konuma en yakın köşe: sekme kapatma → sağ üst, başlat düğmesi → sol alt. */
+export function enYakinCapa(x: number, y: number): KonumCapasi {
+    return ((y < KONUM_MERKEZ ? 'ust' : 'alt') === 'ust'
+        ? (x < KONUM_MERKEZ ? 'sol-ust' : 'sag-ust')
+        : (x < KONUM_MERKEZ ? 'sol-alt' : 'sag-alt'));
+}
+/**
+ * Kaydedilmiş konumu hedef ekrana uyarlar. Köşe çapasında konum, kaydedildiği
+ * ekranda o köşeye olan piksel uzaklığını hedef ekranda korur.
+ */
+export function konumuUyarla(x: number, y: number, ekran: KonumEkrani | undefined, hedef: { w: number; h: number } | null): { x: number; y: number } {
+    if (!ekran || ekran.capa === 'oran' || !hedef || !ekran.w || !ekran.h || !hedef.w || !hedef.h) return { x, y };
+    const px = x / KONUM_MAX * ekran.w, py = y / KONUM_MAX * ekran.h;
+    const sag = ekran.capa.startsWith('sag'), alt = ekran.capa.endsWith('alt');
+    const tx = sag ? hedef.w - (ekran.w - px) : px;
+    const ty = alt ? hedef.h - (ekran.h - py) : py;
+    const sinir = (v: number) => Math.max(0, Math.min(KONUM_MAX, Math.round(v)));
+    return { x: sinir(tx / hedef.w * KONUM_MAX), y: sinir(ty / hedef.h * KONUM_MAX) };
+}
+/** Konumun bu ekrandaki piksel karşılığı (gösterim için). */
+export const konumPikseli = (x: number, y: number, ekran: { w: number; h: number }) => ({ x: Math.round(x / KONUM_MAX * ekran.w), y: Math.round(y / KONUM_MAX * ekran.h) });
+
 /** 0–32767 değerini okunur yüzdeye çevirir (bir ondalık). */
 export function konumYuzdesi(deger: number): number {
     const sinirli = Math.max(0, Math.min(KONUM_MAX, Math.round(deger) || 0));
@@ -187,6 +233,11 @@ export type RemotePrefs = {
     /** Bilgisayara Yaz (eski Köprü Yaz ile birleşik): biçim ve hedef. */
     writeMode: YazBicimi;
     writeTarget: DikteHedefi;
+    /**
+     * Konum makrolarında bu (hedef) bilgisayarın ekranı. null: otomatik
+     * (PC yardımcısından okunur; okunamazsa makro kaydedildiği ekranı kullanır).
+     */
+    hedefEkran?: { w: number; h: number } | null;
     enabledTools: Record<RemoteToolId, boolean>;
     macros: RemoteMacro[];
     profiles: RemoteProfile[];
@@ -840,7 +891,7 @@ export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zin
                     if (!hedef) throw new Error('çağrılan makro silinmiş.');
                     await runRemoteMacro(hedef, prefs, [...zincir, macro.id], durdu);
                 } else {
-                    await runRemoteMacro({ id: macro.id + '-' + sira, name: macro.name, type: adim.type, value: adim.value, click: adim.click }, prefs, [...zincir, macro.id]);
+                    await runRemoteMacro({ id: macro.id + '-' + sira, name: macro.name, type: adim.type, value: adim.value, click: adim.click, ekran: adim.ekran }, prefs, [...zincir, macro.id]);
                 }
             } catch (hata) {
                 throw new Error((sira + 1) + '. adım: ' + (hata instanceof Error ? hata.message : 'çalıştırılamadı.'));
@@ -852,7 +903,8 @@ export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zin
         if (!['bluetooth', 'pc-wifi', 'pc-bluetooth'].includes(prefs.connection)) throw new Error('Konum makrosu için Bluetooth veya doğrudan PC bağlantısı gerekli.');
         const match = /^(\d{1,5})\s*,\s*(\d{1,5})$/.exec(macro.value.trim());
         if (!match) throw new Error('Konumu x,y biçiminde girin.');
-        const x = Number(match[1]), y = Number(match[2]);
+        const hedefBoyut = macro.ekran && macro.ekran.capa !== 'oran' ? await hedefEkranBoyutu(prefs) : null;
+        const { x, y } = konumuUyarla(Number(match[1]), Number(match[2]), macro.ekran, hedefBoyut ?? macro.ekran ?? null);
         // Çift tık iki ayrı tıklama olarak gönderilir: hem PC yardımcısı hem kart
         // tek tıklama sözleşmesi kullanır.
         const tekrar = macro.click === 2 ? 2 : 1;
@@ -866,6 +918,28 @@ export async function runRemoteMacro(macro: RemoteMacro, prefs: RemotePrefs, zin
     } else {
         await typeOnComputer(macro.value, prefs);
     }
+}
+/**
+ * Bağlı bilgisayarın ekran boyutu (PC yardımcısından, Wi‑Fi). Bir dakika
+ * önbellekte tutulur; yardımcı yoksa ya da eskiyse null.
+ */
+let ekranOnbellek: { anahtar: string; zaman: number; boyut: { w: number; h: number } | null } | null = null;
+export async function bilgisayarEkrani(prefs: RemotePrefs): Promise<{ w: number; h: number } | null> {
+    if (!prefs.helperUrl || !prefs.helperToken) return null;
+    const anahtar = prefs.helperUrl;
+    if (ekranOnbellek && ekranOnbellek.anahtar === anahtar && Date.now() - ekranOnbellek.zaman < 60000) return ekranOnbellek.boyut;
+    let boyut: { w: number; h: number } | null = null;
+    try {
+        const yanit = JSON.parse(await request(endpoint(prefs.helperUrl, '/screen'), 'GET', '', prefs.helperToken));
+        if (yanit && yanit.w > 0 && yanit.h > 0) boyut = { w: Math.round(yanit.w), h: Math.round(yanit.h) };
+    } catch { /* eski yardımcı ya da ulaşılamıyor */ }
+    ekranOnbellek = { anahtar, zaman: Date.now(), boyut };
+    return boyut;
+}
+/** Konum makrolarının çalışacağı ekran: ayardaki seçim ya da otomatik (yardımcıdan). */
+export async function hedefEkranBoyutu(prefs: RemotePrefs): Promise<{ w: number; h: number } | null> {
+    if (prefs.hedefEkran && prefs.hedefEkran.w > 0 && prefs.hedefEkran.h > 0) return prefs.hedefEkran;
+    return bilgisayarEkrani(prefs);
 }
 export async function previewPosition(x: number, y: number, prefs = remotePrefs()) {
     if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') await konumGonder({ action: 'absolute', x: Math.round(x), y: Math.round(y), click: false }, prefs);

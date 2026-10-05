@@ -12,7 +12,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Crosshair, MousePointerClick, X } from 'lucide-react';
-import { KONUM_MAX, KONUM_MERKEZ, konumYuzdesi, previewPosition, runRemoteMacro, type RemoteMacro, type RemotePrefs } from '@/lib/remoteTools';
+import { KONUM_MAX, KONUM_MERKEZ, konumYuzdesi, previewPosition, runRemoteMacro, type KonumEkrani, type RemoteMacro, type RemotePrefs } from '@/lib/remoteTools';
+import KonumKaydetme from './KonumKaydetme';
 
 /** Yönlük adımları: kaba ayardan ince ayara. */
 const ADIMLAR = [
@@ -27,11 +28,13 @@ function sinirla(deger: number): number {
     return Math.max(0, Math.min(KONUM_MAX, Math.round(deger) || 0));
 }
 
-export default function KonumSecici({ baslangicX, baslangicY, prefs, onKaydet, onKapat }: {
+export default function KonumSecici({ baslangicX, baslangicY, baslangicEkran, prefs, onKaydet, onKapat }: {
     baslangicX: number;
     baslangicY: number;
+    /** Makronun önceki ekran bilgisi (düzenlemede). */
+    baslangicEkran?: KonumEkrani;
     prefs: RemotePrefs;
-    onKaydet: (x: number, y: number) => void;
+    onKaydet: (x: number, y: number, ekran: KonumEkrani) => void;
     onKapat: () => void;
 }) {
     const [x, setX] = useState(() => sinirla(baslangicX));
@@ -39,6 +42,8 @@ export default function KonumSecici({ baslangicX, baslangicY, prefs, onKaydet, o
     const [mod, setMod] = useState<'harita' | 'cubuklar'>('harita');
     const [adim, setAdim] = useState<AdimId>('orta');
     const [busy, setBusy] = useState(false);
+    /** "Bu noktayı kullan"dan sonra: ekran ve sabitleme seçenekleri. */
+    const [secenekler, setSecenekler] = useState(false);
     /** İmleç önizlemesi yalnızca BLE ya da doğrudan PC bağlantısında çalışır. */
     const onizlemeKapali = prefs.connection === 'wifi';
     const [durum, setDurum] = useState(() => onizlemeKapali
@@ -314,14 +319,18 @@ export default function KonumSecici({ baslangicX, baslangicY, prefs, onKaydet, o
 
                 {durum && <p id="konum-durum" role="status" className="mt-3 text-xs leading-relaxed text-sand-700">{durum}</p>}
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                    <button type="button" id="konum-vazgec" onClick={onKapat} className="btn btn-ghost min-h-[44px] px-4 text-sm">
-                        Vazgeç
-                    </button>
-                    <button type="button" id="konum-kullan" onClick={() => onKaydet(x, y)} className="btn btn-primary min-h-[44px] flex-1 px-4 text-sm">
-                        <Check size={16} /> Bu noktayı kullan
-                    </button>
-                </div>
+                {secenekler ? (
+                    <KonumKaydetme x={x} y={y} prefs={prefs} baslangic={baslangicEkran} onGeri={() => setSecenekler(false)} onKaydet={ekran => onKaydet(x, y, ekran)} />
+                ) : (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <button type="button" id="konum-vazgec" onClick={onKapat} className="btn btn-ghost min-h-[44px] px-4 text-sm">
+                            Vazgeç
+                        </button>
+                        <button type="button" id="konum-kullan" onClick={() => setSecenekler(true)} className="btn btn-primary min-h-[44px] flex-1 px-4 text-sm">
+                            <Check size={16} /> Bu noktayı kullan
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

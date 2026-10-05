@@ -11,7 +11,7 @@ import { Capacitor } from '@capacitor/core';
 import AccountSettings from './AccountSettings';
 import AiSettings from './AiSettings';
 import UsageGuide from './UsageGuide';
-import SettingsHome, { SETTINGS_SECTIONS } from './SettingsHome';
+import SettingsHome, { SETTINGS_SECTIONS, bolumuNormallestir } from './SettingsHome';
 import type { SettingsSectionId } from './SettingsHome';
 import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
@@ -28,6 +28,7 @@ import RemoteMacroTools from './RemoteMacroTools';
 import RemoteProfileTools from './RemoteProfileTools';
 import RemoteScreenTools from './RemoteScreenTools';
 import RemoteToolCards from './RemoteToolCards';
+import HedefEkranAyari from './HedefEkranAyari';
 import TemaSecici from '@/components/ui/TemaSecici';
 import { REMOTE_TOOL_IDS, makroHazir } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
@@ -51,7 +52,9 @@ interface ModelSettingsModalProps {
 }
 
 export default function ModelSettingsModal({ isOpen, onClose, initialSection = 'home' }: ModelSettingsModalProps) {
-    const [activeTab, setActiveTab] = useState<SettingsSectionId | 'home'>(initialSection);
+    const [activeTab, setActiveTabHam] = useState<SettingsSectionId | 'home'>(bolumuNormallestir(initialSection));
+    /** Eski bölüm kimlikleri (ör. 'tools') yeni sayfalara yönlenir. */
+    const setActiveTab = (id: SettingsSectionId | 'home') => setActiveTabHam(bolumuNormallestir(id));
     const contentRef = useRef<HTMLDivElement>(null);
     const headingRef = useRef<HTMLHeadingElement>(null);
     const closeRef = useRef(onClose);
@@ -73,8 +76,6 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
     const [yapayZekaAcik, setYapayZekaAcik] = useState(false);
     const [araclarAcik, setAraclarAcik] = useState(false);
     const [bilgisayarAcik, setBilgisayarAcik] = useState(false);
-    const [toolsTab, setToolsTab] = useState<'local' | 'computer'>('local');
-    const toolsTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
     // Google Drive (kolay senkron) durumu
     const [driveBusy, setDriveBusy] = useState<'idle' | 'upload' | 'restore' | 'merge'>('idle');
@@ -150,7 +151,6 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
             setAutoSync(isAutoSyncEnabled());
             setLastSync(lastSyncTime());
             setActiveTab(initialSection);
-            setToolsTab(initialSection === 'tools' ? 'computer' : 'local');
 
         }
     }, [isOpen, initialSection]);
@@ -560,24 +560,9 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
 
                             {activeTab === 'remote' && <RemoteSettings />}
 
-                            {activeTab === 'tools' && (
-                                <>
-                                    <SettingsPageHeader
-                                        icon={Wrench}
-                                        title="Düzenleme araçları"
-                                        description="Editörde görmek istediğiniz araçları seçin."
-                                    />
-                                    <div role="tablist" aria-label="Düzenleme aracı ayarları" className="mb-4 grid grid-cols-2 gap-1 rounded-2xl border border-sand-200 bg-sand-200/50 p-1">
-                                        {(['local', 'computer'] as const).map((id, index) => <button key={id} type="button" role="tab" id={`tools-settings-tab-${id}`} aria-controls={`tools-settings-panel-${id}`} aria-selected={toolsTab === id} tabIndex={toolsTab === id ? 0 : -1} ref={element => { toolsTabRefs.current[index] = element; }} onClick={() => setToolsTab(id)} onKeyDown={event => {
-                                            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-                                            event.preventDefault();
-                                            const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1 - index;
-                                            setToolsTab(next === 0 ? 'local' : 'computer'); toolsTabRefs.current[next]?.focus();
-                                        }} className={'flex min-h-12 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 ' + (toolsTab === id ? 'bg-white text-moss-800 shadow-sm' : 'text-sand-700 hover:bg-white/50')}>
-                                            {id === 'local' ? <Wrench size={17} /> : <MonitorSmartphone size={17} />}{id === 'local' ? 'Yerel araçlar' : 'Bilgisayar araçları'}
-                                        </button>)}
-                                    </div>
-                                    {toolsTab === 'local' ? <div role="tabpanel" id="tools-settings-panel-local" aria-labelledby="tools-settings-tab-local" className="space-y-4">
+                            {activeTab === 'yerel' && (
+                                <div className="space-y-4">
+                                    <SettingsPageHeader icon={Wrench} title="Yerel araçlar" description="Not metnini cihazda düzenleyen, internet gerektirmeyen araçlar." />
                                         <SettingsSection
                                             icon={Wrench}
                                             title="Yerel araçlar"
@@ -644,7 +629,12 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                                 </button>
                                             )}
                                         </SettingsSection>
-                                    </div> : <div role="tabpanel" id="tools-settings-panel-computer" aria-labelledby="tools-settings-tab-computer" className="space-y-4">
+                                </div>
+                            )}
+
+                            {activeTab === 'pcAraclari' && (
+                                <div className="space-y-4">
+                                    <SettingsPageHeader icon={MonitorSmartphone} title="Bilgisayar araçları" description="Editördeki bilgisayar araçlarını açıp kapatın; dişli simgesiyle ayarlayın." />
                                         <SettingsSection
                                             icon={MonitorSmartphone}
                                             title="Bilgisayar araçları"
@@ -654,6 +644,16 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                             <RemoteToolCards />
                                         </SettingsSection>
 
+                                    <button type="button" onClick={() => setActiveTab('remote')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-sand-300 px-4 text-sm font-medium text-sand-700 transition-colors hover:border-moss-400 hover:text-moss-700">
+                                        <MonitorSmartphone size={16} /> Bağlantı ayarlarına git
+                                    </button>
+                                </div>
+                            )}
+
+                            {activeTab === 'kisayollar' && (
+                                <div className="space-y-4">
+                                    <SettingsPageHeader icon={Keyboard} title="Kısayollar ve ekranlar" description="Kişisel kısayollar, profiller ve Ekran aracının düzenleri." />
+                                    <HedefEkranAyari />
                                         <SettingsSection
                                             icon={Keyboard}
                                             title="Kişisel kısayollar"
@@ -677,8 +677,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                         >
                                             <RemoteScreenTools />
                                         </SettingsSection>
-                                    </div>}
-                                </>
+                                </div>
                             )}
 
                             {activeTab === 'sync' && (
