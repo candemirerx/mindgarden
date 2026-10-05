@@ -474,9 +474,11 @@ function EditorPageInner() {
         const tazele = () => {
             setMacros(readEnabledMacros());
             setAraclar(readEnabledTools());
-            setYapayZekaAcik(bolumAcik('yapayzeka'));
-            setAraclarAcik(bolumAcik('araclar'));
-            setBilgisayarAcik(bolumAcik('bilgisayar'));
+            // "Tüm araçlar" deneme notunda bütün bölümler açık görünür (ayarlar değişmez).
+            const hepsi = deneme === 'hepsi';
+            setYapayZekaAcik(hepsi || bolumAcik('yapayzeka'));
+            setAraclarAcik(hepsi || bolumAcik('araclar'));
+            setBilgisayarAcik(hepsi || bolumAcik('bilgisayar'));
             setRemoteToolPrefs(remotePrefs());
             // Anahtar/sağlayıcı durumu da tazelenir; ayarlarda anahtar eklenince
             // makro düğmeleri sayfa yeniden açılmadan etkinleşir.
@@ -507,7 +509,7 @@ function EditorPageInner() {
             document.removeEventListener('visibilitychange', gorunurluk);
             window.removeEventListener('focus', tazele);
         };
-    }, []);
+    }, [deneme, ]);
     useEffect(() => {
         if (remoteMode === 'mouse' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.mouse || (!focusMode && activeToolTab !== 'computer'))) setRemoteMode('write');
         /* Kısayol panosunda geri düğmesi yok; panoyu açan satır görünmez olursa

@@ -14,10 +14,12 @@ import { bildir, dinle } from './degisim';
 export type TuvalGosterim = 'organik' | 'yatay' | 'klasik';
 export type TuvalGezinme = 'cubuk' | 'sekme' | 'yok';
 export type TuvalOnizleme = 0 | 2 | 3;
-export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme };
+/** Seçili notun eylem düğmeleri: kart üstünde hap + kenar artıları, alttan panel ya da yüzen düğme. */
+export type TuvalEylem = 'hap' | 'panel' | 'yuzen';
+export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem };
 
 const ANAHTAR = 'nb-tuval-v1';
-export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'organik', gezinme: 'sekme', onizleme: 2 };
+export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'organik', gezinme: 'sekme', onizleme: 2, eylem: 'hap' };
 
 export function tuvalTercihleri(): TuvalTercihleri {
     if (typeof window === 'undefined') return VARSAYILAN_TUVAL;
@@ -26,7 +28,8 @@ export function tuvalTercihleri(): TuvalTercihleri {
         return {
             gosterim: k.gosterim === 'yatay' || k.gosterim === 'klasik' ? k.gosterim : 'organik',
             gezinme: k.gezinme === 'cubuk' || k.gezinme === 'yok' ? k.gezinme : 'sekme',
-            onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2
+            onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
+            eylem: k.eylem === 'panel' || k.eylem === 'yuzen' ? k.eylem : 'hap'
         };
     } catch { return VARSAYILAN_TUVAL; }
 }

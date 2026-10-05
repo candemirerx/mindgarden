@@ -24,6 +24,7 @@ import {
     Palette,
     Search,
     Sparkles,
+    Sprout,
     TreePine,
     UserCircle2,
     Wand2,
@@ -97,34 +98,40 @@ function normalizeSearch(value: string) {
     return value.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-/** Deneme ağacını açar: açık not kaydedilir, ayarlar kapanır, editör deneme modunda açılır. */
-function DenemeKarti() {
+/**
+ * Deneme ağacı: tüm araçları açık, kaydedilmeyen bir not. Açık not önce
+ * kaydedilir, ayarlar kapanır, editör deneme modunda açılır.
+ */
+function DenemeDugmesi() {
     const router = useRouter();
-    const [mesgul, setMesgul] = useState<DenemeTuru | null>(null);
-    const ac = async (tur: DenemeTuru) => {
-        setMesgul(tur);
+    const [mesgul, setMesgul] = useState(false);
+    const ac = async () => {
+        setMesgul(true);
         try {
-            const adres = await denemeAgaciAdresi(tur);
+            const adres = await denemeAgaciAdresi('hepsi');
             window.dispatchEvent(new Event('nb-editor-kaydet'));
             window.dispatchEvent(new Event('nb-ayarlari-kapat'));
             router.push(adres);
-        } finally { setMesgul(null); }
+        } finally { setMesgul(false); }
     };
-    const dugme = 'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-white px-3 text-[13px] font-semibold text-sand-800 ring-1 ring-clay-200 transition-colors hover:bg-clay-50 active:scale-[.98] disabled:opacity-60';
     return (
-        <div id="ayar-deneme-agaci" className="relative overflow-hidden rounded-2xl border border-clay-200/80 bg-gradient-to-br from-clay-50 to-white px-4 py-3.5 shadow-soft">
-            <TreePine aria-hidden="true" size={88} strokeWidth={1} className="pointer-events-none absolute -right-4 -top-4 text-clay-300/30" />
-            <p className="relative text-xs font-semibold uppercase tracking-[0.14em] text-clay-700">Deneme ağacı</p>
-            <p className="relative mt-0.5 text-sm leading-snug text-sand-700">Kaydedilmeyen bir notta hemen deneyin.</p>
-            <div className="relative mt-3 flex gap-2">
-                <button type="button" disabled={!!mesgul} onClick={() => void ac('baglanti')} className={dugme}>
-                    {mesgul === 'baglanti' ? <Loader2 size={15} className="animate-spin" /> : <Monitor size={15} className="text-bark-600" />} Bağlantı
-                </button>
-                <button type="button" disabled={!!mesgul} onClick={() => void ac('yapayzeka')} className={dugme}>
-                    {mesgul === 'yapayzeka' ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} className="text-clay-600" />} Yapay zekâ
-                </button>
-            </div>
-        </div>
+        <button type="button" id="ayar-deneme-agaci" disabled={mesgul} onClick={() => void ac()}
+            className="group relative isolate flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-clay-200/80 bg-gradient-to-br from-clay-50 via-white to-moss-50 px-4 py-3.5 text-left shadow-soft transition-all hover:border-clay-300 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 active:scale-[.99] disabled:opacity-70">
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+                <Sprout className="absolute -bottom-6 right-12 h-24 w-24 rotate-12 text-moss-300/25" strokeWidth={1} />
+            </span>
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-clay-300 to-clay-500 text-white shadow-[0_6px_14px_-6px_rgba(170,104,20,.7)]">
+                {mesgul ? <Loader2 size={20} className="animate-spin" aria-hidden="true" /> : <Sprout size={20} aria-hidden="true" />}
+            </span>
+            <span className="relative min-w-0 flex-1">
+                <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-clay-700">Deneme ağacı</span>
+                <span className="mt-0.5 block truncate font-display text-lg leading-snug tracking-tight text-sand-900">Tüm araçları deneyin.</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-sand-600">Kaydedilmeyen bir not; çıkınca kaybolur.</span>
+            </span>
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-clay-700 ring-1 ring-clay-200 transition-colors group-hover:bg-white">
+                <ChevronRight size={17} aria-hidden="true" />
+            </span>
+        </button>
     );
 }
 
@@ -195,7 +202,7 @@ export default function SettingsHome({ onSelect }: { onSelect: (id: SettingsSect
                         <ChevronRight size={17} aria-hidden="true" />
                     </span>
                 </button>
-                <DenemeKarti />
+                <DenemeDugmesi />
             </div>
 
             <div>

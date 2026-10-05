@@ -10,6 +10,7 @@ import { budamaFiltresi } from '@/lib/uiPrefs';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { YeniAgac } from '@/components/canvas/YeniAgac';
+import { SeciliEylemler } from '@/components/canvas/SeciliEylemler';
 import { useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
 import { Modal } from '@/components/editor/Modal';
@@ -190,7 +191,7 @@ function GardenPageInner() {
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned, setNodeColor, setSelectedNode } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned, setNodeColor, setSelectedNode, selectedNodeId } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [ortalanacak, setOrtalanacak] = useState<{ id: string; sayac: number } | null>(null);
@@ -719,6 +720,7 @@ function GardenPageInner() {
                                             onAddSiblingAfter={handleAddSiblingAfter}
                                             duzen={tuval.gosterim}
                                             onizleme={tuval.onizleme}
+                                            eylem={tuval.eylem}
                                             onAddChild={handleAddChild}
                                             onAddTree={handleAddTreeBeside}
                                             onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
@@ -746,6 +748,19 @@ function GardenPageInner() {
                         </div>
                     )}
                 </GardenCanvas>
+                {tuval.gosterim !== 'klasik' && (
+                    <SeciliEylemler
+                        kip={tuval.eylem}
+                        kokler={mindRoots}
+                        seciliId={selectedNodeId}
+                        onKapat={() => setSelectedNode(null)}
+                        onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
+                        onYanina={handleAddSiblingAfter}
+                        onAltina={(id) => handleAddChild(id, 'right')}
+                        onAgacEkle={handleAddTreeBeside}
+                        onBuda={(id, budandi) => void handleTogglePrune(id, budandi)}
+                    />
+                )}
             </main>
 
             {/* Editor Modal */}

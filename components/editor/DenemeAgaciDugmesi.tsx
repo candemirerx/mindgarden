@@ -12,6 +12,11 @@ import { denemeAgaciAdresi, type DenemeTuru } from '@/lib/denemeAgaci';
 import { cx } from '@/components/ui/settings';
 
 const METIN: Record<DenemeTuru, { baslik: string; aciklama: string; dugme: string }> = {
+    hepsi: {
+        baslik: 'Tüm araçları bir notta deneyin',
+        aciklama: 'Yerel, bilgisayar ve yapay zekâ araçlarının hepsi açık bir deneme notu açılır. Not hiçbir bahçeye kaydedilmez; çıkınca kaybolur.',
+        dugme: 'Deneme ağacını aç'
+    },
     baglanti: {
         baslik: 'Bağlantıyı bir notta deneyin',
         aciklama: 'Bilgisayar araçları açık bir "Bağlantı deneme" notu editörde açılır. Not hiçbir bahçeye kaydedilmez; çıkınca kaybolur.',

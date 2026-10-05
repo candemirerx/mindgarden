@@ -19,12 +19,14 @@ import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Copy, GitBranch, Leaf, Pencil, Plus, Scissors, Sprout, TreePine } from 'lucide-react';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
-import type { TuvalOnizleme } from '@/lib/tuvalTercihleri';
+import type { TuvalEylem, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
 type Duzen = 'organik' | 'yatay';
 type Ortak = {
     duzen: Duzen;
     onizleme: TuvalOnizleme;
+    /** Eylem düğmeleri: 'hap' kart üstünde; 'panel' ve 'yuzen' sayfa düzeyinde çizilir (kartta düğme yok). */
+    eylem?: TuvalEylem;
     onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
     onAddTree?: (rootId: string) => void;
     /** Yan not: notun hemen yanına (sonrasına) kardeş ekler. */
@@ -183,7 +185,7 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, onAddChild, onAddTree, onAddSiblingAfter, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, eylem = 'hap', onAddChild, onAddTree, onAddSiblingAfter, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
@@ -193,7 +195,8 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, onAdd
     const secili = selectedNodeId === node.id;
     const budandi = node.isPruned ?? false;
     const cocukSayisi = node.children.length;
-    const araclar = secili || uzerinde;
+    // Panel ve yüzen düğme kiplerinde eylemler kartın üstünde değil, sayfada gösterilir.
+    const araclar = eylem === 'hap' && (secili || uzerinde);
     const tur = derinlik === 0 ? 'kok' : (node.nodeType && node.nodeType !== 'auto' ? node.nodeType : derinlik === 1 ? 'branch' : 'leaf');
     const metin = onizleme > 0 ? onizlemeMetni(node.content) : '';
     const satir: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: onizleme, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
@@ -265,9 +268,14 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, onAdd
         );
     }
 
-    // "+" yalnız altı boş kartta: dolu dala yeni not, yapraktaki "yan ekle" ile eklenir.
-    const ekleAdi = tur === 'kok' ? 'Dal ekle' : 'Yaprak ekle';
-    const eklePos = duzen === 'yatay' ? 'right-0 top-1/2 translate-x-1/2 -translate-y-1/2' : 'left-1/2 top-full -translate-x-1/2 -translate-y-1/2';
+    // Kenar artıları: "alt" çocuk ekler (yalnız altı boşken), "yan" hemen yanına kardeş ekler.
+    // Organikte kardeşler alt alta dizildiği için yan artı sağ kenarda, alt artı alt kenardadır;
+    // yatay akışta tersine: çocuklar sağa açılır, kardeşler alt alta.
+    const ekleAdi = tur === 'kok' ? 'Dal ekle' : 'Altına yaprak ekle';
+    const yanAdi = derinlik === 1 ? 'Yanına dal ekle' : 'Yanına yaprak ekle';
+    const altKenar = 'left-1/2 top-full -translate-x-1/2 -translate-y-1/2', sagKenar = 'right-0 top-1/2 translate-x-1/2 -translate-y-1/2';
+    const eklePos = duzen === 'yatay' ? sagKenar : altKenar;
+    const yanPos = duzen === 'yatay' ? altKenar : sagKenar;
     const yaricap = tur === 'kok' ? 24 : tur === 'branch' ? 18 : 16;
 
     return (
@@ -282,9 +290,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, onAdd
                 {tur === 'kok'
                     ? onAddTree && <button type="button" onClick={e => { e.stopPropagation(); onAddTree(node.id); }} title="Bu ağacın yanına yeni ağaç ekle" aria-label="Ağaç ekle"
                         className="flex h-10 items-center gap-1.5 rounded-full bg-moss-600 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-moss-500 active:scale-95 touch-manipulation"><Sprout size={16} />Ağaç ekle</button>
-                    : <button type="button" onClick={e => { e.stopPropagation(); if (onAddSiblingAfter) onAddSiblingAfter(node.id); else onAddChild(ebeveynId, 'right'); }}
-                        className="flex h-10 items-center gap-1 rounded-full bg-moss-600 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-moss-500 active:scale-95 touch-manipulation"
-                        title={derinlik === 1 ? 'Yanına dal ekle' : 'Yanına yaprak ekle'} aria-label={derinlik === 1 ? 'Yanına dal ekle' : 'Yanına yaprak ekle'}><Plus size={16} />{derinlik === 1 ? 'Dal' : 'Yaprak'}</button>}
+                    : null}
                 <button type="button" onClick={e => { e.stopPropagation(); void setNodePruned(node.id, !budandi); }} aria-pressed={budandi}
                     className={`${ARAC} ${budandi ? 'bg-white/15 text-clay-300' : ''}`} title={budandi ? 'Budamayı geri al' : 'Buda'} aria-label={budandi ? 'Budamayı geri al' : 'Buda'}><Scissors size={16} /></button>
             </div>
@@ -302,10 +308,18 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, onAdd
                 {govde}
             </div>
 
+            {tur !== 'kok' && (
+                <button type="button" onClick={e => { e.stopPropagation(); if (onAddSiblingAfter) onAddSiblingAfter(node.id); else onAddChild(ebeveynId, 'right'); }} title={yanAdi} aria-label={yanAdi}
+                    className={`absolute z-30 flex h-10 items-center justify-center gap-1 touch-manipulation transition-opacity duration-200 ${yanPos} ${araclar ? 'opacity-100' : 'pointer-events-none invisible opacity-0'}`}>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-moss-600 text-white shadow-[0_4px_10px_-3px_rgba(27,58,40,.6)] ring-2 ring-white"><Plus size={15} /></span>
+                    <span className="whitespace-nowrap rounded-full border border-moss-200 bg-moss-50/95 px-2 py-0.5 text-[10px] font-bold text-moss-800">Yan</span>
+                </button>
+            )}
             {cocukSayisi === 0 && (
                 <button type="button" onClick={e => { e.stopPropagation(); onAddChild(node.id, 'right'); }} title={ekleAdi} aria-label={ekleAdi}
-                    className={`absolute z-30 flex h-10 w-10 items-center justify-center touch-manipulation transition-opacity duration-200 ${eklePos} ${araclar ? 'opacity-100' : 'pointer-events-none invisible opacity-0'}`}>
+                    className={`absolute z-30 flex h-10 min-w-10 items-center justify-center touch-manipulation transition-opacity duration-200 ${eklePos} ${araclar ? 'opacity-100' : 'pointer-events-none invisible opacity-0'}`}>
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-moss-600 text-white shadow-[0_4px_10px_-3px_rgba(27,58,40,.6)] ring-2 ring-white"><Plus size={15} /></span>
+                    {tur !== 'kok' && <span className="ml-1 whitespace-nowrap rounded-full border border-moss-200 bg-moss-50/95 px-2 py-0.5 text-[10px] font-bold text-moss-800">Alt</span>}
                 </button>
             )}
             {cocukSayisi > 0 && (
