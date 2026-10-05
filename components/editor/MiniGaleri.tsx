@@ -16,7 +16,7 @@ import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, Camera, Check, CheckCheck, ClipboardCopy, ClipboardPaste, FileText, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
 import { dosyalariBilgisayaraGonder, klavyeGorselleriniDinle, sendToComputerClipboard, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
-import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
+import { useBaglantiDurumu, yolAdi } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
 import { dosyalariGaleriyeEkle, galeridenSil, galeriyeEkle, gorseliHazirla, metinKarti, useMiniGaleri } from '@/lib/miniGaleri';
 import type { GaleriOgesi } from '@/lib/miniGaleri';
@@ -228,7 +228,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                         <p className="text-[11px] leading-none text-sand-500">{ogeler.length ? ogeler.length + ' öğe · seçmek için basılı tutun' : 'Bu nota özel'}</p>
                     </div>
                 </>}
-                <BaglantiGostergesi kompakt id="galeri-baglanti-durumu" yol={prefs.connection} durum={baglanti.durum} bakiliyor={baglanti.bakiliyor}
+                <BaglantiGostergesi kompakt id="galeri-baglanti-durumu" yol={prefs.connection} ad={yolAdi(prefs)} durum={baglanti.durum} bakiliyor={baglanti.bakiliyor}
                     onTazele={() => { if (onBaglantiAyarlari) { onKapat(); onBaglantiAyarlari(); } else void baglanti.tazele(); }} />
                 {ogeler.length > 0 && <button type="button" id="galeri-tumunu-sec" onClick={tumunuSec}
                     className="flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-moss-700 hover:bg-moss-50">

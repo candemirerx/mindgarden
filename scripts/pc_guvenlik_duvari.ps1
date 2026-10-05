@@ -8,7 +8,13 @@
 #
 # -Denetle: yalniz bakar (yonetici gerekmez). Izin hazirsa 0, eklenmesi
 # gerekiyorsa 1 doner; baslatici yonetici iznini yalniz o zaman bir kez ister.
-param([switch]$Denetle)
+#
+# -Tailscale: kurali, Tailscale agindaki (100.64.0.0/10) kendi cihazlarinizdan
+# gelen baglantilara da acar; telefon baska sehirden Tailscale ile baglanabilir.
+# Yardimci yine de 6 haneli kodla eslestirme ister. -TailscaleKaldir bu izni
+# geri alir (yalniz yerel ag kalir). Kuralda Tailscale izni varsa, normal
+# calistirmada korunur.
+param([switch]$Denetle, [switch]$Tailscale, [switch]$TailscaleKaldir)
 $ErrorActionPreference = 'Stop'
 $kuralAdi = 'Not Bahcesi PC yardimcisi (TCP 8765)'
 $port = 8765
@@ -54,13 +60,20 @@ if ($taskPrivateBlocks.Count -gt 0) {
 $kural = $null
 try { $kural = Get-NetFirewallRule -DisplayName $kuralAdi -ErrorAction SilentlyContinue } catch { $kural = $null }
 
+# Uzak adresler: yerel ag + (istenmisse ya da onceden verilmisse) Tailscale agi.
+$tsVar = $false
+if ($kural) { try { $tsVar = (@(($kural | Get-NetFirewallAddressFilter).RemoteAddress) -join ',') -match '100\.64\.0\.0' } catch { } }
+$adresler = if (($Tailscale -or $tsVar) -and -not $TailscaleKaldir) { @('LocalSubnet', '100.64.0.0/10') } else { @('LocalSubnet') }
+
 if ($kural) {
     $kural | Set-NetFirewallRule -Enabled True -Direction Inbound -Action Allow -Profile Private
-    $kural | Get-NetFirewallAddressFilter | Set-NetFirewallAddressFilter -RemoteAddress LocalSubnet
+    $kural | Get-NetFirewallAddressFilter | Set-NetFirewallAddressFilter -RemoteAddress $adresler
     Write-Host ('Guvenlik duvari izni zaten var: ' + $kuralAdi) -ForegroundColor Green
+    if ($adresler.Count -gt 1) { Write-Host 'Tailscale agindan (100.64.0.0/10) gelen baglantilara da izin verildi.' -ForegroundColor Green }
+    elseif ($TailscaleKaldir) { Write-Host 'Tailscale izni kaldirildi; yalniz yerel ag kaldi.' -ForegroundColor Green }
 } else {
     try {
-        New-NetFirewallRule -DisplayName $kuralAdi -Direction Inbound -Action Allow -Protocol TCP -LocalPort $port -Profile Private -RemoteAddress LocalSubnet -Description 'Not Bahcesi telefon-PC bagi (yalniz yerel ag)' | Out-Null
+        New-NetFirewallRule -DisplayName $kuralAdi -Direction Inbound -Action Allow -Protocol TCP -LocalPort $port -Profile Private -RemoteAddress $adresler -Description 'Not Bahcesi telefon-PC bagi (yerel ag; istenirse Tailscale)' | Out-Null
         Write-Host ('Guvenlik duvari izni eklendi: TCP ' + $port + ' (yalniz Ozel ag profili).') -ForegroundColor Green
     } catch {
         Write-Host ('Guvenlik duvari izni eklenemedi: ' + $_.Exception.Message) -ForegroundColor Red

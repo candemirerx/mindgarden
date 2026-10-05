@@ -18,6 +18,7 @@ const HEDEF = join(HEDEF_KLASOR, 'not-bahcesi-pc-yardimcisi.zip');
 const DOSYALAR = [
     'pc_yardimcisi_baslat.cmd',
     'pc_guvenlik_duvari.ps1',
+    'pc_tailscale_izni.cmd',
     'pc_clipboard_helper.ps1',
     'RemoteInput.cs',
     'vendor/InTheHand.Net.Personal.dll',

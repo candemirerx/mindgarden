@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul, bleDurumu, bluetoothKlavyeBagla, bluetoothKlavyeDurumu, connectCard, kartiWifidaBul,
+    BAGLANTI_TURU_ADI, KART_AP_AGI, baglantiTuru, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul, bleDurumu, bluetoothKlavyeBagla, bluetoothKlavyeDurumu, connectCard, kartiWifidaBul,
     kayitliKartAdresi, remotePrefs, saveRemotePrefs, sendCommand, sendKey, sendToComputerClipboard, testCard, testHelper, typeOnComputer
 } from './remoteTools';
 import type { ConnectionMode, RemotePrefs } from './remoteTools';
@@ -19,6 +19,9 @@ import { bildir, dinle } from './degisim';
 
 export type DurumTuru = 'ok' | 'hata' | 'kurulmadi' | 'bakiliyor';
 export type BaglantiDurumu = { tur: DurumTuru; mesaj: string; yol: ConnectionMode; zaman: number };
+
+/** Seçili türün adı (Kart · AP, Tailscale dahil). */
+export const yolAdi = (p: RemotePrefs): string => BAGLANTI_TURU_ADI[baglantiTuru(p)];
 
 export const YOL_ADI: Record<ConnectionMode, string> = {
     'pc-wifi': 'Bilgisayar · Wi‑Fi',
@@ -43,7 +46,7 @@ export async function baglantiyiYokla(prefs: RemotePrefs): Promise<BaglantiDurum
         if (yol === 'pc-wifi') {
             if (!prefs.helperUrl || !prefs.helperToken) return sonuc('kurulmadi', 'Bilgisayar eşleştirilmedi.');
             await sureli(testHelper(prefs), 9000, 'Bilgisayar yanıt vermedi.');
-            return sonuc('ok', ad + ' ile bağlı (Wi‑Fi).');
+            return sonuc('ok', ad + (prefs.agTuru === 'tailscale' ? ' ile Tailscale üzerinden bağlı.' : ' ile bağlı (Wi‑Fi).'));
         }
         if (yol === 'pc-bluetooth') {
             if (!prefs.helperBluetoothAddress) return sonuc('kurulmadi', 'Bilgisayar seçilmedi.');
@@ -53,7 +56,7 @@ export async function baglantiyiYokla(prefs: RemotePrefs): Promise<BaglantiDurum
         if (yol === 'wifi') {
             if (!prefs.cardUrl.trim()) return sonuc('kurulmadi', 'Kart adresi yok.');
             await sureli(testCard(prefs), 9000, 'Kart yanıt vermedi.');
-            return sonuc('ok', 'Karta bağlı · ' + prefs.cardUrl.replace(/^https?:\/\//, '') + '.');
+            return sonuc('ok', prefs.agTuru === 'kart-ap' ? 'Kartın kendi ağına bağlı · 192.168.4.1.' : 'Karta bağlı · ' + prefs.cardUrl.replace(/^https?:\/\//, '') + '.');
         }
         const ble = await bleDurumu();
         if (ble.connected) return sonuc('ok', 'Karta Bluetooth ile bağlı.');
@@ -63,7 +66,10 @@ export async function baglantiyiYokla(prefs: RemotePrefs): Promise<BaglantiDurum
         await sureli(connectCard(adres), 14000, 'Karta Bluetooth ile bağlanılamadı.');
         return sonuc('ok', 'Karta Bluetooth ile bağlı.');
     } catch (hata) {
-        return sonuc('hata', hata instanceof Error ? hata.message : 'Bağlantı kurulamadı.');
+        const ileti = hata instanceof Error ? hata.message : 'Bağlantı kurulamadı.';
+        if (yol === 'pc-wifi' && prefs.agTuru === 'tailscale') return sonuc('hata', 'Tailscale üzerinden bilgisayara ulaşılamadı. Telefonda ve bilgisayarda Tailscale açık mı, PC Yardımcısı çalışıyor mu? (' + ileti + ')');
+        if (yol === 'wifi' && prefs.agTuru === 'kart-ap') return sonuc('hata', 'Karta ulaşılamadı. Telefon kartın kendi Wi‑Fi ağına (' + KART_AP_AGI + ') bağlı mı? (' + ileti + ')');
+        return sonuc('hata', ileti);
     }
 }
 

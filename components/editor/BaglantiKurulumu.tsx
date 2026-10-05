@@ -15,16 +15,16 @@
  */
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Bluetooth, Check, Copy, Download, Loader2, MonitorSmartphone, Search, Share2, Wifi } from 'lucide-react';
+import { Bluetooth, Check, Copy, Download, ExternalLink, Globe, Loader2, MonitorSmartphone, Radio, Search, Share2, Wifi } from 'lucide-react';
 import { PC_YARDIMCISI_SAYFASI, PC_YARDIMCISI_ZIP } from '@/lib/config';
 import {
-    baglantiSatiriniCoz, bilgisayarAdresiniSina, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul,
+    KART_AP_ADRESI, KART_AP_AGI, baglantiSatiriniCoz, baglantiTuru, baglantiTuruSec, bilgisayarAdresiniSina, wifiAyarlariniAc, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul,
     bluetoothAyarlariniAc, bluetoothKlavyeBagla, bluetoothKlavyeyiBaslat, connectCard, telefonuGorunurYap, disconnectCard, kartAginda, kartiWifidaBul, scanCards, scanPairedComputers,
     sendToComputerClipboard, telefonWifiAdresi, testCard, testHelper
 } from '@/lib/remoteTools';
-import type { BulunanBilgisayar, Device, RemotePrefs } from '@/lib/remoteTools';
+import type { BaglantiTuru, BulunanBilgisayar, Device, RemotePrefs } from '@/lib/remoteTools';
 import { SettingsField, SettingsNote, cx, settingsFieldClass } from '@/components/ui/settings';
-import { durumuTazele, useBaglantiDurumu } from '@/lib/baglantiDurumu';
+import { durumuTazele, useBaglantiDurumu, yolAdi } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
 import DenemeAgaciDugmesi from './DenemeAgaciDugmesi';
 
@@ -459,6 +459,121 @@ function KartWifiKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gunce
     </div>;
 }
 
+/**
+ * Kart · AP: telefon, kartın KENDİ Wi‑Fi ağına (can bellek s3) bağlanır; ev
+ * router'ı ya da internet gerekmez. Kart USB ile bilgisayara takılıdır; yazma,
+ * fare, kısayol ve (PC Yardımcısı açıksa) pano karttan geçer.
+ */
+function KartApKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
+    const { mesgul, mesaj, calistir } = useIslem();
+    const [telefonAdresi, setTelefonAdresi] = useState<string | null>(null);
+    const [dogrulandi, setDogrulandi] = useState(false);
+    const yenile = () => void telefonWifiAdresi().then(setTelefonAdresi);
+    useEffect(() => { yenile(); const z = setInterval(yenile, 4000); return () => clearInterval(z); }, []);
+    const apde = telefonAdresi ? kartAginda(telefonAdresi) : false;
+    return <div className="space-y-3">
+        <ol className="space-y-4">
+            <Adim no={1} baslik={'Telefonu kartın ağına bağlayın'} tamam={apde}>
+                <Aciklama>Kartın USB kablosu bilgisayara takılı olsun. Telefonun Wi‑Fi ayarlarında <strong>{KART_AP_AGI}</strong> ağını seçip bağlanın; ev router'ı gerekmez. Telefon "bu ağda internet yok" derse <strong>bağlı kal</strong>'ı seçin; internet gerektiren işler (yapay zekâ, yedekleme) mobil veriyle sürer, kart trafiği kartın ağından gider.</Aciklama>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" id="kart-ap-wifi-ayarlari" className={ikinciDugme} onClick={() => void calistir('ayar', async () => { await wifiAyarlariniAc(); })}>
+                        <Wifi size={15} aria-hidden="true" /> Wi‑Fi ayarlarını aç
+                    </button>
+                </div>
+                <p className={cx('text-xs', apde ? 'text-moss-700' : 'text-sand-600')}>
+                    {telefonAdresi === null ? 'Telefonun ağı denetleniyor…' : !telefonAdresi ? 'Telefon şu an bir Wi‑Fi ağına bağlı değil.' : apde ? 'Telefon kartın ağında (' + telefonAdresi + '). Kart adresi: 192.168.4.1' : 'Telefon başka bir ağda (' + telefonAdresi + '). Kartın ağına geçin.'}
+                </p>
+            </Adim>
+            <Adim no={2} baslik="Deneyin" tamam={dogrulandi}>
+                <button type="button" id="kart-ap-dene" disabled={!!mesgul} className={anaDugme} onClick={() => void calistir('dene', async () => {
+                    const yeni = { ...prefs, connection: 'wifi' as const, agTuru: 'kart-ap' as const, cardUrl: KART_AP_ADRESI };
+                    const durum = await testCard(yeni);
+                    update(yeni); setDogrulandi(true); void durumuTazele(yeni);
+                    return 'Kartın ağından karta erişildi' + (durum?.fw ? ' · yazılım ' + durum.fw : '') + '.';
+                })}><Bekliyor goster={mesgul === 'dene'}>Kart bağlantısını dene</Bekliyor></button>
+                <Aciklama>Kartın bilgisayardaki USB bağlantısı ve PC Yardımcısı açıksa <strong>PC panosu</strong> da bu yoldan çalışır; bilgisayarla ayrıca eşleşmeniz gerekmez.</Aciklama>
+            </Adim>
+        </ol>
+        {mesaj && <SettingsNote tone={mesaj.tone}>{mesaj.text}</SettingsNote>}
+    </div>;
+}
+
+const TAILSCALE_PLAY = 'https://play.google.com/store/apps/details?id=com.tailscale.ipn';
+
+/**
+ * Tailscale: telefon ve bilgisayar aynı Tailscale hesabındaysa PC Yardımcısına
+ * Tailscale adresiyle bağlanılır; telefon başka bir şehirde, mobil veride bile olabilir.
+ * Trafik Tailscale'in şifreli tüneli içinden gider.
+ */
+function TailscaleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
+    const { mesgul, mesaj, calistir } = useIslem();
+    const [adres, setAdres] = useState(() => prefs.agTuru === 'tailscale' ? prefs.helperUrl.replace(/^https?:\/\//, '').replace(/:8765$/, '') : '');
+    const [pc, setPc] = useState<BulunanBilgisayar | null>(null);
+    const [kod, setKod] = useState('');
+    const eslesmis = !!(prefs.agTuru === 'tailscale' && prefs.helperUrl && prefs.helperToken);
+    const playAc = async () => {
+        try { const { Browser } = await import('@capacitor/browser'); await Browser.open({ url: TAILSCALE_PLAY }); }
+        catch { window.open(TAILSCALE_PLAY, '_blank'); }
+    };
+    return <div className="space-y-3">
+        <ol className="space-y-4">
+            <Adim no={1} baslik="Telefona ve bilgisayara Tailscale kurun" tamam={eslesmis}>
+                <Aciklama>İkisinde de aynı <strong>Tailscale hesabıyla</strong> giriş yapın (tailscale.com, ücretsiz). Telefonda uygulamayı açıp bağlı olduğundan emin olun; bilgisayarda Tailscale simgesi bağlı görünmeli. Bilgisayarın Windows ile başlaması için Tailscale'de <strong>Run on startup</strong> açık kalsın.</Aciklama>
+                <button type="button" className={ikinciDugme} onClick={() => void playAc()}><ExternalLink size={15} aria-hidden="true" /> Telefon için Tailscale (Play Store)</button>
+            </Adim>
+            <Adim no={2} baslik="Bilgisayarda PC Yardımcısını açın" tamam={eslesmis}>
+                <Aciklama>Yardımcının penceresinde <strong>Tailscale adresi: http://100.x.x.x:8765</strong> satırı ve <strong>6 haneli eşleştirme kodu</strong> görünür. Başka şehirde olacaksanız yardımcının ve Tailscale'in bilgisayarda açık kalması gerekir. <strong>Bilgisayarda bir kez</strong> yardımcı klasöründeki <strong>pc_tailscale_izni.cmd</strong> dosyasına çift tıklayın (Windows yönetici izni sorar; güvenlik duvarında yalnız Tailscale ağından yardımcıya izin verir). Yardımcı penceresi izin yoksa bunu sarı bir satırla hatırlatır.</Aciklama>
+                <YardimciIndir kurulu={eslesmis} />
+            </Adim>
+            <Adim no={3} baslik="Bilgisayarın Tailscale adresini yazın" tamam={!!pc || eslesmis}>
+                <Aciklama>Yardımcı penceresindeki ya da Tailscale uygulamasındaki <strong>100.x.x.x</strong> adresini (ya da bilgisayarın Tailscale adını, ör. <code>pc.tailnet.ts.net</code>) yazın.</Aciklama>
+                <div className="flex flex-wrap gap-2">
+                    <input id="tailscale-adresi" aria-label="Bilgisayarın Tailscale adresi" className={settingsFieldClass + ' min-h-[44px] min-w-0 flex-1'} inputMode="url" placeholder="100.101.102.103" value={adres} onChange={e => { setAdres(e.target.value); setPc(null); }} />
+                    <button type="button" id="tailscale-bul" disabled={!!mesgul || !adres.trim()} className={ikinciDugme} onClick={() => void calistir('bul', async () => {
+                        const bulunan = await bilgisayarAdresiniSina(adres); setPc(bulunan);
+                        return bulunan.name + ' bulundu (Tailscale üzerinden). Şimdi kodu yazın.';
+                    })}><Bekliyor goster={mesgul === 'bul'}><Search size={15} aria-hidden="true" /> Bul</Bekliyor></button>
+                </div>
+            </Adim>
+            <Adim no={4} baslik="Eşleştirme kodunu yazın" tamam={eslesmis && !pc}>
+                {pc || eslesmis
+                    ? <KodAlani id="tailscale-kod" deger={kod} onDegis={setKod} mesgul={mesgul === 'eslestir'} dugmeMetni="Eşleştir"
+                        onGonder={() => void calistir('eslestir', async () => {
+                            const hedefUrl = pc?.url || prefs.helperUrl;
+                            const sonuc = await bilgisayarlaEslestirWifi(hedefUrl, kod);
+                            update({ ...prefs, ...sonuc, connection: 'pc-wifi', agTuru: 'tailscale', helperUrlTs: sonuc.helperUrl });
+                            setKod(''); setPc(null);
+                            return sonuc.helperName + ' ile Tailscale üzerinden eşleşildi; artık başka şehirden de bağlanabilirsiniz.';
+                        })} />
+                    : <Aciklama>Önce adresi yazıp bilgisayarı bulun.</Aciklama>}
+                {eslesmis && <p className="text-xs text-moss-700">Eşleşmiş: <strong>{prefs.helperName || 'Bilgisayar'}</strong> · {prefs.helperUrl.replace('http://', '')}</p>}
+            </Adim>
+            <Adim no={5} baslik="Deneyin">
+                <div className="flex flex-wrap gap-2">
+                    <button type="button" id="tailscale-dene" disabled={!!mesgul || !eslesmis} className={anaDugme} onClick={() => void calistir('dene', async () => {
+                        await testHelper({ ...prefs, connection: 'pc-wifi' }); void durumuTazele(prefs); return 'Tailscale üzerinden bilgisayara bağlanıldı; araçlar hazır.';
+                    })}><Bekliyor goster={mesgul === 'dene'}>Bağlantıyı dene</Bekliyor></button>
+                    <button type="button" disabled={!!mesgul || !eslesmis} className={ikinciDugme} onClick={() => void calistir('pano', async () => {
+                        await sendToComputerClipboard('Not Bahçesi Tailscale pano denemesi', prefs);
+                        return 'Panoya gönderildi. Bilgisayarda Ctrl+V ile kontrol edin.';
+                    })}><Bekliyor goster={mesgul === 'pano'}>Panoyu dene</Bekliyor></button>
+                </div>
+            </Adim>
+        </ol>
+        {mesaj && <SettingsNote tone={mesaj.tone}>{mesaj.text}</SettingsNote>}
+        <details className="rounded-xl border border-sand-200">
+            <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">Bağlanamıyorsanız</summary>
+            <ul className="list-disc space-y-1.5 px-6 pb-3 text-xs leading-relaxed text-sand-600">
+                <li>Telefonda Tailscale <strong>bağlı</strong> mı? (Uygulamada anahtar açık, VPN simgesi görünür.)</li>
+                <li>İki cihaz <strong>aynı hesapta</strong> ve Tailscale'de görünüyor mu?</li>
+                <li>Bilgisayarda PC Yardımcısı penceresi <strong>açık</strong> mı?</li>
+                <li>Bilgisayarda <strong>pc_tailscale_izni.cmd</strong> bir kez çalıştırıldı mı? Güvenlik duvarı bu izin olmadan Tailscale'den gelen bağlantıyı sessizce engeller (zaman aşımı).</li>
+                <li>Windows güvenlik duvarı Tailscale ağını "Genel" sayıyorsa yardımcıyı engelleyebilir; Windows ayarlarından Tailscale ağını <strong>Özel</strong> yapın.</li>
+            </ul>
+        </details>
+    </div>;
+}
+
 /** Kart adı mı? (yeni ve eski bellenim adları). */
 const kartAdi = (d: Device) => /kablosuz|bellek|usb hid|can00/i.test(d.name) || !!d.connected;
 
@@ -506,32 +621,35 @@ function KartBleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncel
     </div>;
 }
 
-const YOLLAR = [
-    { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'PC yardımcısı + kod', Icon: Wifi },
+const YOLLAR: { id: BaglantiTuru; label: string; detail: string; Icon: typeof Wifi }[] = [
+    { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'Aynı ağda; PC yardımcısı + kod', Icon: Wifi },
+    { id: 'tailscale', label: 'Tailscale', detail: 'Başka şehirden de; PC yardımcısı', Icon: Globe },
     { id: 'pc-bluetooth', label: 'Bilgisayar · Bluetooth', detail: 'Program gerekmez', Icon: Bluetooth },
-    { id: 'wifi', label: 'Kart · Wi‑Fi', detail: 'Ev ağı ya da kartın ağı', Icon: Wifi },
+    { id: 'wifi', label: 'Kart · Wi‑Fi', detail: 'Kart ev ağında', Icon: Wifi },
+    { id: 'kart-ap', label: 'Kart · AP', detail: 'Kartın kendi ağı (router yok)', Icon: Radio },
     { id: 'bluetooth', label: 'Kart · Bluetooth', detail: 'Düşük enerji (BLE)', Icon: Bluetooth }
-] as const;
+];
 
 /** Yol hazır mı? (kayıtlı bilgilere göre; canlı bağlantıyı "Dene" doğrular). */
-function yolHazir(id: RemotePrefs['connection'], prefs: RemotePrefs): boolean {
-    if (id === 'pc-wifi') return !!(prefs.helperUrl && prefs.helperToken);
+function yolHazir(id: BaglantiTuru, prefs: RemotePrefs): boolean {
+    if (id === 'pc-wifi') return !!((prefs.agTuru === 'tailscale' ? prefs.helperUrlLan : prefs.helperUrl) && prefs.helperToken);
+    if (id === 'tailscale') return !!((prefs.agTuru === 'tailscale' ? prefs.helperUrl : prefs.helperUrlTs) && prefs.helperToken);
     if (id === 'pc-bluetooth') return !!prefs.helperBluetoothAddress;
-    if (id === 'wifi') return !!prefs.cardUrl.trim();
+    if (id === 'wifi') return !!((prefs.agTuru === 'kart-ap' ? prefs.cardUrlEv : prefs.cardUrl) || '').trim();
     return true;
 }
 
 export default function BaglantiKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
     const { durum, bakiliyor, tazele } = useBaglantiDurumu(prefs, { aralikMs: 20000 });
     return <div className="space-y-4">
-        <BaglantiGostergesi id="baglanti-canli-durum" yol={prefs.connection} durum={durum} bakiliyor={bakiliyor} onTazele={() => void tazele()} />
+        <BaglantiGostergesi id="baglanti-canli-durum" yol={prefs.connection} ad={yolAdi(prefs)} durum={durum} bakiliyor={bakiliyor} onTazele={() => void tazele()} />
         {/* Bağlantı kurulunca: tek dokunuşla gerçek bir notta deneme. */}
         {durum?.tur === 'ok' && <DenemeAgaciDugmesi tur="baglanti" vurgulu />}
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Bağlantı yolu">
             {YOLLAR.map(({ id, label, detail, Icon }) => {
-                const secili = prefs.connection === id;
+                const secili = baglantiTuru(prefs) === id;
                 const hazir = yolHazir(id, prefs);
-                return <button key={id} type="button" role="radio" aria-checked={secili} id={'baglanti-yolu-' + id} onClick={() => update({ ...prefs, connection: id })}
+                return <button key={id} type="button" role="radio" aria-checked={secili} id={'baglanti-yolu-' + id} onClick={() => update(baglantiTuruSec(prefs, id))}
                     className={cx('relative flex min-h-14 items-center gap-2.5 rounded-xl border p-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40',
                         secili ? 'border-moss-400 bg-moss-50 text-moss-800 ring-1 ring-moss-500/25' : 'border-sand-200 bg-white text-sand-600 hover:border-sand-300 hover:text-sand-900')}>
                     <Icon size={20} className="shrink-0" aria-hidden="true" />
@@ -548,10 +666,12 @@ export default function BaglantiKurulumu({ prefs, update }: { prefs: RemotePrefs
             })}
         </div>
         <div className="rounded-xl border border-sand-200 bg-sand-50/60 p-3">
-            {prefs.connection === 'pc-wifi' && <PcWifiEslestirme prefs={prefs} update={update} yoluSec />}
-            {prefs.connection === 'pc-bluetooth' && <BilgisayarBluetoothKlavye prefs={prefs} update={update} />}
-            {prefs.connection === 'wifi' && <KartWifiKurulumu prefs={prefs} update={update} />}
-            {prefs.connection === 'bluetooth' && <KartBleKurulumu prefs={prefs} update={update} />}
+            {baglantiTuru(prefs) === 'pc-wifi' && <PcWifiEslestirme prefs={prefs} update={update} yoluSec />}
+            {baglantiTuru(prefs) === 'tailscale' && <TailscaleKurulumu prefs={prefs} update={update} />}
+            {baglantiTuru(prefs) === 'pc-bluetooth' && <BilgisayarBluetoothKlavye prefs={prefs} update={update} />}
+            {baglantiTuru(prefs) === 'wifi' && <KartWifiKurulumu prefs={prefs} update={update} />}
+            {baglantiTuru(prefs) === 'kart-ap' && <KartApKurulumu prefs={prefs} update={update} />}
+            {baglantiTuru(prefs) === 'bluetooth' && <KartBleKurulumu prefs={prefs} update={update} />}
         </div>
     </div>;
 }

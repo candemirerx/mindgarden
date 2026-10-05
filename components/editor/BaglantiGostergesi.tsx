@@ -23,12 +23,13 @@ function ne_zaman(ms: number): string {
     return sn < 5 ? 'az önce' : sn < 60 ? sn + ' sn önce' : Math.round(sn / 60) + ' dk önce';
 }
 
-export default function BaglantiGostergesi({ yol, durum, bakiliyor, onTazele, kompakt = false, id }: {
-    yol: ConnectionMode; durum: BaglantiDurumu | null; bakiliyor: boolean; onTazele: () => void; kompakt?: boolean; id?: string;
+export default function BaglantiGostergesi({ yol, ad, durum, bakiliyor, onTazele, kompakt = false, id }: {
+    yol: ConnectionMode; /** Türün adı (Kart · AP, Tailscale); verilmezse yol adı. */ ad?: string; durum: BaglantiDurumu | null; bakiliyor: boolean; onTazele: () => void; kompakt?: boolean; id?: string;
 }) {
+    const yolMetni = ad ?? YOL_ADI[yol];
     const tur = durum?.tur === 'ok' || durum?.tur === 'hata' || durum?.tur === 'kurulmadi' ? durum.tur : 'bilinmiyor';
     const r = RENK[tur];
-    const aciklama = YOL_ADI[yol] + ': ' + (durum ? durum.mesaj + ' (' + ne_zaman(durum.zaman) + ')' : 'denetleniyor…');
+    const aciklama = yolMetni + ': ' + (durum ? durum.mesaj + ' (' + ne_zaman(durum.zaman) + ')' : 'denetleniyor…');
     if (kompakt) {
         // Yalnız simge: yeşil bağlı, kırmızı bağlı değil, gri kurulmadı. Dokununca
         // (onTazele yerine verilen) bağlantı ayarları açılır; yer kaplamaz.
@@ -43,7 +44,7 @@ export default function BaglantiGostergesi({ yol, durum, bakiliyor, onTazele, ko
     return <div id={id} role="status" aria-live="polite" className={cx('flex items-start gap-2.5 rounded-xl border px-3 py-2.5', r.kutu)}>
         {bakiliyor && !durum ? <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin" aria-hidden="true" /> : <span aria-hidden="true" className={cx('mt-1 h-3 w-3 shrink-0 rounded-full', r.nokta)} />}
         <div className="min-w-0 flex-1 text-xs leading-relaxed">
-            <p className="font-semibold">Editör bu yolu kullanıyor: {YOL_ADI[yol]} · {bakiliyor && !durum ? 'denetleniyor…' : r.kisa}</p>
+            <p className="font-semibold">Editör bu yolu kullanıyor: {yolMetni} · {bakiliyor && !durum ? 'denetleniyor…' : r.kisa}</p>
             {durum && <p className="opacity-90">{durum.mesaj} <span className="opacity-70">({ne_zaman(durum.zaman)})</span></p>}
         </div>
         <button type="button" onClick={onTazele} disabled={bakiliyor} aria-label="Bağlantıyı yeniden dene"

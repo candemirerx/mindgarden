@@ -484,7 +484,7 @@ public class RemoteBridgePlugin extends Plugin {
                 // TCP bağlantısı düşebiliyor. Henüz hiçbir veri gitmediği için yalnız
                 // bağlantı kurma adımı bir kez daha denenir; komut asla iki kez gitmez.
                 for (int deneme = 1; ; deneme++) {
-                    connection = (HttpURLConnection) url.openConnection();
+                    connection = (HttpURLConnection) agdanBaglan(url);
                     connection.setConnectTimeout(deneme == 1 ? 4000 : 6500); connection.setReadTimeout(10000);
                     connection.setUseCaches(false);
                     connection.setRequestProperty("Connection", "close");
@@ -756,6 +756,38 @@ public class RemoteBridgePlugin extends Plugin {
     // Fare hareketi her seferinde TCP/HTTP bağlantısı kurmasın diye küçük UDP
     // paketleri gönderilir; yanıt beklenmez (kayıp paket yalnız küçük bir adımdır).
     private java.net.DatagramSocket udpSoket;
+    private boolean udpKartAginda;
+
+    /**
+     * Kartın kendi Wi‑Fi ağı (192.168.4.x) internetsizdir; Android bu ağda
+     * uygulama trafiğini mobil veriye yönlendirebilir ve karta ulaşılamaz.
+     * Kart adresine giden bağlantı bu yüzden doğrudan o Wi‑Fi ağından çıkarılır.
+     * Diğer tüm trafik (yapay zekâ, Drive, ev ağı) etkilenmez.
+     */
+    private android.net.Network kartWifiAgi() {
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return null;
+            for (android.net.Network ag : cm.getAllNetworks()) {
+                android.net.NetworkCapabilities yetenek = cm.getNetworkCapabilities(ag);
+                if (yetenek == null || !yetenek.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) continue;
+                android.net.LinkProperties ozellik = cm.getLinkProperties(ag);
+                if (ozellik == null) continue;
+                for (android.net.LinkAddress adres : ozellik.getLinkAddresses()) {
+                    java.net.InetAddress ip = adres.getAddress();
+                    if (ip instanceof java.net.Inet4Address && ip.getHostAddress().startsWith("192.168.4.")) return ag;
+                }
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+    private java.net.URLConnection agdanBaglan(URL url) throws IOException {
+        if (url.getHost().startsWith("192.168.4.")) {
+            android.net.Network ag = kartWifiAgi();
+            if (ag != null) return ag.openConnection(url);
+        }
+        return url.openConnection();
+    }
     private final ExecutorService udpYazici = Executors.newSingleThreadExecutor();
     @PluginMethod public void udpSend(PluginCall call) {
         String host = call.getString("host", "");
@@ -766,7 +798,13 @@ public class RemoteBridgePlugin extends Plugin {
             try {
                 byte[] bayt = new byte[veri.length()];
                 for (int i = 0; i < bayt.length; i++) bayt[i] = (byte) veri.getInt(i);
-                if (udpSoket == null || udpSoket.isClosed()) udpSoket = new java.net.DatagramSocket();
+                boolean kartAginda = host.startsWith("192.168.4.");
+                if (udpSoket == null || udpSoket.isClosed() || udpKartAginda != kartAginda) {
+                    if (udpSoket != null) udpSoket.close();
+                    udpSoket = new java.net.DatagramSocket();
+                    udpKartAginda = kartAginda;
+                    if (kartAginda) { android.net.Network ag = kartWifiAgi(); if (ag != null) ag.bindSocket(udpSoket); }
+                }
                 udpSoket.send(new java.net.DatagramPacket(bayt, bayt.length, java.net.InetAddress.getByName(host), port));
                 call.resolve();
             } catch (Exception e) { call.reject("UDP gönderilemedi: " + e.getMessage()); }
@@ -790,6 +828,14 @@ public class RemoteBridgePlugin extends Plugin {
         call.resolve(result);
     }
     /** Eşleştirme için Android'in Bluetooth ayarlarını açar. */
+    @PluginMethod public void openWifiSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) { call.reject("Wi‑Fi ayarları açılamadı: " + e.getMessage()); }
+    }
     @PluginMethod public void openBluetoothSettings(PluginCall call) {
         try {
             Intent intent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);

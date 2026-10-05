@@ -19,6 +19,15 @@ export const hedefNota = (h: DikteHedefi) => h !== 'computer';
 export const hedefBilgisayara = (h: DikteHedefi) => h !== 'editor';
 
 export type ConnectionMode = 'wifi' | 'bluetooth' | 'pc-wifi' | 'pc-bluetooth';
+/**
+ * Kurulum ekranındaki altı bağlantı türü. İkisi, mantıkta mevcut yolların
+ * adlandırılmış biçimidir: Kart · AP kartın kendi Wi‑Fi ağıdır (kart yolu,
+ * adres 192.168.4.1); Tailscale ise PC yardımcısına Tailscale adresiyle
+ * (başka şehirden de) bağlanmaktır (PC yolu).
+ */
+export type BaglantiTuru = ConnectionMode | 'kart-ap' | 'tailscale';
+export const KART_AP_ADRESI = 'http://192.168.4.1';
+export const KART_AP_AGI = 'can bellek s3';
 export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'enter' | 'clipboard' | 'imageToComputer' | 'imageToClipboard' | 'phoneClipboard' | 'shortcuts' | 'screen';
 export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'computerWrite', 'enter', 'clipboard', 'imageToComputer', 'imageToClipboard', 'phoneClipboard', 'shortcuts', 'screen'];
 /**
@@ -207,6 +216,12 @@ export function konumYuzdesi(deger: number): number {
 }
 export type RemotePrefs = {
     connection: ConnectionMode;
+    /** Seçili yolun adlandırılmış türü: kartın kendi ağı ya da Tailscale (yoksa standart). */
+    agTuru?: 'kart-ap' | 'tailscale';
+    /** Tür değişince eski adresler kaybolmasın: ev ağındaki kart, yerel ağdaki ve Tailscale'deki bilgisayar. */
+    cardUrlEv?: string;
+    helperUrlLan?: string;
+    helperUrlTs?: string;
     cardUrl: string;
     helperUrl: string;
     helperToken: string;
@@ -270,6 +285,40 @@ export function remotePrefs(): RemotePrefs {
         return { ...defaults, ...data, dictationTarget: dikteHedefiGecerli(data.dictationTarget, defaults.dictationTarget), bridgeDictationTarget: dikteHedefiGecerli(data.bridgeDictationTarget, defaults.bridgeDictationTarget), writeMode: data.writeMode === 'canli' ? 'canli' : 'dugme', writeTarget: dikteHedefiGecerli(data.writeTarget, defaults.writeTarget), enabledTools: araclariBirlestir(data.enabledTools), macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts.map(normalizeScreenLayout) : [] };
     } catch { return defaults; }
 }
+/** Tercihlerden seçili bağlantı türü. */
+export function baglantiTuru(p: Pick<RemotePrefs, 'connection' | 'agTuru'>): BaglantiTuru {
+    if (p.connection === 'wifi' && p.agTuru === 'kart-ap') return 'kart-ap';
+    if (p.connection === 'pc-wifi' && p.agTuru === 'tailscale') return 'tailscale';
+    return p.connection;
+}
+/** Tür adı (durum göstergesi ve iletiler için). */
+export const BAGLANTI_TURU_ADI: Record<BaglantiTuru, string> = {
+    'pc-wifi': 'Bilgisayar · Wi‑Fi',
+    'pc-bluetooth': 'Bilgisayar · Bluetooth',
+    wifi: 'Kart · Wi‑Fi',
+    bluetooth: 'Kart · Bluetooth',
+    'kart-ap': 'Kart · AP',
+    tailscale: 'Tailscale'
+};
+/**
+ * Bağlantı türünü değiştirir. Çıkılan türün adresi saklanır, girilen türünki
+ * geri yüklenir; böylece evdeki ve uzaktaki bilgisayar adresleri birbirini ezmez.
+ */
+export function baglantiTuruSec(p: RemotePrefs, tur: BaglantiTuru): RemotePrefs {
+    const simdiki = baglantiTuru(p);
+    if (simdiki === tur) return p;
+    const s: RemotePrefs = { ...p };
+    if (simdiki === 'wifi') s.cardUrlEv = p.cardUrl;
+    if (simdiki === 'tailscale') s.helperUrlTs = p.helperUrl;
+    else if (simdiki === 'pc-wifi') s.helperUrlLan = p.helperUrl;
+    switch (tur) {
+        case 'kart-ap': return { ...s, connection: 'wifi', agTuru: 'kart-ap', cardUrl: KART_AP_ADRESI };
+        case 'wifi': return { ...s, connection: 'wifi', agTuru: undefined, cardUrl: s.cardUrlEv || s.cardUrl };
+        case 'tailscale': return { ...s, connection: 'pc-wifi', agTuru: 'tailscale', helperUrl: s.helperUrlTs || '' };
+        case 'pc-wifi': return { ...s, connection: 'pc-wifi', agTuru: undefined, helperUrl: simdiki === 'tailscale' ? (s.helperUrlLan || '') : s.helperUrl };
+        default: return { ...s, connection: tur, agTuru: undefined };
+    }
+}
 export function saveRemotePrefs(prefs: RemotePrefs) {
     localStorage.setItem(key, JSON.stringify(prefs));
     bildir('remote-prefs');
@@ -290,6 +339,7 @@ type NativeRemote = {
     hidDiscoverable(): Promise<void>;
     udpSend(options: { host: string; port: number; data: number[] }): Promise<void>;
     openBluetoothSettings(): Promise<void>;
+    openWifiSettings(): Promise<void>;
     connect(options: { address: string }): Promise<{ connected: boolean }>;
     connectClassic(options: { address: string }): Promise<{ connected: boolean }>;
     sendClassic(options: { body: string; address?: string }): Promise<{ ok?: boolean; token?: string; name?: string; error?: string } | void>;
@@ -659,6 +709,11 @@ async function bluetoothKlavyeKomutu(command: string, prefs: RemotePrefs): Promi
     throw new Error('Bu komut Bluetooth klavye yolunda desteklenmiyor.');
 }
 
+/** Android Wi‑Fi ayarlarını açar (kartın kendi ağına bağlanmak için). */
+export async function wifiAyarlariniAc(): Promise<void> {
+    if (!isNative()) throw new Error('Wi‑Fi ayarları yalnız Android uygulamasında açılır.');
+    await native.openWifiSettings();
+}
 export async function testHelper(prefs: RemotePrefs) {
     if (prefs.connection === 'pc-bluetooth') {
         await bluetoothKlavyeBagla(prefs.helperBluetoothAddress);
@@ -834,6 +889,8 @@ async function yardimciIstegi(prefs: RemotePrefs, yol: string, govde: string): P
 }
 let yenidenAraniyor: Promise<string | null> | null = null;
 async function yardimciyiYenidenBul(prefs: RemotePrefs): Promise<string | null> {
+    // Tailscale adresi sabittir; yerel ağda aranıp başka adrese çevrilmez.
+    if (prefs.agTuru === 'tailscale') return null;
     if (yenidenAraniyor) return yenidenAraniyor;
     yenidenAraniyor = (async () => {
         try {
