@@ -1,7 +1,6 @@
 'use client';
 
 import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
-import BaglantiGostergesi from './BaglantiGostergesi';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AudioLines, Check, Clipboard, ClipboardCopy, ClipboardPaste, CornerDownLeft, MonitorUp, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
@@ -23,7 +22,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     onBaglantiAyarlari?: () => void;
 }) {
     const prefs = useRemotePrefs();
-    const baglanti = useBaglantiDurumu(prefs, { aralikMs: 30000, etkin: placement === 'toolbar' && aktif });
+    const baglanti = useBaglantiDurumu(prefs, { aralikMs: 30000, etkin: false });
     const [busy, setBusy] = useState(false);
     const [bridgeListening, setBridgeListening] = useState(false);
     const [bridgeStopping, setBridgeStopping] = useState(false);
@@ -278,8 +277,6 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     }, [content, kopruYaz]);
 
     if (placement === 'toolbar') return <>
-            <BaglantiGostergesi kompakt id="studio-baglanti-durumu" yol={prefs.connection} durum={baglanti.durum} bakiliyor={baglanti.bakiliyor}
-                onTazele={() => { if (onBaglantiAyarlari) onBaglantiAyarlari(); else void baglanti.tazele(); }} />
             {prefs.enabledTools.shortcuts && (() => {
                 const tumuAcik = mode === 'shortcuts' && !profilId;
                 return <button id="studio-kisayollar" type="button" aria-pressed={tumuAcik} onClick={() => { onProfilChange?.(null); onModeChange(tumuAcik ? 'write' : 'shortcuts'); }}

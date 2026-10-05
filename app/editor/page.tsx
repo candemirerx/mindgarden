@@ -11,6 +11,8 @@ import KisayolPanosu, { KisayolSecici } from '@/components/editor/KisayolPanosu'
 import EkranDuzeni, { EkranSecici } from '@/components/editor/EkranDuzeni';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
 import { remotePrefs, sistemCubuklariniGizle } from '@/lib/remoteTools';
+import { useRemotePrefs } from '@/lib/useRemotePrefs';
+import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
 import type { RemoteMode } from '@/lib/remoteTools';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
@@ -157,6 +159,15 @@ function EditorPageInner() {
         { id: 'computer' as const, label: 'Bilgisayar araçları', Icon: MonitorSmartphone, visible: bilgisayarAcik, disabled: resultPending },
         { id: 'ai' as const, label: 'Yapay zekâ', Icon: Sparkles, visible: yapayZekaAcik || resultPending, disabled: false }
     ].filter(tab => tab.visible);
+    /**
+     * Bilgisayar araçları sekmesinin simgesi bağlantıyı gösterir: bağlıysa
+     * yeşil, değilse kırmızı. Sekmeye basılı tutmak bağlantı ayarlarını açar.
+     */
+    const uzakTercihler = useRemotePrefs();
+    const sekmeBaglanti = useBaglantiDurumu(uzakTercihler, { aralikMs: 30000, etkin: bilgisayarAcik });
+    const baglantiRengi = sekmeBaglanti.durum?.tur === 'ok' ? 'text-moss-600' : sekmeBaglanti.durum && sekmeBaglanti.durum.tur !== 'bakiliyor' ? 'text-berry-600' : '';
+    const sekmeBasili = useRef<{ zaman: ReturnType<typeof setTimeout> | null; uzun: boolean }>({ zaman: null, uzun: false });
+    const baglantiAyarlariniAc = () => { setSettingsBolumu('remote'); setSettingsOpen(true); };
     const activeToolTab = resultPending ? 'ai' : visibleToolTabs.some(tab => tab.id === toolTab) ? toolTab : visibleToolTabs[0]?.id;
 
     // Uzun notlarda ve ekran döndürüldüğünde tek kaydırma yüzeyi korunur.
@@ -886,10 +897,25 @@ function EditorPageInner() {
                         <div className="studio-tabs" role="tablist" aria-label="Araç bölümü">
                             {visibleToolTabs.map(({ id, label, Icon, disabled }) => (
                                 <button key={id} id={`studio-tab-${id}`} type="button" role="tab"
-                                    aria-label={label} title={label} aria-selected={activeToolTab === id}
+                                    aria-label={id === 'computer' && sekmeBaglanti.durum ? label + (sekmeBaglanti.durum.tur === 'ok' ? ' · bağlı' : ' · bağlı değil') : label}
+                                    title={id === 'computer' ? label + ' · basılı tutun: bağlantı ayarları' : label} aria-selected={activeToolTab === id}
                                     aria-controls={`studio-panel-${id}`} disabled={disabled}
                                     tabIndex={activeToolTab === id ? 0 : -1}
-                                    onClick={() => { setToolTab(id); aracSekmesiniKaydet(id); setFocusMode(false); }}
+                                    onPointerDown={id === 'computer' ? () => {
+                                        const b = sekmeBasili.current;
+                                        b.uzun = false;
+                                        if (b.zaman) clearTimeout(b.zaman);
+                                        b.zaman = setTimeout(() => { b.uzun = true; b.zaman = null; try { navigator.vibrate?.(20); } catch { /* yok */ } baglantiAyarlariniAc(); }, 550);
+                                    } : undefined}
+                                    onPointerUp={id === 'computer' ? () => { const b = sekmeBasili.current; if (b.zaman) { clearTimeout(b.zaman); b.zaman = null; } } : undefined}
+                                    onPointerLeave={id === 'computer' ? () => { const b = sekmeBasili.current; if (b.zaman) { clearTimeout(b.zaman); b.zaman = null; } } : undefined}
+                                    onPointerCancel={id === 'computer' ? () => { const b = sekmeBasili.current; if (b.zaman) { clearTimeout(b.zaman); b.zaman = null; } } : undefined}
+                                    onContextMenu={id === 'computer' ? (e => { e.preventDefault(); if (!sekmeBasili.current.uzun) baglantiAyarlariniAc(); }) : undefined}
+                                    onClick={() => {
+                                        // Uzun basıştan sonra gelen tıklama sekmeyi değiştirmesin.
+                                        if (id === 'computer' && sekmeBasili.current.uzun) { sekmeBasili.current.uzun = false; return; }
+                                        setToolTab(id); aracSekmesiniKaydet(id); setFocusMode(false);
+                                    }}
                                     onKeyDown={event => {
                                         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
                                         event.preventDefault();
@@ -899,8 +925,9 @@ function EditorPageInner() {
                                         const button = document.getElementById(`studio-tab-${next}`) as HTMLButtonElement | null;
                                         if (button && !button.disabled) { button.click(); button.focus(); }
                                     }}
-                                    className={`studio-tab ${activeToolTab === id ? 'studio-tab--active' : ''}`}>
-                                    <Icon size={19} aria-hidden="true" />
+                                    className={`studio-tab ${activeToolTab === id ? 'studio-tab--active' : ''}`}
+                                    style={id === 'computer' ? { WebkitTouchCallout: 'none', userSelect: 'none' } : undefined}>
+                                    <Icon size={19} aria-hidden="true" className={id === 'computer' ? baglantiRengi : undefined} />
                                 </button>
                             ))}
                         </div>
@@ -992,7 +1019,6 @@ function EditorPageInner() {
                     kullanıcı Onayla/Geri Al düğmelerini göremezdi. */}
                 {((yapayZekaAcik && !focusMode && activeToolTab === 'ai') || resultPending) && (
                 <div id="studio-panel-ai" role="tabpanel" aria-labelledby="studio-tab-ai" className="studio-tool-row studio-ai flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
-                    <span className="studio-tool-label text-clay-700" title="Yapay zekâ"><Sparkles size={16} /><span>Yardımcı</span></span>
 
                     {aiCakisma ? (
                         <div
@@ -1115,13 +1141,6 @@ function EditorPageInner() {
                     burada yer kaplamaz; bölüm ayarlardan tümüyle kapatılabilir. */}
                 {!focusMode && activeToolTab === 'tools' && araclarAcik && (
                     <div id="studio-panel-tools" role="tabpanel" aria-labelledby="studio-tab-tools" className="studio-tool-row flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
-                        <span
-                            className="studio-tool-label text-moss-700"
-                            title="Yerel araçlar: yapay zekâ kullanmadan çalışır"
-                        >
-                            <Wrench size={14} aria-hidden="true" />
-                            <span className="hidden sm:inline">Araçlar</span>
-                        </span>
 
                         <div
                             className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5"
@@ -1163,7 +1182,6 @@ function EditorPageInner() {
                 )}
                 {bilgisayarAcik && (
                     <div id="studio-panel-computer" role="tabpanel" aria-labelledby="studio-tab-computer" style={{ display: !focusMode && activeToolTab === 'computer' ? undefined : 'none' }} className="studio-tool-row studio-computer flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
-                        <span className="studio-tool-label text-moss-700"><MonitorSmartphone size={14} aria-hidden="true" /><span className="hidden sm:inline">Bilgisayar</span></span>
                         {remoteMode === 'screen' && <EkranSecici duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onYaziyaDon={() => setRemoteMode('write')} />}
                         {remoteMode === 'shortcuts' && <KisayolSecici profilId={kisayolProfili} onProfilChange={setKisayolProfili} onYaziyaDon={() => setRemoteMode('write')} />}
                         <div className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Bilgisayar araçları" style={remoteMode === 'screen' || remoteMode === 'shortcuts' ? { display: 'none' } : undefined}>
