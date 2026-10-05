@@ -14,8 +14,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, Camera, Check, CheckCheck, ClipboardCopy, ClipboardPaste, FileText, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
-import { dosyalariBilgisayaraGonder, sendToComputerClipboard, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
+import { dosyalariBilgisayaraGonder, klavyeGorselleriniDinle, sendToComputerClipboard, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
+import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
+import BaglantiGostergesi from './BaglantiGostergesi';
 import { dosyalariGaleriyeEkle, galeridenSil, galeriyeEkle, gorseliHazirla, metinKarti, useMiniGaleri } from '@/lib/miniGaleri';
 import type { GaleriOgesi } from '@/lib/miniGaleri';
 import { cx } from '@/components/ui/settings';
@@ -34,8 +36,13 @@ function useOnizlemeler(ogeler: GaleriOgesi[]) {
     return adresler;
 }
 
-export default function MiniGaleri({ notId, editorMetni, onKapat }: { notId: string; editorMetni: string; onKapat: () => void }) {
+export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyarlari }: {
+    notId: string; editorMetni: string; onKapat: () => void;
+    /** Bağlantı göstergesine dokununca: galeri kapanır, bilgisayar bağlantısı ayarları açılır. */
+    onBaglantiAyarlari?: () => void;
+}) {
     const prefs = useRemotePrefs();
+    const baglanti = useBaglantiDurumu(prefs, { aralikMs: 30000, etkin: true });
     const { ogeler, yukleniyor } = useMiniGaleri(notId);
     const onizleme = useOnizlemeler(ogeler);
     const [secili, setSecili] = useState<Set<string>>(new Set());
@@ -67,6 +74,13 @@ export default function MiniGaleri({ notId, editorMetni, onKapat }: { notId: str
         });
         return () => { bitti = true; window.removeEventListener('keydown', tus); kaldir?.(); };
     }, []);
+    // Klavyeden (Gboard panosu) yapıştırılan görseller ek olarak kutuya düşer.
+    useEffect(() => {
+        let kapat: (() => void) | null = null; let bitti = false;
+        void klavyeGorselleriniDinle(gorsel => ekEkle(gorsel)).then(k => { if (bitti) k(); else kapat = k; });
+        return () => { bitti = true; kapat?.(); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const eklerRef = useRef(ekler);
     eklerRef.current = ekler;
     useEffect(() => () => {
@@ -82,7 +96,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat }: { notId: str
     const calistir = async (gonderiliyor: string, is: () => Promise<string>) => {
         setMesgul(true); bildir({ metin: gonderiliyor, ton: 'sending' });
         try { bildir({ metin: await is(), ton: 'ok' }); }
-        catch (e) { bildir({ metin: e instanceof Error ? e.message : 'İşlem başarısız.', ton: 'error' }); }
+        catch (e) { bildir({ metin: e instanceof Error ? e.message : 'İşlem başarısız.', ton: 'error' }); void baglanti.tazele(); }
         finally { setMesgul(false); }
     };
 
@@ -127,7 +141,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat }: { notId: str
             }
         },
         {
-            id: 'galeri-telefon-panosu', Icon: ClipboardPaste, ad: 'Telefon panosu', aciklama: 'Telefon panosundakini bilgisayar panosuna gönder',
+            id: 'galeri-telefon-panosu', Icon: ClipboardPaste, ad: 'Panodan PC’ye', aciklama: 'Telefon panosundaki metni ya da resmi bilgisayar panosuna gönder',
             calis: () => void calistir('Telefon panosu bilgisayara gönderiliyor…', () => telefonPanosunuBilgisayaraGonder(prefs))
         }
     ];
@@ -212,6 +226,8 @@ export default function MiniGaleri({ notId, editorMetni, onKapat }: { notId: str
                         <p className="text-[11px] leading-none text-sand-500">{ogeler.length ? ogeler.length + ' öğe · seçmek için basılı tutun' : 'Bu nota özel'}</p>
                     </div>
                 </>}
+                <BaglantiGostergesi kompakt id="galeri-baglanti-durumu" yol={prefs.connection} durum={baglanti.durum} bakiliyor={baglanti.bakiliyor}
+                    onTazele={() => { if (onBaglantiAyarlari) { onKapat(); onBaglantiAyarlari(); } else void baglanti.tazele(); }} />
                 {ogeler.length > 0 && <button type="button" id="galeri-tumunu-sec" onClick={tumunuSec}
                     className="flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-moss-700 hover:bg-moss-50">
                     <CheckCheck size={17} />{secili.size === ogeler.length ? 'Seçimi kaldır' : 'Tümünü seç'}

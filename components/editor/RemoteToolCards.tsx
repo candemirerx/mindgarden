@@ -24,7 +24,7 @@ const items = {
     clipboard: { title: 'Bilgisayar Panosuna Gönder', subtitle: 'Not metnini PC pano yardımcısına gönder.', Icon: Clipboard },
     imageToComputer: { title: 'Görselleri Bilgisayara Gönder', subtitle: 'Telefondan seçtiğiniz görseller bilgisayarda Resimler › Not Bahçesi klasörüne kaydedilir. Notun mini galerisinden de gönderilebilir.', Icon: MonitorUp },
     imageToClipboard: { title: 'Görseli PC Panosuna Gönder', subtitle: 'Seçtiğiniz görsel bilgisayar panosuna konur; Ctrl+V ile yapıştırırsınız (birden çoksa dosya olarak).', Icon: ClipboardCopy },
-    phoneClipboard: { title: 'Telefon Panosu → PC Panosu', subtitle: 'Telefonda kopyaladığınız metin ya da görsel bilgisayar panosuna geçer.', Icon: ClipboardPaste },
+    phoneClipboard: { title: 'Panodan PC Panosuna (metin ya da resim)', subtitle: 'Telefonda ne kopyaladıysanız (metin ya da resim) tek dokunuşla bilgisayar panosuna geçer; bilgisayarda Ctrl+V ile yapıştırırsınız.', Icon: ClipboardPaste },
     shortcuts: { title: 'Kısayollar', subtitle: 'Kişisel klavye, metin ve konum makrolarını editördeki panodan çalıştır.', Icon: Wand2 },
     screen: { title: 'Ekran', subtitle: 'Kendi tasarladığın bölmeli ekran: fare, yön tuşları, metin ve kısayollar bir arada.', Icon: LayoutDashboard }
 } satisfies Record<RemoteToolId, { title: string; subtitle: string; Icon: typeof MousePointer2 }>;

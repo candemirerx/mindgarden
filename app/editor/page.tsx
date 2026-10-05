@@ -1227,6 +1227,7 @@ function EditorPageInner() {
                     {/* Sol alt: mini galeri, kamera, telefon galerisi. Kayıt zamanı yazılmaz;
                         yalnız kayıt başarısızsa ya da otomatik kayıt kapalıyken bekleyen değişiklik varsa uyarı çıkar. */}
                     <GaleriDugmeleri notId={nodeId} editorMetni={content}
+                        onBaglantiAyarlari={() => { setSettingsBolumu('remote'); setSettingsOpen(true); }}
                         uyari={kayitHatasi ? 'Kayıt başarısız · taslak korundu' : !autoSave && hasChanges ? '● Kaydedilmedi' : undefined} />
                     <div className="flex items-center gap-3 sm:gap-6">
                         <label className="studio-autosave flex min-h-[44px] cursor-pointer items-center gap-2" title="Otomatik kaydet">

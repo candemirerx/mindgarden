@@ -261,8 +261,21 @@ export function PcBluetoothPano({ prefs, update, yoluSec = true }: { prefs: Remo
     const secili = prefs.helperBluetoothAddress;
     const bagli = !!(secili && prefs.helperToken);
     /** Seçilen bilgisayara bağlanır, anahtarı alır, yolu seçer ve göstergeyi tazeler. */
-    const baglan = (adres: string, ad: string, pin = '') => void calistir('baglan-' + adres, async () => {
-        const sonuc = await bilgisayarlaEslestirBluetooth(adres, pin);
+    const baglan = (ilkAdres: string, ad: string, pin = '') => void calistir('baglan-' + ilkAdres, async () => {
+        // Aynı adlı başka kayıtlar (ör. bilgisayarın eski/bozuk iç Bluetooth'u ile
+        // yeni USB adaptörü) varsa seçilen yanıt vermezse onlar sırayla denenir.
+        const ayniAdlilar = bilgisayarlar.filter(d => d.name === ad && d.address !== ilkAdres).map(d => d.address);
+        let adres = ilkAdres;
+        let sonuc: Awaited<ReturnType<typeof bilgisayarlaEslestirBluetooth>> | null = null;
+        let ilkHata: unknown = null;
+        for (const aday of [ilkAdres, ...ayniAdlilar]) {
+            try { sonuc = await bilgisayarlaEslestirBluetooth(aday, pin); adres = aday; break; }
+            catch (hata) { ilkHata ??= hata; }
+        }
+        if (!sonuc) {
+            if (ayniAdlilar.length && ilkHata instanceof Error) throw new Error(ilkHata.message + ' "' + ad + '" adlı ' + (ayniAdlilar.length + 1) + ' kaydın hiçbiri yanıt vermedi.');
+            throw ilkHata;
+        }
         const yeni = { ...prefs, ...sonuc, helperBluetoothAddress: adres, ...(yoluSec ? { connection: 'pc-bluetooth' as const } : {}) };
         update(yeni); if (yoluSec) void durumuTazele(yeni); setKod('');
         return (sonuc.helperName || ad) + ' ile Bluetooth üzerinden bağlanıldı. Yazma, fare, kısayollar ve pano hazır.';

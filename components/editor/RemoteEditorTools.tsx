@@ -369,7 +369,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
                 className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'gorselPano' ? <Check size={16} /> : <ClipboardCopy size={16} />}<span className="sr-only sm:not-sr-only"> Görsel → pano</span></button>}
             {prefs.enabledTools.phoneClipboard && <button id="studio-telefon-panosu" type="button" disabled={busy} title="Telefon panosundaki metni ya da görseli bilgisayar panosuna gönder" aria-label="Telefon panosunu bilgisayar panosuna gönder"
                 onClick={() => void bildirimliGonder('telefonPanosu', () => telefonPanosunuBilgisayaraGonder(prefs), 'Telefon panosu bilgisayara gönderiliyor…', 'Telefon panosu bilgisayar panosuna gönderildi ✓')}
-                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'telefonPanosu' ? <Check size={16} /> : <ClipboardPaste size={16} />}<span className="sr-only sm:not-sr-only"> Telefon panosu</span></button>}
+                className="btn btn-primary min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm">{basariliDugme === 'telefonPanosu' ? <Check size={16} /> : <ClipboardPaste size={16} />}<span className="sr-only sm:not-sr-only"> Panodan PC’ye</span></button>}
             {(prefs.enabledTools.imageToComputer || prefs.enabledTools.imageToClipboard) && <input ref={gorselSecici} type="file" accept="image/*" multiple hidden
                 onChange={e => { gorselleriGonder(e.target.files); e.target.value = ''; }} />}
             {notice && <span role="status" className="max-w-48 shrink-0 text-xs text-sand-700">{notice}</span>}

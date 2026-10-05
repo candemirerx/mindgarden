@@ -1197,6 +1197,59 @@ public class RemoteBridgePlugin extends Plugin {
             } catch (Exception e) { call.reject("Pano okunamadı: " + e.getMessage()); }
         });
     }
+    /**
+     * Klavyeden görsel yapıştırma (Gboard panosu, GIF/çıkartma). WebView'deki
+     * yazı kutuları klavyeye görsel kabul ettiğini bildirmez; klavye de "bu
+     * uygulama resim yapıştırmayı desteklemiyor" der. Android 12+ içerik alma
+     * dinleyicisi WebView'e görsel türlerini bildirir; gelen görsel okunup
+     * "gorselYapistirildi" olayıyla sayfaya iletilir, metin olağan yoldan gider.
+     * Yalnız mini galeri açıkken etkindir.
+     */
+    @PluginMethod public void setImagePaste(PluginCall call) {
+        boolean acik = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        Activity activity = getActivity();
+        if (Build.VERSION.SDK_INT < 31 || activity == null) { call.resolve(); return; }
+        activity.runOnUiThread(() -> {
+            android.webkit.WebView web = getBridge().getWebView();
+            if (!acik) { web.setOnReceiveContentListener(null, null); call.resolve(); return; }
+            web.setOnReceiveContentListener(new String[] { "image/*" }, (view, payload) -> {
+                // Görsel adresleri burada okunur; metin öğeleri olağan yoldan yapıştırılsın.
+                ClipData clip = payload.getClip();
+                ClipData kalan = null;
+                for (int i = 0; i < clip.getItemCount(); i++) {
+                    ClipData.Item oge = clip.getItemAt(i);
+                    if (oge.getUri() == null) {
+                        if (kalan == null) kalan = new ClipData(clip.getDescription(), oge); else kalan.addItem(oge);
+                        continue;
+                    }
+                    // Klavyenin verdiği okuma izni dinleyiciden dönünce kalkabilir: görsel hemen okunur.
+                    try {
+                        Uri uri = oge.getUri();
+                        String tur = activity.getContentResolver().getType(uri);
+                        if (tur == null || !tur.startsWith("image/")) continue;
+                        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                        try (InputStream giris = activity.getContentResolver().openInputStream(uri)) {
+                            if (giris == null) continue;
+                            byte[] tampon = new byte[16384]; int okunan;
+                            while ((okunan = giris.read(tampon)) != -1) {
+                                bytes.write(tampon, 0, okunan);
+                                if (bytes.size() > 30 * 1024 * 1024) throw new IOException("çok büyük");
+                            }
+                        }
+                        final String mime = tur;
+                        new Thread(() -> {
+                            JSObject olay = new JSObject();
+                            olay.put("mime", mime);
+                            olay.put("data", Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP));
+                            notifyListeners("gorselYapistirildi", olay);
+                        }).start();
+                    } catch (Exception ignored) { }
+                }
+                return kalan == null ? null : new android.view.ContentInfo.Builder(payload).setClip(kalan).build();
+            });
+            call.resolve();
+        });
+    }
     /** Editör tam ekranı: sistem çubuklarını gizler; kenardan kaydırınca geçici görünür. */
     @PluginMethod public void setImmersive(PluginCall call) {
         boolean acik = Boolean.TRUE.equals(call.getBoolean("enabled", false));

@@ -253,6 +253,7 @@ type NativeRemote = {
     stopBridgeDictation(): Promise<void>;
     setImmersive(options: { enabled: boolean }): Promise<void>;
     readClipboard(): Promise<{ text?: string; mime?: string; data?: string }>;
+    setImagePaste(options: { enabled: boolean }): Promise<void>;
 };
 const native = registerPlugin<NativeRemote & Plugin>('RemoteBridge');
 const isNative = () => Capacitor.isNativePlatform();
@@ -1030,16 +1031,33 @@ export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], 
     }
 }
 
+const base64Blob = (data: string, mime: string) => {
+    const ikili = atob(data);
+    const bayt = new Uint8Array(ikili.length);
+    for (let i = 0; i < ikili.length; i++) bayt[i] = ikili.charCodeAt(i);
+    return new Blob([bayt], { type: mime });
+};
+
+/**
+ * Klavyeden yapıştırılan görselleri (Gboard panosu vb.) dinler; Android 12+.
+ * Dönen işlev dinlemeyi kapatır.
+ */
+export async function klavyeGorselleriniDinle(geldi: (gorsel: Blob) => void): Promise<() => void> {
+    if (!isNative()) return () => { };
+    try {
+        const dinleyici = await native.addListener('gorselYapistirildi', (olay: { mime?: string; data?: string }) => {
+            if (olay.data && olay.mime) geldi(base64Blob(olay.data, olay.mime));
+        });
+        await native.setImagePaste({ enabled: true });
+        return () => { void dinleyici.remove(); void native.setImagePaste({ enabled: false }).catch(() => { }); };
+    } catch { return () => { }; }
+}
+
 /** Telefon panosunu okur: metin ya da görsel. */
 export async function telefonPanosunuOku(): Promise<{ metin?: string; gorsel?: Blob }> {
     if (isNative()) {
         const pano = await native.readClipboard();
-        if (pano.data && pano.mime) {
-            const ikili = atob(pano.data);
-            const bayt = new Uint8Array(ikili.length);
-            for (let i = 0; i < ikili.length; i++) bayt[i] = ikili.charCodeAt(i);
-            return { gorsel: new Blob([bayt], { type: pano.mime }) };
-        }
+        if (pano.data && pano.mime) return { gorsel: base64Blob(pano.data, pano.mime) };
         return { metin: pano.text || undefined };
     }
     const pano = navigator.clipboard as Clipboard | undefined;

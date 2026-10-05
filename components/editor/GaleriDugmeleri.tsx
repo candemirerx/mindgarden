@@ -12,7 +12,7 @@ import MiniGaleri from './MiniGaleri';
 
 const SIMGE = 'relative flex h-11 w-11 items-center justify-center rounded-xl text-sand-600 transition-colors hover:bg-sand-100 hover:text-sand-800 active:scale-95 disabled:opacity-40';
 
-export default function GaleriDugmeleri({ notId, editorMetni, uyari }: { notId: string; editorMetni: string; uyari?: string }) {
+export default function GaleriDugmeleri({ notId, editorMetni, uyari, onBaglantiAyarlari }: { notId: string; editorMetni: string; uyari?: string; onBaglantiAyarlari?: () => void }) {
     const { ogeler } = useMiniGaleri(notId);
     const [acik, setAcik] = useState(false);
     const [ileti, setIleti] = useState('');
@@ -48,6 +48,6 @@ export default function GaleriDugmeleri({ notId, editorMetni, uyari }: { notId: 
         {(ileti || uyari) && <span role="status" className={'ml-1 truncate text-xs ' + (ileti ? 'text-moss-700' : 'text-berry-700')}>{ileti || uyari}</span>}
         <input ref={kameraRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { void ekle(e.target.files); e.target.value = ''; }} />
         <input ref={galeriRef} type="file" accept="image/*" multiple hidden onChange={e => { void ekle(e.target.files); e.target.value = ''; }} />
-        {acik && <MiniGaleri notId={notId} editorMetni={editorMetni} onKapat={() => setAcik(false)} />}
+        {acik && <MiniGaleri notId={notId} editorMetni={editorMetni} onKapat={() => setAcik(false)} onBaglantiAyarlari={onBaglantiAyarlari} />}
     </div>;
 }

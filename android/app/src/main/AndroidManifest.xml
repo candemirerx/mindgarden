@@ -21,7 +21,11 @@
          için ses düzeyleri geçici olarak sıfırlanır. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
-    <queries><intent><action android:name="android.speech.RecognitionService" /></intent></queries>
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <!-- Mini galerinin kamera simgesi: Android 11+ kamera uygulamasını ancak bu bildirimle görür; yoksa galeri seçicisine düşülür. -->
+        <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
+    </queries>
 
     <application
         android:allowBackup="false"

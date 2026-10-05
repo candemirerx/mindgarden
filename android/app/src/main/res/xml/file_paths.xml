@@ -7,4 +7,6 @@
     -->
     <external-path name="belgeler" path="Documents/" />
     <cache-path name="onbellek" path="." />
+    <!-- Kameranın çektiği fotoğrafın geçici dosyası (mini galeri). -->
+    <external-files-path name="kamera" path="Pictures/" />
 </paths>
