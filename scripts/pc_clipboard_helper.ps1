@@ -4,6 +4,8 @@
     [string]$BluetoothPort = 'auto',
     [switch]$SerialOnly,
     [switch]$RfcommOnly,
+    # Kartın USB seri kanalını dinle (telefon → kart → USB → PC panosu).
+    [switch]$KartPano,
     # Eski "adres|anahtar" satırını pencerede göster (eşleştirme kodu olmadan kurulum için).
     [switch]$ElleSatir
 )
@@ -227,6 +229,54 @@ function Set-ClipboardDosyalar([string[]]$yollar) {
             catch { if ($deneme -ge 15) { throw }; Start-Sleep -Milliseconds (40 * $deneme) }
         }
     } finally { if ($resim) { $resim.Dispose() } }
+}
+
+# ---- Kart USB panosu ----------------------------------------------------
+# Kablosuz Bellek kartı PC'ye USB ile takılıyken telefon metni karta (Wi‑Fi
+# ya da BLE) gönderir; kart onu USB seri kanalından "NBPANO1:<kimlik>:<base64>"
+# satırı olarak iletir. Burada panoya konur ve karta "NBPANOOK:<kimlik>"
+# onayı döner. Telefonun PC ile ayrıca eşleşmesi gerekmez. Kartın günlük
+# satırları da bu kanaldan gelir; yalnız NBPANO1 satırları işlenir.
+if ($KartPano) {
+    $hazirYazildi = $false
+    while ($true) {
+        $com = $null
+        try {
+            $aygit = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue |
+                Where-Object { $_.PNPDeviceID -match 'VID_1209&PID_0001' -and $_.Name -match '\((COM\d+)\)' } | Select-Object -First 1
+            if ($aygit -and $aygit.Name -match '\((COM\d+)\)') { $com = $Matches[1] }
+        } catch { }
+        if (-not $com) { Start-Sleep -Seconds 3; continue }
+        $seri = $null
+        try {
+            $seri = New-Object -TypeName System.IO.Ports.SerialPort -ArgumentList $com, 115200
+            $seri.Encoding = [System.Text.Encoding]::ASCII
+            $seri.NewLine = "`n"
+            $seri.ReadTimeout = 1000
+            $seri.WriteTimeout = 2000
+            $seri.ReadBufferSize = 262144
+            # DTR: kart, PC'nin kanalı dinlediğini buradan anlar.
+            $seri.DtrEnable = $true
+            $seri.RtsEnable = $true
+            $seri.Open()
+            if (-not $hazirYazildi) { Write-Output "KartPanoReady:$com"; $hazirYazildi = $true }
+            while ($true) {
+                try { $satir = $seri.ReadLine() }
+                catch [System.TimeoutException] { continue }
+                $satir = $satir.Trim()
+                if (-not $satir.StartsWith('NBPANO1:')) { continue }
+                $parca = $satir.Split([char[]]@(':'), 3)
+                if ($parca.Length -lt 3) { continue }
+                try {
+                    $metin = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($parca[2]))
+                    Set-ClipboardRetry $metin
+                    $seri.Write("NBPANOOK:$($parca[1])`n")
+                } catch { }
+            }
+        } catch {
+            Start-Sleep -Seconds 2
+        } finally { if ($seri) { try { $seri.Close(); $seri.Dispose() } catch { } } }
+    }
 }
 
 function Same-Token([string]$candidate, [string]$expected) {
@@ -456,8 +506,14 @@ try {
     $script:phoneDriveReady = $true
 } catch { Write-Warning ('Telefon belleği bileşeni açılamadı: ' + $_.Exception.Message) }
 $serialJob = $null
+$kartPanoJob = $null
 $directBluetooth = $false
 if (-not $TestMode) {
+    # Kart USB'ye takılıysa telefonun karta gönderdiği metin panoya gelsin.
+    $kartPanoJob = Start-Job -ScriptBlock {
+        param($path, $port)
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $path -Port $port -KartPano
+    } -ArgumentList $PSCommandPath, $Port
     if ($BluetoothPort -eq 'auto' -and (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll'))) {
         $directBluetooth = $true
         $scriptPath = $PSCommandPath
@@ -483,6 +539,7 @@ try {
     Write-Host 'Tek program: telefondan bilgisayara yazma, fare, kısayollar ve PANO bununla çalışır.'
     Write-Host '  · Bilgisayara yaz / klavye / makro: metni Not Defteri''ne elle yazar gibi tuş tuş yazar.'
     Write-Host '  · Panoya gönder: metni bilgisayar panosuna koyar; Ctrl+V ile yapıştırırsınız.'
+    Write-Host '  · Kablosuz Bellek kartı USB''ye takılıysa telefonun karta gönderdiği metin de panoya gelir (eşleştirme gerekmez).'
     # Bağlantısız hotspot/VPN adresi yerine etkin fiziksel ağ kartını öncele.
     $physical = @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | Select-Object -ExpandProperty ifIndex)
     $active = @(Get-NetIPInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object ConnectionState -eq 'Connected' | Select-Object -ExpandProperty InterfaceIndex)
@@ -538,4 +595,5 @@ try {
     $listener.Stop()
     if ($script:phoneDriveReady) { [PhoneDrive]::Stop() }
     if ($serialJob) { Stop-Job $serialJob -ErrorAction SilentlyContinue; Remove-Job $serialJob -Force -ErrorAction SilentlyContinue }
+    if ($kartPanoJob) { Stop-Job $kartPanoJob -ErrorAction SilentlyContinue; Remove-Job $kartPanoJob -Force -ErrorAction SilentlyContinue }
 }

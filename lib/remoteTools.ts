@@ -934,8 +934,49 @@ export async function metinFarkiAktar(hedef: string, onceki: string, prefs: Remo
     }
     return hedef;
 }
+/** UTF-8 metnin base64'ü (karta gönderilen biçim). */
+const utf8Base64 = (metin: string) => {
+    const b = new TextEncoder().encode(metin);
+    let ikili = '';
+    for (let i = 0; i < b.length; i += 0x8000) ikili += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    return btoa(ikili);
+};
+
+/**
+ * Kart yoluyla pano: telefon metni karta (Wi‑Fi ya da BLE) gönderir, kart
+ * USB seri kanalından PC'deki yardımcıya iletir. PC ile ayrıca eşleşme
+ * gerekmez; yalnız yardımcının açık ve kartın USB'ye takılı olması gerekir.
+ * Wi‑Fi'de kart, yardımcının onayını bekleyip sonucu döndürür.
+ */
+async function kartlaPanoya(text: string, prefs: RemotePrefs): Promise<void> {
+    const b64 = utf8Base64(text);
+    if (prefs.connection === 'wifi') {
+        cardResponse(await kartIstegi(prefs, '/api/clip', 'POST', 'b64:' + b64));
+        return;
+    }
+    // BLE: satır sınırı yüzünden parça parça (pb → pp:… → pe); onay okunmaz.
+    await bleYaz(() => native.send({ command: 'pb' }));
+    for (let i = 0; i < b64.length; i += 160) await bleYaz(() => native.send({ command: 'pp:' + b64.slice(i, i + 160) }));
+    await bleYaz(() => native.send({ command: 'pe' }));
+}
+
 export async function sendToComputerClipboard(text: string, prefs: RemotePrefs) {
     if (!text) throw new Error('Editör metni boş.');
+    // Kart bağlıyken önce kart yolu denenir (kart USB'den PC'ye takılı, yardımcı açık).
+    if (prefs.connection === 'wifi' || prefs.connection === 'bluetooth') {
+        try { await kartlaPanoya(text, prefs); return; }
+        catch (hata) {
+            // Eski kart yazılımı (/api/clip yok) ya da yardımcı dinlemiyor: PC eşleşmesi varsa onunla denenir.
+            const yedekVar = !!(prefs.helperToken && (prefs.helperUrl || prefs.helperBluetoothAddress));
+            if (!yedekVar) {
+                const ileti = hata instanceof Error ? hata.message : '';
+                if (/HTTP 404/.test(ileti)) throw new Error('Kartın yazılımı eski: panoya göndermek için kart yazılımını güncelleyin ya da Ayarlar → Bilgisayar bağlantısı → "PC panosu" bölümünden bilgisayara bağlanın.');
+                if (/HTTP 409|dinlemiyor/i.test(ileti)) throw new Error('Bilgisayarda Not Bahçesi PC Yardımcısı kartı dinlemiyor: yardımcıyı açın ve kartın USB\'ye takılı olduğundan emin olun.');
+                if (/HTTP 504|yanit vermedi/i.test(ileti)) throw new Error('PC Yardımcısı yanıt vermedi; yardımcıyı kapatıp yeniden açın.');
+                throw hata;
+            }
+        }
+    }
     if (prefs.connection === 'pc-bluetooth') {
         // Bluetooth klavye panoya yazamaz; pano bilgisayardaki yardımcıyla yapılır:
         // Wi‑Fi eşleşmesi varsa onunla, yoksa yardımcının Bluetooth alıcısıyla.
