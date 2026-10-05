@@ -9,6 +9,8 @@ import { useBudamaModu } from '@/components/ui/BudananlarDugmesi';
 import { budamaFiltresi } from '@/lib/uiPrefs';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
+import { YeniAgac } from '@/components/canvas/YeniAgac';
+import { useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
 import { Modal } from '@/components/editor/Modal';
 import { MindTextEditor } from '@/components/editor/MindTextEditor';
@@ -196,6 +198,8 @@ function GardenPageInner() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const budamaModu = useBudamaModu();
     const gorunenAgaclar = budamaFiltresi(mindRoots, budamaModu);
+    const tuval = useTuvalTercihleri();
+    const notSayisi = (n: MindNode): number => 1 + n.children.reduce((t, c) => t + notSayisi(c), 0);
 
     // Modals state
     const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
@@ -664,9 +668,11 @@ function GardenPageInner() {
 
             {/* Tuval */}
             <main className="flex-1 min-h-0 relative overflow-hidden">
-                <GardenCanvas gardenId={gardenId} initialViewState={currentGarden.view_state} ortalanacak={ortalanacak}>
+                <GardenCanvas gardenId={gardenId} initialViewState={currentGarden.view_state} ortalanacak={ortalanacak}
+                    gezinme={tuval.gezinme} agacDizilisi={tuval.gosterim === 'yatay' ? 'alt' : 'yan'}
+                    agaclar={gorunenAgaclar.map(a => ({ id: a.id, ad: a.title, sayi: notSayisi(a) }))}>
                     {mindRoots.length > 0 ? (
-                        <ul className="flex gap-20">
+                        <ul className={tuval.gosterim === 'yatay' ? 'flex flex-col gap-24' : tuval.gosterim === 'organik' ? 'flex items-start gap-28' : 'flex gap-20'}>
                             {gorunenAgaclar.map((root) => (
                                 <SuruklenebilirAgac
                                     key={root.id}
@@ -676,13 +682,24 @@ function GardenPageInner() {
                                         void updateNodePosition(root.id, x, y);
                                     }}
                                 >
-                                    <MindMapNode
-                                        node={root}
-                                        onAddChild={handleAddChild}
-                                        onAddTree={handleAddTreeBeside}
-                                        onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
-                                        depth={0}
-                                    />
+                                    {tuval.gosterim === 'klasik' ? (
+                                        <MindMapNode
+                                            node={root}
+                                            onAddChild={handleAddChild}
+                                            onAddTree={handleAddTreeBeside}
+                                            onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
+                                            depth={0}
+                                        />
+                                    ) : (
+                                        <YeniAgac
+                                            node={root}
+                                            duzen={tuval.gosterim}
+                                            onizleme={tuval.onizleme}
+                                            onAddChild={handleAddChild}
+                                            onAddTree={handleAddTreeBeside}
+                                            onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
+                                        />
+                                    )}
                                 </SuruklenebilirAgac>
                             ))}
                         </ul>

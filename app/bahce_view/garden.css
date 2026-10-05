@@ -27,3 +27,30 @@
 @media (prefers-reduced-motion: reduce) {
   .garden-page .tree, .garden-page .tree * { transition: none !important; }
 }
+
+/* ---- Ağaçlar arası gezinme: sekmeler ve kaydırma çubukları ---- */
+.tuval-sekmeleri { position: absolute; left: 0; right: 0; top: 0; z-index: 35; display: flex; gap: 8px; padding: 10px 12px 16px; overflow-x: auto; scrollbar-width: none; background: linear-gradient(rgb(var(--sand-50) / .96) 65%, rgb(var(--sand-50) / 0)); touch-action: pan-x; }
+.tuval-sekmeleri::-webkit-scrollbar { display: none; }
+.tuval-sekme { flex: none; display: inline-flex; align-items: center; gap: 6px; max-width: 220px; min-height: 36px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: rgb(var(--surface, 255 255 255)); border: 1px solid rgb(var(--sand-200)); color: rgb(var(--sand-700)); box-shadow: 0 2px 6px -3px rgb(var(--sand-950) / .2); }
+.tuval-sekme b { font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: rgb(var(--sand-950) / .07); }
+.tuval-sekme--aktif { background: rgb(var(--moss-700)); border-color: rgb(var(--moss-700)); color: #fff; }
+.tuval-sekme--aktif b { background: rgb(255 255 255 / .18); }
+.tuval-cubuk { position: absolute; z-index: 35; touch-action: none; }
+.tuval-cubuk--x { left: 12px; right: 30px; top: 6px; height: 26px; }
+.tuval-cubuk--y { right: 2px; top: 40px; bottom: 84px; width: 26px; }
+.tuval-cubuk__iz { position: absolute; border-radius: 6px; background: rgb(var(--sand-500) / .14); }
+.tuval-cubuk--x .tuval-cubuk__iz { left: 0; right: 0; top: 10px; height: 6px; }
+.tuval-cubuk--y .tuval-cubuk__iz { top: 0; bottom: 0; left: 10px; width: 6px; }
+.tuval-cubuk__iz i { position: absolute; background: rgb(var(--sand-400)); border-radius: 2px; }
+.tuval-cubuk--x .tuval-cubuk__iz i { top: 1px; width: 2px; height: 4px; }
+.tuval-cubuk--y .tuval-cubuk__iz i { left: 1px; height: 2px; width: 4px; }
+.tuval-cubuk__tutamak { position: absolute; border-radius: 10px; background: rgb(var(--moss-600)); box-shadow: 0 2px 8px rgb(27 58 40 / .35); }
+.tuval-cubuk--x .tuval-cubuk__tutamak { top: -4px; height: 14px; }
+.tuval-cubuk--y .tuval-cubuk__tutamak { left: -4px; width: 14px; }
+.tuval-cubuk--suruklu .tuval-cubuk__tutamak { background: rgb(var(--moss-700)); }
+.tuval-cubuk__balon { position: absolute; white-space: nowrap; background: rgb(var(--sand-900)); color: #fff; border-radius: 12px; padding: 6px 11px; font-size: 12px; font-weight: 600; box-shadow: 0 8px 20px -6px rgb(0 0 0 / .4); pointer-events: none; }
+.tuval-cubuk--x .tuval-cubuk__balon { top: 30px; }
+.tuval-cubuk--y .tuval-cubuk__balon { right: 30px; transform: translateY(-30%); }
+@media (max-width: 767px) {
+  .tuval-cubuk--y { bottom: calc(76px + max(48px, env(safe-area-inset-bottom, 0px))); }
+}

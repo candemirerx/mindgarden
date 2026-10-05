@@ -16,7 +16,9 @@ export type DegisimKonusu =
     /** Budanmış notları gösterme tercihi değişti. */
     | 'budananlar'
     /** Bilgisayar bağlantısının canlı durumu yeniden yoklandı. */
-    | 'baglanti-durumu';
+    | 'baglanti-durumu'
+    /** Tuval görünüm tercihleri (gösterim, gezinme, önizleme) değişti. */
+    | 'tuval';
 
 const dinleyiciler = new Map<DegisimKonusu, Set<() => void>>();
 

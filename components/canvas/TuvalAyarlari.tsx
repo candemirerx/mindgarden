@@ -1,0 +1,77 @@
+'use client';
+
+/**
+ * Ağaç Yönetimi içindeki "Tuval görünümü" ayarları: gösterim şekli, ağaçlar
+ * arası gezinme ve kart önizlemesi. Tercihler cihazda tutulur.
+ */
+import { tuvalTercihleriniKaydet, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
+import type { TuvalGezinme, TuvalGosterim, TuvalOnizleme } from '@/lib/tuvalTercihleri';
+
+const GOSTERIMLER: { id: TuvalGosterim; ad: string; aciklama: string; resim: React.ReactNode }[] = [
+    {
+        id: 'organik', ad: 'Organik', aciklama: 'Kökten dallar açılır, yapraklar dalın ortasından asılır',
+        resim: <svg viewBox="0 0 120 64" aria-hidden="true"><rect x="44" y="5" width="32" height="10" rx="4" fill="rgb(var(--moss-700))" /><path d="M60 15 C60 24 22 20 22 29M60 15V29M60 15 C60 24 98 20 98 29" stroke="rgb(var(--moss-600))" strokeWidth="2.4" fill="none" /><rect x="10" y="29" width="24" height="9" rx="3" fill="rgb(var(--clay-200))" /><rect x="48" y="29" width="24" height="9" rx="3" fill="rgb(var(--clay-200))" /><rect x="86" y="29" width="24" height="9" rx="3" fill="rgb(var(--clay-200))" /><path d="M22 38V44M22 50V52M60 38V44M98 38V44" stroke="rgb(var(--moss-400))" strokeWidth="1.6" /><rect x="12" y="44" width="20" height="6" rx="2" fill="rgb(var(--moss-200))" /><rect x="12" y="52" width="20" height="6" rx="2" fill="rgb(var(--moss-200))" /><rect x="50" y="44" width="20" height="6" rx="2" fill="rgb(var(--moss-200))" /><rect x="88" y="44" width="20" height="6" rx="2" fill="rgb(var(--moss-200))" /></svg>
+    },
+    {
+        id: 'yatay', ad: 'Yatay akış', aciklama: 'Soldan sağa; ağaçlar alt alta',
+        resim: <svg viewBox="0 0 120 64" aria-hidden="true"><rect x="6" y="24" width="22" height="16" rx="4" fill="rgb(var(--moss-700))" /><path d="M28 32C38 32 36 14 46 14M28 32H46M28 32C38 32 36 50 46 50" stroke="rgb(var(--moss-600))" strokeWidth="2.2" fill="none" /><rect x="46" y="10" width="24" height="8" rx="3" fill="rgb(var(--clay-200))" /><rect x="46" y="28" width="24" height="8" rx="3" fill="rgb(var(--clay-200))" /><rect x="46" y="46" width="24" height="8" rx="3" fill="rgb(var(--clay-200))" /><path d="M70 14C78 14 76 8 84 8M70 14C78 14 76 20 84 20M70 32H84M70 50H84" stroke="rgb(var(--moss-400))" strokeWidth="1.5" fill="none" /><rect x="84" y="5" width="30" height="6" rx="2" fill="rgb(var(--moss-200))" /><rect x="84" y="17" width="30" height="6" rx="2" fill="rgb(var(--moss-200))" /><rect x="84" y="29" width="30" height="6" rx="2" fill="rgb(var(--moss-200))" /><rect x="84" y="47" width="30" height="6" rx="2" fill="rgb(var(--moss-200))" /></svg>
+    },
+    {
+        id: 'klasik', ad: 'Klasik', aciklama: 'Önceki düzen: yalnız başlıklı kartlar',
+        resim: <svg viewBox="0 0 120 64" aria-hidden="true"><rect x="42" y="6" width="36" height="12" rx="4" fill="rgb(var(--moss-700))" /><path d="M60 18V26M24 26H96M24 26V32M60 26V32M96 26V32" stroke="rgb(var(--sand-400))" strokeWidth="1.6" fill="none" /><rect x="8" y="32" width="32" height="9" rx="3" fill="#fff" stroke="rgb(var(--clay-400))" /><rect x="44" y="32" width="32" height="9" rx="3" fill="#fff" stroke="rgb(var(--clay-400))" /><rect x="80" y="32" width="32" height="9" rx="3" fill="#fff" stroke="rgb(var(--clay-400))" /><path d="M24 41V48M14 48H34M14 48V52M34 48V52" stroke="rgb(var(--sand-400))" strokeWidth="1.4" fill="none" /><rect x="4" y="52" width="20" height="7" rx="2" fill="#fff" stroke="rgb(var(--sand-300))" /><rect x="26" y="52" width="20" height="7" rx="2" fill="#fff" stroke="rgb(var(--sand-300))" /></svg>
+    }
+];
+const GEZINMELER: { id: TuvalGezinme; ad: string }[] = [
+    { id: 'cubuk', ad: 'Kaydırma çubukları' }, { id: 'sekme', ad: 'Ağaç sekmeleri' }, { id: 'yok', ad: 'Hiçbiri' }
+];
+const ONIZLEMELER: { id: TuvalOnizleme; ad: string }[] = [
+    { id: 0, ad: 'Yalnız başlık' }, { id: 2, ad: '2 satır' }, { id: 3, ad: '3 satır' }
+];
+
+function Parcali<T extends string | number>({ secenekler, secili, sec, etiket }: { secenekler: { id: T; ad: string }[]; secili: T; sec: (v: T) => void; etiket: string }) {
+    return (
+        <div role="radiogroup" aria-label={etiket} className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-sand-100 p-1">
+            {secenekler.map(s => (
+                <button key={String(s.id)} type="button" role="radio" aria-checked={secili === s.id} onClick={() => sec(s.id)}
+                    className={`min-h-10 rounded-[10px] px-1.5 text-xs font-semibold transition-colors ${secili === s.id ? 'bg-white text-moss-800 shadow-soft' : 'text-sand-600 hover:text-sand-900'}`}>
+                    {s.ad}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+export function TuvalAyarlari() {
+    const t = useTuvalTercihleri();
+    return (
+        <div id="tuval-ayarlari" className="mb-4 space-y-4 rounded-2xl border border-sand-200 bg-white px-4 py-4">
+            <div>
+                <p className="text-sm font-semibold text-sand-800">Gösterim şekli</p>
+                <p className="text-xs text-sand-500">Ağaçların tuvalde nasıl dizileceği; notlarınız değişmez.</p>
+                <div role="radiogroup" aria-label="Gösterim şekli" className="mt-3 grid grid-cols-3 gap-2">
+                    {GOSTERIMLER.map(g => {
+                        const secik = t.gosterim === g.id;
+                        return (
+                            <button key={g.id} type="button" role="radio" aria-checked={secik} onClick={() => tuvalTercihleriniKaydet({ ...t, gosterim: g.id })}
+                                className={`rounded-xl border-[1.5px] p-1.5 text-left transition-colors ${secik ? 'border-moss-600 bg-moss-50 ring-2 ring-moss-500/20' : 'border-sand-200 bg-sand-50 hover:border-sand-300'}`}>
+                                <span className="block overflow-hidden rounded-lg bg-white [&>svg]:block [&>svg]:h-12 [&>svg]:w-full">{g.resim}</span>
+                                <span className="mt-1.5 block text-xs font-semibold text-sand-900">{g.ad}</span>
+                                <span className="mt-0.5 block text-[10.5px] leading-tight text-sand-500">{g.aciklama}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+            <div className="border-t border-sand-100 pt-4">
+                <p className="text-sm font-semibold text-sand-800">Ağaçlar arası gezinme</p>
+                <p className="text-xs text-sand-500">Çok ağaç olduğunda hızlı geçiş için: sürüklenen çubuklar ya da üstte ağaç adları.</p>
+                <Parcali etiket="Ağaçlar arası gezinme" secenekler={GEZINMELER} secili={t.gezinme} sec={v => tuvalTercihleriniKaydet({ ...t, gezinme: v })} />
+            </div>
+            <div className="border-t border-sand-100 pt-4">
+                <p className="text-sm font-semibold text-sand-800">Kart önizlemesi</p>
+                <p className="text-xs text-sand-500">Kartta içeriğin ne kadarı görünsün; sığmayan kısım “…” ile biter. (Organik ve Yatay akışta)</p>
+                <Parcali etiket="Kart önizlemesi" secenekler={ONIZLEMELER} secili={t.onizleme} sec={v => tuvalTercihleriniKaydet({ ...t, onizleme: v })} />
+            </div>
+        </div>
+    );
+}

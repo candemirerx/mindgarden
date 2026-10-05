@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
+import { TuvalAyarlari } from './TuvalAyarlari';
 import { MindNode } from '@/lib/types';
 import { BRANCH_COLORS } from '@/lib/branchColors';
 
@@ -131,6 +132,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
 
                 {/* Content */}
                 <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] md:p-6">
+                    <TuvalAyarlari />
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-sand-200 bg-white px-4 py-3">
                         <div className="min-w-0">
                             <p className="text-sm font-semibold text-sand-800">Budanan notlar</p>

@@ -5,6 +5,9 @@ import { ViewState, Point } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 import { agacSurukleniyorMu } from '@/lib/canvasGesture';
 import { ZoomIn, ZoomOut, Scan } from 'lucide-react';
+import { TuvalGezinme } from './TuvalGezinme';
+import type { DunyaOlcusu } from './TuvalGezinme';
+import type { TuvalGezinme as GezinmeTuru } from '@/lib/tuvalTercihleri';
 
 /** Ağaç üzerinde başlayan dokunuşun tuval kaydırmasına dönüşmesi için
  *  parmağın aşması gereken mesafe (piksel). */
@@ -16,9 +19,15 @@ interface GardenCanvasProps {
     initialViewState?: { x: number; y: number; zoom: number };
     /** Değiştiğinde tuval bu düğümün kartına ortalanır (yeni eklenen not). */
     ortalanacak?: { id: string; sayac: number } | null;
+    /** Ağaçlar arası gezinme: kaydırma çubukları, ağaç sekmeleri ya da hiçbiri. */
+    gezinme?: GezinmeTuru;
+    /** Ağaç kökleri (sekme adları ve çubuk işaretleri için). */
+    agaclar?: { id: string; ad: string; sayi: number }[];
+    /** Ağaçlar yan yana mı (organik/klasik) alt alta mı (yatay akış) dizili. */
+    agacDizilisi?: 'yan' | 'alt';
 }
 
-export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, initialViewState, ortalanacak }) => {
+export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, initialViewState, ortalanacak, gezinme = 'yok', agaclar, agacDizilisi = 'yan' }) => {
     const { setSelectedNode, updateGardenViewState } = useStore();
     const [viewState, setViewState] = useState<ViewState>({
         scale: initialViewState?.zoom || 1,
@@ -53,6 +62,80 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
      *  hâlde boşluğa dokunmak seçimi kaldırmıyordu. */
     const dugumUzerinde = (hedef: EventTarget | null): boolean =>
         hedef instanceof Element && Boolean(hedef.closest('.dugum-karti'));
+
+    /** Güncel görünüm; ölçüm ve gezinme hesapları bayat değer kullanmasın. */
+    const gorunumRef = useRef(viewState);
+    gorunumRef.current = viewState;
+    const [boyut, setBoyut] = useState({ w: 0, h: 0 });
+    const [dunya, setDunya] = useState<DunyaOlcusu | null>(null);
+    const agaclarRef = useRef(agaclar);
+    agaclarRef.current = agaclar;
+
+    /**
+     * İçeriğin dünya koordinatlarındaki sınırlarını ve ağaç köklerinin yerini
+     * ölçer. Kaydırmada değil, içerik değişince çalışır (çok kartta da hafif kalsın).
+     */
+    const olc = useCallback(() => {
+        const container = containerRef.current, content = contentRef.current;
+        if (!container || !content) return;
+        const b = container.getBoundingClientRect();
+        const v = gorunumRef.current;
+        const kartlar = content.querySelectorAll<HTMLElement>('.dugum-karti');
+        if (!kartlar.length) { setDunya(null); return; }
+        const adlar = new Map((agaclarRef.current ?? []).map(a => [a.id, a]));
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const kokler: DunyaOlcusu['kokler'] = [];
+        kartlar.forEach(k => {
+            const r = k.getBoundingClientRect();
+            const x = (r.left - b.left - v.offset.x) / v.scale, y = (r.top - b.top - v.offset.y) / v.scale;
+            const w = r.width / v.scale, h = r.height / v.scale;
+            minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x + w); maxY = Math.max(maxY, y + h);
+            const a = k.dataset.nodeId ? adlar.get(k.dataset.nodeId) : undefined;
+            if (a) kokler.push({ id: a.id, ad: a.ad, sayi: a.sayi, x, y, w, h });
+        });
+        kokler.sort((p, q) => agacDizilisi === 'alt' ? p.y - q.y : p.x - q.x);
+        setDunya({ minX, minY, maxX, maxY, kokler });
+    }, [agacDizilisi]);
+
+    useEffect(() => {
+        const container = containerRef.current, content = contentRef.current;
+        if (!container || !content || typeof ResizeObserver === 'undefined') return;
+        let zaman: ReturnType<typeof setTimeout> | undefined;
+        const sonra = () => { clearTimeout(zaman); zaman = setTimeout(olc, 160); };
+        const ro = new ResizeObserver(() => {
+            const r = container.getBoundingClientRect();
+            setBoyut({ w: r.width, h: r.height });
+            sonra();
+        });
+        ro.observe(container);
+        ro.observe(content);
+        // Ağaç taşınınca (yalnız transform değişir, boyut değil) de yeniden ölçülür.
+        const mo = new MutationObserver(sonra);
+        mo.observe(content, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
+        sonra();
+        return () => { ro.disconnect(); mo.disconnect(); clearTimeout(zaman); };
+    }, [olc, agaclar, gezinme]);
+
+    /** Gezinme çubuğundan: görünür alanın sol/üst kenarını verilen dünya koordinatına taşır. */
+    const eksendeKaydir = useCallback((eksen: 'x' | 'y', deger: number) => {
+        setViewState(prev => ({ ...prev, offset: eksen === 'x' ? { x: -deger * prev.scale, y: prev.offset.y } : { x: prev.offset.x, y: -deger * prev.scale } }));
+    }, []);
+
+    /** Ağaç sekmesinden: o ağacın kökünü görünür alana getirir. */
+    const kokeGit = useCallback((id: string) => {
+        const container = containerRef.current;
+        const kart = contentRef.current?.querySelector<HTMLElement>(`.dugum-karti[data-node-id="${CSS.escape(id)}"]`);
+        if (!container || !kart) return;
+        const b = container.getBoundingClientRect(), r = kart.getBoundingClientRect();
+        const v = gorunumRef.current;
+        // Kökün dünya koordinatı; çok uzaklaştırılmışsa okunur boyuta (en az %80) yaklaşılır.
+        const wx = (r.left - b.left - v.offset.x) / v.scale, wy = (r.top - b.top - v.offset.y) / v.scale;
+        const ww = r.width / v.scale, wh = r.height / v.scale;
+        const s = Math.max(v.scale, 0.8);
+        const hedefX = agacDizilisi === 'alt' ? 20 : b.width / 2 - (ww * s) / 2;
+        const hedefY = agacDizilisi === 'alt' ? b.height * 0.42 - (wh * s) / 2 : 72;
+        setViewState({ scale: s, offset: { x: hedefX - wx * s, y: hedefY - wy * s } });
+    }, [agacDizilisi]);
 
     // Canvas'ı başlangıçta ortala (Eğer kayıtlı veri yoksa)
     useEffect(() => {
@@ -455,6 +538,8 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
             >
                 {children}
             </div>
+
+            <TuvalGezinme tur={gezinme} dunya={dunya} gorunum={viewState} boyut={boyut} kaydir={eksendeKaydir} ortala={kokeGit} />
 
             {/* Yüzen Tuval Kontrolleri (Canvas HUD) */}
             <p id="garden-keyboard-help" className="sr-only">Kaydırmak için sürükleyin veya yön tuşlarını kullanın. Artı ve eksi yakınlaştırır, 0 gerçek boyuta getirir, F tüm notları ekrana sığdırır.</p>
