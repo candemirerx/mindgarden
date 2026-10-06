@@ -1244,6 +1244,53 @@ public class RemoteBridgePlugin extends Plugin {
         });
     }
     /**
+     * Telefon panosuna yazar: metin ve/veya görseller (base64). Görseller önbellek
+     * klasörüne yazılıp FileProvider adresiyle panoya konur; klavye ve uygulamalar
+     * (WhatsApp, Gboard) yapıştırırken bu adresi okur.
+     */
+    @PluginMethod public void writeClipboard(PluginCall call) {
+        Activity activity = getActivity();
+        if (activity == null) { call.reject("Pano yazılamadı."); return; }
+        String metin = call.getString("text");
+        JSArray gorseller = call.getArray("images");
+        new Thread(() -> {
+            try {
+                ClipData clip = null;
+                if (gorseller != null && gorseller.length() > 0) {
+                    java.io.File klasor = new java.io.File(activity.getCacheDir(), "pano");
+                    if (!klasor.exists()) klasor.mkdirs();
+                    java.io.File[] eski = klasor.listFiles();
+                    if (eski != null) for (java.io.File f : eski) f.delete();
+                    for (int i = 0; i < gorseller.length(); i++) {
+                        JSONObject g = gorseller.getJSONObject(i);
+                        String mime = g.optString("mime", "image/jpeg");
+                        String uzanti = mime.contains("png") ? "png" : mime.contains("webp") ? "webp" : mime.contains("gif") ? "gif" : "jpg";
+                        java.io.File dosya = new java.io.File(klasor, "pano-" + System.currentTimeMillis() + "-" + i + "." + uzanti);
+                        try (java.io.FileOutputStream cikis = new java.io.FileOutputStream(dosya)) {
+                            cikis.write(Base64.decode(g.getString("data"), Base64.DEFAULT));
+                        }
+                        Uri uri = androidx.core.content.FileProvider.getUriForFile(activity, activity.getPackageName() + ".fileprovider", dosya);
+                        if (clip == null) clip = ClipData.newUri(activity.getContentResolver(), "Not Bahçesi", uri);
+                        else clip.addItem(new ClipData.Item(uri));
+                    }
+                    if (metin != null && !metin.isEmpty() && clip != null) clip.addItem(new ClipData.Item(metin));
+                } else if (metin != null && !metin.isEmpty()) {
+                    clip = ClipData.newPlainText("Not Bahçesi", metin);
+                }
+                if (clip == null) { call.reject("Panoya konacak bir şey yok."); return; }
+                final ClipData son = clip;
+                activity.runOnUiThread(() -> {
+                    try {
+                        ClipboardManager pano = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (pano == null) { call.reject("Pano kullanılamıyor."); return; }
+                        pano.setPrimaryClip(son);
+                        call.resolve();
+                    } catch (Exception e) { call.reject("Pano yazılamadı: " + e.getMessage()); }
+                });
+            } catch (Exception e) { call.reject("Pano yazılamadı: " + e.getMessage()); }
+        }).start();
+    }
+    /**
      * Klavyeden görsel yapıştırma (Gboard panosu, GIF/çıkartma). WebView'deki
      * yazı kutuları klavyeye görsel kabul ettiğini bildirmez; klavye de "bu
      * uygulama resim yapıştırmayı desteklemiyor" der. Android 12+ içerik alma

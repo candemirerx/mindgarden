@@ -13,8 +13,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Capacitor } from '@capacitor/core';
-import { ArrowLeft, Camera, Check, CheckCheck, ClipboardCopy, ClipboardPaste, FileText, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
-import { dosyalariBilgisayaraGonder, klavyeGorselleriniDinle, sendToComputerClipboard, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
+import { ArrowLeft, Camera, Check, CheckCheck, ClipboardCopy, ClipboardPaste, Copy, FileText, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
+import { dosyalariBilgisayaraGonder, klavyeGorselleriniDinle, sendToComputerClipboard, telefonPanosunaYaz, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { useBaglantiDurumu, yolAdi } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
@@ -133,6 +133,20 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
             }
         },
         {
+            id: 'galeri-telefon-panosuna', Icon: Copy, ad: 'Telefon panosuna', aciklama: 'Seçilenleri telefonun panosuna kopyala (bilgisayar gerekmez)',
+            calis: () => {
+                if (!seciliOgeler.length) return secimGerekli();
+                void calistir('Telefon panosuna kopyalanıyor…', async () => {
+                    const gorseller = seciliOgeler.filter(o => o.tur === 'gorsel' && o.veri).map(o => o.veri as Blob);
+                    const metin = seciliOgeler.filter(o => o.tur === 'metin').map(o => o.metin ?? '').join('\n\n');
+                    await telefonPanosunaYaz({ metin, gorseller });
+                    return gorseller.length && metin ? 'Görsel ve metin telefon panosuna kopyalandı ✓'
+                        : gorseller.length ? (gorseller.length > 1 ? gorseller.length + ' görsel' : 'Görsel') + ' telefon panosuna kopyalandı ✓'
+                            : 'Metin telefon panosuna kopyalandı ✓';
+                });
+            }
+        },
+        {
             id: 'galeri-not-panoya', Icon: FileText, ad: 'Notu panoya', aciklama: 'Editördeki metni bilgisayar panosuna gönder',
             calis: () => {
                 if (!editorMetni.trim()) { bildir({ metin: 'Editör metni boş.', ton: 'error' }); return; }
@@ -236,9 +250,9 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                 </button>}
             </div>
             {/* Bilgisayar araçları */}
-            <div className="grid grid-cols-4 gap-1.5 px-2 pb-2.5 sm:gap-2 sm:px-4">
+            <div className="grid grid-cols-3 gap-1.5 px-2 pb-2.5 sm:gap-2 sm:px-4">
                 {araclar.map(({ id, Icon, ad, aciklama, calis }) => {
-                    const seceli = id === 'galeri-bilgisayara' || id === 'galeri-pc-panosu';
+                    const seceli = id === 'galeri-bilgisayara' || id === 'galeri-pc-panosu' || id === 'galeri-telefon-panosuna';
                     const pasif = seceli && !secimKipi;
                     return <button key={id} id={id} type="button" disabled={mesgul} onClick={calis} title={aciklama} aria-label={aciklama}
                         className={cx('flex min-w-0 flex-col items-center justify-start gap-1 rounded-2xl border px-1 py-2 text-[11px] font-medium leading-tight transition-colors disabled:opacity-60 sm:text-xs',

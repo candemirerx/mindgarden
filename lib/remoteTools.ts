@@ -355,6 +355,7 @@ type NativeRemote = {
     setImmersive(options: { enabled: boolean }): Promise<void>;
     readClipboard(): Promise<{ text?: string; mime?: string; data?: string }>;
     setImagePaste(options: { enabled: boolean }): Promise<void>;
+    writeClipboard(options: { text?: string; images?: { mime: string; data: string }[] }): Promise<void>;
 };
 const native = registerPlugin<NativeRemote & Plugin>('RemoteBridge');
 const isNative = () => Capacitor.isNativePlatform();
@@ -1247,6 +1248,23 @@ export async function telefonPanosunuOku(): Promise<{ metin?: string; gorsel?: B
     } catch {
         throw new Error('Pano okunamadı: tarayıcı izin vermedi.');
     }
+}
+
+/** Metni ve/veya görselleri telefonun kendi panosuna koyar (bilgisayar gerekmez). */
+export async function telefonPanosunaYaz(icerik: { metin?: string; gorseller?: Blob[] }): Promise<void> {
+    const gorseller = icerik.gorseller ?? [];
+    if (isNative()) {
+        const images = await Promise.all(gorseller.map(async g => ({ mime: g.type || 'image/jpeg', data: await blobBase64(g) })));
+        await native.writeClipboard({ text: icerik.metin || undefined, images });
+        return;
+    }
+    const pano = navigator.clipboard as Clipboard | undefined;
+    if (!pano) throw new Error('Bu tarayıcı panoya yazmaya izin vermiyor.');
+    if (gorseller.length && pano.write && typeof ClipboardItem !== 'undefined') {
+        const g = gorseller[0];
+        await pano.write([new ClipboardItem({ [g.type || 'image/png']: g })]);
+    } else if (icerik.metin) await pano.writeText(icerik.metin);
+    else throw new Error('Panoya konacak bir şey yok.');
 }
 
 /** Telefon panosundakini (metin ya da görsel) bilgisayar panosuna gönderir; başarı iletisini döndürür. */

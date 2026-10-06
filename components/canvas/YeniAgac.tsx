@@ -104,18 +104,13 @@ export function YeniAgac({ node, ...ortak }: { node: MindNode } & Ortak) {
                 });
                 return;
             }
-            if (e.derinlik === 1) {
-                // Daldan yapraklara: dalın ortasından inen tek sap; her yaprağın tepesinde boğum
-                const sx = e.x + e.w / 2, son = ck.reduce((m, c) => Math.max(m, c.y), 0);
-                yollar.push({ d: incelenYol(sx, e.y + e.h - 2, sx, e.y + e.h + 20, sx, son - 20, sx, son + 2, 3.2, 2), renk: 'rgb(var(--moss-400))', dolu: true });
-                ck.forEach(c => noktalar.push({ x: sx, y: c.y - 1 }));
-                return;
-            }
-            // Daha derin notlar: kartın sol tarafından inen ince köşeli kol
-            const ox = e.x + 16;
+            // Daldan yapraklara (ve yapraktan alt yapraklara): kartın altının ortasından
+            // yan yana dizilen kardeşlerin tepesine dallanan incelen saplar; tepede boğum
+            const sx = e.x + e.w / 2, sy = e.y + e.h, ilk = e.derinlik === 1;
             ck.forEach(c => {
-                const cy = c.y + Math.min(20, c.h / 2);
-                yollar.push({ d: `M${ox} ${e.y + e.h} V${cy - 8} Q${ox} ${cy} ${ox + 8} ${cy} H${c.x}`, renk: 'rgb(var(--moss-300))', dolu: false, k: 2 });
+                const cx = c.x + c.w / 2, ara = Math.max(12, (c.y - sy) / 2);
+                yollar.push({ d: incelenYol(sx, sy - 2, sx, sy + ara, cx, c.y - ara, cx, c.y + 1, ilk ? 3.2 : 2.4, ilk ? 2 : 1.6), renk: ilk ? 'rgb(var(--moss-400))' : 'rgb(var(--moss-300))', dolu: true });
+                noktalar.push({ x: cx, y: c.y - 1 });
             });
         });
         setCizim({ yollar, noktalar });
@@ -169,18 +164,11 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
             </div>
         );
     }
-    if (derinlik === 1) {
-        return (
-            <div className="flex flex-col items-center">
-                {kart}
-                {gorunur && <div className="mt-7 flex flex-col items-center gap-[22px]">{cocuklar}</div>}
-            </div>
-        );
-    }
+    // Dal ve yapraklar: kardeşler üstlerinin altında yan yana dallanır (dümdüz alt alta değil).
     return (
-        <div className="flex flex-col items-start">
+        <div className="flex flex-col items-center">
             {kart}
-            {gorunur && <div className="mt-2.5 flex flex-col gap-2.5 pl-8">{cocuklar}</div>}
+            {gorunur && <div className={`${derinlik === 1 ? 'mt-12' : 'mt-10'} flex items-start gap-5`}>{cocuklar}</div>}
         </div>
     );
 }
@@ -269,7 +257,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, eylem
     }
 
     // Kenar artıları: "alt" çocuk ekler (yalnız altı boşken), "yan" hemen yanına kardeş ekler.
-    // Organikte kardeşler alt alta dizildiği için yan artı sağ kenarda, alt artı alt kenardadır;
+    // Organikte kardeşler yan yana dallandığı için yan artı sağ kenarda, alt artı alt kenardadır;
     // yatay akışta tersine: çocuklar sağa açılır, kardeşler alt alta.
     const ekleAdi = tur === 'kok' ? 'Dal ekle' : 'Altına yaprak ekle';
     const yanAdi = derinlik === 1 ? 'Yanına dal ekle' : 'Yanına yaprak ekle';
