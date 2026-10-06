@@ -1,4 +1,4 @@
-// Windows built-in WebDAV redirector maps this loopback-only proxy. Phone
+﻿// Windows built-in WebDAV redirector maps this loopback-only proxy. Phone
 // files remain on the phone; no sync/cache directory is substituted for a drive.
 using System;
 using System.IO;
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Web.Script.Serialization;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
+using Microsoft.Win32;
 using InTheHand.Net;
 using InTheHand.Net.Sockets;
 
@@ -98,16 +99,80 @@ public static class PhoneDrive {
                 if((used & (1u << (letter-'A')))!=0) continue;
                 string local=letter+":";
                 var resource=new NETRESOURCE { dwType=1,lpLocalName=local,lpRemoteName=Unc };
+                LabelDrive(resource.lpRemoteName,local);
                 last=WNetAddConnection2(ref resource,null,null,0);
-                if(last==0) { drive=local;mountError="";return; }
+                if(last==0) { drive=local;mountError="";RefreshDriveLabel(local);return; }
                 if(last!=85 && last!=1202) break;
             }
             mountError="Windows ağ sürücüsü açılamadı ("+last+"). Dosyalara bilgisayarda http://127.0.0.1:"+port+"/ adresinden erişebilirsiniz.";
         }
     }
+    private static void LabelDrive(string unc,string local) {
+        // Keep the unique session UNC for WebClient cache isolation; Explorer's
+        // user label is independent of that network address.
+        try {
+            // WebClient can expose either the explicit DavWWWRoot UNC or its
+            // normalized form to Explorer. Label both representations.
+            foreach(string address in new string[] { unc,unc.Replace(@"\DavWWWRoot\",@"\") })
+                using(var key=Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\"+address.Replace('\\','#')))
+                    key.SetValue("_LabelFromReg","Cep Köprü",RegistryValueKind.String);
+            SHChangeNotify(0x00002000,0x0005,local+@"\",IntPtr.Zero);
+        } catch { /* A label failure must not interrupt file sharing. */ }
+    }
+    private static void RefreshDriveLabel(string local) {
+        object shell=null,folder=null,item=null;
+        try {
+            shell=Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application"));
+            folder=shell.GetType().InvokeMember("NameSpace",System.Reflection.BindingFlags.InvokeMethod,null,shell,new object[] { 17 });
+            if(folder!=null) {
+                item=folder.GetType().InvokeMember("ParseName",System.Reflection.BindingFlags.InvokeMethod,null,folder,new object[] { local });
+                if(item!=null) item.GetType().InvokeMember("Name",System.Reflection.BindingFlags.SetProperty,null,item,new object[] { "Cep Köprü" });
+            }
+            RefreshOpenExplorerLabels(shell,local);
+            SHChangeNotify(0x08000000,0x1000,null,IntPtr.Zero);
+        } catch { /* Registry label remains available if Shell is unavailable. */ }
+        finally {
+            foreach(object value in new object[] { item,folder,shell })
+                if(value!=null && Marshal.IsComObject(value)) Marshal.ReleaseComObject(value);
+        }
+    }
+    private static object Dispatch(object target,string member,System.Reflection.BindingFlags flags,params object[] args) {
+        return target.GetType().InvokeMember(member,flags,null,target,args);
+    }
+    private static void RefreshOpenExplorerLabels(object shell,string local) {
+        object windows=null;
+        try {
+            windows=Dispatch(shell,"Windows",System.Reflection.BindingFlags.InvokeMethod);
+            int count=Convert.ToInt32(Dispatch(windows,"Count",System.Reflection.BindingFlags.GetProperty));
+            for(int index=0;index<count;index++) {
+                object window=null,document=null,folder=null,self=null,item=null;
+                try {
+                    window=Dispatch(windows,"Item",System.Reflection.BindingFlags.InvokeMethod,index);
+                    document=Dispatch(window,"Document",System.Reflection.BindingFlags.GetProperty);
+                    folder=Dispatch(document,"Folder",System.Reflection.BindingFlags.GetProperty);
+                    self=Dispatch(folder,"Self",System.Reflection.BindingFlags.GetProperty);
+                    string path=Convert.ToString(Dispatch(self,"Path",System.Reflection.BindingFlags.GetProperty));
+                    // Refresh only This PC's mapped-drive item. Other windows,
+                    // documents and files are never renamed or navigated.
+                    if(!path.Equals("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}",StringComparison.OrdinalIgnoreCase)) continue;
+                    item=Dispatch(folder,"ParseName",System.Reflection.BindingFlags.InvokeMethod,local);
+                    if(item!=null) Dispatch(item,"Name",System.Reflection.BindingFlags.SetProperty,"Cep Köprü");
+                } catch { }
+                finally {
+                    foreach(object value in new object[] { item,self,folder,document,window })
+                        if(value!=null && Marshal.IsComObject(value)) Marshal.ReleaseComObject(value);
+                }
+            }
+        } catch { }
+        finally { if(windows!=null && Marshal.IsComObject(windows)) Marshal.ReleaseComObject(windows); }
+    }
     private static void Unmount() {
         lock(DriveGate) {
-            if(drive!="") { int result=WNetCancelConnection2(drive,0,false);if(result==0||result==2250) drive=""; }
+            if(drive!="") {
+                // Windows may retain an old drive while a file is open. It must
+                // never be reported as the new phone session's mapped drive.
+                string previous=drive;drive="";WNetCancelConnection2(previous,0,false);
+            }
         }
     }
     private static void ProxyLoop() {
@@ -334,5 +399,6 @@ public static class PhoneDrive {
     private struct NETRESOURCE { public int dwScope,dwType,dwDisplayType,dwUsage;public string lpLocalName,lpRemoteName,lpComment,lpProvider; }
     [DllImport("mpr.dll",CharSet=CharSet.Unicode)] private static extern int WNetAddConnection2(ref NETRESOURCE resource,string password,string username,int flags);
     [DllImport("mpr.dll",CharSet=CharSet.Unicode)] private static extern int WNetCancelConnection2(string name,int flags,bool force);
+    [DllImport("shell32.dll",CharSet=CharSet.Unicode)] private static extern void SHChangeNotify(uint eventId,uint flags,string item,IntPtr other);
     [DllImport("kernel32.dll")] private static extern uint GetLogicalDrives();
 }

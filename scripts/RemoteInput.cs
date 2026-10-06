@@ -20,6 +20,39 @@ public static class RemoteInput
         public IntPtr extra;
     }
     [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, ref INPUT input, int size);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern bool ShowWindowAsync(IntPtr hwnd, int cmd);
+    [DllImport("user32.dll", SetLastError = true)] private static extern bool PostMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
+    [DllImport("user32.dll")] private static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+    private static int PhysicalScreenMetric(int index) {
+        IntPtr previous=IntPtr.Zero;
+        try {
+            try { previous=SetThreadDpiAwarenessContext(new IntPtr(-4)); }
+            catch(EntryPointNotFoundException) { }
+            return GetSystemMetrics(index);
+        } finally {
+            if(previous!=IntPtr.Zero) SetThreadDpiAwarenessContext(previous);
+        }
+    }
+    public static int DesktopWidth { get { return PhysicalScreenMetric(78); } }
+    public static int DesktopHeight { get { return PhysicalScreenMetric(79); } }
+    public static void WindowAction(string action) { WindowAction(action,0); }
+    public static void WindowAction(string action,long expected) {
+        IntPtr hwnd=GetForegroundWindow();
+        if(hwnd==IntPtr.Zero) throw new InvalidOperationException("No active window.");
+        if(expected!=0 && hwnd.ToInt64()!=expected) throw new InvalidOperationException("Active window changed.");
+        ApplyWindowAction(hwnd,action);
+    }
+    private static void ApplyWindowAction(IntPtr hwnd,string action) {
+        switch(action) {
+            case "minimize": ShowWindowAsync(hwnd,6); break;
+            case "maximize": ShowWindowAsync(hwnd,3); break;
+            case "restore": ShowWindowAsync(hwnd,9); break;
+            case "close": if(!PostMessage(hwnd,0x0112,new IntPtr(0xF060),IntPtr.Zero)) throw new Win32Exception(Marshal.GetLastWin32Error()); break;
+            default: throw new ArgumentException("Invalid window operation.");
+        }
+    }
     private static void Send(INPUT input) {
         if (SendInput(1, ref input, Marshal.SizeOf(typeof(INPUT))) != 1)
             throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -62,6 +95,8 @@ public static class RemoteInput
         switch (name) {
             case "ENTER": return 0x0D; case "TAB": return 0x09; case "ESC": case "ESCAPE": return 0x1B;
             case "SPACE": return 0x20; case "BACKSPACE": return 0x08; case "DELETE": return 0x2E;
+            case "WIN": case "WINDOWS": case "GUI": case "META": return 0x5B;
+            case "CTRL": case "CONTROL": return 0x11; case "SHIFT": return 0x10; case "ALT": return 0x12;
             case "UP": return 0x26; case "DOWN": return 0x28; case "LEFT": return 0x25; case "RIGHT": return 0x27;
             case "HOME": return 0x24; case "END": return 0x23;
             default: throw new ArgumentException("Unsupported shortcut key.");
@@ -76,7 +111,7 @@ public static class RemoteInput
                 case "CTRL": case "CONTROL": modifiers[i] = 0x11; break;
                 case "ALT": modifiers[i] = 0x12; break;
                 case "SHIFT": modifiers[i] = 0x10; break;
-                case "WIN": modifiers[i] = 0x5B; break;
+                case "WIN": case "WINDOWS": case "GUI": case "META": modifiers[i] = 0x5B; break;
                 default: throw new ArgumentException("Unsupported modifier.");
             }
         }

@@ -4,8 +4,9 @@
     [string]$BluetoothPort = 'auto',
     [switch]$SerialOnly,
     [switch]$RfcommOnly,
-    # Kartın USB seri kanalını dinle (telefon → kart → USB → PC panosu).
-    [switch]$KartPano,
+    [switch]$CardOnly,
+    [ValidatePattern('^(COM[0-9]+)?$')][string]$CardPort = '',
+    [switch]$CardTrace,
     # Eski "adres|anahtar" satırını pencerede göster (eşleştirme kodu olmadan kurulum için).
     [switch]$ElleSatir
 )
@@ -38,6 +39,73 @@ if (-not (Test-Path -LiteralPath $tokenPath)) {
 }
 $secret = [System.IO.File]::ReadAllText($tokenPath, [System.Text.Encoding]::ASCII).Trim()
 if ($secret.Length -lt 32) { throw 'Anahtar dosyası geçersiz. Yardımcı programı başlatmadan önce kontrol edin.' }
+
+if ($CardOnly) {
+    # One listener per verified card: a connected first card must not prevent
+    # the LCD/second card from reaching the PC clipboard and window actions.
+    if (-not $CardPort) {
+        $cardWorkers=@{}
+        try {
+            while ($true) {
+                $devices=@(Get-CimInstance Win32_SerialPort -ErrorAction SilentlyContinue | Where-Object { $_.PNPDeviceID -match 'VID_1209&PID_0001' })
+                foreach($device in $devices) {
+                    $name=$device.DeviceID
+                    if($cardWorkers.ContainsKey($name) -and -not $cardWorkers[$name].HasExited) { continue }
+                    $arguments=@('-NoProfile','-STA','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'),'-Port',[string]$Port,'-CardOnly','-CardPort',$name)
+                    if($CardTrace) { $arguments+='-CardTrace' }
+                    $cardWorkers[$name]=Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList $arguments
+                }
+                Start-Sleep -Seconds 2
+            }
+        } finally {
+            foreach($worker in $cardWorkers.Values) { if(-not $worker.HasExited) { $worker.Kill();$worker.WaitForExit() };$worker.Dispose() }
+        }
+    }
+    # Only this application's USB CDC identity; never open unrelated serial devices.
+    while ($true) {
+        $ports = @(Get-CimInstance Win32_SerialPort -ErrorAction SilentlyContinue | Where-Object { $_.PNPDeviceID -match 'VID_1209&PID_0001' -and $_.DeviceID -eq $CardPort })
+        foreach ($device in $ports) {
+            $serial = $null
+            try {
+                $serial = [System.IO.Ports.SerialPort]::new($device.DeviceID,115200)
+                $serial.Encoding = [System.Text.UTF8Encoding]::new($false,$true)
+                $serial.NewLine = "`n"; $serial.ReadTimeout=1000; $serial.WriteTimeout=3000
+                $serial.DtrEnable=$true; $serial.RtsEnable=$true; $serial.Open()
+                # Refresh CDC line state after a firmware restart/re-enumeration.
+                $serial.DtrEnable=$false; Start-Sleep -Milliseconds 50; $serial.DtrEnable=$true
+                Write-Output ('CardReady:'+$device.DeviceID)
+                while ($true) {
+                    try { $line=$serial.ReadLine() } catch [System.TimeoutException] { continue }
+                    if($CardTrace -and $line.Contains('NBPANO')) { Write-Output ('CardFrame:length='+$line.Length+' null='+($line.IndexOf([char]0) -ge 0)+' clean='+$line.StartsWith('NBPANO')) }
+                    $frameMatch=[regex]::Match($line,'^NBPANO([12]):([0-9]{1,10}):([A-Za-z0-9+/=]+)$')
+                    if (-not $frameMatch.Success) { continue }
+                    $version=$frameMatch.Groups[1].Value; $id=$frameMatch.Groups[2].Value; $encoded=$frameMatch.Groups[3].Value
+                    if($CardTrace) { Write-Output ('CardParse:version='+$version+' encodedLength='+$encoded.Length) }
+                    try {
+                        $utf8=[System.Text.UTF8Encoding]::new($false,$true)
+                        if($encoded.Length -gt 1400000) { throw 'Payload too large' }
+                        $bytes=[Convert]::FromBase64String($encoded)
+                        $headers=@{ Authorization='Bearer '+$secret }
+                        if($version -eq '1') {
+                            $reply=Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$Port/clipboard" -Headers $headers -ContentType 'text/plain; charset=utf-8' -Body $bytes -TimeoutSec 3
+                        } else {
+                            if($bytes.Length -gt 24000) { throw 'Payload too large' }
+                            $command=$utf8.GetString($bytes) | ConvertFrom-Json
+                            if($CardTrace) { Write-Output ('CardRequest:'+[string]$command.action+':'+$bytes.Length) }
+                            if([string]$command.action -notin @('ping','parca','gorseller','clipboard','panometni','window')) { throw 'Unsupported card action' }
+                            if($command.action -eq 'gorseller' -and $command.hedef -ne 'pano') { throw 'Unsupported destination' }
+                            $reply=Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$Port/input" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $bytes -TimeoutSec 3
+                        }
+                        if($reply.ok -ne $true) { throw 'Rejected' }
+                        if($CardTrace) { Write-Output ('CardAccepted:'+$id) }
+                        $serial.WriteLine('NBPANOOK:'+$id)
+                    } catch { Write-Output ('CardError:'+ $_.Exception.GetType().Name);$serial.WriteLine('NBPANOERR:'+$id) }
+                }
+            } catch { } finally { if($serial) { $serial.Dispose() } }
+        }
+        Start-Sleep -Seconds 2
+    }
+}
 
 if ($RfcommOnly) {
     try { Add-Type -Path (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll') }
@@ -231,54 +299,6 @@ function Set-ClipboardDosyalar([string[]]$yollar) {
     } finally { if ($resim) { $resim.Dispose() } }
 }
 
-# ---- Kart USB panosu ----------------------------------------------------
-# Kablosuz Bellek kartı PC'ye USB ile takılıyken telefon metni karta (Wi‑Fi
-# ya da BLE) gönderir; kart onu USB seri kanalından "NBPANO1:<kimlik>:<base64>"
-# satırı olarak iletir. Burada panoya konur ve karta "NBPANOOK:<kimlik>"
-# onayı döner. Telefonun PC ile ayrıca eşleşmesi gerekmez. Kartın günlük
-# satırları da bu kanaldan gelir; yalnız NBPANO1 satırları işlenir.
-if ($KartPano) {
-    $hazirYazildi = $false
-    while ($true) {
-        $com = $null
-        try {
-            $aygit = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue |
-                Where-Object { $_.PNPDeviceID -match 'VID_1209&PID_0001' -and $_.Name -match '\((COM\d+)\)' } | Select-Object -First 1
-            if ($aygit -and $aygit.Name -match '\((COM\d+)\)') { $com = $Matches[1] }
-        } catch { }
-        if (-not $com) { Start-Sleep -Seconds 3; continue }
-        $seri = $null
-        try {
-            $seri = New-Object -TypeName System.IO.Ports.SerialPort -ArgumentList $com, 115200
-            $seri.Encoding = [System.Text.Encoding]::ASCII
-            $seri.NewLine = "`n"
-            $seri.ReadTimeout = 1000
-            $seri.WriteTimeout = 2000
-            $seri.ReadBufferSize = 262144
-            # DTR: kart, PC'nin kanalı dinlediğini buradan anlar.
-            $seri.DtrEnable = $true
-            $seri.RtsEnable = $true
-            $seri.Open()
-            if (-not $hazirYazildi) { Write-Output "KartPanoReady:$com"; $hazirYazildi = $true }
-            while ($true) {
-                try { $satir = $seri.ReadLine() }
-                catch [System.TimeoutException] { continue }
-                $satir = $satir.Trim()
-                if (-not $satir.StartsWith('NBPANO1:')) { continue }
-                $parca = $satir.Split([char[]]@(':'), 3)
-                if ($parca.Length -lt 3) { continue }
-                try {
-                    $metin = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($parca[2]))
-                    Set-ClipboardRetry $metin
-                    $seri.Write("NBPANOOK:$($parca[1])`n")
-                } catch { }
-            }
-        } catch {
-            Start-Sleep -Seconds 2
-        } finally { if ($seri) { try { $seri.Close(); $seri.Dispose() } catch { } } }
-    }
-}
-
 function Same-Token([string]$candidate, [string]$expected) {
     if ($candidate.Length -ne $expected.Length) { return $false }
     $difference = 0
@@ -386,7 +406,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
             Send-Response $stream ($(if ($cevap -like '{"ok":true*' -or $cevap -like '*"ok":true*') { 200 } else { 403 })) $cevap; return
         }
         if (-not (Same-Token $authorization "Bearer $expectedToken")) { Send-Response $stream 401 '{"ok":false,"error":"Anahtar yanlış"}'; return }
-        if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 (@{ ok = $true; app = 'not-bahcesi-clipboard'; surum = 3; phoneStorage = $script:phoneDriveReady } | ConvertTo-Json -Compress); return }
+        if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 (@{ ok = $true; app = 'not-bahcesi-clipboard'; surum = 6; phoneStorage = $script:phoneDriveReady; cardClipboard = $true; windowActions = $true; screenWidth = [RemoteInput]::DesktopWidth; screenHeight = [RemoteInput]::DesktopHeight } | ConvertTo-Json -Compress); return }
         if ($parts[0] -eq 'POST' -and $parts[1] -eq '/phone-storage') {
             if (-not $script:phoneDriveReady) { Send-Response $stream 503 '{"ok":false,"error":"PC dosya paylaşım bileşeni açılamadı."}'; return }
             if ($length -lt 1 -or $length -gt 8192) { Send-Response $stream 413 '{"ok":false}'; return }
@@ -454,6 +474,16 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
                     if ($inputAction.text -isnot [string] -or $inputAction.text.Length -gt 32000) { throw 'Pano metni geçersiz.' }
                     if (-not $dryRun) { Set-ClipboardRetry $inputAction.text }
                 }
+                'panometni' {
+                    $id=[string]$inputAction.id
+                    if($id -notmatch '^[A-Za-z0-9-]{8,48}$' -or -not $script:parcalar.ContainsKey($id)) { throw 'Metin eksik geldi.' }
+                    $bytes=$script:parcalar[$id].ToArray()
+                    if($bytes.Length -lt 1 -or $bytes.Length -gt 1MB) { throw 'Metin boyutu geçersiz.' }
+                    $text=[System.Text.UTF8Encoding]::new($false,$true).GetString($bytes)
+                    if(-not $dryRun) { Set-ClipboardRetry $text }
+                    $script:parcaToplam-=$script:parcalar[$id].Length
+                    $script:parcalar[$id].Dispose();$script:parcalar.Remove($id);$script:parcaZamani.Remove($id)
+                }
                 'text' {
                     if ($inputAction.text -isnot [string] -or $inputAction.text.Length -gt 32000) { throw 'Metin geçersiz.' }
                     if (-not $dryRun) { [RemoteInput]::TypeText($inputAction.text) }
@@ -477,6 +507,10 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
                     $x = [int]$inputAction.x; $y = [int]$inputAction.y
                     if ($x -lt 0 -or $x -gt 32767 -or $y -lt 0 -or $y -gt 32767 -or $inputAction.click -isnot [bool]) { throw 'Konum geçersiz.' }
                     if (-not $dryRun) { [RemoteInput]::Absolute($x, $y, $inputAction.click) }
+                }
+                'window' {
+                    if ($inputAction.operation -notin @('minimize','maximize','restore','close')) { throw 'Pencere işlevi geçersiz.' }
+                    if (-not $dryRun) { [RemoteInput]::WindowAction([string]$inputAction.operation,[long]$inputAction.expectedWindow) }
                 }
                 'shortcut' {
                     if ($inputAction.keys -isnot [string] -or $inputAction.keys -notmatch '^[A-Za-z0-9+_ -]{1,60}$') { throw 'Kısayol geçersiz.' }
@@ -506,14 +540,13 @@ try {
     $script:phoneDriveReady = $true
 } catch { Write-Warning ('Telefon belleği bileşeni açılamadı: ' + $_.Exception.Message) }
 $serialJob = $null
-$kartPanoJob = $null
+$cardJob = $null
 $directBluetooth = $false
 if (-not $TestMode) {
-    # Kart USB'ye takılıysa telefonun karta gönderdiği metin panoya gelsin.
-    $kartPanoJob = Start-Job -ScriptBlock {
-        param($path, $port)
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $path -Port $port -KartPano
-    } -ArgumentList $PSCommandPath, $Port
+    $cardJob=Start-Job -ScriptBlock {
+        param($path,$port)
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $path -Port $port -CardOnly
+    } -ArgumentList $PSCommandPath,$Port
     if ($BluetoothPort -eq 'auto' -and (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll'))) {
         $directBluetooth = $true
         $scriptPath = $PSCommandPath
@@ -539,7 +572,7 @@ try {
     Write-Host 'Tek program: telefondan bilgisayara yazma, fare, kısayollar ve PANO bununla çalışır.'
     Write-Host '  · Bilgisayara yaz / klavye / makro: metni Not Defteri''ne elle yazar gibi tuş tuş yazar.'
     Write-Host '  · Panoya gönder: metni bilgisayar panosuna koyar; Ctrl+V ile yapıştırırsınız.'
-    Write-Host '  · Kablosuz Bellek kartı USB''ye takılıysa telefonun karta gönderdiği metin de panoya gelir (eşleştirme gerekmez).'
+    Write-Host '  · Kart USB ile takılıysa metin/görsel panosu kart üzerinden aktarılır; telefonun bilgisayarla ayrıca eşleşmesi gerekmez.'
     # Bağlantısız hotspot/VPN adresi yerine etkin fiziksel ağ kartını öncele.
     $physical = @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | Select-Object -ExpandProperty ifIndex)
     $active = @(Get-NetIPInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object ConnectionState -eq 'Connected' | Select-Object -ExpandProperty InterfaceIndex)
@@ -595,5 +628,5 @@ try {
     $listener.Stop()
     if ($script:phoneDriveReady) { [PhoneDrive]::Stop() }
     if ($serialJob) { Stop-Job $serialJob -ErrorAction SilentlyContinue; Remove-Job $serialJob -Force -ErrorAction SilentlyContinue }
-    if ($kartPanoJob) { Stop-Job $kartPanoJob -ErrorAction SilentlyContinue; Remove-Job $kartPanoJob -Force -ErrorAction SilentlyContinue }
+    if ($cardJob) { Stop-Job $cardJob -ErrorAction SilentlyContinue; Remove-Job $cardJob -Force -ErrorAction SilentlyContinue }
 }
