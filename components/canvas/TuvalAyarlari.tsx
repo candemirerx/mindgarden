@@ -1,10 +1,15 @@
 'use client';
 
 /**
- * Ağaç Yönetimi içindeki "Tuval görünümü" ayarları: gösterim şekli, not
- * kartlarının tasarımı, düğmeler, ağaçlar arası gezinme ve kart önizlemesi. Tercihler cihazda tutulur.
+ * Ağaç Yönetimi → Görünüm sekmesi: düzen, kart tasarımı (açık/koyu tema için
+ * ayrı), not düğmeleri ve ayrıntılar (önizleme, gezinme, budanan notlar).
+ * Ana Ayarlar ekranıyla aynı yapı taşları (SettingsSection) kullanılır.
+ * Tercihler cihazda tutulur.
  */
 import { useEffect, useState } from 'react';
+import { GitFork, MousePointerClick, Palette, SlidersHorizontal } from 'lucide-react';
+import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
+import { SettingsSection, cx } from '@/components/ui/settings';
 import { tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
@@ -57,21 +62,55 @@ const KARTLAR: { id: TuvalKart; ad: string; aciklama: string; resim: React.React
 ];
 const TEMALAR: { id: 'acik' | 'koyu'; ad: string }[] = [{ id: 'acik', ad: 'Açık tema' }, { id: 'koyu', ad: 'Koyu tema' }];
 const GEZINMELER: { id: TuvalGezinme; ad: string }[] = [
-    { id: 'cubuk', ad: 'Kaydırma çubukları' }, { id: 'sekme', ad: 'Ağaç sekmeleri' }, { id: 'yok', ad: 'Hiçbiri' }
+    { id: 'cubuk', ad: 'Çubuklar' }, { id: 'sekme', ad: 'Sekmeler' }, { id: 'yok', ad: 'Hiçbiri' }
 ];
 const ONIZLEMELER: { id: TuvalOnizleme; ad: string }[] = [
-    { id: 0, ad: 'Yalnız başlık' }, { id: 2, ad: '2 satır' }, { id: 3, ad: '3 satır' }
+    { id: 0, ad: 'Başlık' }, { id: 2, ad: '2 satır' }, { id: 3, ad: '3 satır' }
 ];
 
-function Parcali<T extends string | number>({ secenekler, secili, sec, etiket }: { secenekler: { id: T; ad: string }[]; secili: T; sec: (v: T) => void; etiket: string }) {
+/** Bölmeli seçici (segmented control): iki ya da üç kısa seçenek. */
+function Parcali<T extends string | number>({ secenekler, secili, sec, etiket, className }: { secenekler: { id: T; ad: string }[]; secili: T; sec: (v: T) => void; etiket: string; className?: string }) {
     return (
-        <div role="radiogroup" aria-label={etiket} className="mt-3 grid gap-1 rounded-xl bg-sand-100 p-1" style={{ gridTemplateColumns: `repeat(${secenekler.length}, minmax(0, 1fr))` }}>
+        <div role="radiogroup" aria-label={etiket} className={cx('grid gap-0.5 rounded-xl bg-sand-100 p-0.5', className)} style={{ gridTemplateColumns: `repeat(${secenekler.length}, minmax(0, 1fr))` }}>
             {secenekler.map(s => (
                 <button key={String(s.id)} type="button" role="radio" aria-checked={secili === s.id} onClick={() => sec(s.id)}
-                    className={`min-h-10 rounded-[10px] px-1.5 text-xs font-semibold transition-colors ${secili === s.id ? 'bg-white text-moss-800 shadow-soft' : 'text-sand-600 hover:text-sand-900'}`}>
+                    className={cx('min-h-10 rounded-[10px] px-2 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40',
+                        secili === s.id ? 'bg-white text-sand-900 shadow-soft' : 'text-sand-600 hover:text-sand-900')}>
                     {s.ad}
                 </button>
             ))}
+        </div>
+    );
+}
+
+/** Önizlemeli seçenek kartı; seçili olanın köşesinde dolu radyo işareti. */
+function SecenekKarti({ id, secik, onSec, ad, aciklama, resim }: { id?: string; secik: boolean; onSec: () => void; ad: string; aciklama: string; resim: React.ReactNode }) {
+    return (
+        <button type="button" role="radio" aria-checked={secik} id={id} onClick={onSec}
+            className={cx('flex flex-col rounded-2xl border bg-white p-1.5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/50',
+                secik ? 'border-moss-500 shadow-[0_0_0_3px_rgb(var(--moss-500)/.15)]' : 'border-sand-200 hover:border-sand-300 hover:shadow-soft')}>
+            <span className="relative block overflow-hidden rounded-xl bg-[var(--paper)] ring-1 ring-inset ring-sand-200/70 [&>svg]:block [&>svg]:h-14 [&>svg]:w-full">
+                {resim}
+                <span aria-hidden="true" className={cx('absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full border transition-colors',
+                    secik ? 'border-moss-600 bg-moss-600' : 'border-sand-300 bg-white')}>
+                    {secik && <span className="h-1.5 w-1.5 rounded-full bg-[rgb(var(--kok-yazi))]" />}
+                </span>
+            </span>
+            <span className="px-1 pt-2 text-[13px] font-semibold leading-tight text-sand-900">{ad}</span>
+            <span className="px-1 pb-1 pt-0.5 text-[11px] leading-snug text-sand-600">{aciklama}</span>
+        </button>
+    );
+}
+
+/** "Ayrıntılar" kartında açıklama solda, seçici sağda (telefonda alt alta). */
+function AyrintiSatiri({ baslik, aciklama, children }: { baslik: string; aciklama: string; children: React.ReactNode }) {
+    return (
+        <div className="flex flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
+            <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-sand-900">{baslik}</p>
+                <p className="mt-0.5 text-xs leading-snug text-sand-600">{aciklama}</p>
+            </div>
+            {children}
         </div>
     );
 }
@@ -82,73 +121,46 @@ export function TuvalAyarlari() {
     // Hangi temanın kart tasarımı düzenleniyor; açılışta uygulamanın o anki teması
     const [kartTemasi, setKartTemasi] = useState<'acik' | 'koyu'>('acik');
     useEffect(() => { setKartTemasi(koyu ? 'koyu' : 'acik'); }, [koyu]);
+    const klasik = t.gosterim === 'klasik';
     return (
-        <div id="tuval-ayarlari" className="mb-4 space-y-4 rounded-2xl border border-sand-200 bg-white px-4 py-4">
-            <div>
-                <p className="text-sm font-semibold text-sand-800">Gösterim şekli</p>
-                <p className="text-xs text-sand-500">Ağaçların tuvalde nasıl dizileceği; notlarınız değişmez.</p>
-                <div role="radiogroup" aria-label="Gösterim şekli" className="mt-3 grid grid-cols-3 gap-2">
-                    {GOSTERIMLER.map(g => {
-                        const secik = t.gosterim === g.id;
-                        return (
-                            <button key={g.id} type="button" role="radio" aria-checked={secik} onClick={() => tuvalTercihleriniKaydet({ ...t, gosterim: g.id })}
-                                className={`rounded-xl border-[1.5px] p-1.5 text-left transition-colors ${secik ? 'border-moss-600 bg-moss-50 ring-2 ring-moss-500/20' : 'border-sand-200 bg-sand-50 hover:border-sand-300'}`}>
-                                <span className="block overflow-hidden rounded-lg bg-white [&>svg]:block [&>svg]:h-12 [&>svg]:w-full">{g.resim}</span>
-                                <span className="mt-1.5 block text-xs font-semibold text-sand-900">{g.ad}</span>
-                                <span className="mt-0.5 block text-[10.5px] leading-tight text-sand-500">{g.aciklama}</span>
-                            </button>
-                        );
-                    })}
+        <div id="tuval-ayarlari" className="space-y-4">
+            <SettingsSection icon={GitFork} title="Düzen" description="Ağaçların tuvalde nasıl dizileceği; notlarınız değişmez.">
+                <div role="radiogroup" aria-label="Gösterim şekli" className="grid grid-cols-3 gap-2">
+                    {GOSTERIMLER.map(g => <SecenekKarti key={g.id} secik={t.gosterim === g.id} onSec={() => tuvalTercihleriniKaydet({ ...t, gosterim: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
-            </div>
-            <div className="border-t border-sand-100 pt-4">
-                <p className="text-sm font-semibold text-sand-800">Not kartlarının tasarımı</p>
-                <p className="text-xs text-sand-500">Kök, dal ve yaprak kartları nasıl görünsün; açık ve koyu tema için ayrı seçilir. (Organik ve Yatay akışta)</p>
-                <Parcali etiket="Tasarımı seçilen tema" secenekler={TEMALAR} secili={kartTemasi} sec={setKartTemasi} />
+            </SettingsSection>
+
+            <SettingsSection icon={Palette} tone="clay" title="Kart tasarımı"
+                description={klasik ? 'Klasik düzende kullanılmaz; Organik ya da Yatay akışta uygulanır.' : 'Kök, dal ve yaprak kartları. Açık ve koyu tema için ayrı seçilir.'}>
+                <Parcali etiket="Tasarımı seçilen tema" secenekler={TEMALAR} secili={kartTemasi} sec={setKartTemasi} className="mb-3 sm:w-[240px]" />
                 {/* Önizlemeler seçilen temanın renkleriyle çizilir (uygulamanın o anki temasından bağımsız). */}
-                <div role="radiogroup" aria-label={'Not kartlarının tasarımı (' + (kartTemasi === 'koyu' ? 'koyu' : 'açık') + ' tema)'}
-                    className={`mt-2 grid grid-cols-2 gap-2 rounded-2xl bg-[var(--paper)] p-2 sm:grid-cols-4 ${kartTemasi === 'koyu' ? 'dark' : 'acik-tema'}`}>
-                    {KARTLAR.map(g => {
-                        const secik = (kartTemasi === 'koyu' ? t.kartKoyu : t.kart) === g.id;
-                        return (
-                            <button key={g.id} type="button" role="radio" aria-checked={secik} id={'tuval-kart-' + g.id}
-                                onClick={() => tuvalTercihleriniKaydet(kartTemasi === 'koyu' ? { ...t, kartKoyu: g.id } : { ...t, kart: g.id })}
-                                className={`rounded-xl border-[1.5px] p-1.5 text-left transition-colors ${secik ? 'border-moss-600 bg-moss-50 ring-2 ring-moss-500/20' : 'border-sand-200 bg-white hover:border-sand-300'}`}>
-                                <span className="block overflow-hidden rounded-lg bg-[var(--paper)] [&>svg]:block [&>svg]:h-14 [&>svg]:w-full">{g.resim}</span>
-                                <span className="mt-1.5 block text-xs font-semibold text-sand-900">{g.ad}</span>
-                                <span className="mt-0.5 block text-[10.5px] leading-tight text-sand-500">{g.aciklama}</span>
-                            </button>
-                        );
-                    })}
+                <div role="radiogroup" aria-label={'Kart tasarımı (' + (kartTemasi === 'koyu' ? 'koyu' : 'açık') + ' tema)'}
+                    className={cx('grid grid-cols-2 gap-2 rounded-2xl bg-sand-100 p-1.5 sm:grid-cols-4', kartTemasi === 'koyu' ? 'dark' : 'acik-tema')}>
+                    {KARTLAR.map(g => <SecenekKarti key={g.id} id={'tuval-kart-' + g.id} secik={(kartTemasi === 'koyu' ? t.kartKoyu : t.kart) === g.id}
+                        onSec={() => tuvalTercihleriniKaydet(kartTemasi === 'koyu' ? { ...t, kartKoyu: g.id } : { ...t, kart: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
-            </div>
-            <div className="border-t border-sand-100 pt-4">
-                <p className="text-sm font-semibold text-sand-800">Not düğmelerinin görünümü</p>
-                <p className="text-xs text-sand-500">Seçili notta düzenle, kopyala, yanına/altına ekle ve buda nerede görünsün. (Organik ve Yatay akışta)</p>
-                <div role="radiogroup" aria-label="Not düğmelerinin görünümü" className="mt-3 grid grid-cols-3 gap-2">
-                    {EYLEMLER.map(g => {
-                        const secik = t.eylem === g.id;
-                        return (
-                            <button key={g.id} type="button" role="radio" aria-checked={secik} id={'tuval-eylem-' + g.id} onClick={() => tuvalTercihleriniKaydet({ ...t, eylem: g.id })}
-                                className={`rounded-xl border-[1.5px] p-1.5 text-left transition-colors ${secik ? 'border-moss-600 bg-moss-50 ring-2 ring-moss-500/20' : 'border-sand-200 bg-sand-50 hover:border-sand-300'}`}>
-                                <span className="block overflow-hidden rounded-lg bg-white [&>svg]:block [&>svg]:h-12 [&>svg]:w-full">{g.resim}</span>
-                                <span className="mt-1.5 block text-xs font-semibold text-sand-900">{g.ad}</span>
-                                <span className="mt-0.5 block text-[10.5px] leading-tight text-sand-500">{g.aciklama}</span>
-                            </button>
-                        );
-                    })}
+            </SettingsSection>
+
+            <SettingsSection icon={MousePointerClick} tone="sand" title="Not düğmeleri"
+                description={klasik ? 'Klasik düzende kullanılmaz.' : 'Seçili notta düzenle, kopyala, ekle ve buda düğmeleri nerede görünsün.'}>
+                <div role="radiogroup" aria-label="Not düğmelerinin görünümü" className="grid grid-cols-3 gap-2">
+                    {EYLEMLER.map(g => <SecenekKarti key={g.id} id={'tuval-eylem-' + g.id} secik={t.eylem === g.id} onSec={() => tuvalTercihleriniKaydet({ ...t, eylem: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
-            </div>
-            <div className="border-t border-sand-100 pt-4">
-                <p className="text-sm font-semibold text-sand-800">Ağaçlar arası gezinme</p>
-                <p className="text-xs text-sand-500">Çok ağaç olduğunda hızlı geçiş için: sürüklenen çubuklar ya da üstte ağaç adları.</p>
-                <Parcali etiket="Ağaçlar arası gezinme" secenekler={GEZINMELER} secili={t.gezinme} sec={v => tuvalTercihleriniKaydet({ ...t, gezinme: v })} />
-            </div>
-            <div className="border-t border-sand-100 pt-4">
-                <p className="text-sm font-semibold text-sand-800">Kart önizlemesi</p>
-                <p className="text-xs text-sand-500">Kartta içeriğin ne kadarı görünsün; sığmayan kısım “…” ile biter. (Organik ve Yatay akışta)</p>
-                <Parcali etiket="Kart önizlemesi" secenekler={ONIZLEMELER} secili={t.onizleme} sec={v => tuvalTercihleriniKaydet({ ...t, onizleme: v })} />
-            </div>
+            </SettingsSection>
+
+            <SettingsSection icon={SlidersHorizontal} tone="moss" title="Ayrıntılar" flush>
+                <div className="divide-y divide-sand-100">
+                    <AyrintiSatiri baslik="Kart önizlemesi" aciklama="Kartta başlığın altında içeriğin kaç satırı görünsün.">
+                        <Parcali etiket="Kart önizlemesi" secenekler={ONIZLEMELER} secili={t.onizleme} sec={v => tuvalTercihleriniKaydet({ ...t, onizleme: v })} className="sm:w-[264px]" />
+                    </AyrintiSatiri>
+                    <AyrintiSatiri baslik="Ağaçlar arası gezinme" aciklama="Çok ağaçta hızlı geçiş: kaydırma çubukları ya da üstte ağaç sekmeleri.">
+                        <Parcali etiket="Ağaçlar arası gezinme" secenekler={GEZINMELER} secili={t.gezinme} sec={v => tuvalTercihleriniKaydet({ ...t, gezinme: v })} className="sm:w-[264px]" />
+                    </AyrintiSatiri>
+                    <AyrintiSatiri baslik="Budanan notlar" aciklama="Tuvalde ve listede nasıl görünsünler.">
+                        <BudananlarDugmesi etiketli className="self-start sm:self-auto" />
+                    </AyrintiSatiri>
+                </div>
+            </SettingsSection>
         </div>
     );
 }

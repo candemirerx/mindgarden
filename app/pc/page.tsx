@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, Download, MonitorSmartphone } from 'lucide-react';
+import YardimciKlasorleri from '@/components/ui/YardimciKlasorleri';
 
 export const metadata = {
     title: 'PC Yardımcısı - Not Bahçesi',
@@ -40,12 +41,17 @@ export default function PcYardimcisiSayfasi() {
                         <h2 className="text-lg font-semibold text-sand-900">Kurulum</h2>
                         <ol className="list-decimal space-y-1.5 pl-5">
                             <li>Zip dosyasını bir klasöre çıkarın (örnek: Belgeler\Not Bahçesi PC).</li>
-                            <li><code>scripts</code> klasöründeki <strong>pc_yardimcisi_baslat.cmd</strong> dosyasına çift tıklayın.</li>
-                            <li>Windows yönetici izni ister; <strong>Evet</strong> deyin. Güvenlik duvarına yalnız yerel ağ için TCP 8765 izni eklenir.</li>
+                            <li><code>scripts</code> klasöründeki <strong>pc_yardimcisi_baslat.cmd</strong> dosyasına çift tıklayın. Windows yönetici izni istemez.</li>
                             <li>Açılan pencere <strong>6 haneli eşleştirme kodu</strong> gösterir. Pencereyi açık bırakın.</li>
-                            <li>Telefonda: <strong>Ayarlar → Bilgisayar bağlantısı → Bilgisayar · Wi‑Fi</strong> (ya da Bluetooth) → “Ağda bilgisayar ara” → kodu yazın.</li>
+                            <li>Telefonda: <strong>Ayarlar → Bilgisayar bağlantısı</strong> bölümünde bağlantı yolunu seçin; Tailscale ya da Wi‑Fi için kodu yazın.</li>
                         </ol>
                         <p>Kod tek kullanımlıktır; eşleşen telefon bir daha kod sormaz. Bilgisayar her açıldığında yardımcıyı yeniden başlatın.</p>
+                    </section>
+
+                    <section className="space-y-3">
+                        <h2 className="text-lg font-semibold text-sand-900">Zip içindeki dosyalar</h2>
+                        <p>Hangi dosyanın ne işe yaradığı ve yönetici izni isteyip istemediği:</p>
+                        <YardimciKlasorleri />
                     </section>
 
                     <section className="space-y-2">

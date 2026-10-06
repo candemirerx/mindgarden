@@ -79,7 +79,7 @@ function Aciklama({ children }: { children: React.ReactNode }) {
  * Yardımcı henüz kurulmamışsa açık ve belirgin durur; kurulduktan sonra
  * küçük bir "Yardımcıyı indir" satırına katlanır.
  */
-function YardimciIndir({ kurulu = false }: { kurulu?: boolean }) {
+export function YardimciIndir({ kurulu = false }: { kurulu?: boolean }) {
     const [bilgi, setBilgi] = useState('');
     const telefon = Capacitor.isNativePlatform();
     const kisaAdres = PC_YARDIMCISI_SAYFASI.replace(/^https?:\/\//, '');

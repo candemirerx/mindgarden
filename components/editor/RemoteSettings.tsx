@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MonitorSmartphone, MousePointer2, Radio } from 'lucide-react';
+import { Download, MonitorSmartphone, MousePointer2, Radio } from 'lucide-react';
 import { remotePrefs, saveRemotePrefs, dictationEngines } from '@/lib/remoteTools';
 import type { RemotePrefs } from '@/lib/remoteTools';
 import {
@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/settings';
 import { Capacitor } from '@capacitor/core';
 import DikteMotoruAyari from './DikteMotoruAyari';
-import BaglantiKurulumu, { PcBluetoothPano, PcWifiEslestirme } from './BaglantiKurulumu';
+import BaglantiKurulumu, { PcBluetoothPano, PcWifiEslestirme, YardimciIndir } from './BaglantiKurulumu';
+import YardimciKlasorleri from '@/components/ui/YardimciKlasorleri';
 
 /** Bağlantı yolunun kısa adı; sekme başlığındaki rozette gösterilir. */
 const CONNECTION_LABELS: Record<RemotePrefs['connection'], string> = {
@@ -44,6 +45,13 @@ export default function RemoteSettings() {
 
         <SettingsSection icon={Radio} title="Bağlantı yolu" description="Bir yol seçin ve adımları sırayla izleyin. Bilgisayar yolları için kart gerekmez; kart yolları için kartın USB kablosu bilgisayara takılı olmalı.">
             <BaglantiKurulumu prefs={prefs} update={update} />
+        </SettingsSection>
+
+        <SettingsSection icon={Download} tone="clay" title="PC yardımcısı" description="Bilgisayara yazma, fare, pano ve görsel aktarımı için küçük Windows programı. İndirip bir klasöre çıkarın; hangi dosyanın ne işe yaradığı aşağıda.">
+            <div className="space-y-3">
+                <YardimciIndir />
+                <YardimciKlasorleri />
+            </div>
         </SettingsSection>
 
         {(kartKipi || prefs.connection === 'pc-bluetooth') && <SettingsSection

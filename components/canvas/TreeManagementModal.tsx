@@ -1,19 +1,19 @@
 'use client';
 
 /**
- * Ağaç Yönetimi.
+ * Ağaç Yönetimi (tuvaldeki ayarlar düğmesi).
  *
- * Canvas'ta düğüm çevresindeki seçenek sayısı azaltıldı; buraya taşınanlar
- * (tip değiştirme, renk, başlığı kopyalama, budama ve silme) bu pencereden
- * yönetilir. Ağacın kendisi de buradan yeniden adlandırılır veya silinir.
+ * Ana Ayarlar ekranıyla aynı görsel dil: tam ekran, başlık ve iki sekme.
+ * "Görünüm" tuvalin dizilişini, kart tasarımını ve ayrıntılarını; "Ağaçlar"
+ * ağaçları ve düğümleri (tip, renk, başlığı kopyalama, budama, silme)
+ * yönetir. Ağacın kendisi de buradan yeniden adlandırılır veya silinir.
  */
 import { useState } from 'react';
 import {
     Settings, X, Pencil, Trash2, ArrowLeft, ChevronDown, ChevronRight,
-    Copy, Check, Scissors, Leaf, Sprout
+    Copy, Check, Scissors, Leaf, Sprout, Palette, TreePine
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { TuvalAyarlari } from './TuvalAyarlari';
 import { MindNode } from '@/lib/types';
 import { BRANCH_COLORS } from '@/lib/branchColors';
@@ -54,6 +54,8 @@ interface TreeManagementModalProps {
     /** Dal rengini sıradaki renge çevirip kaydeder; kaydedilemezse `false` döner. */
     onCycleColor: (nodeId: string, mevcutRenk: string | null) => Promise<boolean>;
     onDeleteNode: (nodeId: string) => void;
+    /** Başlığın üstünde gösterilen bahçe adı. */
+    bahceAdi?: string;
 }
 
 export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
@@ -65,7 +67,8 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     onToggleType,
     onTogglePrune,
     onCycleColor,
-    onDeleteNode
+    onDeleteNode,
+    bahceAdi
 }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
@@ -74,6 +77,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     const [kopyalanan, setKopyalanan] = useState<string | null>(null);
     /** Renk kaydedilemezse kullanıcı sessiz kalmaz. */
     const [renkHatasi, setRenkHatasi] = useState('');
+    const [sekme, setSekme] = useState<'gorunum' | 'agaclar'>('gorunum');
 
     if (!isOpen) return null;
 
@@ -105,43 +109,53 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
         setTimeout(() => setKopyalanan(null), 1500);
     };
 
+    const SEKMELER: { id: 'gorunum' | 'agaclar'; ad: string; Icon: typeof Palette; sayi?: number }[] = [
+        { id: 'gorunum', ad: 'Görünüm', Icon: Palette },
+        { id: 'agaclar', ad: 'Ağaçlar', Icon: TreePine, sayi: trees.length }
+    ];
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bark-950/50 backdrop-blur-sm md:p-4">
-            <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-gradient-to-br from-sand-50 via-clay-50/30 to-sand-50 shadow-pop md:h-[90vh] md:max-w-4xl md:rounded-3xl">
-                {/* Header */}
-                <div className="flex flex-shrink-0 items-center gap-3 border-b border-sand-200 bg-white/80 px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-md md:px-6 md:py-4">
-                    <button
-                        onClick={onClose}
-                        aria-label="Ağaç yönetiminden geri dön"
-                        className="-ml-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sand-600 transition-colors hover:bg-sand-100"
-                    >
-                        <ArrowLeft size={22} />
-                    </button>
-                    <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-clay-100">
-                            <Settings className="text-clay-600" size={20} />
+        <div className="fixed inset-0 z-[100] bg-sand-100">
+            <div role="dialog" aria-modal="true" aria-labelledby="agac-yonetimi-basligi" className="flex h-[100dvh] w-full flex-col overflow-hidden text-sand-800">
+                {/* Başlık: ana Ayarlar ekranıyla aynı yapı */}
+                <div className="shrink-0 border-b border-sand-200 bg-white pt-[env(safe-area-inset-top,0px)]">
+                    <div className="mx-auto flex min-h-[72px] w-full max-w-3xl items-center gap-3 px-4 py-3 sm:px-8">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            aria-label="Ağaç yönetiminden geri dön"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-sand-200 bg-sand-50 text-sand-700 transition-colors hover:bg-sand-200 focus-visible:ring-2 focus-visible:ring-moss-500"
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                            <p className="mb-0.5 truncate text-xs font-semibold uppercase tracking-[0.14em] text-moss-700">{bahceAdi || 'Bahçe'}</p>
+                            <h2 id="agac-yonetimi-basligi" className="font-sans text-[17px] font-semibold leading-tight tracking-tight text-sand-900 sm:text-xl">Tuval ve ağaçlar</h2>
                         </div>
-                        <div className="min-w-0">
-                            <h2 className="truncate text-lg font-bold text-sand-800 md:text-xl">Ağaç Yönetimi</h2>
-                            <p className="truncate text-xs text-sand-500">
-                                Ağaçları ve düğümleri düzenleyin: tip, renk, kopyalama, budama, silme
-                            </p>
-                        </div>
+                        <TreePine size={24} className="hidden shrink-0 text-moss-700 sm:block" aria-hidden />
+                    </div>
+                    {/* Sekmeler */}
+                    <div role="tablist" aria-label="Ağaç yönetimi bölümleri" className="mx-auto flex w-full max-w-3xl gap-1 px-4 sm:px-8">
+                        {SEKMELER.map(({ id, ad, Icon, sayi }) => {
+                            const aktif = sekme === id;
+                            return (
+                                <button key={id} type="button" role="tab" id={'agac-sekme-' + id} aria-selected={aktif} onClick={() => setSekme(id)}
+                                    className={`relative flex min-h-12 items-center gap-2 px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-moss-500 ${aktif ? 'text-moss-800' : 'text-sand-600 hover:text-sand-900'}`}>
+                                    <Icon size={16} className={aktif ? 'text-moss-700' : 'text-sand-500'} aria-hidden />
+                                    {ad}
+                                    {sayi !== undefined && <span className={`rounded-full px-1.5 py-px text-[11px] ${aktif ? 'bg-moss-100 text-moss-700' : 'bg-sand-100 text-sand-600'}`}>{sayi}</span>}
+                                    {aktif && <span aria-hidden className="absolute inset-x-2 bottom-0 h-[3px] rounded-t-full bg-moss-600" />}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* Content */}
-                <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] md:p-6">
-                    <TuvalAyarlari />
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-sand-200 bg-white px-4 py-3">
-                        <div className="min-w-0">
-                            <p className="text-sm font-semibold text-sand-800">Budanan notlar</p>
-                            <p className="text-xs text-sand-500">Tuvalde ve listede nasıl görünsünler</p>
-                        </div>
-                        <BudananlarDugmesi etiketli />
-                    </div>
-                    {trees.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
+                {/* İçerik */}
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-5 sm:px-8 sm:pt-6">
+                    <div role="tabpanel" aria-labelledby={'agac-sekme-' + sekme} className="mx-auto w-full max-w-3xl pb-4">
+                    {sekme === 'gorunum' ? <TuvalAyarlari /> : trees.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
                             <div className="w-20 h-20 rounded-full bg-sand-100 flex items-center justify-center mb-4">
                                 <Settings className="text-sand-400" size={40} />
                             </div>
@@ -157,9 +171,9 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                 return (
                                     <div
                                         key={tree.id}
-                                        className="overflow-hidden rounded-2xl border-2 border-sand-200 bg-white transition-all duration-200 hover:border-clay-300"
+                                        className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft transition-colors duration-200 hover:border-moss-300"
                                     >
-                                        <div className="flex items-center justify-between p-4">
+                                        <div className="flex items-center justify-between px-4 py-3">
                                             <div className="min-w-0 flex-1">
                                                 {editingId === tree.id ? (
                                                     <input
@@ -175,11 +189,11 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                         autoFocus
                                                     />
                                                 ) : (
-                                                    <h3 className="break-words text-lg font-semibold leading-snug text-sand-900">
+                                                    <h3 className="break-words text-[15px] font-semibold leading-snug text-sand-900">
                                                         {tree.title || 'Başlıksız'}
                                                     </h3>
                                                 )}
-                                                <p className="mt-1 text-sm text-sand-500">
+                                                <p className="mt-0.5 text-xs text-sand-600">
                                                     {dugumler.length} düğüm
                                                 </p>
                                             </div>
@@ -361,6 +375,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                             })}
                         </div>
                     )}
+                    </div>
                 </div>
             </div>
 
