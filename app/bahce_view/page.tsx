@@ -11,7 +11,7 @@ import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { YeniAgac } from '@/components/canvas/YeniAgac';
 import { SeciliEylemler } from '@/components/canvas/SeciliEylemler';
-import { useTuvalTercihleri } from '@/lib/tuvalTercihleri';
+import { useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
 import { Modal } from '@/components/editor/Modal';
 import { MindTextEditor } from '@/components/editor/MindTextEditor';
@@ -200,6 +200,7 @@ function GardenPageInner() {
     const budamaModu = useBudamaModu();
     const gorunenAgaclar = budamaFiltresi(mindRoots, budamaModu);
     const tuval = useTuvalTercihleri();
+    const koyuTema = useKoyuTema();
     const notSayisi = (n: MindNode): number => 1 + n.children.reduce((t, c) => t + notSayisi(c), 0);
 
     // Modals state
@@ -721,6 +722,7 @@ function GardenPageInner() {
                                             duzen={tuval.gosterim}
                                             onizleme={tuval.onizleme}
                                             eylem={tuval.eylem}
+                                            kart={koyuTema ? tuval.kartKoyu : tuval.kart}
                                             onAddChild={handleAddChild}
                                             onAddTree={handleAddTreeBeside}
                                             onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}

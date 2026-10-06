@@ -19,7 +19,7 @@ import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Copy, GitBranch, Leaf, Pencil, Plus, Scissors, Sprout, TreePine } from 'lucide-react';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
-import type { TuvalEylem, TuvalOnizleme } from '@/lib/tuvalTercihleri';
+import type { TuvalEylem, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
 type Duzen = 'organik' | 'yatay';
 type Ortak = {
@@ -27,6 +27,8 @@ type Ortak = {
     onizleme: TuvalOnizleme;
     /** Eylem düğmeleri: 'hap' kart üstünde; 'panel' ve 'yuzen' sayfa düzeyinde çizilir (kartta düğme yok). */
     eylem?: TuvalEylem;
+    /** Kart tasarımı; verilmezse bahçe. */
+    kart?: TuvalKart;
     onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
     onAddTree?: (rootId: string) => void;
     /** Yan not: notun hemen yanına (sonrasına) kardeş ekler. */
@@ -173,7 +175,7 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, eylem = 'hap', onAddChild, onAddTree, onAddSiblingAfter, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, eylem = 'hap', kart = 'bahce', onAddChild, onAddTree, onAddSiblingAfter, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
@@ -209,27 +211,67 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, eylem
         : (tur === 'kok' ? 'w-[272px]' : derinlik === 1 ? 'w-[208px]' : 'w-[196px]');
 
     let govde: React.ReactNode;
-    if (tur === 'kok') {
+    const turAdi = tur === 'kok' ? 'Kök' : tur === 'branch' ? 'Dal' : 'Yaprak';
+    const TurSimge = tur === 'kok' ? TreePine : tur === 'branch' ? GitBranch : Leaf;
+    const sayac = cocukSayisi > 0 && <span className="inline-flex items-center gap-1"><TurSimge size={10} />{tur === 'kok' ? `${cocukSayisi} dal` : `${cocukSayisi} yaprak`}</span>;
+    if (kart === 'sade') {
+        // Sade: gölgesiz, ince çerçeve; seviye yalnız küçük etiket ve renkli noktayla belli olur
+        const nokta = tur === 'kok' ? 'bg-moss-600' : tur === 'branch' ? 'bg-clay-500' : 'bg-moss-400';
         govde = (
-            <div className={`relative overflow-hidden rounded-[24px] bg-[linear-gradient(150deg,#3b7a52_0%,#22492f_55%,#122a1c_100%)] px-4 pb-3.5 pt-3.5 text-white shadow-[0_1px_0_rgba(255,255,255,.14)_inset,0_22px_40px_-22px_rgba(18,40,27,.85)] ${budandi ? 'opacity-60' : ''}`}>
+            <div className={`rounded-xl border bg-white px-3 py-2.5 ring-1 ring-[color:var(--kart-kenar)] ${tur === 'kok' ? 'border-2 border-moss-600' : 'border-sand-200'} ${budandi ? 'border-dashed opacity-60' : ''}`}>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.08em] text-sand-500">
+                    <span className={`h-1.5 w-1.5 rounded-full ${nokta}`} />{budandi ? 'Budandı' : turAdi}
+                    {sayac && <span className="ml-auto normal-case tracking-normal text-sand-400">{sayac}</span>}
+                </div>
+                <p className={`mt-1 font-semibold leading-snug text-sand-900 ${tur === 'kok' ? 'text-[17px]' : 'text-[13.5px]'} ${budandi ? 'line-through' : ''}`} style={{ ...satir, WebkitLineClamp: 2 }}>{node.title}</p>
+                {metin && <p className="mt-0.5 text-xs leading-[1.45] text-sand-500" style={satir}>{metin}</p>}
+            </div>
+        );
+    } else if (kart === 'renkli') {
+        // Renkli: seviyeye göre dolu renk; kök koyu yeşil, dal kehribar, yaprak açık yeşil
+        const renk = tur === 'kok' ? 'bg-[rgb(var(--kok-1))] text-[rgb(var(--kok-yazi))] border-[rgb(var(--kok-2))]' : tur === 'branch' ? 'bg-clay-100 text-clay-900 border-clay-300' : 'bg-moss-50 text-moss-900 border-moss-200';
+        const ikincil = tur === 'kok' ? 'text-[rgb(var(--kok-soluk))]' : tur === 'branch' ? 'text-clay-700' : 'text-moss-700';
+        govde = (
+            <div className={`rounded-2xl border px-3.5 py-3 shadow-[0_10px_22px_-18px_rgba(30,24,19,.6)] ring-1 ring-[color:var(--kart-kenar)] ${renk} ${budandi ? 'border-dashed opacity-60' : ''}`}>
+                <div className="flex items-center gap-2">
+                    <span className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg ${tur === 'kok' ? 'bg-[rgb(var(--kok-yazi)/.15)]' : 'bg-white/70'}`}>{budandi ? <Scissors size={12} /> : <TurSimge size={13} />}</span>
+                    <span className={`min-w-0 flex-1 font-semibold leading-tight ${tur === 'kok' ? 'font-serif text-[18px]' : 'text-[13.5px]'} ${budandi ? 'line-through' : ''}`} style={{ ...satir, WebkitLineClamp: 2 }}>{node.title}</span>
+                </div>
+                {metin && <p className={`mt-1.5 text-xs leading-[1.45] ${ikincil}`} style={satir}>{metin}</p>}
+                {sayac && <div className={`mt-2 text-[10.5px] font-semibold ${ikincil}`}>{sayac}</div>}
+            </div>
+        );
+    } else if (kart === 'hap') {
+        // Hap: tek satır, yuvarlak; kalabalık ağaçlarda en az yer kaplar (önizleme gösterilmez;
+        // alt sayısını sağ alttaki aç/kapa düğmesi gösterir)
+        const renk = tur === 'kok' ? 'bg-[rgb(var(--kok-2))] text-[rgb(var(--kok-yazi))] border-[rgb(var(--kok-3))]' : tur === 'branch' ? 'bg-white text-sand-900 border-clay-300' : 'bg-white text-sand-900 border-moss-200';
+        govde = (
+            <div className={`flex items-center gap-2 rounded-full border-[1.5px] py-1.5 pl-1.5 pr-3 shadow-[0_6px_14px_-12px_rgba(30,24,19,.7)] ring-1 ring-[color:var(--kart-kenar)] ${renk} ${budandi ? 'border-dashed opacity-60' : ''}`}>
+                <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${tur === 'kok' ? 'bg-[rgb(var(--kok-yazi)/.15)]' : tur === 'branch' ? 'bg-clay-100 text-clay-700' : 'bg-moss-50 text-moss-600'}`}>{budandi ? <Scissors size={12} /> : <TurSimge size={13} />}</span>
+                <span className={`min-w-0 flex-1 truncate font-semibold ${tur === 'kok' ? 'font-serif text-[16px]' : 'text-[13px]'} ${budandi ? 'line-through' : ''}`}>{node.title}</span>
+            </div>
+        );
+    } else if (tur === 'kok') {
+        govde = (
+            <div className={`relative overflow-hidden rounded-[24px] bg-[linear-gradient(150deg,rgb(var(--kok-1))_0%,rgb(var(--kok-2))_55%,rgb(var(--kok-3))_100%)] px-4 pb-3.5 pt-3.5 text-[rgb(var(--kok-yazi))] ring-1 ring-[color:var(--kart-kenar)] shadow-[0_1px_0_rgba(255,255,255,.14)_inset,0_22px_40px_-22px_rgba(18,40,27,.85)] ${budandi ? 'opacity-60' : ''}`}>
                 {/* köşede silik ağaç filigranı */}
-                <TreePine aria-hidden="true" size={96} strokeWidth={1.2} className="pointer-events-none absolute -right-5 -top-3 text-white/[.07]" />
-                <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.08em] text-moss-100">
+                <TreePine aria-hidden="true" size={96} strokeWidth={1.2} className="pointer-events-none absolute -right-5 -top-3 text-[rgb(var(--kok-yazi)/.07)]" />
+                <span className="relative inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--kok-yazi)/.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.08em] text-[rgb(var(--kok-soluk))]">
                     {budandi ? <Scissors size={10} /> : <TreePine size={10} />}{budandi ? 'Budandı' : 'Kök not'}
                 </span>
                 <p className={`relative mt-1.5 font-serif text-[21px] font-semibold leading-tight tracking-tight ${budandi ? 'line-through' : ''}`} style={{ ...satir, WebkitLineClamp: 2 }}>{node.title}</p>
-                {metin && <p className="relative mt-1 text-[12.5px] leading-snug text-moss-100/85" style={satir}>{metin}</p>}
-                {cocukSayisi > 0 && <div className="relative mt-3 flex flex-wrap gap-1.5 border-t border-white/10 pt-2.5 text-[10.5px] font-semibold text-moss-50">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/12 px-2 py-0.5"><GitBranch size={10} />{cocukSayisi} dal</span>
-                    {altSayisi(node) - cocukSayisi > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-white/12 px-2 py-0.5"><Leaf size={10} />{altSayisi(node) - cocukSayisi} yaprak</span>}
+                {metin && <p className="relative mt-1 text-[12.5px] leading-snug text-[rgb(var(--kok-soluk)/.9)]" style={satir}>{metin}</p>}
+                {cocukSayisi > 0 && <div className="relative mt-3 flex flex-wrap gap-1.5 border-t border-[rgb(var(--kok-yazi)/.1)] pt-2.5 text-[10.5px] font-semibold text-[rgb(var(--kok-yazi)/.92)]">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[rgb(var(--kok-yazi)/.12)] px-2 py-0.5"><GitBranch size={10} />{cocukSayisi} dal</span>
+                    {altSayisi(node) - cocukSayisi > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-[rgb(var(--kok-yazi)/.12)] px-2 py-0.5"><Leaf size={10} />{altSayisi(node) - cocukSayisi} yaprak</span>}
                 </div>}
             </div>
         );
     } else if (tur === 'branch') {
         govde = (
-            <div className={`overflow-hidden rounded-[18px] border border-clay-200/70 bg-white shadow-[0_1px_2px_rgba(30,24,19,.05),0_14px_28px_-20px_rgba(120,72,14,.45)] ${budandi ? 'border-dashed opacity-60' : ''}`}>
+            <div className={`overflow-hidden rounded-[18px] border border-clay-200/70 bg-white shadow-[0_1px_2px_rgba(30,24,19,.05),0_14px_28px_-20px_rgba(120,72,14,.45)] ring-1 ring-[color:var(--kart-kenar)] ${budandi ? 'border-dashed opacity-60' : ''}`}>
                 <div className="flex items-center gap-2 bg-[linear-gradient(180deg,rgb(var(--clay-50)),rgb(var(--clay-50)/.4))] px-3 pb-2 pt-2.5">
-                    <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-clay-300 to-clay-500 text-white shadow-[0_2px_6px_-2px_rgba(170,104,20,.6)]"><GitBranch size={13} /></span>
+                    <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-clay-300 to-clay-500 text-[rgb(var(--kok-yazi))] shadow-[0_2px_6px_-2px_rgba(170,104,20,.6)]"><GitBranch size={13} /></span>
                     <span className={`min-w-0 flex-1 truncate text-[13.5px] font-semibold text-sand-900 ${budandi ? 'line-through' : ''}`}>{node.title}</span>
                 </div>
                 {(metin || cocukSayisi > 0 || budandi) && <div className="px-3 pb-3 pt-1.5">
@@ -243,7 +285,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, eylem
         );
     } else {
         govde = (
-            <div className={`relative overflow-hidden rounded-2xl border border-sand-200/90 bg-white/95 py-2.5 pl-3.5 pr-3 shadow-[0_1px_2px_rgba(30,24,19,.04),0_12px_24px_-20px_rgba(27,58,40,.45)] ${budandi ? 'border-dashed opacity-60' : ''}`}>
+            <div className={`relative overflow-hidden rounded-2xl border border-sand-200/90 bg-white/95 ring-1 ring-[color:var(--kart-kenar)] py-2.5 pl-3.5 pr-3 shadow-[0_1px_2px_rgba(30,24,19,.04),0_12px_24px_-20px_rgba(27,58,40,.45)] ${budandi ? 'border-dashed opacity-60' : ''}`}>
                 {/* solda ince yaprak yeşili şerit */}
                 <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-gradient-to-b from-moss-300 to-moss-500" />
                 <div className="flex items-center gap-2">
@@ -264,7 +306,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, eylem
     const altKenar = 'left-1/2 top-full -translate-x-1/2 -translate-y-1/2', sagKenar = 'right-0 top-1/2 translate-x-1/2 -translate-y-1/2';
     const eklePos = duzen === 'yatay' ? sagKenar : altKenar;
     const yanPos = duzen === 'yatay' ? altKenar : sagKenar;
-    const yaricap = tur === 'kok' ? 24 : tur === 'branch' ? 18 : 16;
+    const yaricap = kart === 'hap' ? 9999 : kart === 'sade' ? 12 : kart === 'renkli' ? 16 : tur === 'kok' ? 24 : tur === 'branch' ? 18 : 16;
 
     return (
         <div className={`relative flex-shrink-0 ${genislik}`} onMouseEnter={() => setUzerinde(window.matchMedia('(hover: hover)').matches)} onMouseLeave={() => setUzerinde(false)}>

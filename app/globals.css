@@ -7,7 +7,8 @@
    ========================================================================== */
 
 @layer base {
-  :root {
+  :root,
+  .acik-tema {
     /* --- Renk ölçekleri (açık tema) ------------------------------------
        Bileşenler Tailwind sınıflarıyla çalışır (bg-sand-100, text-bark-900).
        Ölçekler burada RGB üçlüsü olarak durur; koyu temada (.dark) aynı
@@ -74,6 +75,14 @@
     /* Ağaç dalları */
     --branch: #b9a88f; /* Kum/ahşap karışımı tek, temiz bir dal rengi */
     --branch-hover: #64a378;
+    /* Tuval kartları: kök zemini (koyu yeşil geçiş), üstündeki yazı ve koyu temada kart kenarı.
+       Temadan bağımsız "beyaz" gerektiği için surface'a (bg-white) bağlanmaz. */
+    --kok-1: 59 122 82;
+    --kok-2: 34 73 47;
+    --kok-3: 18 42 28;
+    --kok-yazi: 255 255 255;
+    --kok-soluk: 214 236 220;
+    --kart-kenar: rgba(255, 255, 255, 0);
     color-scheme: light;
   }
 
@@ -145,6 +154,12 @@
     --paper: #14110e;
     --branch: #7b6a54;
     --branch-hover: #7fc796;
+    --kok-1: 58 124 82;
+    --kok-2: 33 77 50;
+    --kok-3: 20 46 30;
+    --kok-yazi: 240 247 242;
+    --kok-soluk: 178 216 190;
+    --kart-kenar: rgba(255, 255, 255, .07);
     color-scheme: dark;
   }
 
