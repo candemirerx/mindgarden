@@ -1243,6 +1243,26 @@ public class RemoteBridgePlugin extends Plugin {
                     }
                     if (t != null && t.startsWith("image/")) { uri = aday; tur = t; oge = clip.getItemAt(i); }
                 }
+                CharSequence panoMetni = oge.coerceToText(activity);
+                String duzMetin = panoMetni == null ? "" : panoMetni.toString().trim();
+                // Bazı uygulamalar görseli düz metin olarak koyar: içerik adresi ya da data: adresi.
+                if (uri == null && duzMetin.startsWith("data:image/") && duzMetin.contains(";base64,")) {
+                    try {
+                        int ayrac = duzMetin.indexOf(";base64,");
+                        JSObject g = new JSObject();
+                        g.put("mime", duzMetin.substring(5, ayrac));
+                        g.put("data", duzMetin.substring(ayrac + 8).replaceAll("\\s", ""));
+                        call.resolve(g);
+                        return;
+                    } catch (Exception ignored) { }
+                }
+                if (uri == null && duzMetin.length() < 512 && !duzMetin.contains("\n") && (duzMetin.startsWith("content://") || duzMetin.startsWith("file://"))) {
+                    try {
+                        Uri aday = Uri.parse(duzMetin);
+                        String t = cozucu.getType(aday);
+                        if (t != null && t.startsWith("image/")) { uri = aday; tur = t; }
+                    } catch (Exception ignored) { }
+                }
                 final Uri gorselUri = uri; final String gorselTuru = tur;
                 if (gorselUri != null) {
                     new Thread(() -> {
@@ -1264,6 +1284,13 @@ public class RemoteBridgePlugin extends Plugin {
                 }
                 CharSequence metin = oge.coerceToText(activity);
                 if (metin != null && metin.length() > 0) sonuc.put("text", metin.toString());
+                // Görsel bulunamadıysa panonun bildirdiği türler (tanılama için) döner.
+                if (clip.getDescription() != null) {
+                    JSArray turler = new JSArray();
+                    for (int k = 0; k < clip.getDescription().getMimeTypeCount(); k++) turler.put(clip.getDescription().getMimeType(k));
+                    sonuc.put("turler", turler);
+                }
+                sonuc.put("ogeSayisi", clip.getItemCount());
                 call.resolve(sonuc);
             } catch (Exception e) { call.reject("Pano okunamadı: " + e.getMessage()); }
         });

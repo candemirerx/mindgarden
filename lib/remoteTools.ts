@@ -353,7 +353,7 @@ type NativeRemote = {
     getDictationEngines(): Promise<{ onDevice: boolean; system: boolean; google?: boolean }>;
     stopBridgeDictation(): Promise<void>;
     setImmersive(options: { enabled: boolean }): Promise<void>;
-    readClipboard(): Promise<{ text?: string; mime?: string; data?: string }>;
+    readClipboard(): Promise<{ text?: string; mime?: string; data?: string; turler?: string[]; ogeSayisi?: number }>;
     setImagePaste(options: { enabled: boolean }): Promise<void>;
     writeClipboard(options: { text?: string; images?: { mime: string; data: string }[] }): Promise<void>;
 };
@@ -1227,11 +1227,11 @@ export async function klavyeGorselleriniDinle(geldi: (gorsel: Blob) => void): Pr
 }
 
 /** Telefon panosunu okur: metin ya da görsel. */
-export async function telefonPanosunuOku(): Promise<{ metin?: string; gorsel?: Blob }> {
+export async function telefonPanosunuOku(): Promise<{ metin?: string; gorsel?: Blob; turler?: string[]; ogeSayisi?: number }> {
     if (isNative()) {
         const pano = await native.readClipboard();
         if (pano.data && pano.mime) return { gorsel: base64Blob(pano.data, pano.mime) };
-        return { metin: pano.text || undefined };
+        return { metin: pano.text || undefined, turler: pano.turler, ogeSayisi: pano.ogeSayisi };
     }
     const pano = navigator.clipboard as Clipboard | undefined;
     if (!pano) throw new Error('Bu tarayıcı panoyu okumaya izin vermiyor.');
@@ -1277,7 +1277,9 @@ export async function telefonPanosunuBilgisayaraGonder(prefs: RemotePrefs): Prom
     }
     if (!pano.metin) throw new Error('Telefon panosu boş.');
     await sendToComputerClipboard(pano.metin, prefs);
-    return 'Telefon panosundaki metin bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz';
+    // Görsel beklenirken yalnız metin gittiyse nedenini göstermek için panonun bildirdiği türler eklenir.
+    const turler = (pano.turler ?? []).join(', ');
+    return 'Telefon panosundaki metin bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz' + (turler ? ' · Panodaki tür: ' + turler + (pano.ogeSayisi && pano.ogeSayisi > 1 ? ' (' + pano.ogeSayisi + ' öğe)' : '') + ' · Görsel bulunamadı' : '');
 }
 
 export async function dictate(language: string): Promise<string> {
