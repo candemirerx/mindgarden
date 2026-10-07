@@ -1216,12 +1216,37 @@ public class RemoteBridgePlugin extends Plugin {
                 ClipData clip = pano == null ? null : pano.getPrimaryClip();
                 JSObject sonuc = new JSObject();
                 if (clip == null || clip.getItemCount() == 0) { call.resolve(sonuc); return; }
+                // En son kopyalanan görsel olabilir: çoğu uygulama (Chrome, Galeri, Samsung
+                // Pano, ekran görüntüsü) görseli metinle birlikte ya da ilk sırada olmayan
+                // bir öğe olarak koyar ve türü sağlayıcıdan değil kopya açıklamasından bildirir.
+                // Bu yüzden tüm öğelere bakılır; görsel varsa metne tercih edilir.
                 ClipData.Item oge = clip.getItemAt(0);
-                Uri uri = oge.getUri();
-                String tur = uri == null ? null : activity.getContentResolver().getType(uri);
-                if (uri != null && tur != null && tur.startsWith("image/")) {
+                Uri uri = null; String tur = null;
+                android.content.ContentResolver cozucu = activity.getContentResolver();
+                boolean aciklamadaGorsel = clip.getDescription() != null && clip.getDescription().hasMimeType("image/*");
+                for (int i = 0; i < clip.getItemCount() && uri == null; i++) {
+                    Uri aday = clip.getItemAt(i).getUri();
+                    if (aday == null) continue;
+                    String t = null;
+                    try { t = cozucu.getType(aday); } catch (Exception ignored) { }
+                    if (t == null || !t.startsWith("image/")) {
+                        try {
+                            String[] akis = cozucu.getStreamTypes(aday, "image/*");
+                            if (akis != null && akis.length > 0) t = akis[0];
+                        } catch (Exception ignored) { }
+                    }
+                    if ((t == null || !t.startsWith("image/")) && aciklamadaGorsel) {
+                        for (int k = 0; k < clip.getDescription().getMimeTypeCount(); k++) {
+                            String m = clip.getDescription().getMimeType(k);
+                            if (m != null && m.startsWith("image/")) { t = m; break; }
+                        }
+                    }
+                    if (t != null && t.startsWith("image/")) { uri = aday; tur = t; oge = clip.getItemAt(i); }
+                }
+                final Uri gorselUri = uri; final String gorselTuru = tur;
+                if (gorselUri != null) {
                     new Thread(() -> {
-                        try (InputStream giris = activity.getContentResolver().openInputStream(uri)) {
+                        try (InputStream giris = cozucu.openInputStream(gorselUri)) {
                             if (giris == null) throw new IOException("Görsel açılamadı.");
                             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
                             byte[] tampon = new byte[16384]; int okunan;
@@ -1230,7 +1255,7 @@ public class RemoteBridgePlugin extends Plugin {
                                 if (bytes.size() > 30 * 1024 * 1024) throw new IOException("Panodaki görsel çok büyük.");
                             }
                             JSObject g = new JSObject();
-                            g.put("mime", tur);
+                            g.put("mime", gorselTuru);
                             g.put("data", Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP));
                             call.resolve(g);
                         } catch (Exception e) { call.reject("Panodaki görsel okunamadı: " + e.getMessage()); }
