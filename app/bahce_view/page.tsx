@@ -8,7 +8,6 @@ import { ArrowLeft, Sprout, Settings2, List, TreePine } from 'lucide-react';
 import { useBudamaModu } from '@/components/ui/BudananlarDugmesi';
 import { budamaFiltresi } from '@/lib/uiPrefs';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
-import { MindMapNode } from '@/components/canvas/MindMapNode';
 import { YeniAgac } from '@/components/canvas/YeniAgac';
 import { SeciliEylemler } from '@/components/canvas/SeciliEylemler';
 import { useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
@@ -691,7 +690,7 @@ function GardenPageInner() {
                     gezinme={tuval.gezinme} agacDizilisi={tuval.gosterim === 'yatay' ? 'alt' : 'yan'}
                     agaclar={gorunenAgaclar.map(a => ({ id: a.id, ad: a.title, sayi: notSayisi(a) }))}>
                     {mindRoots.length > 0 ? (
-                        <ul className={tuval.gosterim === 'yatay' ? 'flex flex-col gap-24' : tuval.gosterim === 'organik' ? 'flex items-start gap-28' : 'flex gap-20'}>
+                        <ul className={tuval.gosterim === 'yatay' ? 'flex flex-col gap-24' : 'flex items-start gap-28'}>
                             {gorunenAgaclar.map((root) => (
                                 <SuruklenebilirAgac
                                     key={root.id}
@@ -701,15 +700,6 @@ function GardenPageInner() {
                                         void updateNodePosition(root.id, x, y);
                                     }}
                                 >
-                                    {tuval.gosterim === 'klasik' ? (
-                                        <MindMapNode
-                                            node={root}
-                                            onAddChild={handleAddChild}
-                                            onAddTree={handleAddTreeBeside}
-                                            onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
-                                            depth={0}
-                                        />
-                                    ) : (
                                         <YeniAgac
                                             node={root}
                                             onAddSiblingAfter={handleAddSiblingAfter}
@@ -721,7 +711,6 @@ function GardenPageInner() {
                                             onAddTree={handleAddTreeBeside}
                                             onEdit={(node) => router.push(`/editor?id=${gardenId}&nodeId=${node.id}`)}
                                         />
-                                    )}
                                 </SuruklenebilirAgac>
                             ))}
                         </ul>
@@ -744,7 +733,7 @@ function GardenPageInner() {
                         </div>
                     )}
                 </GardenCanvas>
-                {tuval.gosterim !== 'klasik' && (
+                {(
                     <SeciliEylemler
                         kip={tuval.eylem}
                         kokler={mindRoots}

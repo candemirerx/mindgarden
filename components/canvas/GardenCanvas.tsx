@@ -23,7 +23,7 @@ interface GardenCanvasProps {
     gezinme?: GezinmeTuru;
     /** Ağaç kökleri (sekme adları ve çubuk işaretleri için). */
     agaclar?: { id: string; ad: string; sayi: number }[];
-    /** Ağaçlar yan yana mı (organik/klasik) alt alta mı (yatay akış) dizili. */
+    /** Ağaçlar yan yana mı (organik) alt alta mı (yatay akış) dizili. */
     agacDizilisi?: 'yan' | 'alt';
 }
 

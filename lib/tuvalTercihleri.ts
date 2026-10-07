@@ -1,9 +1,9 @@
 /**
  * Tuval görünüm tercihleri (cihaza özel; bahçe verisine yazılmaz).
  *
- * - gosterim: ağaçların dizilişi. Organik: kökten dallar açılır, yapraklar
- *   dalın ortasından asılır; ağaçlar yan yana. Yatay: soldan sağa kök → dal →
- *   yaprak; ağaçlar alt alta. Klasik: önceki düzen.
+ * - gosterim: yalnız dizilim (kart görünümünden bağımsız). Organik: kökten dallar
+ *   açılır, yapraklar dalın ortasından asılır; ağaçlar yan yana. Yatay: soldan
+ *   sağa kök → dal → yaprak; ağaçlar alt alta.
  * - gezinme: çok ağaçta hızlı geçiş için kaydırma çubukları ya da üstte ağaç
  *   sekmeleri (yalnız biri) ya da hiçbiri.
  * - onizleme: kartta başlığın altında içeriğin kaç satırı görünsün (0: yalnız başlık).
@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import { bildir, dinle } from './degisim';
 import { temaAboneGec } from './tema';
 
-export type TuvalGosterim = 'organik' | 'yatay' | 'klasik';
+export type TuvalGosterim = 'organik' | 'yatay';
 export type TuvalGezinme = 'cubuk' | 'sekme' | 'yok';
 export type TuvalOnizleme = 0 | 2 | 3;
 /** Seçili notun eylem düğmeleri: kart üstünde hap + kenar artıları, alttan panel ya da yüzen düğme. */
@@ -33,7 +33,8 @@ export function tuvalTercihleri(): TuvalTercihleri {
     try {
         const k = JSON.parse(localStorage.getItem(ANAHTAR) || '{}') as Partial<TuvalTercihleri>;
         return {
-            gosterim: k.gosterim === 'yatay' || k.gosterim === 'klasik' ? k.gosterim : 'organik',
+            // Eski 'klasik' düzen kalktı (kendi kart görünümüne bağlıydı); kayıtlı olan organiğe döner
+            gosterim: k.gosterim === 'yatay' ? 'yatay' : 'organik',
             gezinme: k.gezinme === 'cubuk' || k.gezinme === 'yok' ? k.gezinme : 'sekme',
             onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
             eylem: k.eylem === 'panel' || k.eylem === 'yuzen' ? k.eylem : 'hap',
