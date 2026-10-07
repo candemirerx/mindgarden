@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Loader2, TreePine } from 'lucide-react';
-import { denemeAgaciAdresi, type DenemeTuru } from '@/lib/denemeAgaci';
+import { ayarlaraDonSakla, denemeAgaciAdresi, type DenemeTuru } from '@/lib/denemeAgaci';
 import { cx } from '@/components/ui/settings';
 
 const METIN: Record<DenemeTuru, { baslik: string; aciklama: string; dugme: string }> = {
@@ -38,6 +38,7 @@ export default function DenemeAgaciDugmesi({ tur, vurgulu = false }: { tur: Dene
         setMesgul(true); setHata('');
         try {
             const adres = await denemeAgaciAdresi(tur);
+            ayarlaraDonSakla(tur === 'yapayzeka' ? 'models' : 'remote');
             window.dispatchEvent(new Event('nb-editor-kaydet')); // açık gerçek not varsa önce kaydedilir
             window.dispatchEvent(new Event('nb-ayarlari-kapat'));
             router.push(adres);

@@ -33,7 +33,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { APP_VERSION } from '@/lib/config';
-import { denemeAgaciAdresi, type DenemeTuru } from '@/lib/denemeAgaci';
+import { ayarlaraDonSakla, denemeAgaciAdresi, type DenemeTuru } from '@/lib/denemeAgaci';
 
 export type SettingsSectionId =
     | 'account'
@@ -109,6 +109,7 @@ function DenemeDugmesi() {
         setMesgul(true);
         try {
             const adres = await denemeAgaciAdresi('hepsi');
+            ayarlaraDonSakla('home');
             window.dispatchEvent(new Event('nb-editor-kaydet'));
             window.dispatchEvent(new Event('nb-ayarlari-kapat'));
             router.push(adres);

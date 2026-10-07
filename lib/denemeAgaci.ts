@@ -45,3 +45,24 @@ export async function denemeAgaciAdresi(tur: DenemeTuru): Promise<string> {
     aracSekmesiniKaydet(agac.sekme);
     return `/editor?deneme=${tur}`;
 }
+
+const DONUS_ANAHTARI = 'nb-ayarlara-don';
+
+/**
+ * Ayarlardan deneme ağacına geçerken hangi ayar sayfasında olunduğunu saklar;
+ * deneme editöründen geri dönülünce ayarlar o sayfada yeniden açılır (ana sayfaya değil).
+ */
+export function ayarlaraDonSakla(bolum: string): void {
+    try { sessionStorage.setItem(DONUS_ANAHTARI, JSON.stringify({ bolum, zaman: Date.now() })); } catch { /* depolama kapalı */ }
+}
+
+/** Saklanan dönüş bölümünü bir kez okur ve siler; yoksa ya da bayatsa (30 dk) null. */
+export function ayarlaraDonOku(): string | null {
+    try {
+        const ham = sessionStorage.getItem(DONUS_ANAHTARI);
+        if (!ham) return null;
+        sessionStorage.removeItem(DONUS_ANAHTARI);
+        const k = JSON.parse(ham) as { bolum?: string; zaman?: number };
+        return k.bolum && Date.now() - (k.zaman ?? 0) < 30 * 60 * 1000 ? k.bolum : null;
+    } catch { return null; }
+}

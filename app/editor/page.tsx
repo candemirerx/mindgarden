@@ -10,6 +10,7 @@ import GaleriDugmeleri from '@/components/editor/GaleriDugmeleri';
 import KisayolPanosu, { KisayolSecici } from '@/components/editor/KisayolPanosu';
 import EkranDuzeni, { EkranSecici } from '@/components/editor/EkranDuzeni';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
+import type { SettingsSectionId } from '@/components/editor/SettingsHome';
 import { remotePrefs, sistemCubuklariniGizle } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
@@ -28,7 +29,7 @@ import { runCustomProviderDirect, CustomProviderError } from '@/lib/customProvid
 import { runLocalInference, isOfflineFallbackEnabled } from '@/lib/localLlm';
 import { Capacitor } from '@capacitor/core';
 import { imleciGorunurTut } from '@/lib/imlecGorunur';
-import { DENEME_AGACLARI, denemeTuru } from '@/lib/denemeAgaci';
+import { DENEME_AGACLARI, ayarlaraDonOku, denemeTuru } from '@/lib/denemeAgaci';
 
 /**
  * Yerel taslak: uygulama kapanırken veya arka plana atılırken kayıt yetişmese
@@ -87,7 +88,7 @@ function EditorPageInner() {
     const [remoteToolPrefs, setRemoteToolPrefs] = useState(remotePrefs);
     const [settingsOpen, setSettingsOpen] = useState(false);
     /** Ayar penceresi istenen bölümde açılabilsin: kısayol panosu doğrudan makrolara gider. */
-    const [settingsBolumu, setSettingsBolumu] = useState<'home' | 'tools' | 'remote' | 'kisayollar'>('home');
+    const [settingsBolumu, setSettingsBolumu] = useState<SettingsSectionId | 'home'>('home');
     const [focusMode, setFocusMode] = useState(false);
     const [toolTab, setToolTab] = useState<'tools' | 'computer' | 'ai'>('tools');
     useEffect(() => { setToolTab(sonAracSekmesi()); }, []);
@@ -167,6 +168,13 @@ function EditorPageInner() {
     const sekmeBaglanti = useBaglantiDurumu(uzakTercihler, { aralikMs: 30000, etkin: bilgisayarAcik });
     const baglantiRengi = sekmeBaglanti.durum?.tur === 'ok' ? 'text-moss-600' : sekmeBaglanti.durum && sekmeBaglanti.durum.tur !== 'bakiliyor' ? 'text-berry-600' : '';
     const sekmeBasili = useRef<{ zaman: ReturnType<typeof setTimeout> | null; uzun: boolean }>({ zaman: null, uzun: false });
+    // Deneme ağacından geri dönüldüğünde ayarlar, deneme ağacına geçilen sayfada yeniden açılır.
+    useEffect(() => {
+        if (deneme) return;
+        const bolum = ayarlaraDonOku();
+        if (bolum) { setSettingsBolumu(bolum as SettingsSectionId | 'home'); setSettingsOpen(true); }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const baglantiAyarlariniAc = () => { setSettingsBolumu('remote'); setSettingsOpen(true); };
     const activeToolTab = resultPending ? 'ai' : visibleToolTabs.some(tab => tab.id === toolTab) ? toolTab : visibleToolTabs[0]?.id;
 
