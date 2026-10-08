@@ -15,7 +15,7 @@
  * seçenekleri açar; parmak kaydırılıp bırakılınca seçilen işlem uygulanır.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Copy, CornerDownRight, GitBranch, Leaf, ListPlus, Pencil, Scissors, Move, Sprout, TreePine } from 'lucide-react';
+import { Check, ChevronDown, Copy, CornerDownRight, GitBranch, Leaf, ListPlus, Pencil, Plus, Scissors, Move, Sprout, TreePine } from 'lucide-react';
 import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
@@ -306,7 +306,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
                     <button data-kart-eylem="kopya" type="button" onClick={kopyala} className={dugme('kopya')}
                         title="İçeriği kopyala" aria-label="İçeriği kopyala">{kopyalandi ? <Check size={17} /> : <Copy size={17} />}</button>
                     <button data-kart-eylem="editor" type="button" onClick={e => { e.stopPropagation(); onEdit(node); }}
-                        className={dugme('editor', true)} title="Metin editörünü aç" aria-label="Metin editörünü aç"><Pencil size={21} /></button>
+                        className={dugme('editor', true)} title="Metin editörünü aç" aria-label="Metin editörünü aç"><Pencil size={18} /><span className="kart-eylem-yazi">Düzenle</span></button>
                     <button data-kart-eylem="buda" type="button" onClick={e => { e.stopPropagation(); void setNodePruned(node.id, !budandi); }}
                         aria-pressed={budandi} className={dugme('buda')} title={budandi ? 'Budamayı geri al' : 'Buda'} aria-label={budandi ? 'Budamayı geri al' : 'Buda'}><Scissors size={17} /></button>
                 </div>
@@ -317,9 +317,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
                     if (tur === 'kok') onAddTree?.(node.id);
                     else if (onAddSiblingAfter) onAddSiblingAfter(node.id);
                     else onAddChild(ebeveynId, 'right');
-                }} title={yanAdi} aria-label={yanAdi} className={`${dugme('yan')} kart-yan`}>{tur === 'kok' ? <Sprout size={18} /> : <ListPlus size={18} />}</button>
+                }} title={yanAdi} aria-label={yanAdi} className={`${dugme('yan')} kart-yan`}><Plus size={20} /></button>
                 <button data-kart-eylem="alt" type="button" onClick={e => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                    title={ekleAdi} aria-label={ekleAdi} className={`${dugme('alt')} kart-alt`}><CornerDownRight size={18} /></button>
+                    title={ekleAdi} aria-label={ekleAdi} className={`${dugme('alt')} kart-alt`}><Plus size={20} /></button>
                 {hareket.hedef && <span className={`kart-eylem-etiket ${['kopya', 'editor', 'buda'].includes(hareket.hedef) ? 'kart-eylem-etiket--ust' : ''}`} aria-live="polite">{etiketler[hareket.hedef]}</span>}
             </>}
             <div role="button" tabIndex={0} aria-label={node.title} aria-pressed={secili}

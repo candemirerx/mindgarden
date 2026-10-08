@@ -74,7 +74,7 @@ html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60;
 .kart-araclar {
   position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); z-index: 50;
   display: flex; align-items: stretch; width: calc(100% - 12px); margin-bottom: -1px;
-  border: 1px solid rgb(var(--moss-200)); border-radius: 18px; overflow: hidden;
+  border: 1px solid rgb(var(--moss-200)); border-radius: 16px 16px 0 0; overflow: hidden;
   background: linear-gradient(180deg, rgb(var(--surface)), rgb(var(--moss-50) / .8));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .18), 0 16px 30px -18px rgb(var(--moss-900) / .75), 0 2px 6px -3px rgb(var(--sand-950) / .18);
   animation: kart-menu-ac .18s cubic-bezier(.22, .9, .3, 1.12);
@@ -90,14 +90,16 @@ html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60;
 .garden-page .kart-araclar .kart-eylem--ana:active { box-shadow: inset 0 3px 10px rgb(var(--moss-950) / .28); }
 .garden-page .kart-araclar .kart-eylem--hedef { background: rgb(var(--moss-100)); color: rgb(var(--moss-900)); box-shadow: inset 0 0 0 2px rgb(var(--moss-500)); }
 .garden-page .kart-araclar .kart-eylem--ana.kart-eylem--hedef { background: rgb(var(--moss-500)); color: rgb(var(--surface)); box-shadow: inset 0 0 0 2px rgb(var(--moss-300) / .45); }
-.garden-page .kart-araclar .kart-eylem:first-child { border-radius: 16px 0 0 16px; }
-.garden-page .kart-araclar .kart-eylem:last-child { border-radius: 0 16px 16px 0; }
+.garden-page .kart-araclar .kart-eylem:first-child { border-radius: 15px 0 0 0; }
+.garden-page .kart-araclar .kart-eylem:last-child { border-radius: 0 15px 0 0; }
+.garden-page .kart-araclar .kart-eylem--ana { gap: 7px; }
+.kart-eylem-yazi { font-size: 11px; font-weight: 600; letter-spacing: .01em; }
 .garden-page .kart-araclar .kart-eylem:focus-visible { outline: none; box-shadow: inset 0 0 0 3px rgb(var(--moss-400)); }
 /* Yan ve alt düğmeler: şeritle aynı yüzey, ölçü ve gölge dili. */
 .kart-yan, .kart-alt, .kart-tasi { position: absolute; z-index: 50; animation: kart-dugme-ac .2s ease-out backwards; }
 @keyframes kart-dugme-ac { from { opacity: 0; scale: .8; } }
 .garden-page .kart-tasi, .garden-page .kart-yan, .garden-page .kart-alt {
-  width: 42px; height: 42px; border: 1px solid rgb(var(--moss-200)); border-radius: 15px;
+  width: 44px; height: 44px; border: 1px solid rgb(var(--moss-200)); border-radius: 14px;
   background: linear-gradient(180deg, rgb(var(--surface)), rgb(var(--moss-50) / .75));
   color: rgb(var(--moss-800));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .18), 0 14px 26px -18px rgb(var(--moss-900) / .8), 0 2px 5px -3px rgb(var(--sand-950) / .18);
@@ -105,6 +107,10 @@ html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60;
 }
 .garden-page .kart-tasi:hover, .garden-page .kart-yan:hover, .garden-page .kart-alt:hover { background: rgb(var(--moss-50)); color: rgb(var(--moss-900)); }
 .garden-page .kart-tasi:active, .garden-page .kart-yan:active, .garden-page .kart-alt:active { box-shadow: inset 0 3px 8px rgb(var(--moss-900) / .2); }
+.garden-page .kart-tasi.kart-eylem--hedef, .garden-page .kart-yan.kart-eylem--hedef, .garden-page .kart-alt.kart-eylem--hedef {
+  background: rgb(var(--moss-600)); color: rgb(var(--surface));
+  box-shadow: 0 0 0 3px rgb(var(--moss-300) / .5), 0 8px 20px -8px rgb(var(--moss-900) / .5);
+}
 .kart-yan { left: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
 .kart-tasi { right: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
 .kart-alt { top: calc(100% + 4px); left: 50%; transform: translateX(-50%); }
@@ -119,3 +125,13 @@ html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60;
 
 /* Menü açıkken eldeki kart hafifçe yükselir. */
 html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-shadow: 0 0 0 2px rgb(var(--sand-50)), 0 0 0 4.5px rgb(var(--moss-500)), 0 22px 44px -24px rgb(var(--moss-900) / .7); }
+
+/* Tuvalde karta basılı tutup kaydırırken Android WebView uzun basışı metin
+   seçme hareketine çeviriyor ve dokunuşu iptal ediyordu; menü açılıp hemen
+   kapanıyordu. Kart içindeki başlık ve metinlerin seçilmesini kapatıyoruz. */
+.garden-page .dugum-karti,
+.garden-page .dugum-karti * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
