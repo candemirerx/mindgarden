@@ -192,7 +192,33 @@ try {
  assert.equal(soldaki[1],'branch');
  console.log('PASS: sol yanına ekleme sıralaması');
 
+ // Kartı dokunup bıraktıktan sonra normal düğme dokunuşu da işlevini çalıştırır.
+ const tapAt = async p => { await touch('touchStart',p); await wait(60); await touch('touchEnd',p); await wait(250); };
+ const tapMenu = async action => {
+  await tapAt(await box('[data-yk-id="branch"]'));
+  assert.equal(await run('document.documentElement.hasAttribute("data-kart-menusu")'),true);
+  await tapAt(await box(`[data-kart-eylem="${action}"]`));
+ };
+ await load(); await run('navigator.clipboard.writeText("önceki pano")'); await tapMenu('kopya');
+ assert.equal(await run('navigator.clipboard.readText()'),'Küçük bir fikirle başla.');
+ assert.equal(await run('document.documentElement.hasAttribute("data-kart-menusu")'),false);
+ await tapMenu('buda');
+ assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),true);
+ await tapMenu('buda');
+ assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),false);
+ for(const action of ['sol','yan','alt']) {
+  await tapMenu(action);
+  assert.equal(await run('!!document.querySelector("[role=dialog]")'),true);
+  await run(`Array.from(document.querySelectorAll('[role=dialog] button')).find(b=>b.textContent.includes('İptal')).click()`);
+  await wait(200);
+ }
+ await tapMenu('editor');
+ for(let i=0;i<100;i++){if(await run('location.pathname==="/editor"'))break;await wait(100);}
+ assert.equal(await run('new URL(location.href).searchParams.get("nodeId")'),'branch');
+ console.log('PASS: kartı dokunup bırak → düğmeye normal dokun; kopyala, buda/geri al, sol/sağ/alt ekleme ve editör çalışır');
+
  // Düğme konumuna başka işlev atama, devre dışı bırakma ve kalıcılık.
+ await navigate('/bahce_view?id=gesture-test'); await wait(300);
  await run(`localStorage.setItem('nb-tuval-v1',JSON.stringify({...JSON.parse(localStorage.getItem('nb-tuval-v1')),dugmeler:{ustSol:'kopya',ustOrta:'editor',ustSag:'buda',sol:'sol',sag:'yok',alt:'alt',altSol:'ayarlar',altSag:'yok'}}))`);
  await load(); await hold('branch');
  assert.equal(await run('document.querySelector("[data-kart-yer=sag]")===null'),true);

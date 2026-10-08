@@ -326,7 +326,13 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         const ust = yer.startsWith('ust');
         const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : 'Düzenle';
         return <button key={yer} data-kart-yer={yer} data-kart-eylem={id} type="button"
-            onClick={e => { e.stopPropagation(); uygula(id); }} title={etiketler[id]} aria-label={etiketler[id]}
+            onClick={e => {
+                e.stopPropagation();
+                // Gerçek dokunuşta capture aşamasında menüyü kaldırmak click işlevini yutuyor.
+                // Önce düğmenin işlevi çalışsın, ardından menü kapansın.
+                uygula(id);
+                hareket.kapat();
+            }} title={etiketler[id]} aria-label={etiketler[id]}
             aria-pressed={id === 'buda' ? budandi : undefined}
             className={dugme(id, ust && yer === 'ustOrta') + ' ' + sinif}>
             {simge(id)}{!yer.startsWith('altS') && <span className="kart-eylem-yazi">{yazi}</span>}
@@ -335,7 +341,6 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
 
     return (
         <div ref={hareket.kap} data-kart-kap data-kart-aktif={araclar ? '1' : undefined}
-            onClickCapture={e => { if ((e.target as Element).closest('[data-kart-eylem]') && araclar) hareket.kapat(); }}
             onKeyDown={e => { if (e.key === 'Escape') { hareket.kapat(); hareket.kap.current?.querySelector<HTMLElement>('.dugum-karti')?.focus(); } }}
             className={`relative flex-shrink-0 ${genislik} ${araclar ? 'z-50' : ''}`}>
             {araclar && <>
