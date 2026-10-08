@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { KART_BASILI_TUT_KAYMA_ESIGI, kartMenusunuAyarla } from '@/lib/canvasGesture';
+import type { KartKullanim } from '@/lib/tuvalTercihleri';
 
 /** Tek dokunuş menüyü sabit açar; sonraki uzun basış taşır. İlk uzun basış seçim yapar. */
-export function useKartHareketi() {
+export function useKartHareketi(kullanim: KartKullanim = 'birlikte', disMenu?: () => void) {
     const [acik, setAcik] = useState(false);
     const [hedef, setHedef] = useState<string | null>(null);
     const kap = useRef<HTMLDivElement>(null);
@@ -27,6 +28,7 @@ export function useKartHareketi() {
         setHedef(null);
     }, [tasi]);
     const ac = (kalici: boolean) => {
+        if (disMenu) { disMenu(); return; }
         // Diğer kartın menüsünü kapat; aynı anda yalnız bir kart sahibi olabilir.
         document.dispatchEvent(new CustomEvent('nb-kart-menu-ac', { detail: kap.current }));
         sahip.current = true;
@@ -34,6 +36,8 @@ export function useKartHareketi() {
         kartMenusunuAyarla(true);
         setAcik(true);
     };
+
+    useEffect(() => { kapat(); }, [kullanim, !!disMenu, kapat]);
 
     useEffect(() => {
         const digeri = (e: Event) => { if ((e as CustomEvent).detail !== kap.current) kapat(); };
@@ -87,7 +91,8 @@ export function useKartHareketi() {
                         b.tasima = true;
                         setHedef(null);
                         tasi('basla', b.x, b.y);
-                    } else ac(false);
+                    } else if (kullanim !== 'dokun') ac(false);
+                    else ac(true);
                 }, 320);
             },
             onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
@@ -99,22 +104,21 @@ export function useKartHareketi() {
                     clearTimeout(timer.current);
                 }
                 if (b.ikinci || b.uzun) e.stopPropagation();
-                if (b.uzun) setHedef(bul(e.clientX, e.clientY)?.dataset.kartEylem ?? null);
+                if (b.uzun && kullanim !== 'dokun') setHedef(bul(e.clientX, e.clientY)?.dataset.kartEylem ?? null);
             },
             onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
                 const b = bas.current;
                 if (!b || b.id !== e.pointerId) return;
                 tikYut.current = true;
                 clearTimeout(timer.current);
-                const secim = b.uzun && !b.tasima ? bul(e.clientX, e.clientY) : undefined;
+                const secim = b.uzun && !b.tasima && kullanim !== 'dokun' ? bul(e.clientX, e.clientY) : undefined;
                 bas.current = null;
                 if (b.tasima) { e.stopPropagation(); tasi('bitir', e.clientX, e.clientY); kapat(); }
                 else if (b.uzun) {
                     e.stopPropagation();
                     // Düğme kaldırılmadan işlevi çalıştır; React tıklaması menüyü kapatır.
-                    secim?.click();
-                    kapat();
-                } else if (!b.kaydi) { e.stopPropagation(); ac(true); }
+                    if (kullanim !== 'dokun') { secim?.click(); kapat(); }
+                } else if (!b.kaydi) { e.stopPropagation(); if (kullanim !== 'kaydir') ac(true); }
                 if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
             },
             onPointerCancel() { tikYut.current = true; kapat(); },
@@ -126,7 +130,7 @@ export function useKartHareketi() {
             onClick(e: React.MouseEvent) {
                 e.stopPropagation();
                 if (tikYut.current) { tikYut.current = false; return; }
-                ac(true);
+                if (kullanim !== 'kaydir') ac(true);
             }
         }
     };

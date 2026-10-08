@@ -40,7 +40,7 @@ export function SeciliEylemler({ kip, kokler, seciliId, onKapat, onEdit, onYanin
     const secili = seciliId ? bul(kokler, seciliId) : null;
     // Seçim değişince yüzen düğme kapalı başlar.
     useEffect(() => { setAcik(false); }, [seciliId]);
-    if (kip === 'hap' || !secili) return null;
+    if ((kip !== 'panel' && kip !== 'yuzen') || !secili) return null;
     const { node, derinlik } = secili;
     const budandi = node.isPruned ?? false;
     const tur = derinlik === 0 ? 'ağaç' : derinlik === 1 ? 'dal' : 'yaprak';

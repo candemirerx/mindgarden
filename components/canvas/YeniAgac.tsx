@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Tuvalin yeni ağaç çizimi: Organik ve Yatay akış.
+ * Tuvalin ağaç çizimi: Organik, Klasik ve Yatay akış.
  *
  * Kartlar CSS ile dizilir; bağlantılar kartlar yerleştikten sonra ölçülüp SVG
  * ile çizilir (kökten uca doğru incelen kavisli dallar). Böylece kartların
@@ -20,14 +20,15 @@ import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 import { VARSAYILAN_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
-import type { KartDugmeleri, KartIslevi, TuvalEylem, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
+import type { KartDugmeleri, KartIslevi, KartKullanim, TuvalEylem, TuvalKart, TuvalOnizleme, TuvalGosterim } from '@/lib/tuvalTercihleri';
 
-type Duzen = 'organik' | 'yatay';
+type Duzen = TuvalGosterim;
 type Ortak = {
     duzen: Duzen;
     onizleme: TuvalOnizleme;
-    /** Eylem düğmeleri: 'hap' kart üstünde; 'panel' ve 'yuzen' sayfa düzeyinde çizilir (kartta düğme yok). */
+    /** Kart çevresinde üç tasarım; panel ve yüzen düğme sayfa düzeyinde çizilir. */
     eylem?: TuvalEylem;
+    kullanim?: KartKullanim;
     /** Kart tasarımı; verilmezse bahçe. */
     kart?: TuvalKart;
     onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
@@ -40,7 +41,7 @@ type Ortak = {
     onEdit: (node: MindNode) => void;
 };
 
-/** Kart aracı düğmesi: üst şeritte eşit bölme, yan ve alt düğmelerde 42 px kare. */
+/** Kart aracı: eşit bölmeli üst şerit ve kenar boyunca geniş, kısa hedefler. */
 const ARAC = 'kart-eylem flex items-center justify-center rounded-full outline-none touch-manipulation';
 
 /** Notun gövdesinden kısa önizleme: başlık satırı atlanır, işaretler sadeleşir. */
@@ -92,6 +93,15 @@ export function YeniAgac({ node, ...ortak }: { node: MindNode } & Ortak) {
         gruplar.forEach((cocuklar, eid) => {
             const e = kutular.get(eid)!;
             const ck = cocuklar.map(id => kutular.get(id)!);
+            if (ortak.duzen === 'klasik') {
+                const sx = e.x + e.w / 2, sy = e.y + e.h;
+                const ara = sy + (Math.min(...ck.map(c => c.y)) - sy) / 2;
+                ck.forEach(c => {
+                    const cx = c.x + c.w / 2;
+                    yollar.push({ d: `M${sx} ${sy}V${ara}H${cx}V${c.y}`, renk: 'rgb(var(--sand-400))', dolu: false, k: 2 });
+                });
+                return;
+            }
             if (ortak.duzen === 'yatay') {
                 const sx = e.x + e.w, sy = e.y + e.h / 2;
                 ck.forEach(c => {
@@ -179,12 +189,13 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', dugmeler = VARSAYILAN_KART_DUGMELERI, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', kullanim = 'birlikte', dugmeler = VARSAYILAN_KART_DUGMELERI, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
     const [kopyalandi, setKopyalandi] = useState(false);
-    const hareket = useKartHareketi();
+    const disMenu = eylem === 'panel' || eylem === 'yuzen';
+    const hareket = useKartHareketi(disMenu ? 'dokun' : kullanim, disMenu ? () => setSelectedNode(node.id) : undefined);
     const secili = selectedNodeId === node.id;
     const budandi = node.isPruned ?? false;
     const cocukSayisi = node.children.length;
@@ -341,6 +352,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
 
     return (
         <div ref={hareket.kap} data-kart-kap data-kart-aktif={araclar ? '1' : undefined}
+            data-kart-model={eylem}
             onKeyDown={e => { if (e.key === 'Escape') { hareket.kapat(); hareket.kap.current?.querySelector<HTMLElement>('.dugum-karti')?.focus(); } }}
             className={`relative flex-shrink-0 ${genislik} ${araclar ? 'z-50' : ''}`}>
             {araclar && <>

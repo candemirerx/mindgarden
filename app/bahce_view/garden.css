@@ -168,3 +168,17 @@ html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-sha
     background:rgb(var(--moss-600)); color:rgb(var(--surface));
     box-shadow:0 0 0 3px rgb(var(--moss-300) / .5);
 }
+
+/* Aynı işlevler ve yakın hedefler, üç seçilebilir menü yüzeyi. */
+.garden-page [data-kart-model="yumusak"] .kart-araclar { border-radius:26px 26px 0 0; background:rgb(var(--moss-50)); }
+.garden-page [data-kart-model="yumusak"] .kart-araclar .kart-eylem:first-child { border-radius:25px 0 0 0; }
+.garden-page [data-kart-model="yumusak"] .kart-araclar .kart-eylem:last-child { border-radius:0 25px 0 0; }
+.garden-page [data-kart-model="yumusak"] .kart-sol { border-radius:26px 0 0 26px; }
+.garden-page [data-kart-model="yumusak"] .kart-yan { border-radius:0 26px 26px 0; }
+.garden-page [data-kart-model="yumusak"] .kart-alt { border-radius:0 0 26px 26px; }
+.garden-page [data-kart-model="kapsul"] .kart-araclar { margin-bottom:6px; border-radius:999px; }
+.garden-page [data-kart-model="kapsul"] .kart-araclar .kart-eylem:first-child { border-radius:999px 0 0 999px; }
+.garden-page [data-kart-model="kapsul"] .kart-araclar .kart-eylem:last-child { border-radius:0 999px 999px 0; }
+.garden-page [data-kart-model="kapsul"] .kart-sol { right:calc(100% + 6px); border-radius:999px; width:40px; }
+.garden-page [data-kart-model="kapsul"] .kart-yan { left:calc(100% + 6px); border-radius:999px; width:40px; }
+.garden-page [data-kart-model="kapsul"] .kart-alt { top:calc(100% + 6px); border-radius:999px; height:40px; }

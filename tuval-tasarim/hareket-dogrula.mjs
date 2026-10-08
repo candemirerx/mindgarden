@@ -22,12 +22,14 @@ try {
  await c.gonder('Page.enable'); await c.gonder('Runtime.enable');
  await c.gonder('Emulation.setDeviceMetricsOverride',{width:430,height:932,deviceScaleFactor:2,mobile:true});
  await c.gonder('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
+ await c.gonder('Emulation.setFocusEmulationEnabled',{enabled:true});
  const run = async expression => { const r=await c.gonder('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true}); if(r.exceptionDetails) throw Error(JSON.stringify(r.exceptionDetails)); return r.result.value; };
  const navigate = async path => {
+  await run('window.__nbEskiBelge=true');
   await c.gonder('Page.navigate',{url:origin+path});
   await wait(400);
   for(let i=0;i<150;i++){
-   const hazir=await run(`location.origin===${JSON.stringify(origin)} && document.readyState==="complete"`);
+   const hazir=await run(`!window.__nbEskiBelge && location.origin===${JSON.stringify(origin)} && document.readyState==="complete"`);
    if(hazir) return;
    await wait(200);
   }
@@ -42,7 +44,7 @@ try {
  const load = async () => {
   await run(`localStorage.setItem('nb-local-db-v1',${JSON.stringify(JSON.stringify({gardens:[garden],nodes}))});`);
   await navigate('/bahce_view?id=gesture-test');
-  for(let i=0;i<100;i++){ if(await run('document.querySelectorAll("[data-yk-id]").length >= 4')) return; await wait(200); }
+  for(let i=0;i<100;i++){ if(await run(`(()=>{const t=JSON.parse(localStorage.getItem('nb-tuval-v1'));return document.querySelectorAll('[data-yk-id]').length>=4 && !!document.querySelector('.yeni-agac--'+(t.gosterim||'organik')) && document.querySelector('[data-kart-model]')?.dataset.kartModel===(t.eylem||'hap')})()`)) return; await wait(200); }
   throw Error('Kartlar yüklenmedi');
  };
  await load();
@@ -236,4 +238,59 @@ try {
  assert.equal(await run('document.querySelector("[data-kart-yer=altSol]")===null'),true);
  await touch('touchCancel',await box('[data-yk-id="branch"]'));
  console.log('PASS: seçilen işlev konumunda görünür, gizlenen düğme yok, ayarlar düğmesi çalışır');
+
+ const tercih = async values => {
+  await run(`localStorage.setItem('nb-tuval-v1',JSON.stringify({gosterim:'organik',gezinme:'yok',onizleme:2,eylem:'hap',kart:'bahce',...${JSON.stringify(values)}}))`);
+  await load();
+ };
+ for (const model of ['hap','yumusak','kapsul']) {
+  await tercih({eylem:model,kullanim:'birlikte'});
+  await hold('branch');
+  assert.equal(await run(`document.querySelector('[data-kart-aktif="1"]').dataset.kartModel`),model);
+  const kart=await box('[data-yk-id="branch"]'), alt=await box('[data-kart-yer="alt"]');
+  assert.ok(alt.top-kart.bottom<10);
+  await choose('buda');
+  assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),true);
+ }
+ console.log('PASS: üç güncel modelin yakın hedefleri ve kaydırarak seçimi');
+ await tercih({gosterim:'klasik'});
+ assert.equal(await run(`!!document.querySelector('.yeni-agac--klasik')`),true);
+ assert.equal(await run(`Array.from(document.querySelectorAll('.yeni-agac > svg path')).every(p=>p.getAttribute('d').includes('H') && !p.getAttribute('d').includes('C'))`),true);
+ await tapMenu('kopya');
+ await load();
+ assert.equal(await run(`!!document.querySelector('.yeni-agac--klasik')`),true);
+ console.log('PASS: Klasik düzen, köşeli bağlantılar, yeni düğmeler ve kalıcılık');
+ await tercih({kullanim:'kaydir'});
+ await tapAt(await box('[data-yk-id="branch"]'));
+ assert.equal(await run('!!document.querySelector("[data-kart-aktif]")'),false);
+ await hold('branch'); await choose('kopya');
+ await tercih({kullanim:'dokun'});
+ const dokunKart=await box('[data-yk-id="branch"]');
+ await touch('touchStart',dokunKart); await wait(500); await touch('touchEnd',dokunKart); await wait(200);
+ assert.equal(await run('!!document.querySelector("[data-kart-aktif]")'),true);
+ await tapAt(await box('[data-kart-eylem="buda"]'));
+ assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),true);
+ console.log('PASS: yalnız kaydırma kısa dokunuşu açmaz; dokunma yöntemi menüyü bırakınca korur');
+ for(const model of ['panel','yuzen']) {
+  await tercih({eylem:model,kullanim:'kaydir'});
+  await tapAt(await box('[data-yk-id="branch"]'));
+  assert.equal(await run('document.documentElement.hasAttribute("data-kart-menusu")'),false);
+  assert.equal(await run(`!!document.querySelector('#secili-${model}')`),true);
+  if(model==='yuzen') await run(`document.querySelector('#secili-yuzen button').click()`);
+  await tapAt(await box('#secili-buda'));
+  assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),true);
+ }
+ console.log('PASS: panel ve yüzen düğme gerçek dokunuşla açılır, budama çalışır');
+ await tercih({dugmeler:{ustSol:'kopya',ustOrta:'editor',ustSag:'buda',sol:'sol',sag:'yan',alt:'alt',altSol:'ayarlar',altSag:'yok'}});
+ await hold('branch'); await choose('ayarlar'); await wait(200);
+ for(const model of ['hap','yumusak','kapsul','panel','yuzen']) assert.equal(await run(`!!document.querySelector('#tuval-eylem-${model}')`),true);
+ await run(`document.querySelector('#tuval-eylem-kapsul').click()`); await wait(150);
+ await run(`Array.from(document.querySelectorAll('[aria-label="Not düğmelerinin kullanım yöntemi"] button')).find(b=>b.textContent==='Basılı tut, kaydır').click()`); await wait(150);
+ await run(`Array.from(document.querySelectorAll('[aria-label="Düzen"] button')).find(b=>b.textContent.includes('Klasik')).click()`); await wait(150);
+ assert.deepEqual(await run(`(()=>{const t=JSON.parse(localStorage.getItem('nb-tuval-v1'));return [t.gosterim,t.eylem,t.kullanim]})()`),['klasik','kapsul','kaydir']);
+ await run(`document.querySelector('[aria-label="Ağaç yönetiminden geri dön"]').click()`); await wait(250);
+ await navigate('/'); await load(); await wait(350); await hold('branch');
+ assert.equal(await run(`document.querySelector('[data-kart-aktif="1"]').dataset.kartModel`),'kapsul');
+ await screenshot('guncel-kapsul-klasik.png'); await touch('touchCancel',await box('[data-yk-id="branch"]'));
+ console.log('PASS: Görünüm seçenekleri ayarlardan değişir, yenilemede korunur ve tuvale uygulanır');
 } finally { socket?.close(); browser.kill(); }

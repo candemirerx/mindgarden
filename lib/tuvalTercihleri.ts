@@ -3,22 +3,24 @@
  *
  * - gosterim: yalnız dizilim (kart görünümünden bağımsız). Organik: kökten dallar
  *   açılır, yapraklar dalın ortasından asılır; ağaçlar yan yana. Yatay: soldan
- *   sağa kök → dal → yaprak; ağaçlar alt alta.
+ *   sağa kök → dal → yaprak; ağaçlar alt alta. Klasik: üstten alta,
+ *   düz bağlantılarla hiyerarşi; ağaçlar yan yana.
  * - gezinme: çok ağaçta hızlı geçiş için kaydırma çubukları ya da üstte ağaç
  *   sekmeleri (yalnız biri) ya da hiçbiri.
  * - onizleme: kartta başlığın altında içeriğin kaç satırı görünsün (0: yalnız başlık).
  * - kart / kartKoyu: kök, dal ve yaprak kartlarının tasarımı; açık ve koyu tema
- *   için ayrı seçilir (Organik ve Yatay akışta).
+ *   için ayrı seçilir, tüm düzenlerde geçerlidir.
  */
 import { useEffect, useState } from 'react';
 import { bildir, dinle } from './degisim';
 import { temaAboneGec } from './tema';
 
-export type TuvalGosterim = 'organik' | 'yatay';
+export type TuvalGosterim = 'organik' | 'yatay' | 'klasik';
 export type TuvalGezinme = 'cubuk' | 'sekme' | 'yok';
 export type TuvalOnizleme = 0 | 2 | 3;
-/** Seçili notun eylem düğmeleri: kart üstünde hap + kenar artıları, alttan panel ya da yüzen düğme. */
-export type TuvalEylem = 'hap' | 'panel' | 'yuzen';
+/** Kart çevresindeki üç güncel tasarım veya dokunarak açılan panel/yüzen düğme. */
+export type TuvalEylem = 'hap' | 'yumusak' | 'kapsul' | 'panel' | 'yuzen';
+export type KartKullanim = 'birlikte' | 'dokun' | 'kaydir';
 /** Not kartlarının tasarımı: bahçe (gölgeli, katmanlı), sade (ince çerçeve), renkli (seviyeye göre dolgu), hap (tek satır, yuvarlak). */
 export type TuvalKart = 'bahce' | 'sade' | 'renkli' | 'hap';
 export const KART_ISLEVLERI = {
@@ -37,10 +39,10 @@ export const VARSAYILAN_KART_DUGMELERI: KartDugmeleri = {
     ustSol: 'kopya', ustOrta: 'editor', ustSag: 'buda',
     sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok'
 };
-export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri };
+export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kullanim: KartKullanim; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri };
 
 const ANAHTAR = 'nb-tuval-v1';
-export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'organik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI };
+export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'organik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kullanim: 'birlikte', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI };
 
 function dugmeleriOku(v: unknown): KartDugmeleri {
     const k = v && typeof v === 'object' ? v as Partial<KartDugmeleri> : {};
@@ -58,11 +60,11 @@ export function tuvalTercihleri(): TuvalTercihleri {
     try {
         const k = JSON.parse(localStorage.getItem(ANAHTAR) || '{}') as Partial<TuvalTercihleri>;
         return {
-            // Eski 'klasik' düzen kalktı (kendi kart görünümüne bağlıydı); kayıtlı olan organiğe döner
-            gosterim: k.gosterim === 'yatay' ? 'yatay' : 'organik',
+            gosterim: k.gosterim === 'yatay' || k.gosterim === 'klasik' ? k.gosterim : 'organik',
             gezinme: k.gezinme === 'cubuk' || k.gezinme === 'yok' ? k.gezinme : 'sekme',
             onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
-            eylem: k.eylem === 'panel' || k.eylem === 'yuzen' ? k.eylem : 'hap',
+            eylem: ['panel', 'yuzen', 'yumusak', 'kapsul'].includes(k.eylem ?? '') ? k.eylem! : 'hap',
+            kullanim: k.kullanim === 'dokun' || k.kullanim === 'kaydir' ? k.kullanim : 'birlikte',
             kart: kartOku(k.kart),
             kartKoyu: kartOku(k.kartKoyu),
             dugmeler: dugmeleriOku(k.dugmeler)

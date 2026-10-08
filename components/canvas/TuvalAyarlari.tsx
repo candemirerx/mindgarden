@@ -12,12 +12,16 @@ import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { SettingsSection, cx } from '@/components/ui/settings';
 import { KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import type { KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
-import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
+import type { KartKullanim, TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
 /* Düzen önizlemeleri: kartlar bilerek hepsi aynı sade gri kutu; yalnız dizilim ve dalların gidişi görünür. */
 const KUTU = 'rgb(var(--sand-300))';
 const CIZGI = 'rgb(var(--moss-500))';
 const GOSTERIMLER: { id: TuvalGosterim; ad: string; aciklama: string; resim: React.ReactNode }[] = [
+    {
+        id: 'klasik', ad: 'Klasik', aciklama: 'Üstten alta hiyerarşi; düz, köşeli bağlantılar ve yan yana ağaçlar',
+        resim: <svg viewBox="0 0 120 64" aria-hidden="true"><path d="M60 15V23M22 32V23H98V32M60 23V32M22 41V49M12 56V49H32V56M98 41V56" stroke={CIZGI} strokeWidth="2" fill="none" /><rect x="45" y="4" width="30" height="11" rx="3" fill={KUTU} /><rect x="9" y="32" width="26" height="9" rx="3" fill={KUTU} /><rect x="47" y="32" width="26" height="9" rx="3" fill={KUTU} /><rect x="85" y="32" width="26" height="9" rx="3" fill={KUTU} /><rect x="4" y="56" width="16" height="7" rx="2" fill={KUTU} /><rect x="24" y="56" width="16" height="7" rx="2" fill={KUTU} /><rect x="90" y="56" width="16" height="7" rx="2" fill={KUTU} /></svg>
+    },
     {
         id: 'organik', ad: 'Organik', aciklama: 'Kökten dallar yana açılır, yapraklar dalın altına asılır; ağaçlar yan yana',
         resim: <svg viewBox="0 0 120 64" aria-hidden="true"><path d="M60 13C60 22 24 18 24 27M60 13V27M60 13C60 22 96 18 96 27" stroke={CIZGI} strokeWidth="2" fill="none" strokeLinecap="round" /><path d="M24 35V42M24 42C24 47 18 46 18 52M24 42C24 47 30 46 30 52M60 35V52M96 35V52" stroke={CIZGI} strokeWidth="1.5" fill="none" strokeLinecap="round" /><rect x="46" y="4" width="28" height="9" rx="3" fill={KUTU} /><rect x="12" y="27" width="24" height="8" rx="3" fill={KUTU} /><rect x="48" y="27" width="24" height="8" rx="3" fill={KUTU} /><rect x="84" y="27" width="24" height="8" rx="3" fill={KUTU} /><rect x="8" y="52" width="20" height="7" rx="2.5" fill={KUTU} /><rect x="32" y="52" width="20" height="7" rx="2.5" fill={KUTU} /><rect x="50" y="52" width="20" height="7" rx="2.5" fill={KUTU} /><rect x="86" y="52" width="20" height="7" rx="2.5" fill={KUTU} /></svg>
@@ -27,11 +31,28 @@ const GOSTERIMLER: { id: TuvalGosterim; ad: string; aciklama: string; resim: Rea
         resim: <svg viewBox="0 0 120 64" aria-hidden="true"><path d="M28 32C38 32 36 16 46 16M28 32H46M28 32C38 32 36 48 46 48" stroke={CIZGI} strokeWidth="2" fill="none" strokeLinecap="round" /><path d="M72 16C80 16 78 10 86 10M72 16C80 16 78 22 86 22M72 32H86M72 48H86" stroke={CIZGI} strokeWidth="1.5" fill="none" strokeLinecap="round" /><rect x="6" y="26" width="22" height="12" rx="3" fill={KUTU} /><rect x="46" y="12" width="26" height="8" rx="3" fill={KUTU} /><rect x="46" y="28" width="26" height="8" rx="3" fill={KUTU} /><rect x="46" y="44" width="26" height="8" rx="3" fill={KUTU} /><rect x="86" y="6" width="28" height="7" rx="2.5" fill={KUTU} /><rect x="86" y="18" width="28" height="7" rx="2.5" fill={KUTU} /><rect x="86" y="29" width="28" height="7" rx="2.5" fill={KUTU} /><rect x="86" y="45" width="28" height="7" rx="2.5" fill={KUTU} /></svg>
     }
 ];
+function MenuOnizleme({ model }: { model: 'hap' | 'yumusak' | 'kapsul' }) {
+    const kapsul = model === 'kapsul', yumusak = model === 'yumusak';
+    const yesil = 'rgb(var(--moss-600))', yuzey = 'rgb(var(--surface))';
+    return <svg viewBox="0 0 120 64" aria-hidden="true">
+        <rect x="32" y="21" width="56" height="29" rx="8" fill={yesil} />
+        <rect x="32" y={kapsul ? 4 : 7} width="56" height={kapsul ? 14 : 15} rx={kapsul || yumusak ? 7 : 3} fill={yuzey} stroke={yesil} />
+        <path d="M51 8v12M69 8v12" stroke={yesil} opacity=".3" />
+        <path d="M40 11h5v6h-5zM58 15l4-4M76 12l4 5M80 12l-4 5" stroke={yesil} fill="none" strokeWidth="1.5" />
+        <rect x={kapsul ? 18 : 24} y="25" width={kapsul ? 11 : 8} height="22" rx={kapsul || yumusak ? 5 : 2} fill={yuzey} stroke={yesil} />
+        <rect x={kapsul ? 91 : 88} y="25" width={kapsul ? 11 : 8} height="22" rx={kapsul || yumusak ? 5 : 2} fill={yuzey} stroke={yesil} />
+        <rect x="47" y={kapsul ? 53 : 50} width="26" height="8" rx={kapsul || yumusak ? 4 : 2} fill={yuzey} stroke={yesil} />
+        <path d="M26 36h4M28 34v4M90 36h4M92 34v4M58 54h4M60 52v4" stroke={yesil} strokeWidth="1.2" />
+        <path d="M40 32h33M40 38h22" stroke={yuzey} opacity=".8" strokeLinecap="round" strokeWidth="2" />
+    </svg>;
+}
 const EYLEMLER: { id: TuvalEylem; ad: string; aciklama: string; resim: React.ReactNode }[] = [
     {
-        id: 'hap', ad: 'Kart üstünde', aciklama: 'Üstte küçük hap, kenarlarda + Yan ve + Alt',
-        resim: <svg viewBox="0 0 120 64" aria-hidden="true"><rect x="38" y="6" width="44" height="12" rx="6" fill="rgb(var(--sand-900))" /><circle cx="50" cy="12" r="2" fill="#fff" /><circle cx="60" cy="12" r="2" fill="#fff" /><circle cx="70" cy="12" r="2" fill="#fff" /><rect x="34" y="24" width="52" height="22" rx="6" fill="#fff" stroke="rgb(var(--moss-500))" strokeWidth="2" /><circle cx="86" cy="35" r="6" fill="rgb(var(--moss-600))" /><circle cx="60" cy="46" r="6" fill="rgb(var(--moss-600))" /><path d="M86 32v6M83 35h6M60 43v6M57 46h6" stroke="#fff" strokeWidth="1.6" /></svg>
+        id: 'hap', ad: 'Bitişik', aciklama: 'Karta sıfır boşlukla oturan şerit; geniş, kısa kenar düğmeleri',
+        resim: <MenuOnizleme model="hap" />
     },
+    { id: 'yumusak', ad: 'Yumuşak', aciklama: 'Bitişik düğmeler, daha oval köşeler ve yumuşak yüzey', resim: <MenuOnizleme model="yumusak" /> },
+    { id: 'kapsul', ad: 'Kapsül', aciklama: 'Kartın yakınında ayrı, yuvarlak düğmeler', resim: <MenuOnizleme model="kapsul" /> },
     {
         id: 'panel', ad: 'Alttan panel', aciklama: 'Dokununca alttan büyük, yazılı düğmeler',
         resim: <svg viewBox="0 0 120 64" aria-hidden="true"><rect x="34" y="6" width="52" height="16" rx="5" fill="#fff" stroke="rgb(var(--moss-500))" strokeWidth="2" /><rect x="6" y="30" width="108" height="34" rx="8" fill="#fff" stroke="rgb(var(--sand-200))" /><rect x="14" y="36" width="92" height="8" rx="3" fill="rgb(var(--moss-600))" /><rect x="14" y="48" width="44" height="8" rx="3" fill="rgb(var(--moss-600))" /><rect x="62" y="48" width="44" height="8" rx="3" fill="rgb(var(--sand-200))" /></svg>
@@ -124,7 +145,7 @@ export function TuvalAyarlari() {
     return (
         <div id="tuval-ayarlari" className="space-y-4">
             <SettingsSection icon={GitFork} title="Düzen" description="Ağaçların ve dalların tuvalde nasıl dizileceği, dalların nasıl ilerleyeceği. Kartların görünümünden bağımsızdır; notlarınız değişmez.">
-                <div role="radiogroup" aria-label="Düzen" className="grid grid-cols-2 gap-2">
+                <div role="radiogroup" aria-label="Düzen" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {GOSTERIMLER.map(g => <SecenekKarti key={g.id} secik={t.gosterim === g.id} onSec={() => tuvalTercihleriniKaydet({ ...t, gosterim: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
             </SettingsSection>
@@ -141,14 +162,22 @@ export function TuvalAyarlari() {
             </SettingsSection>
 
             <SettingsSection icon={MousePointerClick} tone="sand" title="Not düğmeleri"
-                description='Seçili notta düzenle, kopyala, ekle ve buda düğmeleri nerede görünsün.'>
-                <div role="radiogroup" aria-label="Not düğmelerinin görünümü" className="grid grid-cols-3 gap-2">
+                description='Düğmelerin tasarımını seçin; kullanım yöntemini aşağıdan ayrıca ayarlayın.'>
+                <div role="radiogroup" aria-label="Not düğmelerinin görünümü" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {EYLEMLER.map(g => <SecenekKarti key={g.id} id={'tuval-eylem-' + g.id} secik={t.eylem === g.id} onSec={() => tuvalTercihleriniKaydet({ ...t, eylem: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
+                </div>
+                <div className="mt-4 border-t border-sand-100 pt-4">
+                    <p className="mb-2 text-sm font-semibold text-sand-900">Kullanım yöntemi</p>
+                    {t.eylem === 'panel' || t.eylem === 'yuzen'
+                        ? <p className="text-xs leading-relaxed text-sand-600">Bu görünümde karta dokunup düğmeye basın. Kaydırarak seçim için Bitişik, Yumuşak veya Kapsül seçin.</p>
+                        : <><Parcali<KartKullanim> etiket="Not düğmelerinin kullanım yöntemi" secenekler={[{ id: 'birlikte', ad: 'İkisi birlikte' }, { id: 'dokun', ad: 'Dokun ve seç' }, { id: 'kaydir', ad: 'Basılı tut, kaydır' }]} secili={t.kullanim} sec={kullanim => tuvalTercihleriniKaydet({ ...t, kullanim })} />
+                            <p className="mt-2 text-xs leading-relaxed text-sand-600">{t.kullanim === 'kaydir' ? 'Karta basılı tutun, düğmeye kaydırıp bırakın. Kısa dokunuş menüyü açmaz. Taşımak için bir düğmeye Ağacı taşı işlevini atayın.' : t.kullanim === 'dokun' ? 'Karta dokunup bırakın, ardından bir düğmeye basın. Menü açıkken karta uzun basıp sürüklemek ağacı taşır.' : 'Dokunup bırakarak menüyü açın veya doğrudan basılı tutup kaydırarak seçin. Menü açıkken karta uzun basıp sürüklemek ağacı taşır.'}</p>
+                        </>}
                 </div>
             </SettingsSection>
 
             <SettingsSection icon={MousePointerClick} title="Kart menüsü"
-                description="Tek dokunuş düğmeleri açar. Ardından basılı tutup sürükleyerek ağacı taşıyabilirsiniz. Doğrudan uzun basışta kaydırıp bırakarak düğme seçilir.">
+                description="Bitişik, Yumuşak ve Kapsül modellerinde her konuma istediğiniz işlevi atayın. Alt köşeler isteğe bağlıdır; Düğme yok seçeneğiyle gizlenir.">
                 <div className="grid grid-cols-2 gap-3">
                     {Object.entries(KART_YERLERI).map(([yer, ad]) => (
                         <label key={yer} className="flex flex-col gap-1.5 text-sm text-sand-800">
