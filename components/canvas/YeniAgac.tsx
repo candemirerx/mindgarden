@@ -11,15 +11,16 @@
  *   ortasından inen sapa asılır. Daha derin notlar girintili listelenir.
  * - Yatay: soldan sağa kök → dal → yaprak.
  *
- * Dokunma: kısa dokunuş metin editörünü açar. Basılı tutma çevredeki
- * seçenekleri açar; parmak kaydırılıp bırakılınca seçilen işlem uygulanır.
+ * Dokunma: kısa dokunuş menüyü açar; ardından uzun basıp sürüklemek taşır.
+ * İlk uzun basış seçenekleri açar; kaydırıp bırakınca seçilen işlem uygulanır.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Copy, CornerDownRight, GitBranch, Leaf, ListPlus, Pencil, Plus, Scissors, Move, Sprout, TreePine } from 'lucide-react';
+import { Check, ChevronDown, Copy, GitBranch, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sprout, TreePine } from 'lucide-react';
 import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
-import type { TuvalEylem, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
+import { VARSAYILAN_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
+import type { KartDugmeleri, KartIslevi, TuvalEylem, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
 type Duzen = 'organik' | 'yatay';
 type Ortak = {
@@ -30,7 +31,10 @@ type Ortak = {
     /** Kart tasarımı; verilmezse bahçe. */
     kart?: TuvalKart;
     onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
-    onAddTree?: (rootId: string) => void;
+    onAddTree?: (rootId: string, direction?: 'left' | 'right') => void;
+    onAddSiblingBefore?: (siblingId: string) => void;
+    dugmeler?: KartDugmeleri;
+    onSettings?: () => void;
     /** Yan not: notun hemen yanına (sonrasına) kardeş ekler. */
     onAddSiblingAfter?: (siblingId: string) => void;
     onEdit: (node: MindNode) => void;
@@ -175,23 +179,22 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', onAddChild, onAddTree, onAddSiblingAfter, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', dugmeler = VARSAYILAN_KART_DUGMELERI, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
     const [kopyalandi, setKopyalandi] = useState(false);
-    const hareket = useKartHareketi(() => onEdit(node));
+    const hareket = useKartHareketi();
     const secili = selectedNodeId === node.id;
     const budandi = node.isPruned ?? false;
     const cocukSayisi = node.children.length;
-    // Düğmeler yalnız basılı tutma boyunca görünür.
+    // Tek dokunuşta sabit, ilk uzun basışta kaydırarak seçim menüsü.
     const araclar = hareket.acik;
     const tur = derinlik === 0 ? 'kok' : (node.nodeType && node.nodeType !== 'auto' ? node.nodeType : derinlik === 1 ? 'branch' : 'leaf');
     const metin = onizleme > 0 ? onizlemeMetni(node.content) : '';
     const satir: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: onizleme, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
 
-    const kopyala = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const kopyala = () => {
         const govde = node.content.split('\n').slice(1).join('\n').trim();
         void navigator.clipboard.writeText(govde || node.title);
         setKopyalandi(true); setTimeout(() => setKopyalandi(false), 1500);
@@ -294,7 +297,41 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const yaricap = kart === 'hap' ? 9999 : kart === 'sade' ? 12 : kart === 'renkli' ? 16 : tur === 'kok' ? 24 : tur === 'branch' ? 18 : 16;
     const dugme = (id: string, ana = false) => `${ARAC} ${ana ? 'kart-eylem--ana' : ''} ${hareket.hedef === id ? 'kart-eylem--hedef' : ''}`;
     const tasi = () => hareket.kap.current?.dispatchEvent(new CustomEvent('nb-agac-tasi', { bubbles: true }));
-    const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', yan: yanAdi, alt: ekleAdi };
+    const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları' };
+    const uygula = (id: KartIslevi) => {
+        if (id === 'editor') onEdit(node);
+        else if (id === 'kopya') void kopyala();
+        else if (id === 'buda') void setNodePruned(node.id, !budandi);
+        else if (id === 'tasi') tasi();
+        else if (id === 'ayarlar') onSettings?.();
+        else if (id === 'alt') onAddChild(node.id, 'right');
+        else if (id === 'sol' || id === 'yan') {
+            if (tur === 'kok') onAddTree?.(node.id, id === 'sol' ? 'left' : 'right');
+            else if (id === 'sol' && onAddSiblingBefore) onAddSiblingBefore(node.id);
+            else if (onAddSiblingAfter) onAddSiblingAfter(node.id);
+            else onAddChild(ebeveynId, id === 'sol' ? 'left' : 'right');
+        }
+    };
+    const simge = (id: KartIslevi) => {
+        if (id === 'editor') return <Pencil size={18} />;
+        if (id === 'kopya') return kopyalandi ? <Check size={17} /> : <Copy size={17} />;
+        if (id === 'buda') return <Scissors size={17} />;
+        if (id === 'tasi') return <Move size={17} />;
+        if (id === 'ayarlar') return <SlidersHorizontal size={16} />;
+        return <Plus size={17} />;
+    };
+    const buton = (yer: keyof KartDugmeleri, sinif = '') => {
+        const id = dugmeler[yer];
+        if (id === 'yok') return null;
+        const ust = yer.startsWith('ust');
+        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : 'Düzenle';
+        return <button key={yer} data-kart-yer={yer} data-kart-eylem={id} type="button"
+            onClick={e => { e.stopPropagation(); uygula(id); }} title={etiketler[id]} aria-label={etiketler[id]}
+            aria-pressed={id === 'buda' ? budandi : undefined}
+            className={dugme(id, ust && yer === 'ustOrta') + ' ' + sinif}>
+            {simge(id)}{!yer.startsWith('altS') && <span className="kart-eylem-yazi">{yazi}</span>}
+        </button>;
+    };
 
     return (
         <div ref={hareket.kap} data-kart-kap data-kart-aktif={araclar ? '1' : undefined}
@@ -302,32 +339,20 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
             onKeyDown={e => { if (e.key === 'Escape') { hareket.kapat(); hareket.kap.current?.querySelector<HTMLElement>('.dugum-karti')?.focus(); } }}
             className={`relative flex-shrink-0 ${genislik} ${araclar ? 'z-50' : ''}`}>
             {araclar && <>
-                <div role="toolbar" aria-label={`${node.title} araçları`} className="kart-araclar">
-                    <button data-kart-eylem="kopya" type="button" onClick={kopyala} className={dugme('kopya')}
-                        title="İçeriği kopyala" aria-label="İçeriği kopyala">{kopyalandi ? <Check size={17} /> : <Copy size={17} />}</button>
-                    <button data-kart-eylem="editor" type="button" onClick={e => { e.stopPropagation(); onEdit(node); }}
-                        className={dugme('editor', true)} title="Metin editörünü aç" aria-label="Metin editörünü aç"><Pencil size={18} /><span className="kart-eylem-yazi">Düzenle</span></button>
-                    <button data-kart-eylem="buda" type="button" onClick={e => { e.stopPropagation(); void setNodePruned(node.id, !budandi); }}
-                        aria-pressed={budandi} className={dugme('buda')} title={budandi ? 'Budamayı geri al' : 'Buda'} aria-label={budandi ? 'Budamayı geri al' : 'Buda'}><Scissors size={17} /></button>
-                </div>
-                <button data-kart-eylem="tasi" type="button" onClick={e => { e.stopPropagation(); tasi(); }}
-                    title="Ağacı taşı" aria-label="Ağacı taşı" className={`${dugme('tasi')} kart-tasi`}><Move size={17} /></button>
-                <button data-kart-eylem="yan" type="button" onClick={e => {
-                    e.stopPropagation();
-                    if (tur === 'kok') onAddTree?.(node.id);
-                    else if (onAddSiblingAfter) onAddSiblingAfter(node.id);
-                    else onAddChild(ebeveynId, 'right');
-                }} title={yanAdi} aria-label={yanAdi} className={`${dugme('yan')} kart-yan`}><Plus size={20} /></button>
-                <button data-kart-eylem="alt" type="button" onClick={e => { e.stopPropagation(); onAddChild(node.id, 'right'); }}
-                    title={ekleAdi} aria-label={ekleAdi} className={`${dugme('alt')} kart-alt`}><Plus size={20} /></button>
-                {hareket.hedef && <span className={`kart-eylem-etiket ${['kopya', 'editor', 'buda'].includes(hareket.hedef) ? 'kart-eylem-etiket--ust' : ''}`} aria-live="polite">{etiketler[hareket.hedef]}</span>}
+                {[dugmeler.ustSol, dugmeler.ustOrta, dugmeler.ustSag].some(id => id !== 'yok') &&
+                    <div role="toolbar" aria-label={`${node.title} araçları`} className="kart-araclar">
+                        {buton('ustSol')}{buton('ustOrta')}{buton('ustSag')}
+                    </div>}
+                {buton('sol', 'kart-sol')}{buton('sag', 'kart-yan')}{buton('alt', 'kart-alt')}
+                {buton('altSol', 'kart-kose kart-kose--sol')}{buton('altSag', 'kart-kose kart-kose--sag')}
+                {hareket.hedef && <span className="kart-eylem-etiket" aria-live="polite">{etiketler[hareket.hedef]}</span>}
             </>}
             <div role="button" tabIndex={0} aria-label={node.title} aria-pressed={secili}
                 data-node-id={node.id} data-yk-id={node.id} data-yk-derinlik={derinlik} data-yk-ebeveyn={ebeveynId} data-yk-acik={acik ? '1' : '0'}
                 {...hareket.events}
                 onKeyDown={e => {
                     if (e.target !== e.currentTarget) return;
-                    if (['Enter', ' '].includes(e.key)) { e.preventDefault(); onEdit(node); }
+                    if (['Enter', ' '].includes(e.key)) { e.preventDefault(); hareket.klavyeAc(); }
                     if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); hareket.klavyeAc(); }
                 }}
                 className={`dugum-karti relative z-10 cursor-pointer select-none outline-none transition-[box-shadow,transform] duration-200 ${araclar || secili ? 'shadow-[0_0_0_2px_rgb(var(--sand-50)),0_0_0_4.5px_rgb(var(--moss-500))]' : ''}`}

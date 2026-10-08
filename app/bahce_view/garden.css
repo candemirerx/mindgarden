@@ -135,3 +135,36 @@ html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-sha
     user-select: none;
     -webkit-touch-callout: none;
 }
+
+/* Bitişik menü: kenar boyunca geniş hedef, dışarı doğru kısa çıkıntı. */
+.garden-page .kart-araclar { width:100%; margin-bottom:-1px; border-radius:16px 16px 0 0; }
+.garden-page .kart-araclar .kart-eylem { height:54px; flex-direction:column; gap:3px; }
+.garden-page .kart-araclar .kart-eylem--ana { flex:1 1 0; }
+.garden-page .kart-eylem-yazi { font-size:11px; font-weight:600; }
+.garden-page .kart-sol, .garden-page .kart-yan, .garden-page .kart-alt, .garden-page .kart-kose {
+    position:absolute; z-index:50; border:1px solid rgb(var(--moss-200));
+    background:rgb(var(--surface)); color:rgb(var(--moss-800));
+    display:flex; align-items:center; justify-content:center; gap:3px;
+    box-shadow:0 8px 20px -14px rgb(var(--moss-900) / .6);
+    transition:background .13s ease, color .13s ease;
+}
+.garden-page .kart-sol, .garden-page .kart-yan {
+    width:34px; height:min(112px, 85%); min-height:60px;
+    top:50%; transform:translateY(-50%); flex-direction:column;
+}
+.garden-page .kart-sol { right:calc(100% - 1px); border-radius:16px 0 0 16px; }
+.garden-page .kart-yan { left:calc(100% - 1px); border-radius:0 16px 16px 0; }
+.garden-page .kart-sol .kart-eylem-yazi, .garden-page .kart-yan .kart-eylem-yazi { writing-mode:vertical-rl; }
+.garden-page .kart-alt {
+    top:calc(100% - 1px); left:50%; transform:translateX(-50%);
+    width:min(112px, 55%); height:34px; border-radius:0 0 16px 16px; flex-direction:row;
+}
+.garden-page .kart-kose { top:calc(100% - 1px); width:44px; height:44px; border-radius:50%; }
+.garden-page .kart-kose--sol { left:0; }
+.garden-page .kart-kose--sag { right:0; }
+.garden-page .kart-sol:hover, .garden-page .kart-yan:hover, .garden-page .kart-alt:hover, .garden-page .kart-kose:hover { background:rgb(var(--moss-50)); }
+.garden-page .kart-sol.kart-eylem--hedef, .garden-page .kart-yan.kart-eylem--hedef,
+.garden-page .kart-alt.kart-eylem--hedef, .garden-page .kart-kose.kart-eylem--hedef {
+    background:rgb(var(--moss-600)); color:rgb(var(--surface));
+    box-shadow:0 0 0 3px rgb(var(--moss-300) / .5);
+}

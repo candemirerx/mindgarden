@@ -50,6 +50,42 @@ function SuruklenebilirAgac({
     const alanRef = useRef<HTMLLIElement>(null);
     const baslangic = useRef({ fareX: 0, fareY: 0, kayX: 0, kayY: 0, olcek: 1 });
     const suruklendi = useRef(false);
+    const hareketEtkin = useRef(false);
+    const surukluyorRef = useRef(false);
+
+    // Kartın ilk dokunuşu menüyü açar; ikinci uzun basışı aynı dokunuşta taşımayı başlatır.
+    useEffect(() => {
+        const alan = alanRef.current;
+        if (!alan) return;
+        const dinle = (event: Event) => {
+            const { evre, x: fareX, y: fareY } = (event as CustomEvent<{ evre: string; x: number; y: number }>).detail;
+            if (evre === 'basla') {
+                baslangic.current = { fareX, fareY, kayX: kaydirma.x, kayY: kaydirma.y, olcek: olcekOku() };
+                hareketEtkin.current = true;
+                surukluyorRef.current = true;
+                suruklendi.current = true;
+                setSurukluyor(true);
+                agacSuruklemesiBasladi();
+                void hapticTick();
+            } else if (hareketEtkin.current) {
+                const b = baslangic.current;
+                const son = { x: b.kayX + (fareX - b.fareX) / b.olcek, y: b.kayY + (fareY - b.fareY) / b.olcek };
+                if (evre === 'hareket') setKaydirma(son);
+                else {
+                    hareketEtkin.current = false;
+                    surukluyorRef.current = false;
+                    setSurukluyor(false);
+                    agacSuruklemesiBitti();
+                    if (evre === 'bitir') {
+                        setKaydirma(son);
+                        onMove(Math.round(son.x), Math.round(son.y));
+                    } else setKaydirma({ x: b.kayX, y: b.kayY });
+                }
+            }
+        };
+        alan.addEventListener('nb-agac-surukle', dinle);
+        return () => alan.removeEventListener('nb-agac-surukle', dinle);
+    }, [kaydirma, onMove]);
 
     useEffect(() => {
         const alan = alanRef.current;
@@ -74,10 +110,10 @@ function SuruklenebilirAgac({
 
     // Konum dışarıdan değişirse (senkron vb.) ve o an sürükleme yoksa uygula
     useEffect(() => {
-        if (!surukluyor) {
+        if (!surukluyorRef.current) {
             setKaydirma({ x, y });
         }
-    }, [x, y, surukluyor]);
+    }, [x, y]);
 
     // Bileşen ekrandan kalkarsa tuvali kilitli bırakma
     useEffect(() => () => {
@@ -127,6 +163,7 @@ function SuruklenebilirAgac({
         suruklendi.current = true;
 
         const hedef = e.currentTarget as HTMLElement;
+        surukluyorRef.current = true;
         setSurukluyor(true);
         agacSuruklemesiBasladi();
         void hapticTick();
@@ -146,6 +183,7 @@ function SuruklenebilirAgac({
         if (!surukluyor) return;
 
         e.stopPropagation();
+        surukluyorRef.current = false;
         setSurukluyor(false);
         setTasimaHazir(false);
         // Tuval yeniden kaydırılabilir.
@@ -343,7 +381,7 @@ function GardenPageInner() {
     };
 
     // Bir ağacın hemen yanına yeni ağaç ekle (kök düğümün "Ağaç Ekle" düğmesi)
-    const handleAddTreeBeside = (rootId: string) => {
+    const handleAddTreeBeside = (rootId: string, direction: 'left' | 'right' = 'right') => {
         const adIzinli = siraliAdEtkin();
         const varsayilan = 'Yeni Ağaç';
         setPromptConfig({
@@ -362,7 +400,11 @@ function GardenPageInner() {
                     .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')));
                 const sira = kokler.findIndex(n => n.id === rootId);
                 let createdAt: string | undefined;
-                if (sira >= 0 && sira < kokler.length - 1) {
+                if (direction === 'left' && sira >= 0) {
+                    const t1 = Date.parse(kokler[sira].created_at);
+                    const t0 = sira > 0 ? Date.parse(kokler[sira - 1].created_at) : t1 - 2000;
+                    if (Number.isFinite(t0) && Number.isFinite(t1)) createdAt = new Date(t0 + Math.floor((t1 - t0) / 2)).toISOString();
+                } else if (sira >= 0 && sira < kokler.length - 1) {
                     const t0 = Date.parse(kokler[sira].created_at), t1 = Date.parse(kokler[sira + 1].created_at);
                     if (Number.isFinite(t0) && Number.isFinite(t1)) createdAt = new Date(t0 + Math.max(1, Math.floor((t1 - t0) / 2))).toISOString();
                 }
@@ -385,6 +427,11 @@ function GardenPageInner() {
         const kardes = nodes.find(n => n.id === siblingId);
         if (!kardes || !kardes.parent_id) return;
         handleAddChild(kardes.parent_id, 'right', siblingId);
+    };
+    const handleAddSiblingBefore = (siblingId: string) => {
+        const kardes = nodes.find(n => n.id === siblingId);
+        if (!kardes || !kardes.parent_id) return;
+        handleAddChild(kardes.parent_id, 'left', siblingId);
     };
 
     const handleAddChild = (parentId: string, direction: 'left' | 'right' = 'right', sonrasina?: string) => {
@@ -411,7 +458,11 @@ function GardenPageInner() {
                     const kardesler = nodes.filter(n => n.parent_id === parentId)
                         .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')));
                     const sira = kardesler.findIndex(n => n.id === sonrasina);
-                    if (sira >= 0 && sira < kardesler.length - 1) {
+                    if (direction === 'left' && sira >= 0) {
+                        const t1 = Date.parse(kardesler[sira].created_at);
+                        const t0 = sira > 0 ? Date.parse(kardesler[sira - 1].created_at) : t1 - 2000;
+                        if (Number.isFinite(t0) && Number.isFinite(t1)) createdAt = new Date(t0 + Math.floor((t1 - t0) / 2)).toISOString();
+                    } else if (sira >= 0 && sira < kardesler.length - 1) {
                         const t0 = Date.parse(kardesler[sira].created_at), t1 = Date.parse(kardesler[sira + 1].created_at);
                         if (Number.isFinite(t0) && Number.isFinite(t1)) createdAt = new Date(t0 + Math.max(1, Math.floor((t1 - t0) / 2))).toISOString();
                     }
@@ -709,6 +760,9 @@ function GardenPageInner() {
                                         <YeniAgac
                                             node={root}
                                             onAddSiblingAfter={handleAddSiblingAfter}
+                                            onAddSiblingBefore={handleAddSiblingBefore}
+                                            dugmeler={tuval.dugmeler}
+                                            onSettings={() => setIsSettingsOpen(true)}
                                             duzen={tuval.gosterim}
                                             onizleme={tuval.onizleme}
                                             eylem={tuval.eylem}

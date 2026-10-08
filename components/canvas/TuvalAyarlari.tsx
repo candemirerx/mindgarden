@@ -10,7 +10,8 @@ import { useEffect, useState } from 'react';
 import { GitFork, MousePointerClick, Palette, SlidersHorizontal } from 'lucide-react';
 import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { SettingsSection, cx } from '@/components/ui/settings';
-import { tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
+import { KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
+import type { KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
 import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
 /* Düzen önizlemeleri: kartlar bilerek hepsi aynı sade gri kutu; yalnız dizilim ve dalların gidişi görünür. */
@@ -144,6 +145,24 @@ export function TuvalAyarlari() {
                 <div role="radiogroup" aria-label="Not düğmelerinin görünümü" className="grid grid-cols-3 gap-2">
                     {EYLEMLER.map(g => <SecenekKarti key={g.id} id={'tuval-eylem-' + g.id} secik={t.eylem === g.id} onSec={() => tuvalTercihleriniKaydet({ ...t, eylem: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
+            </SettingsSection>
+
+            <SettingsSection icon={MousePointerClick} title="Kart menüsü"
+                description="Tek dokunuş düğmeleri açar. Ardından basılı tutup sürükleyerek ağacı taşıyabilirsiniz. Doğrudan uzun basışta kaydırıp bırakarak düğme seçilir.">
+                <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(KART_YERLERI).map(([yer, ad]) => (
+                        <label key={yer} className="flex flex-col gap-1.5 text-sm text-sand-800">
+                            <span>{ad}</span>
+                            <select aria-label={ad + ' işlevi'} className="min-h-[44px] rounded-xl border border-sand-200 bg-sand-50 px-2 text-sm"
+                                value={t.dugmeler[yer as keyof KartDugmeleri]}
+                                onChange={e => tuvalTercihleriniKaydet({ ...t, dugmeler: { ...t.dugmeler, [yer]: e.target.value as KartIslevi } })}>
+                                {Object.entries(KART_ISLEVLERI).map(([id, isim]) => <option key={id} value={id}>{isim}</option>)}
+                            </select>
+                        </label>
+                    ))}
+                </div>
+                <button type="button" className="mt-3 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
+                    onClick={() => tuvalTercihleriniKaydet({ ...t, dugmeler: { ...VARSAYILAN_KART_DUGMELERI } })}>Düğmeleri varsayılana döndür</button>
             </SettingsSection>
 
             <SettingsSection icon={SlidersHorizontal} tone="moss" title="Ayrıntılar" flush>
