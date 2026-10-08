@@ -32,6 +32,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { SettingsHint, cx } from '@/components/ui/settings';
+import { APP_VERSION } from '@/lib/config';
 import type { SettingsSectionId } from './SettingsHome';
 import { SEVIYELER, SSS, type KilavuzIkonu, type KilavuzSeviyesi } from '@/lib/kilavuzIcerik';
 
@@ -118,6 +119,7 @@ export default function UsageGuide({ onNavigate }: UsageGuideProps) {
     return (
         <div className="space-y-5">
             <div className="rounded-2xl border border-moss-200 bg-moss-50/60 p-4">
+                <p className="mb-2 text-xs font-semibold text-moss-700">Güncel kılavuz · {APP_VERSION}</p>
                 <div className="flex items-start gap-3">
                     <GraduationCap size={20} className="mt-0.5 shrink-0 text-moss-700" aria-hidden="true" />
                     <p className="text-sm leading-relaxed text-sand-800">

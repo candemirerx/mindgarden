@@ -6,15 +6,20 @@
  * Çalıştırmak için: node --experimental-strip-types scripts/kilavuz-belgesi.mjs
  * (ardından HTML için: node scripts/md-to-html.mjs)
  */
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = process.cwd();
+const config = await readFile(join(ROOT, 'lib/config.ts'), 'utf8');
+const surum = /APP_VERSION\s*=\s*'([^']+)'/.exec(config)?.[1];
+if (!surum) throw new Error('Kılavuz sürümü okunamadı.');
 const { SEVIYELER, SSS } = await import(pathToFileURL(join(ROOT, 'lib/kilavuzIcerik.ts')).href);
 
 const satirlar = [
     '# Not Bahçesi — Kullanım Kılavuzu',
+    '',
+    `**Sürüm:** ${surum}`,
     '',
     'Not Bahçesi, notlarını bir ağaç gibi büyütmen için tasarlandı. Her bahçe bir konu,',
     'her not bir ağaç, her alt not bir dal ya da yaprak.',
