@@ -1,25 +1,24 @@
 NOT BAHCESI - SURUM BILGILERI
-Olusturma: 8 Ekim 2026 07:39
+Olusturma: 08 Ekim 2026 21:48
 
-Surum      : 2.2.16 (surum kodu 60)
+Surum      : 2.2.23 (surum kodu 67)
 Paket adi  : com.notbahcesi.app
 Hedef API  : 36   (minSdk 24)
 Imza SHA-256: 3B:19:EC:C2:B5:C0:E0:CF:12:64:B2:BC:75:F6:B9:CE:18:C7:C5:4A:BC:1C:AF:ED:CA:33:A0:1F:25:69:F0:90, D8:98:FC:35:E0:04:5D:1A:21:92:8A:43:64:6E:F7:40:85:53:62:25:EA:35:B9:C2:5D:6C:0D:72:7C:ED:52:9A
 
-Play Console'a yuklenecek dosya:
-  uygulama/not-bahcesi-2.2.16.aab
-    Boyut  : 69.229.241 bayt
-    SHA-256: 5FD77CEF32D99DB325D2C2F6A8D5B95184F0DF0E574B4C79C3BBEFC9EFA6E69F
+  uygulama/not-bahcesi-2.2.23.aab
+    Boyut  : 69.234.115 bayt
+    SHA-256: 72B8B5C5B39D165B41CD0211A80EF8F048AC7940297BB2CC203F12550AD3F9D9
 
-Telefonda denemek icin imzali APK:
-  uygulama/not-bahcesi-2.2.16.apk
-    Boyut  : 162.321.522 bayt
-    SHA-256: 82DA9FA8D019617284051D151DB0C38552E90CA8387D9031C65342252017E533
+  uygulama/not-bahcesi-2.2.23.apk
+    Boyut  : 162.326.418 bayt
+    SHA-256: 8A3C651EA23EDD32A1E3BDC44FC78F16A0567C3743592BC0BF37E6E78EE827C6
 
-Ikinci uygulama (com.notbahcesi.app2, "Not Bahcesi 2") - ayni imza:
-  uygulama/not-bahcesi-2-2.2.16.apk
-    Boyut  : 162.318.682 bayt
-    SHA-256: 096F010D75F32F6A20E3D0AE2EB3B9CF752872B9C8CC72634375BD228AB75FAC
+  uygulama/not-bahcesi-2-2.2.23.apk
+    Boyut  : 162.323.578 bayt
+    SHA-256: 951E469839D0FA72D2FF8CB95C299792C2CB402575FA00CD54EFAF9AA55F8CD3
+
+Ikinci APK: com.notbahcesi.app2 (Not Bahcesi 2), ayni imza.
 
 Not: Her yeni yuklemede android/app/build.gradle icindeki versionCode artirilmalidir.
 Yayin adresleri:
