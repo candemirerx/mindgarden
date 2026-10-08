@@ -37,7 +37,8 @@ export function useKartHareketi(kullanim: KartKullanim = 'birlikte', disMenu?: (
         setAcik(true);
     };
 
-    useEffect(() => { kapat(); }, [kullanim, !!disMenu, kapat]);
+    const hariciMenu = Boolean(disMenu);
+    useEffect(() => { kapat(); }, [kullanim, hariciMenu, kapat]);
 
     useEffect(() => {
         const digeri = (e: Event) => { if ((e as CustomEvent).detail !== kap.current) kapat(); };

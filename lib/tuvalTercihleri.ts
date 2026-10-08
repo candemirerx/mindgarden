@@ -42,7 +42,7 @@ export const VARSAYILAN_KART_DUGMELERI: KartDugmeleri = {
 export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kullanim: KartKullanim; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri };
 
 const ANAHTAR = 'nb-tuval-v1';
-export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'organik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kullanim: 'birlikte', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI };
+export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kullanim: 'birlikte', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI };
 
 function dugmeleriOku(v: unknown): KartDugmeleri {
     const k = v && typeof v === 'object' ? v as Partial<KartDugmeleri> : {};
@@ -60,7 +60,7 @@ export function tuvalTercihleri(): TuvalTercihleri {
     try {
         const k = JSON.parse(localStorage.getItem(ANAHTAR) || '{}') as Partial<TuvalTercihleri>;
         return {
-            gosterim: k.gosterim === 'yatay' || k.gosterim === 'klasik' ? k.gosterim : 'organik',
+            gosterim: k.gosterim === 'yatay' || k.gosterim === 'organik' ? k.gosterim : 'klasik',
             gezinme: k.gezinme === 'cubuk' || k.gezinme === 'yok' ? k.gezinme : 'sekme',
             onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
             eylem: ['panel', 'yuzen', 'yumusak', 'kapsul'].includes(k.eylem ?? '') ? k.eylem! : 'hap',

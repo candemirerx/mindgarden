@@ -8,7 +8,8 @@
  * ağaçları ve düğümleri (tip, renk, başlığı kopyalama, budama, silme)
  * yönetir. Ağacın kendisi de buradan yeniden adlandırılır veya silinir.
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import {
     Settings, X, Pencil, Trash2, ArrowLeft, ChevronDown, ChevronRight,
     Copy, Check, Scissors, Leaf, Sprout, Palette, TreePine
@@ -79,6 +80,38 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     const [renkHatasi, setRenkHatasi] = useState('');
     const [sekme, setSekme] = useState<'gorunum' | 'agaclar'>('gorunum');
 
+    const geriRef = useRef<() => void>(() => {});
+    geriRef.current = () => {
+        if (pendingDelete) setPendingDelete(null);
+        else if (editingId) { setEditingId(null); setEditingName(''); }
+        else onClose();
+    };
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const klavye = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            geriRef.current();
+        };
+        window.addEventListener('keydown', klavye, true);
+        let iptal = false;
+        let kaldir: (() => Promise<void>) | undefined;
+        if (Capacitor.isNativePlatform()) {
+            void import('@capacitor/app').then(async ({ App }) => {
+                const dinleyici = await App.addListener('backButton', () => geriRef.current());
+                if (iptal) await dinleyici.remove();
+                else kaldir = () => dinleyici.remove();
+            });
+        }
+        return () => {
+            iptal = true;
+            void kaldir?.();
+            window.removeEventListener('keydown', klavye, true);
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const agacAcKapa = (id: string) => {
@@ -115,14 +148,14 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     ];
 
     return (
-        <div className="fixed inset-0 z-[100] bg-sand-100">
+        <div data-geri-yonetir className="fixed inset-0 z-[100] bg-sand-100">
             <div role="dialog" aria-modal="true" aria-labelledby="agac-yonetimi-basligi" className="flex h-[100dvh] w-full flex-col overflow-hidden text-sand-800">
                 {/* Başlık: ana Ayarlar ekranıyla aynı yapı */}
                 <div className="shrink-0 border-b border-sand-200 bg-white pt-[env(safe-area-inset-top,0px)]">
                     <div className="mx-auto flex min-h-[72px] w-full max-w-3xl items-center gap-3 px-4 py-3 sm:px-8">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={() => geriRef.current()}
                             aria-label="Ağaç yönetiminden geri dön"
                             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-sand-200 bg-sand-50 text-sand-700 transition-colors hover:bg-sand-200 focus-visible:ring-2 focus-visible:ring-moss-500"
                         >

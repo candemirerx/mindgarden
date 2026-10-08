@@ -6,7 +6,6 @@
  * Ana Ayarlar ekranıyla aynı yapı taşları (SettingsSection) kullanılır.
  * Tercihler cihazda tutulur.
  */
-import { useEffect, useState } from 'react';
 import { GitFork, MousePointerClick, Palette, SlidersHorizontal } from 'lucide-react';
 import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { SettingsSection, cx } from '@/components/ui/settings';
@@ -81,7 +80,6 @@ const KARTLAR: { id: TuvalKart; ad: string; aciklama: string; resim: React.React
         resim: <svg viewBox="0 0 120 64" aria-hidden="true"><rect x="20" y="4" width="80" height="16" rx="8" fill="rgb(var(--kok-2))" /><circle cx="29" cy="12" r="5" fill="rgb(var(--kok-yazi) / .2)" /><rect x="38" y="10" width="40" height="4" rx="2" fill="rgb(var(--kok-yazi))" /><rect x="20" y="25" width="80" height="16" rx="8" fill="rgb(var(--surface))" stroke="rgb(var(--clay-300))" strokeWidth="1.4" /><circle cx="29" cy="33" r="5" fill="rgb(var(--clay-100))" /><rect x="38" y="31" width="36" height="4" rx="2" fill="rgb(var(--sand-700))" /><rect x="20" y="46" width="80" height="14" rx="7" fill="rgb(var(--surface))" stroke="rgb(var(--moss-200))" strokeWidth="1.4" /><circle cx="28.5" cy="53" r="4" fill="rgb(var(--moss-100))" /><rect x="37" y="51.2" width="32" height="3.6" rx="1.8" fill="rgb(var(--sand-700))" /></svg>
     }
 ];
-const TEMALAR: { id: 'acik' | 'koyu'; ad: string }[] = [{ id: 'acik', ad: 'Açık tema' }, { id: 'koyu', ad: 'Koyu tema' }];
 const GEZINMELER: { id: TuvalGezinme; ad: string }[] = [
     { id: 'cubuk', ad: 'Çubuklar' }, { id: 'sekme', ad: 'Sekmeler' }, { id: 'yok', ad: 'Hiçbiri' }
 ];
@@ -139,9 +137,6 @@ function AyrintiSatiri({ baslik, aciklama, children }: { baslik: string; aciklam
 export function TuvalAyarlari() {
     const t = useTuvalTercihleri();
     const koyu = useKoyuTema();
-    // Hangi temanın kart tasarımı düzenleniyor; açılışta uygulamanın o anki teması
-    const [kartTemasi, setKartTemasi] = useState<'acik' | 'koyu'>('acik');
-    useEffect(() => { setKartTemasi(koyu ? 'koyu' : 'acik'); }, [koyu]);
     return (
         <div id="tuval-ayarlari" className="space-y-4">
             <SettingsSection icon={GitFork} title="Düzen" description="Ağaçların ve dalların tuvalde nasıl dizileceği, dalların nasıl ilerleyeceği. Kartların görünümünden bağımsızdır; notlarınız değişmez.">
@@ -151,13 +146,11 @@ export function TuvalAyarlari() {
             </SettingsSection>
 
             <SettingsSection icon={Palette} tone="clay" title="Kart tasarımı"
-                description="Yalnız kartların görünümü: renk, çerçeve, gölge, yazı. Dizilimi etkilemez. Açık ve koyu tema için ayrı seçilir.">
-                <Parcali etiket="Tasarımı seçilen tema" secenekler={TEMALAR} secili={kartTemasi} sec={setKartTemasi} className="mb-3 sm:w-[240px]" />
-                {/* Önizlemeler seçilen temanın renkleriyle çizilir (uygulamanın o anki temasından bağımsız). */}
-                <div role="radiogroup" aria-label={'Kart tasarımı (' + (kartTemasi === 'koyu' ? 'koyu' : 'açık') + ' tema)'}
-                    className={cx('grid grid-cols-2 gap-2 rounded-2xl bg-sand-100 p-1.5 sm:grid-cols-4', kartTemasi === 'koyu' ? 'dark' : 'acik-tema')}>
-                    {KARTLAR.map(g => <SecenekKarti key={g.id} id={'tuval-kart-' + g.id} secik={(kartTemasi === 'koyu' ? t.kartKoyu : t.kart) === g.id}
-                        onSec={() => tuvalTercihleriniKaydet(kartTemasi === 'koyu' ? { ...t, kartKoyu: g.id } : { ...t, kart: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
+                description="Kartların renk, çerçeve ve gölge görünümü. Seçiminiz kullandığınız tema için kaydedilir.">
+                <div role="radiogroup" aria-label="Kart tasarımı"
+                    className="grid grid-cols-2 gap-2 rounded-2xl bg-sand-100 p-1.5 sm:grid-cols-4">
+                    {KARTLAR.map(g => <SecenekKarti key={g.id} id={'tuval-kart-' + g.id} secik={(koyu ? t.kartKoyu : t.kart) === g.id}
+                        onSec={() => tuvalTercihleriniKaydet(koyu ? { ...t, kartKoyu: g.id } : { ...t, kart: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
             </SettingsSection>
 
