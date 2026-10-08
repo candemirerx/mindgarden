@@ -260,17 +260,15 @@ try {
  await load();
  assert.equal(await run(`!!document.querySelector('.yeni-agac--klasik')`),true);
  console.log('PASS: Klasik düzen, köşeli bağlantılar, yeni düğmeler ve kalıcılık');
- await tercih({kullanim:'kaydir'});
- await tapAt(await box('[data-yk-id="branch"]'));
- assert.equal(await run('!!document.querySelector("[data-kart-aktif]")'),false);
- await hold('branch'); await choose('kopya');
- await tercih({kullanim:'dokun'});
- const dokunKart=await box('[data-yk-id="branch"]');
- await touch('touchStart',dokunKart); await wait(500); await touch('touchEnd',dokunKart); await wait(200);
- assert.equal(await run('!!document.querySelector("[data-kart-aktif]")'),true);
- await tapAt(await box('[data-kart-eylem="buda"]'));
- assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),true);
- console.log('PASS: yalnız kaydırma kısa dokunuşu açmaz; dokunma yöntemi menüyü bırakınca korur');
+ for (const eskiYontem of ['kaydir','dokun']) {
+  await tercih({kullanim:eskiYontem});
+  await tapAt(await box('[data-yk-id="branch"]'));
+  assert.equal(await run('!!document.querySelector("[data-kart-aktif]")'),true);
+  await tapAt(await box('[data-kart-eylem="kopya"]'));
+  await hold('branch'); await choose('buda');
+  assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),true);
+ }
+ console.log('PASS: eski yöntem ayarları seçimleri kısıtlamaz; dokunma ve kaydırma yerleşik çalışır');
  for(const model of ['panel','yuzen']) {
   await tercih({eylem:model,kullanim:'kaydir'});
   await tapAt(await box('[data-yk-id="branch"]'));
@@ -284,10 +282,15 @@ try {
  await tercih({dugmeler:{ustSol:'kopya',ustOrta:'editor',ustSag:'buda',sol:'sol',sag:'yan',alt:'alt',altSol:'ayarlar',altSag:'yok'}});
  await hold('branch'); await choose('ayarlar'); await wait(200);
  for(const model of ['hap','yumusak','kapsul','panel','yuzen']) assert.equal(await run(`!!document.querySelector('#tuval-eylem-${model}')`),true);
+ assert.equal(await run(`document.querySelector('[aria-label="Not düğmelerinin kullanım yöntemi"]')===null`),true);
+ for (const model of ['panel','yuzen']) {
+  await run(`document.querySelector('#tuval-eylem-${model}').click()`); await wait(100);
+  assert.equal(await run(`document.querySelector('select[aria-label="Sağ kenar işlevi"]')===null`),true);
+ }
  await run(`document.querySelector('#tuval-eylem-kapsul').click()`); await wait(150);
- await run(`Array.from(document.querySelectorAll('[aria-label="Not düğmelerinin kullanım yöntemi"] button')).find(b=>b.textContent==='Basılı tut, kaydır').click()`); await wait(150);
+ assert.equal(await run(`!!document.querySelector('select[aria-label="Sağ kenar işlevi"]')`),true);
  await run(`Array.from(document.querySelectorAll('[aria-label="Düzen"] button')).find(b=>b.textContent.includes('Klasik')).click()`); await wait(150);
- assert.deepEqual(await run(`(()=>{const t=JSON.parse(localStorage.getItem('nb-tuval-v1'));return [t.gosterim,t.eylem,t.kullanim]})()`),['klasik','kapsul','kaydir']);
+ assert.deepEqual(await run(`(()=>{const t=JSON.parse(localStorage.getItem('nb-tuval-v1'));return [t.gosterim,t.eylem,Object.hasOwn(t,'kullanim')]})()`),['klasik','kapsul',false]);
  await run(`document.querySelector('[aria-label="Ağaç yönetiminden geri dön"]').click()`); await wait(250);
  await navigate('/'); await load(); await wait(350); await hold('branch');
  assert.equal(await run(`document.querySelector('[data-kart-aktif="1"]').dataset.kartModel`),'kapsul');

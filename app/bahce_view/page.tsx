@@ -766,7 +766,6 @@ function GardenPageInner() {
                                             duzen={tuval.gosterim}
                                             onizleme={tuval.onizleme}
                                             eylem={tuval.eylem}
-                                            kullanim={tuval.kullanim}
                                             kart={koyuTema ? tuval.kartKoyu : tuval.kart}
                                             onAddChild={handleAddChild}
                                             onAddTree={handleAddTreeBeside}

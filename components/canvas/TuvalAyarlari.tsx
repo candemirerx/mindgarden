@@ -11,7 +11,7 @@ import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { SettingsSection, cx } from '@/components/ui/settings';
 import { KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import type { KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
-import type { KartKullanim, TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
+import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
 /* Düzen önizlemeleri: kartlar bilerek hepsi aynı sade gri kutu; yalnız dizilim ve dalların gidişi görünür. */
 const KUTU = 'rgb(var(--sand-300))';
@@ -155,22 +155,14 @@ export function TuvalAyarlari() {
             </SettingsSection>
 
             <SettingsSection icon={MousePointerClick} tone="sand" title="Not düğmeleri"
-                description='Düğmelerin tasarımını seçin; kullanım yöntemini aşağıdan ayrıca ayarlayın.'>
+                description="Düğmelerin görünümünü seçin.">
                 <div role="radiogroup" aria-label="Not düğmelerinin görünümü" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {EYLEMLER.map(g => <SecenekKarti key={g.id} id={'tuval-eylem-' + g.id} secik={t.eylem === g.id} onSec={() => tuvalTercihleriniKaydet({ ...t, eylem: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
-                <div className="mt-4 border-t border-sand-100 pt-4">
-                    <p className="mb-2 text-sm font-semibold text-sand-900">Kullanım yöntemi</p>
-                    {t.eylem === 'panel' || t.eylem === 'yuzen'
-                        ? <p className="text-xs leading-relaxed text-sand-600">Bu görünümde karta dokunup düğmeye basın. Kaydırarak seçim için Bitişik, Yumuşak veya Kapsül seçin.</p>
-                        : <><Parcali<KartKullanim> etiket="Not düğmelerinin kullanım yöntemi" secenekler={[{ id: 'birlikte', ad: 'İkisi birlikte' }, { id: 'dokun', ad: 'Dokun ve seç' }, { id: 'kaydir', ad: 'Basılı tut, kaydır' }]} secili={t.kullanim} sec={kullanim => tuvalTercihleriniKaydet({ ...t, kullanim })} />
-                            <p className="mt-2 text-xs leading-relaxed text-sand-600">{t.kullanim === 'kaydir' ? 'Karta basılı tutun, düğmeye kaydırıp bırakın. Kısa dokunuş menüyü açmaz. Taşımak için bir düğmeye Ağacı taşı işlevini atayın.' : t.kullanim === 'dokun' ? 'Karta dokunup bırakın, ardından bir düğmeye basın. Menü açıkken karta uzun basıp sürüklemek ağacı taşır.' : 'Dokunup bırakarak menüyü açın veya doğrudan basılı tutup kaydırarak seçin. Menü açıkken karta uzun basıp sürüklemek ağacı taşır.'}</p>
-                        </>}
-                </div>
             </SettingsSection>
 
-            <SettingsSection icon={MousePointerClick} title="Kart menüsü"
-                description="Bitişik, Yumuşak ve Kapsül modellerinde her konuma istediğiniz işlevi atayın. Alt köşeler isteğe bağlıdır; Düğme yok seçeneğiyle gizlenir.">
+            {t.eylem !== 'panel' && t.eylem !== 'yuzen' && <SettingsSection icon={MousePointerClick} title="Kart menüsü"
+                description="Düğme yerlerini ve işlevlerini düzenleyin.">
                 <div className="grid grid-cols-2 gap-3">
                     {Object.entries(KART_YERLERI).map(([yer, ad]) => (
                         <label key={yer} className="flex flex-col gap-1.5 text-sm text-sand-800">
@@ -185,7 +177,7 @@ export function TuvalAyarlari() {
                 </div>
                 <button type="button" className="mt-3 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
                     onClick={() => tuvalTercihleriniKaydet({ ...t, dugmeler: { ...VARSAYILAN_KART_DUGMELERI } })}>Düğmeleri varsayılana döndür</button>
-            </SettingsSection>
+            </SettingsSection>}
 
             <SettingsSection icon={SlidersHorizontal} tone="moss" title="Ayrıntılar" flush>
                 <div className="divide-y divide-sand-100">

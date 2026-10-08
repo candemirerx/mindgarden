@@ -20,7 +20,6 @@ export type TuvalGezinme = 'cubuk' | 'sekme' | 'yok';
 export type TuvalOnizleme = 0 | 2 | 3;
 /** Kart çevresindeki üç güncel tasarım veya dokunarak açılan panel/yüzen düğme. */
 export type TuvalEylem = 'hap' | 'yumusak' | 'kapsul' | 'panel' | 'yuzen';
-export type KartKullanim = 'birlikte' | 'dokun' | 'kaydir';
 /** Not kartlarının tasarımı: bahçe (gölgeli, katmanlı), sade (ince çerçeve), renkli (seviyeye göre dolgu), hap (tek satır, yuvarlak). */
 export type TuvalKart = 'bahce' | 'sade' | 'renkli' | 'hap';
 export const KART_ISLEVLERI = {
@@ -39,10 +38,10 @@ export const VARSAYILAN_KART_DUGMELERI: KartDugmeleri = {
     ustSol: 'kopya', ustOrta: 'editor', ustSag: 'buda',
     sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok'
 };
-export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kullanim: KartKullanim; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri };
+export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri };
 
 const ANAHTAR = 'nb-tuval-v1';
-export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kullanim: 'birlikte', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI };
+export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI };
 
 function dugmeleriOku(v: unknown): KartDugmeleri {
     const k = v && typeof v === 'object' ? v as Partial<KartDugmeleri> : {};
@@ -64,7 +63,6 @@ export function tuvalTercihleri(): TuvalTercihleri {
             gezinme: k.gezinme === 'cubuk' || k.gezinme === 'yok' ? k.gezinme : 'sekme',
             onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
             eylem: ['panel', 'yuzen', 'yumusak', 'kapsul'].includes(k.eylem ?? '') ? k.eylem! : 'hap',
-            kullanim: k.kullanim === 'dokun' || k.kullanim === 'kaydir' ? k.kullanim : 'birlikte',
             kart: kartOku(k.kart),
             kartKoyu: kartOku(k.kartKoyu),
             dugmeler: dugmeleriOku(k.dugmeler)

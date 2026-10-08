@@ -20,7 +20,7 @@ import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 import { VARSAYILAN_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
-import type { KartDugmeleri, KartIslevi, KartKullanim, TuvalEylem, TuvalKart, TuvalOnizleme, TuvalGosterim } from '@/lib/tuvalTercihleri';
+import type { KartDugmeleri, KartIslevi, TuvalEylem, TuvalKart, TuvalOnizleme, TuvalGosterim } from '@/lib/tuvalTercihleri';
 
 type Duzen = TuvalGosterim;
 type Ortak = {
@@ -28,7 +28,6 @@ type Ortak = {
     onizleme: TuvalOnizleme;
     /** Kart çevresinde üç tasarım; panel ve yüzen düğme sayfa düzeyinde çizilir. */
     eylem?: TuvalEylem;
-    kullanim?: KartKullanim;
     /** Kart tasarımı; verilmezse bahçe. */
     kart?: TuvalKart;
     onAddChild: (parentId: string, direction?: 'left' | 'right') => void;
@@ -189,13 +188,13 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', kullanim = 'birlikte', dugmeler = VARSAYILAN_KART_DUGMELERI, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler = VARSAYILAN_KART_DUGMELERI, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
     const [kopyalandi, setKopyalandi] = useState(false);
     const disMenu = eylem === 'panel' || eylem === 'yuzen';
-    const hareket = useKartHareketi(disMenu ? 'dokun' : kullanim, disMenu ? () => setSelectedNode(node.id) : undefined);
+    const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined);
     const secili = selectedNodeId === node.id;
     const budandi = node.isPruned ?? false;
     const cocukSayisi = node.children.length;
