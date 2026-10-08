@@ -15,16 +15,17 @@
  */
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Bluetooth, Check, Copy, Download, ExternalLink, Globe, Loader2, MonitorSmartphone, Radio, Search, Share2, Wifi } from 'lucide-react';
+import { Activity, Bluetooth, Check, Copy, Download, ExternalLink, Globe, Loader2, MonitorSmartphone, Radio, RefreshCw, Search, Share2, ShieldCheck, Wifi } from 'lucide-react';
 import { PC_YARDIMCISI_SAYFASI, PC_YARDIMCISI_ZIP } from '@/lib/config';
 import {
     KART_AP_ADRESI, KART_AP_AGI, baglantiSatiriniCoz, baglantiTuru, baglantiTuruSec, bilgisayarAdresiniSina, wifiAyarlariniAc, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul,
-    bluetoothAyarlariniAc, bluetoothKlavyeBagla, bluetoothKlavyeyiBaslat, connectCard, telefonuGorunurYap, disconnectCard, kartAginda, kartiWifidaBul, scanCards, scanPairedComputers,
+    bluetoothAyarlariniAc, bluetoothKlavyeBagla, bluetoothKlavyeyiBaslat, connectCard, telefonuGorunurYap, disconnectCard, kartAdiEslesir, kartAginda, kartiWifidaBul, kayitliKartAdresi, scanCards, scanPairedComputers,
     sendToComputerClipboard, telefonWifiAdresi, testCard, testHelper
 } from '@/lib/remoteTools';
 import type { BaglantiTuru, BulunanBilgisayar, Device, RemotePrefs } from '@/lib/remoteTools';
-import { SettingsField, SettingsNote, cx, settingsFieldClass } from '@/components/ui/settings';
-import { durumuTazele, useBaglantiDurumu, yolAdi } from '@/lib/baglantiDurumu';
+import { SettingsField, SettingsGroupLabel, SettingsNote, SettingsSwitch, cx, settingsFieldClass } from '@/components/ui/settings';
+import { baglantiyiYokla, durumuTazele, useBaglantiDurumu, yolAdi } from '@/lib/baglantiDurumu';
+import type { DurumTuru } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
 import DenemeAgaciDugmesi from './DenemeAgaciDugmesi';
 
@@ -575,7 +576,7 @@ function TailscaleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gunc
 }
 
 /** Kart adı mı? (yeni ve eski bellenim adları). */
-const kartAdi = (d: Device) => /kablosuz|bellek|usb hid|can00/i.test(d.name) || !!d.connected;
+const kartAdi = (d: Device) => kartAdiEslesir(d.name) || !!d.connected;
 
 /** Kart BLE: tara, kartlar önce; bağlan. */
 function KartBleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
@@ -621,14 +622,23 @@ function KartBleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncel
     </div>;
 }
 
-const YOLLAR: { id: BaglantiTuru; label: string; detail: string; Icon: typeof Wifi }[] = [
-    { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'Aynı ağda; PC yardımcısı + kod', Icon: Wifi },
-    { id: 'tailscale', label: 'Tailscale', detail: 'Başka şehirden de; PC yardımcısı', Icon: Globe },
-    { id: 'pc-bluetooth', label: 'Bilgisayar · Bluetooth', detail: 'Program gerekmez', Icon: Bluetooth },
-    { id: 'wifi', label: 'Kart · Wi‑Fi', detail: 'Kart ev ağında', Icon: Wifi },
-    { id: 'kart-ap', label: 'Kart · AP', detail: 'Kartın kendi ağı (router yok)', Icon: Radio },
-    { id: 'bluetooth', label: 'Kart · Bluetooth', detail: 'Düşük enerji (BLE)', Icon: Bluetooth }
+type YolTanimi = { id: BaglantiTuru; label: string; detail: string; Icon: typeof Wifi; grup: 'bilgisayar' | 'kart' };
+
+const YOLLAR: YolTanimi[] = [
+    { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'Aynı ağ; yardımcı + 6 haneli kod', Icon: Wifi, grup: 'bilgisayar' },
+    { id: 'tailscale', label: 'Tailscale', detail: 'Başka şehirden de; yardımcı', Icon: Globe, grup: 'bilgisayar' },
+    { id: 'pc-bluetooth', label: 'Bilgisayar · Bluetooth', detail: 'Klavye/fare; program gerekmez', Icon: Bluetooth, grup: 'bilgisayar' },
+    { id: 'wifi', label: 'Kart · Wi‑Fi', detail: 'Kart ev/iş ağında', Icon: Wifi, grup: 'kart' },
+    { id: 'kart-ap', label: 'Kart · AP', detail: 'Kartın kendi ağı; router yok', Icon: Radio, grup: 'kart' },
+    { id: 'bluetooth', label: 'Kart · Bluetooth', detail: 'Düşük enerji (BLE)', Icon: Bluetooth, grup: 'kart' }
 ];
+
+const YOL_GRUPLARI: { id: YolTanimi['grup']; baslik: string; aciklama: string }[] = [
+    { id: 'bilgisayar', baslik: 'Bilgisayar', aciklama: 'Yazı, fare ve pano doğrudan bilgisayara gider; kart gerekmez.' },
+    { id: 'kart', baslik: 'Kart', aciklama: 'Kablosuz Bellek kartı yazar ve fareyi oynatır; kartın USB kablosu hedef bilgisayarda olmalı.' }
+];
+
+const yolTanimi = (id: BaglantiTuru): YolTanimi => YOLLAR.find(y => y.id === id) ?? YOLLAR[0];
 
 /** Yol hazır mı? (kayıtlı bilgilere göre; canlı bağlantıyı "Dene" doğrular). */
 function yolHazir(id: BaglantiTuru, prefs: RemotePrefs): boolean {
@@ -636,42 +646,163 @@ function yolHazir(id: BaglantiTuru, prefs: RemotePrefs): boolean {
     if (id === 'tailscale') return !!((prefs.agTuru === 'tailscale' ? prefs.helperUrl : prefs.helperUrlTs) && prefs.helperToken);
     if (id === 'pc-bluetooth') return !!prefs.helperBluetoothAddress;
     if (id === 'wifi') return !!((prefs.agTuru === 'kart-ap' ? prefs.cardUrlEv : prefs.cardUrl) || '').trim();
-    return true;
+    if (id === 'bluetooth') return !!kayitliKartAdresi();
+    return false;
 }
+
+/** Durum rozeti: yeşil bağlı, kırmızı bağlantı yok, gri kurulmadı/denetleniyor. */
+const ROZET_ADI: Record<DurumTuru | 'bilinmiyor', string> = {
+    ok: 'Bağlı', hata: 'Bağlantı yok', kurulmadi: 'Kurulmadı', bakiliyor: 'Denetleniyor', bilinmiyor: 'Bekliyor'
+};
+const ROZET_SINIFI: Record<DurumTuru | 'bilinmiyor', string> = {
+    ok: 'border-moss-500/30 bg-moss-500/10 text-moss-800',
+    hata: 'border-berry-500/30 bg-berry-500/10 text-berry-700',
+    kurulmadi: 'border-sand-300 bg-sand-100 text-sand-600',
+    bakiliyor: 'border-sand-300 bg-sand-100 text-sand-600',
+    bilinmiyor: 'border-sand-200 bg-white text-sand-500'
+};
+
+function DurumRozeti({ tur, bakiliyor }: { tur: DurumTuru | null; bakiliyor: boolean }) {
+    const t: DurumTuru | 'bilinmiyor' = tur ?? (bakiliyor ? 'bakiliyor' : 'bilinmiyor');
+    return <span className={cx('inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold', ROZET_SINIFI[t])}>
+        <span aria-hidden="true" className={cx('h-1.5 w-1.5 rounded-full', t === 'ok' ? 'bg-moss-500' : t === 'hata' ? 'bg-berry-500' : t === 'bakiliyor' ? 'animate-pulse bg-sand-400' : 'bg-sand-400')} />
+        {ROZET_ADI[t]}
+    </span>;
+}
+
+/** Tek bağlantı yolu kartı: simge, ad, kısa açıklama ve durum rozeti. */
+function YolKarti({ tanim, secili, hazir, durum, bakiliyor, onSec }: {
+    tanim: YolTanimi; secili: boolean; hazir: boolean; durum: DurumTuru | null; bakiliyor: boolean; onSec: () => void;
+}) {
+    const Ikon = tanim.Icon;
+    return <button type="button" role="radio" aria-checked={secili} id={'baglanti-yolu-' + tanim.id} onClick={onSec}
+        className={cx('group relative flex min-h-[70px] flex-col gap-1.5 rounded-2xl border p-2.5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40',
+            secili
+                ? 'border-moss-400 bg-gradient-to-b from-moss-50 to-white ring-1 ring-moss-500/20 shadow-[0_10px_22px_-18px_rgba(31,61,45,0.6)]'
+                : 'border-sand-200 bg-white hover:border-moss-200 hover:bg-moss-50/40')}>
+        <span className="flex min-h-[22px] items-center gap-2">
+            <span className={cx('flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
+                secili ? 'bg-moss-600 text-white' : 'bg-sand-100 text-sand-600 group-hover:bg-moss-100 group-hover:text-moss-700')}>
+                <Ikon size={15} aria-hidden="true" />
+            </span>
+            {secili
+                ? <DurumRozeti tur={durum} bakiliyor={bakiliyor} />
+                : hazir ? <span className="rounded-full border border-sand-200 bg-sand-50 px-2 py-0.5 text-[10px] font-medium text-sand-500">kurulu</span> : null}
+        </span>
+        <span className="min-w-0">
+            <span className={cx('block text-[12.5px] font-semibold leading-tight', secili ? 'text-moss-900' : 'text-sand-800')}>{tanim.label}</span>
+            <span className={cx('mt-0.5 block text-[10.5px] leading-snug', secili ? 'text-moss-700' : 'text-sand-500')}>{tanim.detail}</span>
+        </span>
+    </button>;
+}
+
+type SinamaSonucu = { yol: BaglantiTuru; tur: DurumTuru; mesaj: string };
 
 export default function BaglantiKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
     const { durum, bakiliyor, tazele } = useBaglantiDurumu(prefs, { aralikMs: 20000 });
+    const secili = baglantiTuru(prefs);
+    const tanim = yolTanimi(secili);
+    const Ikon = tanim.Icon;
+    const otoAcik = prefs.autoBaglan !== false;
+    const [siniyor, setSiniyor] = useState(false);
+    const [sonuclar, setSonuclar] = useState<SinamaSonucu[] | null>(null);
+
+    /** Kurulu yolları sırayla, editörün kullandığı fonksiyonlarla gerçekten yoklar. */
+    const sinaYollari = async () => {
+        setSiniyor(true); setSonuclar([]);
+        try {
+            const adaylar = YOLLAR.map(y => y.id).filter(id => yolHazir(id, prefs));
+            try {
+                const ip = await telefonWifiAdresi();
+                if (ip && kartAginda(ip) && !adaylar.includes('kart-ap')) adaylar.push('kart-ap');
+            } catch { /* ağ adresi okunamadı: yalnız kurulu yollar sınanır */ }
+            if (!adaylar.length) { setSonuclar(null); return; }
+            for (const id of adaylar) {
+                const sonuc = await baglantiyiYokla(baglantiTuruSec(prefs, id));
+                setSonuclar(onceki => [...(onceki ?? []), { yol: id, tur: sonuc.tur, mesaj: sonuc.mesaj }]);
+            }
+        } finally {
+            setSiniyor(false); void tazele();
+        }
+    };
+
     return <div className="space-y-4">
-        <BaglantiGostergesi id="baglanti-canli-durum" yol={prefs.connection} ad={yolAdi(prefs)} durum={durum} bakiliyor={bakiliyor} onTazele={() => void tazele()} />
+        {/* Canlı durum + açılışta otomatik bağlanma */}
+        <div className="space-y-2">
+            <BaglantiGostergesi id="baglanti-canli-durum" yol={prefs.connection} ad={yolAdi(prefs)} durum={durum} bakiliyor={bakiliyor} onTazele={() => void tazele()} />
+            <div className="flex items-center gap-3 rounded-xl border border-sand-200 bg-white px-3 py-1.5">
+                <Activity size={16} className={cx('shrink-0', otoAcik ? 'text-moss-700' : 'text-sand-400')} aria-hidden="true" />
+                <div className="min-w-0 flex-1 py-1.5">
+                    <p className="text-xs font-semibold text-sand-800">Açılışta otomatik bağlan</p>
+                    <p className="text-[11px] leading-snug text-sand-500">Uygulama her açıldığında ve öne geldiğinde <strong className="font-medium text-sand-700">{tanim.label}</strong> yolunu kendisi kurar; adres tutmazsa kartı yeniden tarar.</p>
+                </div>
+                <SettingsSwitch id="oto-baglama" checked={otoAcik} onChange={v => update({ ...prefs, autoBaglan: v })} label="Açılışta otomatik bağlan" />
+            </div>
+        </div>
+
         {/* Bağlantı kurulunca: tek dokunuşla gerçek bir notta deneme. */}
         {durum?.tur === 'ok' && <DenemeAgaciDugmesi tur="baglanti" vurgulu />}
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Bağlantı yolu">
-            {YOLLAR.map(({ id, label, detail, Icon }) => {
-                const secili = baglantiTuru(prefs) === id;
-                const hazir = yolHazir(id, prefs);
-                return <button key={id} type="button" role="radio" aria-checked={secili} id={'baglanti-yolu-' + id} onClick={() => update(baglantiTuruSec(prefs, id))}
-                    className={cx('relative flex min-h-14 items-center gap-2.5 rounded-xl border p-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40',
-                        secili ? 'border-moss-400 bg-moss-50 text-moss-800 ring-1 ring-moss-500/25' : 'border-sand-200 bg-white text-sand-600 hover:border-sand-300 hover:text-sand-900')}>
-                    <Icon size={20} className="shrink-0" aria-hidden="true" />
-                    <span className="min-w-0">
-                        <span className={cx('block text-sm font-semibold', secili ? 'text-moss-800' : 'text-sand-800')}>{label}</span>
-                        <span className={cx('block text-xs', secili ? 'text-moss-700' : 'text-sand-600')}>{detail}</span>
-                    </span>
-                    {secili
-                        ? <span className={cx('absolute right-2 top-1.5 rounded-full px-1.5 text-[10px] font-bold',
-                            durum?.tur === 'ok' ? 'bg-moss-600 text-white' : durum?.tur === 'hata' ? 'bg-berry-600 text-white' : 'bg-sand-200 text-sand-700')}>
-                            {durum?.tur === 'ok' ? 'Bağlı' : durum?.tur === 'hata' ? 'Bağlantı yok' : 'Kullanılıyor'}</span>
-                        : hazir && id !== 'bluetooth' && <span className="absolute right-2 top-1.5 text-[10px] font-medium text-sand-500">kurulu</span>}
-                </button>;
-            })}
+
+        {/* Yol seçimi: bilgisayar ve kart grupları ayrı, her kartta durum rozeti. */}
+        <div role="radiogroup" aria-label="Bağlantı yolu" className="space-y-3">
+            {YOL_GRUPLARI.map(grup => <div key={grup.id} className="space-y-1.5">
+                <SettingsGroupLabel>{grup.baslik}</SettingsGroupLabel>
+                <div className="grid grid-cols-2 gap-2">
+                    {YOLLAR.filter(y => y.grup === grup.id).map(y => <YolKarti key={y.id} tanim={y}
+                        secili={secili === y.id} hazir={yolHazir(y.id, prefs)}
+                        durum={secili === y.id ? (durum?.tur ?? null) : null}
+                        bakiliyor={secili === y.id && bakiliyor}
+                        onSec={() => update(baglantiTuruSec(prefs, y.id))} />)}
+                </div>
+                <p className="text-[11px] leading-snug text-sand-500">{grup.aciklama}</p>
+            </div>)}
         </div>
-        <div className="rounded-xl border border-sand-200 bg-sand-50/60 p-3">
-            {baglantiTuru(prefs) === 'pc-wifi' && <PcWifiEslestirme prefs={prefs} update={update} yoluSec />}
-            {baglantiTuru(prefs) === 'tailscale' && <TailscaleKurulumu prefs={prefs} update={update} />}
-            {baglantiTuru(prefs) === 'pc-bluetooth' && <BilgisayarBluetoothKlavye prefs={prefs} update={update} />}
-            {baglantiTuru(prefs) === 'wifi' && <KartWifiKurulumu prefs={prefs} update={update} />}
-            {baglantiTuru(prefs) === 'kart-ap' && <KartApKurulumu prefs={prefs} update={update} />}
-            {baglantiTuru(prefs) === 'bluetooth' && <KartBleKurulumu prefs={prefs} update={update} />}
+
+        {/* Seçili yolun adımları. */}
+        <section data-baglanti-adimlari className="overflow-hidden rounded-2xl border border-sand-200 bg-white">
+            <header className="flex items-center gap-2.5 border-b border-sand-100 bg-sand-50/70 px-3.5 py-2.5">
+                <span className={cx('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1',
+                    durum?.tur === 'ok' ? 'bg-moss-600 text-white ring-moss-600' : 'bg-white text-moss-700 ring-sand-200')}>
+                    <Ikon size={16} aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-semibold text-sand-900">{tanim.label}</span>
+                    <span className="block text-[11px] text-sand-500">Aşağıdaki adımları sırayla izleyin.</span>
+                </span>
+                <DurumRozeti tur={durum?.tur ?? null} bakiliyor={bakiliyor} />
+            </header>
+            <div className="p-3.5">
+                {secili === 'pc-wifi' && <PcWifiEslestirme prefs={prefs} update={update} yoluSec />}
+                {secili === 'tailscale' && <TailscaleKurulumu prefs={prefs} update={update} />}
+                {secili === 'pc-bluetooth' && <BilgisayarBluetoothKlavye prefs={prefs} update={update} />}
+                {secili === 'wifi' && <KartWifiKurulumu prefs={prefs} update={update} />}
+                {secili === 'kart-ap' && <KartApKurulumu prefs={prefs} update={update} />}
+                {secili === 'bluetooth' && <KartBleKurulumu prefs={prefs} update={update} />}
+            </div>
+        </section>
+
+        {/* Tanılama: kurulu tüm yolları gerçek istekle dener. */}
+        <div className="rounded-2xl border border-sand-200 bg-white p-3">
+            <div className="flex items-start gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-moss-50 text-moss-700 ring-1 ring-moss-100"><ShieldCheck size={16} aria-hidden="true" /></span>
+                <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-sand-800">Bağlantı türlerini sına</p>
+                    <p className="text-[11px] leading-snug text-sand-500">Kurulu yolları sırayla gerçek istekle yoklar; hangisinin yanıt verdiğini yazar. Sıra sürerken bekleyin (~1 dk sürebilir).</p>
+                </div>
+                <button type="button" id="baglanti-sina" disabled={siniyor} className={cx(ikinciDugme, 'shrink-0')} onClick={() => void sinaYollari()}>
+                    <Bekliyor goster={siniyor}><RefreshCw size={15} aria-hidden="true" /> {siniyor ? 'Sınanıyor…' : 'Sına'}</Bekliyor>
+                </button>
+            </div>
+            {sonuclar && sonuclar.length > 0 && <ul className="mt-2.5 space-y-1.5 border-t border-sand-100 pt-2.5">
+                {sonuclar.map(s => <li key={s.yol} className="flex items-start gap-2">
+                    <span className="mt-0.5 w-[128px] shrink-0 text-[11px] font-semibold text-sand-800">{yolTanimi(s.yol).label}</span>
+                    <span className="min-w-0 flex-1 text-[11px] leading-snug text-sand-600">{s.mesaj}</span>
+                    <DurumRozeti tur={s.tur} bakiliyor={false} />
+                </li>)}
+            </ul>}
+            {sonuclar && sonuclar.length === 0 && !siniyor && <p className="mt-2.5 border-t border-sand-100 pt-2.5 text-[11px] text-sand-500">Sınanacak kurulu yol yok. Önce bir yolu kurun.</p>}
+            {siniyor && <p className="mt-2.5 border-t border-sand-100 pt-2.5 text-[11px] text-sand-500">Yollar sırayla sınanıyor…</p>}
         </div>
     </div>;
 }
+

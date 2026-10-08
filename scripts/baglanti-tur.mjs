@@ -42,7 +42,12 @@ class Cdp {
     }
     gonder(method, params = {}) {
         const id = ++this.sayac;
-        return new Promise((coz, reddet) => { this.bekleyenler.set(id, { coz, reddet }); this.soket.send(JSON.stringify({ id, method, params })); });
+        // Tarayıcı düşerse istek sonsuza kadar asılı kalmasın: 30 sn sonra hata ver.
+        return new Promise((coz, reddet) => {
+            const zaman = setTimeout(() => { this.bekleyenler.delete(id); reddet(new Error('Tarayıcı yanıt vermedi: ' + method)); }, 30000);
+            this.bekleyenler.set(id, { coz: v => { clearTimeout(zaman); coz(v); }, reddet: h => { clearTimeout(zaman); reddet(h); } });
+            this.soket.send(JSON.stringify({ id, method, params }));
+        });
     }
     dinle(method, f) { const k = this.olaylar.get(method) || []; k.push(f); this.olaylar.set(method, k); }
 }
@@ -108,7 +113,7 @@ async function main() {
             await bekle(700);
             const durum = await degerlendir(`(() => {
                 const radyo = document.getElementById('baglanti-yolu-${id}');
-                const liste = document.querySelector('[role=radiogroup][aria-label="Bağlantı yolu"]')?.parentElement?.querySelector('ol');
+                const liste = document.querySelector('[data-baglanti-adimlari] ol');
                 const pano = [...document.querySelectorAll('h3,h4')].some(h => /PC panosu/.test(h.innerText));
                 return { secili: radyo?.getAttribute('aria-checked') === 'true', adim: liste ? liste.children.length : 0, pano };
             })()`);
@@ -121,6 +126,32 @@ async function main() {
                 await degerlendir(`document.getElementById('baglanti-yolu-${id}').scrollIntoView({ block: 'start' })`); await bekle(300);
                 const k = await cdp.gonder('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
                 writeFileSync(join(GORSEL, 'baglanti-' + id + '.png'), Buffer.from(k.data, 'base64'));
+            }
+        }
+
+        // Yeni düzen: gruplanmış yol kartları, canlı durum rozeti, otomatik
+        // bağlanma anahtarı ve bağlantı türlerini sınayan tanılama düğmesi.
+        sart('Yol kartları Bilgisayar ve Kart gruplarına ayrıldı', await degerlendir(`(() => {
+            const metin = document.querySelector('[role=radiogroup][aria-label="Bağlantı yolu"]')?.innerText || '';
+            return /Bilgisayar/.test(metin) && /Kart/.test(metin);
+        })()`));
+        sart('Her yol kartında durum rozeti var', await degerlendir(`(() => {
+            const secili = JSON.parse(localStorage.getItem('nb-remote-prefs-v1')).connection;
+            const kart = document.getElementById('baglanti-yolu-' + secili);
+            return !!kart && /Bağlı|Bağlantı yok|Kurulmadı|Denetleniyor|Bekliyor/.test(kart.innerText);
+        })()`));
+        const oto = await degerlendir(`(() => { const b = document.getElementById('oto-baglama'); return b ? { var: true, acik: b.getAttribute('aria-checked') === 'true' } : { var: false }; })()`);
+        sart('Açılışta otomatik bağlan anahtarı açık geliyor', oto.var && oto.acik, JSON.stringify(oto));
+        await tikla(`document.getElementById('oto-baglama')`); await bekle(500);
+        sart('Anahtar kapatılınca tercih kaydedildi', await degerlendir(`JSON.parse(localStorage.getItem('nb-remote-prefs-v1')).autoBaglan === false`));
+        await tikla(`document.getElementById('oto-baglama')`); await bekle(500);
+        sart('Anahtar açılınca tercih kaydedildi', await degerlendir(`JSON.parse(localStorage.getItem('nb-remote-prefs-v1')).autoBaglan === true`));
+        sart('Bağlantı türlerini sına düğmesi var', await degerlendir(`!!document.getElementById('baglanti-sina')`));
+        if (GORSEL) {
+            for (const [ad, secici] of [['durum', '#baglanti-canli-durum'], ['yollar', '[role=radiogroup][aria-label="Bağlantı yolu"]'], ['tanilama', '#baglanti-sina']]) {
+                await degerlendir(`document.querySelector('${secici}')?.scrollIntoView({ block: 'start' })`); await bekle(350);
+                const k = await cdp.gonder('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+                writeFileSync(join(GORSEL, 'baglanti-' + ad + '.png'), Buffer.from(k.data, 'base64'));
             }
         }
 

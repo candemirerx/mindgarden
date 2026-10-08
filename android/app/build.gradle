@@ -1,5 +1,12 @@
 apply plugin: 'com.android.application'
 
+// İkinci uygulama (yan yana kurulum): aynı kaynaktan, farklı paket adı ve
+// görünen adla ikinci bir APK üretir:
+//   gradlew assembleRelease -Puygulama=ikiz
+// Birincil uygulama (Play) bu bayrak verilmeden derlenir ve eskisi gibi
+// com.notbahcesi.app olarak kalır.
+def ikizUygulama = ['ikiz', 'ikinci', '2'].contains((project.findProperty('uygulama') ?: '').toString().trim().toLowerCase())
+
 // Play Store release imzası: android/keystore.properties (repoya girmez)
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('keystore.properties')
@@ -21,11 +28,14 @@ android {
     // gradlew assembleReleaseAndroidTest -PtestBuildType=release
     testBuildType project.findProperty('testBuildType') ?: 'debug'
     defaultConfig {
-        applicationId "com.notbahcesi.app"
+        applicationId ikizUygulama ? "com.notbahcesi.app2" : "com.notbahcesi.app"
+        // Görünen ad manifest'ten gelir; iki uygulama aynı anda kurulabilsin diye
+        // ikinci kopya farklı adla kurulur.
+        manifestPlaceholders = [uygulamaAdi: ikizUygulama ? "Not Bahçesi 2" : "Not Bahçesi"]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 58
-        versionName "2.2.14"
+        versionCode 60
+        versionName "2.2.16"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -92,7 +102,10 @@ apply from: 'capacitor.build.gradle'
 
 try {
     def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
+    // Google Hizmetleri eklentisi paket adına göre istemci arar; ikinci uygulamanın
+    // paketi google-services.json içinde yok, bu yüzden yalnız birincil uygulamada
+    // uygulanır. (Google ile giriş/Drive yedeği ikinci kopyada kullanılmaz.)
+    if (servicesJSON.text && !ikizUygulama) {
         apply plugin: 'com.google.gms.google-services'
     }
 } catch(Exception e) {

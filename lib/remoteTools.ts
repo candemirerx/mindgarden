@@ -253,6 +253,8 @@ export type RemotePrefs = {
      * (PC yardımcısından okunur; okunamazsa makro kaydedildiği ekranı kullanır).
      */
     hedefEkran?: { w: number; h: number } | null;
+    /** Uygulama açıldığında (ve öne geldiğinde) seçili yola kendiliğinden bağlanılsın mı. */
+    autoBaglan: boolean;
     enabledTools: Record<RemoteToolId, boolean>;
     macros: RemoteMacro[];
     profiles: RemoteProfile[];
@@ -262,7 +264,7 @@ export type RemotePrefs = {
 
 const key = 'nb-remote-prefs-v1';
 const defaults: RemotePrefs = {
-    connection: 'wifi', cardUrl: 'http://192.168.4.1', helperUrl: '', helperToken: '', helperBluetoothAddress: '',
+    connection: 'wifi', cardUrl: 'http://192.168.4.1', helperUrl: '', helperToken: '', helperBluetoothAddress: '', autoBaglan: true,
     mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', appendDictation: true, dictationTarget: 'editor', bridgeDictationTarget: 'computer', writeMode: 'dugme', writeTarget: 'both',
     enabledTools: { mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, enter: true, clipboard: true, imageToComputer: true, imageToClipboard: true, phoneClipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
 };
@@ -325,6 +327,41 @@ export function saveRemotePrefs(prefs: RemotePrefs) {
 }
 
 export type Device = { address: string; name: string; rssi: number; computer?: boolean; connected?: boolean };
+
+/**
+ * Kart adı mı? Kablosuz Bellek kartının yeni ve eski bellenim adları
+ * (KablosuzBellek, USB HID Klavye, can bellek s3 / can00 ...) kapsanır.
+ * Tarama listesinde kartları öne almak ve açılışta otomatik bağlanırken
+ * kayıtlı adres yanıt vermezse doğru cihazı seçmek için kullanılır.
+ */
+export const kartAdiEslesir = (ad: string | undefined | null): boolean => /kablosuz|bellek|usb hid|can00/i.test(ad ?? '');
+
+/**
+ * Açılışta otomatik bağlanmada cihaz seçme puanı. Yüksek puan daha güçlü
+ * adaydır: kart adı + açık bağlantı + sinyal gücü.
+ *
+ * Adı karta benzemeyen cihaz **hiç** aday olmaz; "telefona bağlı" bilgisi
+ * tek başına yetmez. Android, GATT bağlantısı olan her cihazı (ör. akıllı
+ * saat, kulaklık) taramada "bağlı" diye bildirir; bunlar karta bağlanmamalı.
+ */
+export function kartAdayPuani(d: Device): number {
+    if (!kartAdiEslesir(d.name)) return 0;
+    let puan = 100;
+    if (d.connected) puan += 30;
+    if (typeof d.rssi === 'number' && d.rssi < 0) puan += Math.max(0, 20 + d.rssi / 5);
+    return puan;
+}
+
+/** Tarama sonucundan otomatik bağlanılacak en iyi kart adayı (yoksa null). */
+export function enIyiKartAdayi(cihazlar: Device[]): Device | null {
+    let enIyi: Device | null = null;
+    let enYuksek = 0;
+    for (const cihaz of cihazlar) {
+        const puan = kartAdayPuani(cihaz);
+        if (puan > enYuksek) { enYuksek = puan; enIyi = cihaz; }
+    }
+    return enIyi;
+}
 type NativeRemote = {
     scan(options?: { scanId: string }): Promise<{ devices: Device[] }>;
     scanPaired(): Promise<{ devices: Device[] }>;

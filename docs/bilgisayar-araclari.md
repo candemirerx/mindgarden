@@ -43,14 +43,14 @@ Yardımcı program, hedef bilgisayarda açık kalan küçük bir alıcıdır: te
 
 Kartın `/api/text` ve BLE `w:` komutu **PC panosuna yazmaz**: SD kartta sonradan PC'de çalıştırılacak dosya üretir. Gerçek, anlık PC pano işlemi için yardımcı program zorunludur:
 
-1. PC'de masaüstündeki **Not Bahçesi PC Yardımcısı** kısayoluna çift tıklayın ve pencereyi açık bırakın. Kısayol yoksa [pc_yardimcisi_baslat.cmd](../scripts/pc_yardimcisi_baslat.cmd) dosyasına çift tıklayın. Windows'un kendi PowerShell'i kullanılır; Python veya başka paket kurulmaz. Tek başlatıcı vardır; eski `pc_kontrolu_baslat.cmd`, `pc_panoyu_baslat.cmd` ve Python sürümü 2.2.12 ile kaldırıldı.
-2. Programı **yönetici olarak çalıştırmanız gerekmez**. Başlatıcı yalnız Wi‑Fi için güvenlik duvarı kuralının (TCP 8765, yalnız **Özel ağ** profili) olup olmadığına bakar; kural varsa hiç izin sormaz. Yoksa yalnız o kuralı eklemek için **bir kez** Windows izin penceresi çıkar. **Hayır** derseniz program yine açılır: Bluetooth ile pano çalışır, yalnız Wi‑Fi bağlantısı engellenebilir. Kuralı sonra eklemek için başlatıcıyı yeniden çalıştırın.
-3. Açılan pencere adresi ve erişim anahtarını **tek satır** olarak panonuza kopyalar: `http://PC-IP:8765|anahtar`. Telefonda Ayarlar → Bilgisayar sekmesindeki **Bağlantı kodu** alanına yapıştırıp **Kaydet** düğmesine dokunun; adres ve anahtar alanları kendiliğinden dolar. Elle de girebilirsiniz: IP'yi `192.168.1.20:8765` biçiminde yazmanız yeterlidir, `http://` eklenmese de kabul edilir.
+1. PC'de masaüstündeki **Not Bahçesi PC Yardımcısı** kısayoluna çift tıklayın ve pencereyi açık bırakın. Kısayol yoksa [pc_yardimcisi_baslat.cmd](../scripts/pc_yardimcisi_baslat.cmd) dosyasına çift tıklayın. Windows'un kendi PowerShell'i kullanılır; Python veya başka paket kurulmaz. Eski `pc_kontrolu_baslat.cmd`, `pc_panoyu_baslat.cmd` ve Python sürümü 2.2.12 ile kaldırıldı; doğrudan yerel ağ için ayrıca `pc_yardimcisi_wifi.cmd` vardır.
+2. Programı **yönetici olarak çalıştırmanız gerekmez** ve başlatıcı yönetici penceresi açmaz. Varsayılan başlatıcı kart USB, Bluetooth ve kurulu Tailscale hizmetini kullanır; TCP 8765 yalnız `127.0.0.1` üzerinde dinler. Tailscale bu portu özel ağınıza yönlendirir; mevcut diğer yayınları ve güvenlik duvarını değiştirmez. Doğrudan yerel ağ için `pc_yardimcisi_wifi.cmd` dosyasını açın. Windows gelen Wi-Fi bağlantısını engelliyorsa sistem yöneticisinin verdiği güvenlik duvarı izni gerekir. İlk Tailscale kurulumu ve kurum politikaları ayrıca sistem izni gerektirebilir.
+3. Penceredeki adresi telefonda bilgisayar bağlantısına girin; ilk eşleştirmede 6 haneli kodu kullanın. Yardımcı bilgisayar panosunu değiştirmez. Eski `http://PC-IP:8765|anahtar` biçimi yalnız gelişmiş elle kurulum içindir; başlatırken `-ElleSatir` verilirse gösterilir.
 4. **Bağlantıyı dene**, ardından isterseniz **Pano aktarımını dene** ile sınayın. Editörde **PC panosu** düğmesi notun tamamını bilgisayarın panosuna kopyalar; gönderim sürerken ve bitince ekranın altında birkaç saniyelik kısa bir bildirim görünür. Windows panosu başka bir uygulamada kısa süre meşgulse yardımcı yazmayı birkaç kez yeniden dener. Klasik Bluetooth seçiliyse IP girmeniz gerekmez.
 
-Uçtan uca doğrulama (28.09.2026, Windows PC): `/health` yanıtı `{"ok":true,"app":"not-bahcesi-clipboard"}`, `/clipboard` isteği panoya yazdı ve `Get-Clipboard` ile birebir eşleşti, yanlış ya da eksik anahtar 401 ile reddedildi, `/input` `ping` isteği kabul edildi. Aynı gün telefondan yapılan bağlantı denemesi **zaman aşımına** uğradı: yardımcı 0.0.0.0:8765 üzerinde dinliyor ve Wi-Fi ağı Özel profilde olmasına karşın Windows gelen bağlantıyı engelliyordu. Bu yüzden tek tıkli başlatıcı yönetici izniyle `pc_guvenlik_duvari.ps1` betiğini çalıştırıp TCP 8765 için gelen izni ekler. Yardımcı hâlâ çalışmıyorsa sırayla bakın: pencere açık mı, izin kuralı eklendi mi, telefonla PC aynı ağda mı, ağ profili Özel mi.
+Uçtan uca doğrulama (28.09.2026, Windows PC): `/health` yanıtı `{"ok":true,"app":"not-bahcesi-clipboard"}`, `/clipboard` isteği panoya yazdı ve `Get-Clipboard` ile birebir eşleşti, yanlış ya da eksik anahtar 401 ile reddedildi, `/input` `ping` isteği kabul edildi. Aynı gün doğrudan Wi-Fi bağlantısı güvenlik duvarı nedeniyle zaman aşımına uğradı. O tarihteki başlatıcının otomatik yönetici isteme adımı 06.10.2026'da kaldırıldı. Yeni varsayılan Tailscale yolunda her iki cihazın Tailscale oturumu, adres ve yardımcı penceresi kontrol edilir; doğrudan Wi-Fi için aynı yerel ağ ve mevcut güvenlik duvarı izni gerekir.
 
-Yardımcı program kullanıcı oturumunda çalışmalı; Windows panosuna yazması için oturum açık olmalıdır. Güvenlik Duvarı sorarsa yalnız **Özel ağ** izni verin. Program tüm arabirimlerde dinler fakat her istekte 256-bit rastgele anahtar ister; anahtar `scripts/.pc_clipboard_token` dosyasında saklanır ve Git tarafından yok sayılır. Yerel HTTP trafiği şifrelenmez: ortak/güvenilmeyen ağda veya internete açarak kullanmayın. İş bitince Ctrl+C ile kapatın. Anahtarı başkası gördüyse programı durdurup token dosyasını güvenle değiştirerek yeniden başlatın. Bu yardımcı uygulama Play Store APK'sının parçası değildir; PC'de ayrıca çalıştırılmalıdır. 
+Yardımcı program kullanıcı oturumunda çalışmalı; Windows panosuna yazması için oturum açık olmalıdır. Varsayılan ağ dinleyicisi yalnız loopback üzerindedir; Tailscale özel ağ bağlantısını taşır. Wi-Fi başlatıcısı tüm arabirimlerde dinler. Eşleştirme dışındaki işlemler 256-bit rastgele anahtar ister; anahtar `scripts/.pc_clipboard_token` dosyasında saklanır ve Git tarafından yok sayılır. Yerel Wi-Fi HTTP trafiği şifrelenmez; güvenilen ağ kullanın. İş bitince Ctrl+C ile kapatın. Yardımcı APK'nın parçası değildir; PC'de ayrıca çalıştırılır. Normal yetkili yardımcı, Windows'un koruması nedeniyle yönetici olarak açılmış uygulamalara tuş gönderemeyebilir. Telefon belleğini sürücü harfiyle bağlamak için WebClient hizmeti gerekir; hizmet sistem politikası nedeniyle açılamazsa tarayıcı erişimi kullanılabilir.
 
 ## Kartla bağlıyken pano
 
@@ -129,3 +129,65 @@ Sıralı makro düzenleyicisindeki **Düğmeye basınca** bölümünden seçilir
 - **Basılı tut:** düğme basılı tutuldukça tekrar eder, bırakınca durur.
 
 Tekrarlanan biçimlerde **Turlar arası** bekleme (0–600 sn) verilebilir; en az 150 ms ara her zaman bırakılır. Çalışan makronun düğmesi yeşil çerçeveyle vurgulanır ve köşesinde tur sayısı (sayılıda `2/5`) görünür. Durdurma, o anki adım bitince (bekleme adımındaysa hemen) olur. Test: `node scripts/makro-calisma-tur.mjs` (17 kontrol).
+
+## Açılışta otomatik bağlanma (2.2.15)
+
+Bir yol bir kez kurulduysa telefonda her seferinde Ayarlar'ı açıp **Bağlan** demek gerekmez. Uygulama açıldığında (ilk boyamadan ~1,5 sn sonra) ve uygulama arka plandan öne geldiğinde seçili yol kendiliğinden kurulur. Ayarlar → Bilgisayar bağlantısı ekranındaki **Açılışta otomatik bağlan** anahtarıyla kapatılabilir (varsayılan açık).
+
+- **Bilgisayar · Bluetooth:** telefon, kayıtlı bilgisayara yine Bluetooth klavye/fare olarak bağlanır. Bilgisayarın yanında duran telefon (ör. GM24 Pro) için pratik olan yol budur.
+- **Bilgisayar · Wi‑Fi / Tailscale:** kayıtlı yardımcıya anahtarlı ping atılır; yanıt gelmezse sessizce bırakılır.
+- **Kart · Wi‑Fi:** kayıtlı adres yoklanır; telefon kartın kendi ağına (192.168.4.x) geçmişse kart `192.168.4.1`'den aranır ve bulunursa tercih "Kart · AP"ye kendiliğinden döner.
+- **Kart · Bluetooth:** bağlantı açıksa bir şey yapılmaz. Değilse önce kayıtlı kart adresi denenir; kart adresi değişmişse kart yeniden taranır ve adı kart adına benzeyen (KablosuzBellek, USB HID Klavye, can bellek s3 / can00 …) en güçlü aday seçilir. Bağlanan adres bir sonraki açılış için saklanır.
+
+Kurallar: aynı oturumda iki deneme arası en az 90 sn; hata açılışta pencere olarak gösterilmez, durum şeridi gerçek sonucu yazar; tarayıcıda (PWA) otomatik bağlanma denenmez. Otomatik bağlanma için **Yakındaki cihazlar** izninin bir kez verilmiş olması gerekir (izin yoksa Android izin penceresi açılmaz, deneme sessizce başarısız olur).
+
+Ayarlar sayfasındaki **Bağlantı türlerini sına** düğmesi kurulu yolları sırayla, editörün kullandığı fonksiyonlarla gerçek istekle yoklar ve hangisinin yanıt verdiğini yazar.
+
+## İkinci uygulama (yan yana kurulum)
+
+Aynı kaynaktan, farklı paket adı ve farklı görünen adla ikinci bir APK üretilir; iki uygulama aynı telefonda yan yana kurulabilir:
+
+```
+cd android
+.\gradlew.bat assembleRelease -Puygulama=ikiz
+```
+
+- Birincil kopya: `com.notbahcesi.app` · "Not Bahçesi" · Play sürümü. Bayrak verilmeden derlenir; çıktı yolu değişmez (`android/app/build/outputs/apk/release/app-release.apk`).
+- İkinci kopya: `com.notbahcesi.app2` · "Not Bahçesi 2". Aynı imza anahtarı ve aynı web paketi kullanılır, bu yüzden iki APK aynı klasöre yazılır: birincil APK'yı önce başka bir adla kopyalayın, sonra ikinci kopyayı derleyin.
+
+İkinci kopyada Google ile giriş ve Drive yedeği kullanılmaz: `google-services.json` yalnız birincil paket için tanımlı, ikinci paket için OAuth istemcisi yok. Bu yüzden Google Hizmetleri eklentisi ikinci derlemede uygulanmaz. Not tutma, bağlantı araçları ve tüm yerel özellikler aynıdır.
+
+## Telefon kabloyla karta bağlanamaz
+
+Kart yollarında **USB kablosu telefondan değil, hedef bilgisayardan geçer**. Kablonun anlamı yönlüdür:
+
+- Kart (ESP32-S3), USB'de bir **cihazdır** (device): bilgisayara USB klavye/fare olarak görünür. Telefon da USB'de cihazdır. İki cihazı birbirine bağlayan bir kablo hiçbir şey yapmaz; aralarında USB **host** yoktur.
+- Uygulamanın kartla konuştuğu iki taşıma yolu vardır: **BLE (NUS)** ve **Wi‑Fi HTTP** (`/api/keys`, `/api/rkey`, `/api/rmouse`). USB bu yolların parçası değildir.
+- Bu yüzden telefon USB ile karta bağlanmış olsa da kart uygulamada görünmez: USB yığını karta dokunmaz; kartın kendi NUS yayını ya da Wi‑Fi sunucusu kullanılmalıdır.
+
+Yedek telefonda alınan hata bu kuraldan gelir. Doğru kurulum:
+
+1. Kartın USB kablosu **hedef bilgisayarda** kalsın (kart yazsın ve fareyi oynatsın diye).
+2. Telefonda **Kart · Bluetooth** yolunu seçip kartı BLE ile bağlayın; ya da **Kart · Wi‑Fi / Kart · AP** yolunu kullanın.
+3. Pano gerekiyorsa bilgisayarda PC Yardımcısı açık olsun; kart yollarında pano yalnız onun üzerinden gider.
+
+### Kart taraması boş dönerse (eşleşmiş cihaz yedeği)
+
+Android canlı BLE taraması bazen boş döner: tarama sınırı (kısa sürede çok tarama), ekran kapalıyken tarama, ya da kartın reklam yayınını kesmiş olması. 2.2.15'ten sonra **Kart · Bluetooth** yolu bu durumda telefonda **eşleşmiş** cihazlara da bakar; adı kart adına benzeyen bir aday varsa (KablosuzBellek, can00, USB HID Klavye …) doğrudan o adrese bağlanmayı dener. Bağlanamazsa durum şeridi "Kart bağlantısı kurulamadı (kart açık ve menzilde mi?): …" yazar; açılışta pencere açılmaz. Kart bir kez uygulamadan bağlanınca adresi saklanır ve sonraki açılışlarda önce o adres denenir, tarama hiç gerekmez.
+
+### Tanı: telefon ne görüyor?
+
+Kart görünmüyorsa önce telefondan şunu sorun:
+
+```
+adb shell am instrument -w -e teshis 1 -e class com.notbahcesi.app.CardBleDeviceTest#teshis com.notbahcesi.app.test/androidx.test.runner.AndroidJUnitRunner
+adb logcat -d -s System.out:I | findstr TESHIS
+```
+
+- `TESHIS_PREFS`: kayıtlı tercihler (seçili yol, kayıtlı bilgisayar, otomatik bağlanma anahtarı).
+- `TESHIS_WIFI`: telefonun Wi‑Fi IPv4 adresi.
+- `TESHIS_BLE`: canlı taramanın bulduğu cihazlar (ad, adres, sinyal).
+- `TESHIS_ESLESMIS`: telefonda eşleşmiş cihazlar.
+- `TESHIS_KART_ARAMA`: yerel ağdaki kart aramasının sonucu.
+
+Gerçek okuma (iki telefonda alındı): `KablosuzBellek-2331-CBA4` her iki telefonda da **eşleşmiş** listesinde görünüyor, ama canlı taramada yok ve doğrudan bağlanma "BLE bağlantısı kesildi (147)" ya da "zaman aşımına uğradı" ile bitiyor. Bu, kartın o an kapalı ya da menzil dışı olduğunu gösterir; kart açıldığında aynı komut yeşil bağlanma vermelidir.

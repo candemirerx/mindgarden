@@ -3,15 +3,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ViewState, Point } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
-import { agacSurukleniyorMu } from '@/lib/canvasGesture';
+import { KART_BASILI_TUT_KAYMA_ESIGI, agacSurukleniyorMu } from '@/lib/canvasGesture';
 import { ZoomIn, ZoomOut, Scan } from 'lucide-react';
 import { TuvalGezinme } from './TuvalGezinme';
 import type { DunyaOlcusu } from './TuvalGezinme';
 import type { TuvalGezinme as GezinmeTuru } from '@/lib/tuvalTercihleri';
 
-/** Ağaç üzerinde başlayan dokunuşun tuval kaydırmasına dönüşmesi için
- *  parmağın aşması gereken mesafe (piksel). */
-const KAYDIRMA_ESIGI = 10;
+/**
+ * Eldeki kartın basılı tutma menüsüyle aynı eşik: parmak bu kadar oynadıysa
+ * niyet kaydırmadır. İki eşik ayrı olduğunda arada ölü bölge kalıyordu.
+ */
+const KAYDIRMA_ESIGI = KART_BASILI_TUT_KAYMA_ESIGI;
 
 interface GardenCanvasProps {
     children: React.ReactNode;

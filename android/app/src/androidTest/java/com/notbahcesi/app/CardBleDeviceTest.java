@@ -70,6 +70,40 @@ public class CardBleDeviceTest {
             SystemClock.sleep(200);
         }
     }
+
+    /**
+     * Açılışta otomatik bağlanma: uygulama açılınca kancanın yüklendiğini,
+     * "Açılışta otomatik bağlan" varsayılanının açık olduğunu ve zorlanan
+     * denemenin hata fırlatmadan yapılandırılmış bir sonuç döndürdüğünü doğrular.
+     * Kayıtlı tercihler test bitince aynen geri yazılır; kullanıcı ayarları bozulmaz.
+     */
+    @Test public void autoConnectOnLaunch() throws Exception {
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            long son = SystemClock.elapsedRealtime() + 25000;
+            while (!"true".equals(js("!!window.__nbOtomatik && !!window.__nbUzak")) && SystemClock.elapsedRealtime() < son) SystemClock.sleep(250);
+            assertTrue("Otomatik bağlanma kancası yüklenmedi (window.__nbOtomatik)", "true".equals(js("!!window.__nbOtomatik")));
+            js("if (!window.__otoYedek) window.__otoYedek = localStorage.getItem('nb-remote-prefs-v1')");
+            try {
+                assertTrue("Açılışta otomatik bağlan varsayılanı açık olmalı", "true".equals(js("window.__nbUzak.prefs().autoBaglan !== false")));
+                js("window.__otoQa=null;window.__nbOtomatik.baglan(true).then(v=>window.__otoQa={value:v}).catch(e=>window.__otoQa={error:e.message})");
+                long bitis = SystemClock.elapsedRealtime() + 90000;
+                String ham = "null";
+                while ("null".equals(ham) && SystemClock.elapsedRealtime() < bitis) { SystemClock.sleep(250); ham = js("window.__otoQa"); }
+                assertFalse("Otomatik bağlanma sonucu gelmedi", "null".equals(ham));
+                JSONObject sonuc = new JSONObject(ham);
+                assertFalse(sonuc.toString(), sonuc.has("error"));
+                JSONObject deger = sonuc.optJSONObject("value");
+                assertNotNull(sonuc.toString(), deger);
+                String ozet = "OTO_BAGLAN yol=" + deger.optString("yol") + " ok=" + deger.optBoolean("ok") + " mesaj=" + deger.optString("mesaj");
+                System.out.println(ozet);
+                android.util.Log.i("NotBahcesiTest", ozet);
+            } finally {
+                js("if (window.__otoYedek) localStorage.setItem('nb-remote-prefs-v1', window.__otoYedek)");
+            }
+        }
+    }
     /**
      * Yazma testi (yalnız -e typeB64 verilince): kart BLE üzerinden PC'ye metin
      * ("t:" parçaları) ve Enter gönderir. PC'de odakta bir metin alanı olmalı.
@@ -486,6 +520,31 @@ public class CardBleDeviceTest {
             }
         }
     }
+    /**
+     * Teshis (yalnizca -e teshis 1 verilince): hicbir seyi degistirmeden kayitli
+     * tercihleri, yakin/eslesmis Bluetooth cihazlarini (ad, adres, sinyal) ve kart
+     * aramasini yazdirir. "Kart gorunmuyor" sorununda neyin eksik oldugunu
+     * (izin, menzil, ad) ayirt etmek icin kullanilir.
+     */
+    @Test public void teshis() throws Exception {
+        org.junit.Assume.assumeNotNull(InstrumentationRegistry.getArguments().getString("teshis"));
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            long son = SystemClock.elapsedRealtime() + 25000;
+            while (!"true".equals(js("!!window.__nbUzak")) && SystemClock.elapsedRealtime() < son) SystemClock.sleep(250);
+            System.out.println("TESHIS_PREFS " + js("JSON.stringify(window.__nbUzak.prefs())"));
+            System.out.println("TESHIS_WIFI " + call("wifiAddress", new JSONObject()));
+            System.out.println("TESHIS_BLE " + call("scan", new JSONObject().put("scanId", "teshis")));
+            System.out.println("TESHIS_ESLESMIS " + call("scanPaired", new JSONObject()));
+            js("window.__teshisKart=null;window.__nbUzak.kartBul().then(v=>window.__teshisKart={value:v}).catch(e=>window.__teshisKart={error:e.message})");
+            long bitis = SystemClock.elapsedRealtime() + 45000;
+            String ham = "null";
+            while ("null".equals(ham) && SystemClock.elapsedRealtime() < bitis) { SystemClock.sleep(500); ham = js("window.__teshisKart"); }
+            System.out.println("TESHIS_KART_ARAMA " + ham);
+        }
+    }
+
     @Test public void wifiAndBleRemainAvailableTogether() throws Exception {
         String address = InstrumentationRegistry.getArguments().getString("cardAddress");
         String url = InstrumentationRegistry.getArguments().getString("cardUrl");

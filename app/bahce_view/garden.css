@@ -62,3 +62,60 @@
     radial-gradient(820px 520px at 108% 108%, rgb(var(--clay-100) / .5), transparent 60%),
     rgb(var(--sand-50));
 }
+
+/* Basılı tut menüsü: yerleşim korunur, yalnız eldeki kart görünür. */
+html[data-kart-menusu] .garden-page [data-kart-kap]:not([data-kart-aktif="1"]) { visibility: hidden; pointer-events: none; }
+html[data-kart-menusu] .garden-page .yeni-agac > svg,
+html[data-kart-menusu] .tuval-sekmeleri,
+html[data-kart-menusu] #secili-panel,
+html[data-kart-menusu] #secili-yuzen { visibility: hidden; }
+html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60; }
+/* Üst şerit: karta oturan, kart genişliğiyle orantılı üç bölmeli araç çubuğu. */
+.kart-araclar {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); z-index: 50;
+  display: flex; align-items: stretch; width: calc(100% - 12px); margin-bottom: -1px;
+  border: 1px solid rgb(var(--moss-200)); border-radius: 18px; overflow: hidden;
+  background: linear-gradient(180deg, rgb(var(--surface)), rgb(var(--moss-50) / .8));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .18), 0 16px 30px -18px rgb(var(--moss-900) / .75), 0 2px 6px -3px rgb(var(--sand-950) / .18);
+  animation: kart-menu-ac .18s cubic-bezier(.22, .9, .3, 1.12);
+}
+@keyframes kart-menu-ac { from { opacity: 0; transform: translateX(-50%) translateY(7px) scale(.95); } }
+@media (prefers-reduced-motion: reduce) { .kart-araclar, .kart-tasi, .kart-yan, .kart-alt { animation: none; } }
+.garden-page .kart-araclar .kart-eylem { position: relative; flex: 1 1 0; min-width: 0; height: 46px; border: 0; border-radius: 0; background: transparent; color: rgb(var(--moss-800)); transition: background .13s ease, color .13s ease, box-shadow .13s ease; }
+.garden-page .kart-araclar .kart-eylem:hover { background: rgb(var(--moss-50) / .9); }
+.garden-page .kart-araclar .kart-eylem:active { box-shadow: inset 0 3px 8px rgb(var(--moss-900) / .2); }
+.garden-page .kart-araclar .kart-eylem + .kart-eylem::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 1px; background: linear-gradient(rgb(var(--moss-200) / 0), rgb(var(--moss-200)), rgb(var(--moss-200) / 0)); }
+.garden-page .kart-araclar .kart-eylem--ana { flex: 1.34 1 0; background: linear-gradient(180deg, rgb(var(--moss-600)), rgb(var(--moss-700))); color: rgb(var(--surface)); box-shadow: inset 0 1px 0 rgb(255 255 255 / .16); }
+.garden-page .kart-araclar .kart-eylem--ana:hover { background: linear-gradient(180deg, rgb(var(--moss-500)), rgb(var(--moss-600))); }
+.garden-page .kart-araclar .kart-eylem--ana:active { box-shadow: inset 0 3px 10px rgb(var(--moss-950) / .28); }
+.garden-page .kart-araclar .kart-eylem--hedef { background: rgb(var(--moss-100)); color: rgb(var(--moss-900)); box-shadow: inset 0 0 0 2px rgb(var(--moss-500)); }
+.garden-page .kart-araclar .kart-eylem--ana.kart-eylem--hedef { background: rgb(var(--moss-500)); color: rgb(var(--surface)); box-shadow: inset 0 0 0 2px rgb(var(--moss-300) / .45); }
+.garden-page .kart-araclar .kart-eylem:first-child { border-radius: 16px 0 0 16px; }
+.garden-page .kart-araclar .kart-eylem:last-child { border-radius: 0 16px 16px 0; }
+.garden-page .kart-araclar .kart-eylem:focus-visible { outline: none; box-shadow: inset 0 0 0 3px rgb(var(--moss-400)); }
+/* Yan ve alt düğmeler: şeritle aynı yüzey, ölçü ve gölge dili. */
+.kart-yan, .kart-alt, .kart-tasi { position: absolute; z-index: 50; animation: kart-dugme-ac .2s ease-out backwards; }
+@keyframes kart-dugme-ac { from { opacity: 0; scale: .8; } }
+.garden-page .kart-tasi, .garden-page .kart-yan, .garden-page .kart-alt {
+  width: 42px; height: 42px; border: 1px solid rgb(var(--moss-200)); border-radius: 15px;
+  background: linear-gradient(180deg, rgb(var(--surface)), rgb(var(--moss-50) / .75));
+  color: rgb(var(--moss-800));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .18), 0 14px 26px -18px rgb(var(--moss-900) / .8), 0 2px 5px -3px rgb(var(--sand-950) / .18);
+  transition: background .13s ease, color .13s ease, box-shadow .13s ease;
+}
+.garden-page .kart-tasi:hover, .garden-page .kart-yan:hover, .garden-page .kart-alt:hover { background: rgb(var(--moss-50)); color: rgb(var(--moss-900)); }
+.garden-page .kart-tasi:active, .garden-page .kart-yan:active, .garden-page .kart-alt:active { box-shadow: inset 0 3px 8px rgb(var(--moss-900) / .2); }
+.kart-yan { left: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
+.kart-tasi { right: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
+.kart-alt { top: calc(100% + 4px); left: 50%; transform: translateX(-50%); }
+.kart-tasi { animation-delay: .02s; }
+.kart-yan { animation-delay: .06s; }
+.kart-alt { animation-delay: .1s; }
+.kart-eylem-etiket { position: absolute; top: calc(100% + 52px); left: 50%; transform: translateX(-50%); z-index: 50; white-space: nowrap; border-radius: 999px; background: rgb(var(--moss-800)); color: rgb(var(--surface)); padding: 5px 12px; font-size: 12px; font-weight: 600; box-shadow: 0 10px 22px -14px rgb(var(--moss-950) / .9); pointer-events: none; }
+.kart-eylem-etiket--ust { top: auto; bottom: calc(100% + 52px); }
+.agac-tasima-etiket { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; border-radius: 999px; background: rgb(var(--moss-800)); color: rgb(var(--surface)); padding: 4px 6px 4px 14px; font-size: 12px; font-weight: 600; white-space: nowrap; z-index: 60; box-shadow: 0 12px 26px -16px rgb(var(--moss-950) / .9); }
+.agac-tasima-etiket button { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: rgb(var(--surface) / .18); color: inherit; }
+.agac-tasima-etiket button:hover { background: rgb(var(--surface) / .32); }
+
+/* Menü açıkken eldeki kart hafifçe yükselir. */
+html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-shadow: 0 0 0 2px rgb(var(--sand-50)), 0 0 0 4.5px rgb(var(--moss-500)), 0 22px 44px -24px rgb(var(--moss-900) / .7); }

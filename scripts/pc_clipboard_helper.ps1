@@ -1,6 +1,7 @@
 ﻿param(
     [ValidateRange(1024, 65535)][int]$Port = 8765,
     [switch]$TestMode,
+    [switch]$LoopbackOnly,
     [string]$BluetoothPort = 'auto',
     [switch]$SerialOnly,
     [switch]$RfcommOnly,
@@ -41,15 +42,15 @@ $secret = [System.IO.File]::ReadAllText($tokenPath, [System.Text.Encoding]::ASCI
 if ($secret.Length -lt 32) { throw 'Anahtar dosyası geçersiz. Yardımcı programı başlatmadan önce kontrol edin.' }
 
 if ($CardOnly) {
+    Add-Type -Path (Join-Path $PSScriptRoot 'UsbInternetRelay.cs') -ReferencedAssemblies @('System.dll','System.Core.dll','System.Web.Extensions.dll')
     # One listener per verified card: a connected first card must not prevent
     # the LCD/second card from reaching the PC clipboard and window actions.
     if (-not $CardPort) {
         $cardWorkers=@{}
         try {
             while ($true) {
-                $devices=@(Get-CimInstance Win32_SerialPort -ErrorAction SilentlyContinue | Where-Object { $_.PNPDeviceID -match 'VID_1209&PID_0001' })
-                foreach($device in $devices) {
-                    $name=$device.DeviceID
+                $devices=@([UsbInternetRelay]::CardPorts())
+                foreach($name in $devices) {
                     if($cardWorkers.ContainsKey($name) -and -not $cardWorkers[$name].HasExited) { continue }
                     $arguments=@('-NoProfile','-STA','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'),'-Port',[string]$Port,'-CardOnly','-CardPort',$name)
                     if($CardTrace) { $arguments+='-CardTrace' }
@@ -63,19 +64,27 @@ if ($CardOnly) {
     }
     # Only this application's USB CDC identity; never open unrelated serial devices.
     while ($true) {
-        $ports = @(Get-CimInstance Win32_SerialPort -ErrorAction SilentlyContinue | Where-Object { $_.PNPDeviceID -match 'VID_1209&PID_0001' -and $_.DeviceID -eq $CardPort })
-        foreach ($device in $ports) {
+        $ports = @([UsbInternetRelay]::CardPorts() | Where-Object { $_ -eq $CardPort })
+        foreach ($cardDevicePort in $ports) {
             $serial = $null
+            $internetRelay = [UsbInternetRelay]::new()
             try {
-                $serial = [System.IO.Ports.SerialPort]::new($device.DeviceID,115200)
+                $serial = [System.IO.Ports.SerialPort]::new($cardDevicePort,115200)
                 $serial.Encoding = [System.Text.UTF8Encoding]::new($false,$true)
                 $serial.NewLine = "`n"; $serial.ReadTimeout=1000; $serial.WriteTimeout=3000
                 $serial.DtrEnable=$true; $serial.RtsEnable=$true; $serial.Open()
                 # Refresh CDC line state after a firmware restart/re-enumeration.
                 $serial.DtrEnable=$false; Start-Sleep -Milliseconds 50; $serial.DtrEnable=$true
-                Write-Output ('CardReady:'+$device.DeviceID)
+                Write-Output ('CardReady:'+$cardDevicePort)
                 while ($true) {
-                    try { $line=$serial.ReadLine() } catch [System.TimeoutException] { continue }
+                    try { $line=$internetRelay.ReadFrame($serial) } catch [System.TimeoutException] { continue }
+                    if ($line.StartsWith('NBI1:')) {
+                        try {
+                            $internetReply=$internetRelay.HandleWireFrame($line)
+                            if ($null -ne $internetReply) { $serial.WriteLine($internetReply) }
+                        } catch { }
+                        continue
+                    }
                     if($CardTrace -and $line.Contains('NBPANO')) { Write-Output ('CardFrame:length='+$line.Length+' null='+($line.IndexOf([char]0) -ge 0)+' clean='+$line.StartsWith('NBPANO')) }
                     $frameMatch=[regex]::Match($line,'^NBPANO([12]):([0-9]{1,10}):([A-Za-z0-9+/=]+)$')
                     if (-not $frameMatch.Success) { continue }
@@ -101,7 +110,7 @@ if ($CardOnly) {
                         $serial.WriteLine('NBPANOOK:'+$id)
                     } catch { Write-Output ('CardError:'+ $_.Exception.GetType().Name);$serial.WriteLine('NBPANOERR:'+$id) }
                 }
-            } catch { } finally { if($serial) { $serial.Dispose() } }
+            } catch { } finally { $internetRelay.Dispose(); if($serial) { $serial.Dispose() } }
         }
         Start-Sleep -Seconds 2
     }
@@ -525,7 +534,8 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
     } finally { $client.Close() }
 }
 
-$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $Port)
+$taskBindAddress = if ($LoopbackOnly) { [System.Net.IPAddress]::Loopback } else { [System.Net.IPAddress]::Any }
+$listener = [System.Net.Sockets.TcpListener]::new($taskBindAddress, $Port)
 try { $listener.Start() }
 catch {
     Write-Host "PC bağlantı noktası $Port zaten kullanılıyor. Açık Not Bahçesi yardımcısının penceresini kullanın; başka bir yardımcı açmadan önce mevcut olanı kapatın." -ForegroundColor Yellow
@@ -579,6 +589,7 @@ try {
     $adresler = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
         Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' -and $active -contains $_.InterfaceIndex } |
         Sort-Object @{ Expression = { if ($physical -contains $_.InterfaceIndex) { 0 } else { 1 } } }, InterfaceIndex)
+    if ($LoopbackOnly) { $adresler = @($adresler | Where-Object { $_.IPAddress -like '100.*' }) }
     $adresler | ForEach-Object { Write-Host "Adres: http://$($_.IPAddress):$Port" -ForegroundColor DarkGray }
     Show-PairPin
     # Panoya artık otomatik bir şey kopyalanmaz (kullanıcının panosunu ezmesin);

@@ -43,7 +43,7 @@ export default function RemoteSettings() {
             badge={<SettingsPill tone={kartKipi ? 'clay' : 'moss'}>{CONNECTION_LABELS[prefs.connection]}</SettingsPill>}
         />
 
-        <SettingsSection icon={Radio} title="Bağlantı yolu" description="Bir yol seçin ve adımları sırayla izleyin. Bilgisayar yolları için kart gerekmez; kart yolları için kartın USB kablosu bilgisayara takılı olmalı.">
+        <SettingsSection icon={Radio} title="Bağlantı yolu" description="Yolu seçin ve adımları sırayla izleyin. Bilgisayar yolları için kart gerekmez; kart yolları için kartın USB kablosu hedef bilgisayarda olmalı. Açılışta otomatik bağlan açıkken uygulama her açılışta seçili yolu kendisi kurar.">
             <BaglantiKurulumu prefs={prefs} update={update} />
         </SettingsSection>
 

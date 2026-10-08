@@ -4,7 +4,7 @@ import './garden.css';
 import { useEffect, Suspense, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Sprout, Settings2, List, TreePine } from 'lucide-react';
+import { ArrowLeft, Sprout, Settings2, List, TreePine, X } from 'lucide-react';
 import { useBudamaModu } from '@/components/ui/BudananlarDugmesi';
 import { budamaFiltresi } from '@/lib/uiPrefs';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
@@ -25,7 +25,7 @@ import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Bir ağacı uzun basıp sürükleyerek bahçede istenen konuma taşımaya yarar.
+ * Menüden taşıma seçildikten sonra ağacı sürükleyerek konumlandırır.
  *
  * Konum, ağacın otomatik yerleşimine eklenen bir kaydırma olarak tutulur;
  * böylece diğer ağaçların düzeni bozulmaz. Sürükleme bitince konum kaydedilir.
@@ -46,9 +46,31 @@ function SuruklenebilirAgac({
 }) {
     const [kaydirma, setKaydirma] = useState({ x, y });
     const [surukluyor, setSurukluyor] = useState(false);
+    const [tasimaHazir, setTasimaHazir] = useState(false);
+    const alanRef = useRef<HTMLLIElement>(null);
     const baslangic = useRef({ fareX: 0, fareY: 0, kayX: 0, kayY: 0, olcek: 1 });
-    const zamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
     const suruklendi = useRef(false);
+
+    useEffect(() => {
+        const alan = alanRef.current;
+        const hazirla = (e: Event) => setTasimaHazir(e.target instanceof Node && !!alan?.contains(e.target));
+        const iptal = (e: KeyboardEvent) => { if (e.key === 'Escape') setTasimaHazir(false); };
+        document.addEventListener('nb-agac-tasi', hazirla);
+        window.addEventListener('keydown', iptal);
+        return () => {
+            document.removeEventListener('nb-agac-tasi', hazirla);
+            window.removeEventListener('keydown', iptal);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!tasimaHazir) return;
+        const disari = (e: PointerEvent) => {
+            if (e.target instanceof Node && !alanRef.current?.contains(e.target)) setTasimaHazir(false);
+        };
+        document.addEventListener('pointerdown', disari);
+        return () => document.removeEventListener('pointerdown', disari);
+    }, [tasimaHazir]);
 
     // Konum dışarıdan değişirse (senkron vb.) ve o an sürükleme yoksa uygula
     useEffect(() => {
@@ -59,7 +81,6 @@ function SuruklenebilirAgac({
 
     // Bileşen ekrandan kalkarsa tuvali kilitli bırakma
     useEffect(() => () => {
-        if (zamanlayici.current) clearTimeout(zamanlayici.current);
         agacSuruklemesiBitti();
     }, []);
 
@@ -84,6 +105,7 @@ function SuruklenebilirAgac({
     };
 
     const basla = (e: React.PointerEvent) => {
+        if (!tasimaHazir || !e.isPrimary) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
 
         // Düğmelere uzun basmak ağacı taşımaya başlatmasın; düğmeler
@@ -102,37 +124,18 @@ function SuruklenebilirAgac({
             kayY: kaydirma.y,
             olcek: olcekOku()
         };
-        suruklendi.current = false;
+        suruklendi.current = true;
 
         const hedef = e.currentTarget as HTMLElement;
-        zamanlayici.current = setTimeout(() => {
-            setSurukluyor(true);
-            // Tuval bu andan sonra kaymaz; hareket yalnızca ağaca aittir.
-            agacSuruklemesiBasladi();
-            void hapticTick();
-            try {
-                hedef.setPointerCapture(e.pointerId);
-            } catch {
-                // yakalama desteklenmiyorsa sorun değil
-            }
-        }, 350);
+        setSurukluyor(true);
+        agacSuruklemesiBasladi();
+        void hapticTick();
+        hedef.setPointerCapture(e.pointerId);
+        e.stopPropagation();
     };
 
     const hareket = (e: React.PointerEvent) => {
-        if (!surukluyor) {
-            // Parmak erken kayarsa uzun basma iptal olur, tuval kaydırması devam eder
-            if (
-                zamanlayici.current &&
-                Math.hypot(
-                    e.clientX - baslangic.current.fareX,
-                    e.clientY - baslangic.current.fareY
-                ) > 8
-            ) {
-                clearTimeout(zamanlayici.current);
-                zamanlayici.current = null;
-            }
-            return;
-        }
+        if (!surukluyor) return;
 
         e.stopPropagation();
         suruklendi.current = true;
@@ -140,46 +143,49 @@ function SuruklenebilirAgac({
     };
 
     const bitir = (e: React.PointerEvent) => {
-        if (zamanlayici.current) {
-            clearTimeout(zamanlayici.current);
-            zamanlayici.current = null;
-        }
         if (!surukluyor) return;
 
         e.stopPropagation();
         setSurukluyor(false);
+        setTasimaHazir(false);
         // Tuval yeniden kaydırılabilir.
         agacSuruklemesiBitti();
 
+        if (e.type === 'pointercancel') { setKaydirma({ x, y }); return; }
         const son = fareFarki(e);
         onMove(Math.round(son.x), Math.round(son.y));
     };
 
     return (
         <li
+            ref={alanRef}
             onPointerDown={basla}
             onPointerMove={hareket}
             onPointerUp={bitir}
             onPointerCancel={bitir}
             onClickCapture={(e) => {
                 // Sürüklemeden sonra oluşan tıklamayı yut; düğüm seçilmesin
-                if (suruklendi.current) {
+                if (suruklendi.current && e.detail > 0 && !(e.target as Element).closest('button')) {
                     e.stopPropagation();
                     e.preventDefault();
                     suruklendi.current = false;
                 }
             }}
             data-agac-alani
+            data-agac-tasima={tasimaHazir ? '1' : undefined}
             className={`tree-drag-area relative ${surukluyor ? 'z-50' : ''}`}
             style={{
                 transform: `translate(${kaydirma.x}px, ${kaydirma.y}px)`,
                 touchAction: surukluyor ? 'none' : 'auto',
                 transition: surukluyor ? 'none' : 'transform 0.15s ease-out',
-                cursor: surukluyor ? 'grabbing' : undefined,
+                cursor: surukluyor ? 'grabbing' : tasimaHazir ? 'grab' : undefined,
                 // Taşınan ağaç, elin altında olduğu anlaşılsın diye hafifçe öne çıkar
                 filter: surukluyor ? 'drop-shadow(0 12px 18px rgba(41, 37, 30, 0.22))' : undefined
             }}
         >
+            {tasimaHazir && <span className="agac-tasima-etiket" role="status">Ağacı sürükle
+                <button type="button" aria-label="Taşımayı iptal et" onClick={e => { e.stopPropagation(); setTasimaHazir(false); }}><X size={15} /></button>
+            </span>}
             {children}
         </li>
     );

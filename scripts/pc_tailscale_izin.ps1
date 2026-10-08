@@ -1,11 +1,33 @@
-# Tailscale yolunda yalniz ozel VPN arayuzu ve tailnet adreslerine izin ver.
+param([ValidateRange(1024,65535)][int]$Port=8765, [switch]$Kaldir)
 $ErrorActionPreference='Stop'
-$taskIdentity=[System.Security.Principal.WindowsIdentity]::GetCurrent()
-$taskAdmin=(New-Object System.Security.Principal.WindowsPrincipal($taskIdentity)).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
-if(-not $taskAdmin) { Write-Output 'Tailscale port iznini eklemek icin bu dosyayi yonetici olarak calistirin.';exit 1 }
-$taskAdapter=Get-NetAdapter -IncludeHidden | Where-Object { $_.InterfaceDescription -like '*Tailscale*' } | Select-Object -First 1
-if(-not $taskAdapter) { Write-Output 'Tailscale ag arayuzu bulunamadi; once Tailscale acin.';exit 2 }
-$taskName='Cep Kopru Tailscale TCP 8765'
-if(Get-NetFirewallRule -DisplayName $taskName -ErrorAction SilentlyContinue) { Remove-NetFirewallRule -DisplayName $taskName }
-New-NetFirewallRule -DisplayName $taskName -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8765 -Profile Any -InterfaceAlias $taskAdapter.Name -RemoteAddress '100.64.0.0/10' -Description 'Yalniz Tailscale ozel aginda kimlik dogrulamali Cep Kopru yardimcisi' | Out-Null
-Write-Output 'Tailscale bilgisayar baglantisi icin TCP 8765 izni eklendi.'
+# Forward only this helper port; preserve other Serve routes and firewall rules.
+$taskCommand=Get-Command tailscale.exe -ErrorAction SilentlyContinue
+$taskExe=if($taskCommand){$taskCommand.Source}else{Join-Path $env:ProgramFiles 'Tailscale/tailscale.exe'}
+if(-not (Test-Path -LiteralPath $taskExe)) {
+    Write-Host 'Tailscale bulunamadi. Kart USB ve Bluetooth kullanilabilir.'
+    exit 2
+}
+try {
+    $taskState=(& $taskExe status --json | ConvertFrom-Json)
+    if($LASTEXITCODE -ne 0 -or $taskState.BackendState -ne 'Running'){throw 'Tailscale oturumu acik degil.'}
+    $taskServe=(& $taskExe serve status --json | ConvertFrom-Json)
+    if($LASTEXITCODE -ne 0){throw 'Tailscale yonlendirmesi okunamadi.'}
+    $taskExisting=$taskServe.TCP."$Port"
+    $taskTarget="127.0.0.1:$Port"
+    if($taskExisting -and $taskExisting.TCPForward -ne $taskTarget){throw "Port $Port baska bir yayinda kullaniliyor. Mevcut yayin degistirilmedi."}
+    if($Kaldir){
+        if($taskExisting){
+            & $taskExe serve --tcp=$Port off
+            if($LASTEXITCODE -ne 0){throw 'Yonlendirme kaldirilamadi.'}
+        }
+        exit 0
+    }
+    if(-not $taskExisting){
+        & $taskExe serve --bg --tcp=$Port "tcp://$taskTarget"
+        if($LASTEXITCODE -ne 0){throw 'Tailscale yonlendirmesine sistem politikasi izin vermedi.'}
+    }
+    $taskState.TailscaleIPs | Where-Object {$_ -like '100.*'} | ForEach-Object {
+        Write-Host "Telefondaki bilgisayar adresi: http://${_}:$Port" -ForegroundColor Green
+    }
+    exit 0
+} catch { Write-Warning $_.Exception.Message; exit 1 }

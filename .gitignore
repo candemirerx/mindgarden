@@ -61,7 +61,7 @@ scripts/__pycache__/
 
 # Derleme ve denetim çıktıları
 /build-cikti.txt
-/gradle-derleme.txt
+/gradle-*.txt
 /lint-cikti.txt
 /studio-cikti.txt
 /tsc-cikti.txt
@@ -72,3 +72,6 @@ scripts/.adb-kablosuz-adresler
 # Test betiklerinin ekran görüntüleri
 .claude/*.png
 .claude/baglanti/
+
+# Tuval tasarım denemeleri (yerel çalışma artıkları)
+/tuval-tasarim/
