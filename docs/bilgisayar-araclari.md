@@ -191,3 +191,8 @@ adb logcat -d -s System.out:I | findstr TESHIS
 - `TESHIS_KART_ARAMA`: yerel ağdaki kart aramasının sonucu.
 
 Gerçek okuma (iki telefonda alındı): `KablosuzBellek-2331-CBA4` her iki telefonda da **eşleşmiş** listesinde görünüyor, ama canlı taramada yok ve doğrudan bağlanma "BLE bağlantısı kesildi (147)" ya da "zaman aşımına uğradı" ile bitiyor. Bu, kartın o an kapalı ya da menzil dışı olduğunu gösterir; kart açıldığında aynı komut yeşil bağlanma vermelidir.
+
+
+## Mini galeriden dosya aktarımı
+
+Editörün sol altındaki dördüncü **Dosya ekle** düğmesi PDF, belge, ZIP ve diğer dosyaları notun mini galerisine ekler. Dosya adı ve içeriği korunur. Galeride seçtikten sonra **Bilgisayara** ile **Belgeler → Not Bahçesi** klasörüne kaydedin veya **PC panosuna** ile gönderip bilgisayarda Ctrl+V ile bir klasöre yapıştırın. Yalnız görseller gönderildiğinde Resimler → Not Bahçesi kullanılır. Güncel PC Yardımcısı (sürüm 7 veya üzeri) ile eşleşme gerekir; Wi-Fi/Tailscale veya yardımcı Bluetooth alıcısı kullanılır. Dosya başına 40 MB, aktarım başına 50 öğe ve toplam 200 MB sınırı vardır. Dosyalar yalnız cihazda saklanır; bahçe dışa aktarımına ve Drive yedeğine eklenmez.

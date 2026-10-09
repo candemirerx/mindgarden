@@ -1,6 +1,6 @@
 # Not Bahçesi — Kullanım Kılavuzu
 
-**Sürüm:** 1.0.0
+**Sürüm:** 1.0.1
 
 Not Bahçesi, notlarını bir ağaç gibi büyütmen için tasarlandı. Her bahçe bir konu,
 her not bir ağaç, her alt not bir dal ya da yaprak.
@@ -256,7 +256,7 @@ Telefonunuzu bilgisayarın klavyesi, faresi ve panosu gibi kullanın. Bu seviyen
 2. Telefonda notu yazın ve **Bilgisayara yaz** (gönder) düğmesine dokunun: metin, klavyeden yazılmış gibi bilgisayara geçer.
 3. **PC panosu** düğmesi metni bilgisayarın panosuna koyar; bilgisayarda **Ctrl+V** ile istediğiniz yere yapıştırırsınız.
 4. Gönderim bitince ekranın üstünde kısa bir **"gönderildi ✓"** bildirimi çıkar ve düğme birkaç saniye yeşil tik gösterir. Hata olursa bildirim nedenini yazar.
-5. Editörün sol altındaki üç simge notun **mini galerisi**dir: galeri, **kamera** (çekilen fotoğraf doğrudan galeriye) ve **telefon galerisinden aktarım**. Galeride bir görsele **basılı tutarak** seçim yapın ya da **Tümünü seç**e dokunun; üstteki araçlarla seçilenleri **bilgisayara** (Resimler › Not Bahçesi klasörü) ya da **PC panosuna** gönderin. Aynı satırda not metnini ve telefon panosunu da PC panosuna gönderebilirsiniz. Alttaki küçük kutuya panodan görsel ya da metin yapıştırıp galeriye ekleyebilirsiniz.
+5. Editörün sol altındaki dört simge: **mini galeri**, **kamera**, **telefon galerisinden aktarım** ve **Dosya ekle**. PDF, belge, ZIP veya başka bir dosyayı adı ve içeriği korunarak ekleyebilirsiniz; dosya başına en çok **40 MB**. Öğeye **basılı tutarak** seçim yapın ya da **Tümünü seç**e dokunun. **Bilgisayara** dosyaları Belgeler › Not Bahçesi klasörüne, yalnız görselleri Resimler › Not Bahçesi klasörüne kaydeder. **PC panosuna** gönderdiğiniz dosyaları bilgisayarda **Ctrl+V** ile klasöre veya dosya kabul eden uygulamaya yapıştırın. Güncel PC Yardımcısı ile eşleşme gerekir; aktarım başına en çok 50 öğe ve toplam 200 MB. Galeri yalnız bu cihazda saklanır, bahçe ve Drive yedeğine eklenmez. Not metnini ve telefon panosunu da PC panosuna gönderebilir, alttaki kutuya görsel ya da metin yapıştırabilirsiniz.
 
 > **İpucu:** Pano için PC yardımcısı açık olmalıdır. Kart yollarında pano kartın bilgisayara bağlı USB kablosundan yardımcıya iletilir; ayrıca bilgisayar eşleştirmesi gerekmez. Doğrudan Bilgisayar · Bluetooth yolunda PC panosu bölümünden yardımcıyı tanıtın; Bluetooth ile kod gerekmez.
 

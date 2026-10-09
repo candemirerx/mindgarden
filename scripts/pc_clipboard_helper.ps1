@@ -101,8 +101,8 @@ if ($CardOnly) {
                             if($bytes.Length -gt 24000) { throw 'Payload too large' }
                             $command=$utf8.GetString($bytes) | ConvertFrom-Json
                             if($CardTrace) { Write-Output ('CardRequest:'+[string]$command.action+':'+$bytes.Length) }
-                            if([string]$command.action -notin @('ping','parca','gorseller','clipboard','panometni','window')) { throw 'Unsupported card action' }
-                            if($command.action -eq 'gorseller' -and $command.hedef -ne 'pano') { throw 'Unsupported destination' }
+                            if([string]$command.action -notin @('ping','parca','gorseller','dosyalar','clipboard','panometni','window')) { throw 'Unsupported card action' }
+                            if($command.action -in @('gorseller','dosyalar') -and $command.hedef -ne 'pano') { throw 'Unsupported destination' }
                             $reply=Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$Port/input" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $bytes -TimeoutSec 3
                         }
                         if($reply.ok -ne $true) { throw 'Rejected' }
@@ -249,27 +249,29 @@ function Add-Parca([string]$id, [int]$sira, [string]$veri) {
     $bytes = [Convert]::FromBase64String($veri)
     if ($sira -eq 0) {
         if ($script:parcalar.ContainsKey($id)) { $script:parcaToplam -= $script:parcalar[$id].Length; $script:parcalar[$id].Dispose() }
-        if ($script:parcalar.Count -ge 60) { throw 'Çok fazla bekleyen görsel.' }
+        if ($script:parcalar.Count -ge 60) { throw 'Çok fazla bekleyen dosya.' }
         $script:parcalar[$id] = New-Object System.IO.MemoryStream
     } elseif (-not $script:parcalar.ContainsKey($id)) { throw 'Parça sırası bozuk.' }
-    if ($script:parcaToplam + $bytes.Length -gt 200MB -or $script:parcalar[$id].Length + $bytes.Length -gt 40MB) { throw 'Görsel çok büyük.' }
+    if ($script:parcaToplam + $bytes.Length -gt 200MB -or $script:parcalar[$id].Length + $bytes.Length -gt 40MB) { throw 'Dosya çok büyük.' }
     $script:parcalar[$id].Write($bytes, 0, $bytes.Length)
     $script:parcaToplam += $bytes.Length
     $script:parcaZamani[$id] = Get-Date
 }
-function Get-GuvenliAd([string]$ad, [string]$varsayilan) {
+function Get-GuvenliAd([string]$ad, [string]$varsayilan, [bool]$belge = $false) {
     $temiz = ($ad -replace '[\\/:*?"<>|\x00-\x1f]', '_').Trim(' .')
     if ($temiz.Length -gt 80) { $temiz = $temiz.Substring($temiz.Length - 80) }
-    if ($temiz -notmatch '\.(jpe?g|png|webp|gif|txt)$') { $temiz = $varsayilan }
+    if (-not $temiz -or (-not $belge -and $temiz -notmatch '\.(jpe?g|png|webp|gif|txt)$')) { $temiz = $varsayilan }
+    if ($temiz -match '^(CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])(?:\.|$)') { $temiz = '_' + $temiz }
     return $temiz
 }
-function Save-Gorseller($ids, $adlar, [string]$klasor) {
+function Save-Gorseller($ids, $adlar, [string]$klasor, [bool]$belge = $false) {
     if (-not (Test-Path -LiteralPath $klasor)) { New-Item -ItemType Directory -Path $klasor -Force | Out-Null }
     $yollar = @()
     for ($i = 0; $i -lt $ids.Count; $i++) {
         $id = [string]$ids[$i]
-        if (-not $script:parcalar.ContainsKey($id)) { throw 'Görsel eksik geldi.' }
-        $ad = Get-GuvenliAd ([string]$adlar[$i]) ('not-bahcesi-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + ($i + 1) + '.jpg')
+        if (-not $script:parcalar.ContainsKey($id)) { throw 'Dosya eksik geldi.' }
+        $uzantiVarsayilan = if ($belge) { '.bin' } else { '.jpg' }
+        $ad = Get-GuvenliAd ([string]$adlar[$i]) ('not-bahcesi-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + ($i + 1) + $uzantiVarsayilan) $belge
         $yol = Join-Path $klasor $ad
         $taban = [System.IO.Path]::GetFileNameWithoutExtension($ad); $uzanti = [System.IO.Path]::GetExtension($ad)
         for ($n = 2; Test-Path -LiteralPath $yol; $n++) { $yol = Join-Path $klasor ('{0} ({1}){2}' -f $taban, $n, $uzanti) }
@@ -415,7 +417,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
             Send-Response $stream ($(if ($cevap -like '{"ok":true*' -or $cevap -like '*"ok":true*') { 200 } else { 403 })) $cevap; return
         }
         if (-not (Same-Token $authorization "Bearer $expectedToken")) { Send-Response $stream 401 '{"ok":false,"error":"Anahtar yanlış"}'; return }
-        if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 (@{ ok = $true; app = 'not-bahcesi-clipboard'; surum = 6; phoneStorage = $script:phoneDriveReady; cardClipboard = $true; windowActions = $true; screenWidth = [RemoteInput]::DesktopWidth; screenHeight = [RemoteInput]::DesktopHeight } | ConvertTo-Json -Compress); return }
+        if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 (@{ ok = $true; app = 'not-bahcesi-clipboard'; surum = 7; fileTransfer = $true; phoneStorage = $script:phoneDriveReady; cardClipboard = $true; windowActions = $true; screenWidth = [RemoteInput]::DesktopWidth; screenHeight = [RemoteInput]::DesktopHeight } | ConvertTo-Json -Compress); return }
         if ($parts[0] -eq 'POST' -and $parts[1] -eq '/phone-storage') {
             if (-not $script:phoneDriveReady) { Send-Response $stream 503 '{"ok":false,"error":"PC dosya paylaşım bileşeni açılamadı."}'; return }
             if ($length -lt 1 -or $length -gt 8192) { Send-Response $stream 413 '{"ok":false}'; return }
@@ -458,15 +460,24 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
                     if ($inputAction.veri -isnot [string]) { throw 'Parça geçersiz.' }
                     Add-Parca ([string]$inputAction.id) ([int]$inputAction.sira) $inputAction.veri
                 }
-                'gorseller' {
+                { $_ -in @('gorseller', 'dosyalar') } {
                     $ids = @($inputAction.ids); $adlar = @($inputAction.adlar)
-                    if ($ids.Count -lt 1 -or $ids.Count -gt 50 -or $adlar.Count -ne $ids.Count) { throw 'Görsel listesi geçersiz.' }
+                    if ($ids.Count -lt 1 -or $ids.Count -gt 50 -or $adlar.Count -ne $ids.Count -or @($ids | Select-Object -Unique).Count -ne $ids.Count) { throw 'Dosya listesi geçersiz.' }
+                    $belge = [string]$inputAction.action -eq 'dosyalar'
+                    if ($belge) {
+                        $boyutlar = @($inputAction.boyutlar)
+                        if ($boyutlar.Count -ne $ids.Count) { throw 'Dosya boyutları eksik.' }
+                        for ($i = 0; $i -lt $ids.Count; $i++) {
+                            if (-not $script:parcalar.ContainsKey([string]$ids[$i]) -or $script:parcalar[[string]$ids[$i]].Length -ne [long]$boyutlar[$i]) { throw 'Dosya eksik geldi; yeniden gönderin.' }
+                        }
+                    }
                     $hedef = [string]$inputAction.hedef
                     if ($hedef -notin @('dosya', 'pano')) { throw 'Hedef geçersiz.' }
                     if (-not $dryRun) {
                         if ($hedef -eq 'dosya') {
-                            $klasor = Join-Path ([Environment]::GetFolderPath('MyPictures')) 'Not Bahçesi'
-                            $yollar = Save-Gorseller $ids $adlar $klasor
+                            $anaKlasor = if ($belge) { 'MyDocuments' } else { 'MyPictures' }
+                            $klasor = Join-Path ([Environment]::GetFolderPath($anaKlasor)) 'Not Bahçesi'
+                            $yollar = Save-Gorseller $ids $adlar $klasor $belge
                             Write-Host ('{0} dosya kaydedildi: {1}' -f $yollar.Count, $klasor) -ForegroundColor Green
                             # Kaydedilenler Gezgin'de seçili açılır.
                             try { Start-Process explorer.exe -ArgumentList ('/select,"' + $yollar[0] + '"') } catch { }
@@ -474,7 +485,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
                             $klasor = Join-Path $env:TEMP 'NotBahcesi-pano'
                             # Önceki pano dosyaları bir günden eskiyse temizlenir.
                             if (Test-Path -LiteralPath $klasor) { Get-ChildItem -LiteralPath $klasor -File | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-1) } | Remove-Item -Force -ErrorAction SilentlyContinue }
-                            $yollar = Save-Gorseller $ids $adlar $klasor
+                            $yollar = Save-Gorseller $ids $adlar $klasor $belge
                             Set-ClipboardDosyalar $yollar
                         }
                     }

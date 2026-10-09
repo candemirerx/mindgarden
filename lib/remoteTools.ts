@@ -1177,7 +1177,7 @@ export async function sendToComputerClipboard(text: string, prefs: RemotePrefs) 
     }
 }
 /** Bilgisayara giden dosya: mini galerideki görsel ya da metin kartı. */
-export type GonderilecekDosya = { ad: string; veri: Blob };
+export type GonderilecekDosya = { ad: string; veri: Blob; tur?: 'dosya' };
 
 const blobBase64 = (blob: Blob) => new Promise<string>((coz, red) => {
     const okuyucu = new FileReader();
@@ -1187,7 +1187,7 @@ const blobBase64 = (blob: Blob) => new Promise<string>((coz, red) => {
 });
 
 /**
- * Görselleri (ve metin kartlarını .txt olarak) PC yardımcısına gönderir.
+ * Görselleri, dosyaları ve metin kartlarını PC yardımcısına gönderir.
  * `dosya`: Resimler › Not Bahçesi klasörüne kaydedilir; `pano`: panoya konur
  * (tek görsel resim olarak da, Ctrl+V her uygulamada çalışsın).
  *
@@ -1197,9 +1197,11 @@ const blobBase64 = (blob: Blob) => new Promise<string>((coz, red) => {
  * yardımcı her parçayı ayrı çözer.
  */
 export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], hedef: 'dosya' | 'pano', prefs: RemotePrefs, ilerleme?: (oran: number) => void) {
-    if (!dosyalar.length) throw new Error('Önce görsel seçin.');
+    if (!dosyalar.length) throw new Error('Önce gönderilecek öğeleri seçin.');
     if (dosyalar.length > 50) throw new Error('Bir seferde en çok 50 öğe gönderilebilir.');
-    if (!prefs.helperToken) throw new Error('Görsel göndermek için bilgisayarda Not Bahçesi PC Yardımcısı gerekir: Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayara bağlanın.');
+    if (dosyalar.some(d => d.veri.size > 40 * 1024 * 1024)) throw new Error('Her dosya en çok 40 MB olabilir.');
+    if (dosyalar.reduce((s, d) => s + d.veri.size, 0) > 200 * 1024 * 1024) throw new Error('Bir aktarımın toplamı en çok 200 MB olabilir.');
+    if (!prefs.helperToken) throw new Error('Öğe göndermek için bilgisayarda Not Bahçesi PC Yardımcısı gerekir: Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayara bağlanın.');
     const wifiVar = !!prefs.helperUrl;
     const bluetoothVar = prefs.connection === 'pc-bluetooth' || !!prefs.helperBluetoothAddress;
     if (!wifiVar && !bluetoothVar) throw new Error('Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayarı eşleştirin.');
@@ -1221,7 +1223,7 @@ export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], 
                 catch (hata) {
                     // Eski yardımcı "parca" eylemini tanımaz ve isteği reddeder.
                     if (sira === 0 && giden === 0 && /HTTP 400|reddedildi|reddetti/i.test(hata instanceof Error ? hata.message : '')) {
-                        throw new Error('Bilgisayardaki PC Yardımcısı eski: görsel gönderebilmek için Ayarlar → Bilgisayar bağlantısı bölümünden yardımcının yeni sürümünü indirip açın.');
+                        throw new Error('Bilgisayardaki PC Yardımcısı eski: öğe gönderebilmek için Ayarlar → Bilgisayar bağlantısı bölümünden yardımcının yeni sürümünü indirip açın.');
                     }
                     throw hata;
                 }
@@ -1229,7 +1231,14 @@ export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], 
                 ilerleme?.(Math.min(0.99, giden / toplam));
             }
         }
-        await gonder({ action: 'gorseller', ids, adlar: dosyalar.map(d => d.ad), hedef });
+        try {
+            await gonder({ action: dosyalar.some(d => d.tur === 'dosya') ? 'dosyalar' : 'gorseller', ids, adlar: dosyalar.map(d => d.ad), boyutlar: dosyalar.map(d => d.veri.size), hedef });
+        } catch (hata) {
+            if (dosyalar.some(d => d.tur === 'dosya') && /HTTP 400|reddedildi|reddetti/i.test(hata instanceof Error ? hata.message : '')) {
+                throw new Error('Dosya aktarımı için PC Yardımcısını güncelleyin; ardından yeniden gönderin.');
+            }
+            throw hata;
+        }
         ilerleme?.(1);
     };
     if (!wifiVar) { await aktar('bluetooth'); return; }

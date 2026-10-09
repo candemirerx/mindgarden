@@ -106,10 +106,10 @@ export default function PrivacyPage() {
                             bağlantı kurmak tek başına not metninizi veya galeri görsellerinizi göndermez.
                         </p>
                         <p>
-                            Mini galeriye kameradan veya telefonunuzun seçicisinden eklediğiniz görseller uygulamanın
+                            Mini galeriye kameradan veya telefonunuzun seçicisinden eklediğiniz görseller ve dosyalar uygulamanın
                             cihazdaki özel deposunda saklanır. Kamera yalnız siz açtığınızda kullanılır. Seçtiğiniz
-                            görselleri bilgisayara veya PC panosuna gönderdiğinizde görsel verisi kendi bilgisayarınızdaki
-                            yardımcıya iletilir. Uygulama bu görselleri kendiliğinden bulut yapay zekâya göndermez.
+                            görselleri veya dosyaları bilgisayara ya da PC panosuna gönderdiğinizde içerikleri kendi bilgisayarınızdaki
+                            yardımcıya iletilir. Uygulama bunları kendiliğinden bulut yapay zekâya göndermez.
                             Görselleri galeriden silebilirsiniz; uygulamayı kaldırmak cihazdaki uygulama verilerini kaldırır.
                         </p>
                         <p>

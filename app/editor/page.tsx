@@ -1251,7 +1251,7 @@ function EditorPageInner() {
 
             {/* Footer */}
             <footer ref={footerRef} className="studio-footer bg-white border-t border-sand-200 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6">
-                <div className="flex items-center justify-between text-xs text-sand-600">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 text-xs text-sand-600">
                     {/* Sol alt: mini galeri, kamera, telefon galerisi. Kayıt zamanı yazılmaz;
                         yalnız kayıt başarısızsa ya da otomatik kayıt kapalıyken bekleyen değişiklik varsa uyarı çıkar. */}
                     <GaleriDugmeleri notId={nodeId} editorMetni={content}

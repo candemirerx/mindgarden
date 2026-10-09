@@ -38,8 +38,8 @@ Aşağıdaki tabloyu birebir gir. "Toplanıyor" = uygulamadan dışarı çıkıy
 Diğer kategoriler (konum, kişiler, takvim, sağlık, mesajlar,
 ödeme bilgileri, uygulama içi arama geçmişi) için: **Hayır**.
 
-**Fotoğraflar ve dosyalar:** Mini galeriye eklenen görseller cihazın uygulamaya özel
-deposunda tutulur. Kullanıcı seçtiği görselleri kendi bilgisayarına veya PC panosuna
+**Fotoğraflar ve dosyalar:** Mini galeriye eklenen görseller ve dosyalar cihazın uygulamaya özel
+deposunda tutulur. Kullanıcı seçtiği görselleri veya dosyaları kendi bilgisayarına veya PC panosuna
 gönderebilir; uygulama bunları kendiliğinden bulut yapay zekâya göndermez. Play
 formunu doldururken bu kullanıcı tarafından başlatılan aktarımın güncel veri
 toplama/paylaşma istisnalarını karşılayıp karşılamadığını değerlendirin; fotoğraf
@@ -60,7 +60,7 @@ uygulamanın bir sunucusuna gönderilmez:
 | Bluetooth eşleşme bilgisi (cihaz adı/adresi) | Kart veya bilgisayarla bağlantı kurmak | Yalnızca telefon ile eşleşen cihaz arasında |
 | Yerel ağ adresi (kart/PC IP'si) | Wi‑Fi üzerinden bağlanmak | Yalnızca kullanıcının kendi yerel ağı |
 | Panoya gönderilen metin | Bilgisayarın panosuna kopyalamak | Kullanıcının kendi bilgisayarı |
-| Mini galeri görselleri | Kameradan/seçiciden ekleme; seçilenleri bilgisayara veya PC panosuna gönderme | Cihazın özel deposu; kullanıcı gönderirse kendi bilgisayarı |
+| Mini galeri görselleri ve dosyaları | Kameradan/seçiciden ekleme; seçilenleri bilgisayara veya PC panosuna gönderme | Cihazın özel deposu; kullanıcı gönderirse kendi bilgisayarı |
 | Mikrofon sesi | Dikteyi yazıya çevirmek | Android'in konuşma tanıma servisi (cihazda ya da servis sağlayıcısının, ör. Google'ın, sunucusunda işlenebilir; bu yüzden yukarıdaki tabloda "Ses kayıtları" toplanıyor ve paylaşılıyor olarak beyan edilir) |
 
 > Bluetooth ve yerel ağ izinleri yalnızca eşleştirme ve bağlantı için kullanılır;

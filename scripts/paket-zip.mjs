@@ -153,10 +153,15 @@ await kopyala(ikiz, join(stage, 'uygulama'));
 
 const yardimciDosyalar = [
     'pc_yardimcisi_baslat.cmd',
+    'pc_yardimcisi_baslat.ps1',
+    'pc_yardimcisi_wifi.cmd',
     'pc_guvenlik_duvari.ps1',
     'pc_tailscale_izni.cmd',
+    'pc_tailscale_izin.ps1',
     'pc_clipboard_helper.ps1',
     'RemoteInput.cs',
+    'PhoneDrive.cs',
+    'UsbInternetRelay.cs',
     'vendor/InTheHand.Net.Personal.dll',
     'vendor/32feet-LICENSE.txt',
     'vendor/README.md'

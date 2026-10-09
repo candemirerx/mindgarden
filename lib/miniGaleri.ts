@@ -12,8 +12,8 @@ import { useCallback, useEffect, useState } from 'react';
 export type GaleriOgesi = {
     id: string;
     notId: string;
-    tur: 'gorsel' | 'metin';
-    /** Görselin kendisi (tur 'gorsel'). */
+    tur: 'gorsel' | 'metin' | 'dosya';
+    /** Görselin veya dosyanın içeriği; dosyalar değiştirilmeden saklanır. */
     veri?: Blob;
     /** Metin kartının içeriği (tur 'metin'). */
     metin?: string;
@@ -121,6 +121,17 @@ export async function dosyalariGaleriyeEkle(notId: string, dosyalar: Iterable<Bl
     if (!gorseller.length) return 0;
     return galeriyeEkle(notId, await Promise.all(gorseller.map((d, i) => gorseliHazirla(d, i))));
 }
+
+/** Dosya seçicisinden gelen ekler değiştirilmeden, özgün adlarıyla saklanır. */
+export async function belgeleriGaleriyeEkle(notId: string, dosyalar: Iterable<File>): Promise<number> {
+    const liste = [...dosyalar];
+    if (liste.some(d => d.size > 40 * 1024 * 1024)) throw new Error('Her dosya en çok 40 MB olabilir.');
+    return galeriyeEkle(notId, liste.map(d => ({ tur: 'dosya', veri: d, ad: d.name || 'dosya' })));
+}
+
+export const dosyaBoyutu = (bayt: number) => bayt < 1024 ? bayt + ' B'
+    : bayt < 1024 * 1024 ? (bayt / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' KB'
+        : (bayt / (1024 * 1024)).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB';
 
 /** Notun galerisini izler. */
 export function useMiniGaleri(notId: string) {

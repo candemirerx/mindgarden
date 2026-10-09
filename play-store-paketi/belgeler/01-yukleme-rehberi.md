@@ -11,7 +11,7 @@ dur, ekranda ne yazdığını bana söyle, birlikte çözelim.
 | Kavram | Ne demek |
 |---|---|
 | **Play Console** | Google'ın geliştirici paneli: uygulamanı buradan yükler, mağaza sayfasını buradan düzenlersin. Adresi: https://play.google.com/console |
-| **AAB** (`.aab`) | Play'e yüklenen paket. Google bunu her telefona uygun küçük APK'lara böler. Bizim dosya: `uygulama/not-bahcesi-1.0.0.aab` |
+| **AAB** (`.aab`) | Play'e yüklenen paket. Google bunu her telefona uygun küçük APK'lara böler. Bizim dosya: `uygulama/not-bahcesi-1.0.1.aab` |
 | **APK** (`.apk`) | Doğrudan telefona kurulan paket. Play'e **yüklenmez**; yalnız kendi telefonlarına elle kurmak için. |
 | **Yükleme anahtarı** | AAB'yi senin imzaladığın anahtar (`android/app/notbahcesi-release.jks`). **Kaybetme!** (bkz. 1.3) |
 | **Play App Signing** | Google, kullanıcıya giden uygulamayı kendi anahtarıyla yeniden imzalar. Bu yüzden Google girişi için Play'in anahtar parmak izini ayrıca eklememiz gerekir (Adım 7). |
@@ -35,8 +35,8 @@ Aynı gün       → Kapalı teste yükle, 12 test kullanıcısını davet et
 
 | Gereken | Dosya / durum |
 |---|---|
-| Yayın paketi (AAB) | `uygulama/not-bahcesi-1.0.0.aab` — sürüm kodu **68**, sürüm adı **1.0.0**, yükleme anahtarıyla imzalı |
-| Kendi telefonun için APK | `uygulama/not-bahcesi-1.0.0.apk` (Play'e yüklenmez) |
+| Yayın paketi (AAB) | `uygulama/not-bahcesi-1.0.1.aab` — sürüm kodu **68**, sürüm adı **1.0.1**, yükleme anahtarıyla imzalı |
+| Kendi telefonun için APK | `uygulama/not-bahcesi-1.0.1.apk` (Play'e yüklenmez) |
 | Uygulama ikonu 512×512 | `gorseller/uygulama-ikonu-512.png` |
 | Öne çıkan görsel 1024×500 | `gorseller/one-cikan-gorsel-1024x500.png` |
 | Telefon ekran görüntüleri (7 adet, 1080×2160) | `gorseller/ekran-1 … ekran-7` |
@@ -167,8 +167,8 @@ Adım 7'den sonra çalışır. Bunu kapalı testten **önce** kendimiz görmeliy
 
 1. Sol menü **Test et ve yayınla → Test → Dahili test → Yeni sürüm oluştur**.
 2. İlk seferde **Play App Signing**'i kabul et (Google'ın anahtarı yönetmesi — önerilen ve zorunlu).
-3. **Uygulama paketleri** alanına `uygulama/not-bahcesi-1.0.0.aab` dosyasını sürükle.
-4. **Sürüm adı:** `1.0.0` (kendiliğinden dolar).
+3. **Uygulama paketleri** alanına `uygulama/not-bahcesi-1.0.1.aab` dosyasını sürükle.
+4. **Sürüm adı:** `1.0.1` (kendiliğinden dolar).
 5. **Sürüm notları:** `03-magaza-metinleri.md` → "Sürüm notları — ilk sürüm" metnini `<tr-TR>` etiketleri arasına yapıştır.
 6. **Sonraki → Kaydet ve yayınla.**
 7. **Testçiler** sekmesinde bir e-posta listesi oluştur, kendi Gmail adresini ekle.

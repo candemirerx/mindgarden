@@ -13,12 +13,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Capacitor } from '@capacitor/core';
-import { ArrowLeft, Camera, Check, CheckCheck, ClipboardCopy, ClipboardPaste, Copy, FileText, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Camera, Check, CheckCheck, ClipboardCopy, ClipboardPaste, Copy, FileText, FilePlus2, Download, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
 import { dosyalariBilgisayaraGonder, klavyeGorselleriniDinle, sendToComputerClipboard, telefonPanosunaYaz, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { useBaglantiDurumu, yolAdi } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
-import { dosyalariGaleriyeEkle, galeridenSil, galeriyeEkle, gorseliHazirla, metinKarti, useMiniGaleri } from '@/lib/miniGaleri';
+import { belgeleriGaleriyeEkle, dosyaBoyutu, dosyalariGaleriyeEkle, galeridenSil, galeriyeEkle, gorseliHazirla, metinKarti, useMiniGaleri } from '@/lib/miniGaleri';
 import type { GaleriOgesi } from '@/lib/miniGaleri';
 import { cx } from '@/components/ui/settings';
 import Kamera from './Kamera';
@@ -30,7 +30,7 @@ function useOnizlemeler(ogeler: GaleriOgesi[]) {
     const [adresler, setAdresler] = useState<Record<string, string>>({});
     useEffect(() => {
         const yeni: Record<string, string> = {};
-        ogeler.forEach(o => { if (o.tur === 'gorsel' && o.veri) yeni[o.id] = URL.createObjectURL(o.veri); });
+        ogeler.forEach(o => { if (o.veri) yeni[o.id] = URL.createObjectURL(o.veri); });
         setAdresler(yeni);
         return () => Object.values(yeni).forEach(a => URL.revokeObjectURL(a));
     }, [ogeler]);
@@ -56,6 +56,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
     const durumZamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
     const kameraRef = useRef<HTMLInputElement>(null);
     const galeriRef = useRef<HTMLInputElement>(null);
+    const dosyaRef = useRef<HTMLInputElement>(null);
     const basili = useRef<{ zamanlayici: ReturnType<typeof setTimeout> | null; x: number; y: number; tetiklendi: boolean }>({ zamanlayici: null, x: 0, y: 0, tetiklendi: false });
     const secimKipi = secili.size > 0;
 
@@ -103,7 +104,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
     };
 
     const seciliOgeler = useMemo(() => ogeler.filter(o => secili.has(o.id)), [ogeler, secili]);
-    const dosyaya = (o: GaleriOgesi) => ({ ad: o.ad, veri: o.tur === 'gorsel' && o.veri ? o.veri : new Blob([o.metin ?? ''], { type: 'text/plain;charset=utf-8' }) });
+    const dosyaya = (o: GaleriOgesi) => ({ ad: o.ad, veri: o.veri ?? new Blob([o.metin ?? ''], { type: 'text/plain;charset=utf-8' }), ...(o.tur === 'dosya' ? { tur: 'dosya' as const } : {}) });
     const secimGerekli = () => { bildir({ metin: 'Önce gönderilecekleri seçin: bir öğeye basılı tutun ya da Tümünü seç’e dokunun.', ton: 'error' }); };
 
     const araclar = [
@@ -113,7 +114,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                 if (!seciliOgeler.length) return secimGerekli();
                 void calistir(seciliOgeler.length + ' öğe bilgisayara gönderiliyor…', async () => {
                     await dosyalariBilgisayaraGonder(seciliOgeler.map(dosyaya), 'dosya', prefs, oran => setDurum({ metin: 'Bilgisayara gönderiliyor… %' + Math.round(oran * 100), ton: 'sending' }));
-                    return seciliOgeler.length + ' öğe bilgisayarda Resimler › Not Bahçesi klasörüne kaydedildi ✓';
+                    return seciliOgeler.length + ' öğe bilgisayarda ' + (seciliOgeler.some(o => o.tur === 'dosya') ? 'Belgeler' : 'Resimler') + ' › Not Bahçesi klasörüne kaydedildi ✓';
                 });
             }
         },
@@ -128,7 +129,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                     } else {
                         await dosyalariBilgisayaraGonder(seciliOgeler.map(dosyaya), 'pano', prefs, oran => setDurum({ metin: 'Panoya gönderiliyor… %' + Math.round(oran * 100), ton: 'sending' }));
                     }
-                    return 'Bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz';
+                    return seciliOgeler.some(o => o.tur === 'dosya') ? 'Dosyalar PC panosuna kopyalandı ✓ Ctrl+V ile klasöre veya dosya kabul eden uygulamaya yapıştırın.' : 'Bilgisayar panosuna gönderildi ✓ Ctrl+V ile yapıştırabilirsiniz';
                 });
             }
         },
@@ -136,6 +137,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
             id: 'galeri-telefon-panosuna', Icon: Copy, ad: 'Telefon panosuna', aciklama: 'Seçilenleri telefonun panosuna kopyala (bilgisayar gerekmez)',
             calis: () => {
                 if (!seciliOgeler.length) return secimGerekli();
+                if (seciliOgeler.some(o => o.tur === 'dosya')) { bildir({ metin: 'Dosyalar için Bilgisayara veya PC panosuna düğmesini kullanın.', ton: 'error' }); return; }
                 void calistir('Telefon panosuna kopyalanıyor…', async () => {
                     const gorseller = seciliOgeler.filter(o => o.tur === 'gorsel' && o.veri).map(o => o.veri as Blob);
                     const metin = seciliOgeler.filter(o => o.tur === 'metin').map(o => o.metin ?? '').join('\n\n');
@@ -192,11 +194,11 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
         if (secimKipi) sec(o.id); else setBuyuk(o);
     };
 
-    const dosyaEkle = async (dosyalar: FileList | null) => {
+    const dosyaEkle = async (dosyalar: FileList | null, belge = false) => {
         if (!dosyalar?.length) return;
         try {
-            const n = await dosyalariGaleriyeEkle(notId, Array.from(dosyalar));
-            bildir(n ? { metin: n + ' görsel galeriye eklendi.', ton: 'ok' } : { metin: 'Görsel bulunamadı.', ton: 'error' });
+            const n = await (belge ? belgeleriGaleriyeEkle : dosyalariGaleriyeEkle)(notId, Array.from(dosyalar));
+            bildir(n ? { metin: n + (belge ? ' dosya' : ' görsel') + ' galeriye eklendi.', ton: 'ok' } : { metin: 'Öğe bulunamadı.', ton: 'error' });
         } catch (e) { bildir({ metin: e instanceof Error ? e.message : 'Eklenemedi.', ton: 'error' }); }
     };
     const ekEkle = (veri: Blob) => setEkler(e => [...e, { id: Math.random().toString(36).slice(2), veri, adres: URL.createObjectURL(veri) }]);
@@ -279,18 +281,19 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                     <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-moss-100 text-moss-700"><GalleryThumbnails size={30} /></span>
                     <div className="space-y-1">
                         <p className="font-semibold text-sand-900">Galeri boş</p>
-                        <p className="text-sm text-sand-600">Fotoğraf çekin, telefon galerisinden aktarın ya da aşağıdaki kutuya panodan yapıştırın.</p>
+                        <p className="text-sm text-sand-600">Fotoğraf çekin, galeriden aktarın, dosya ekleyin ya da aşağıdaki kutuya yapıştırın. Dosya başına en çok 40 MB.</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap justify-center gap-2">
                         <button type="button" onClick={() => setKamera(true)} className="btn btn-primary min-h-11 gap-1.5 px-4 text-sm"><Camera size={16} /> Fotoğraf çek</button>
                         <button type="button" onClick={() => galeriRef.current?.click()} className="btn btn-secondary min-h-11 gap-1.5 px-4 text-sm"><ImagePlus size={16} /> Galeriden</button>
+                        <button type="button" onClick={() => dosyaRef.current?.click()} className="btn btn-secondary min-h-11 gap-1.5 px-4 text-sm"><FilePlus2 size={16} /> Dosya ekle</button>
                     </div>
                 </div>
                     : <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-6" aria-label="Galeri öğeleri">
                         {ogeler.map(o => {
                             const s = secili.has(o.id);
                             return <li key={o.id} className="relative aspect-square">
-                                <button type="button" aria-pressed={secimKipi ? s : undefined} aria-label={(o.tur === 'gorsel' ? 'Görsel ' : 'Metin ') + o.ad}
+                                <button type="button" aria-pressed={secimKipi ? s : undefined} aria-label={(o.tur === 'gorsel' ? 'Görsel ' : o.tur === 'dosya' ? 'Dosya ' : 'Metin ') + o.ad}
                                     data-galeri-oge={o.id}
                                     onPointerDown={e => basBasla(o.id, e)} onPointerMove={basHareket} onPointerUp={basIptal} onPointerLeave={basIptal} onPointerCancel={basIptal}
                                     onContextMenu={e => e.preventDefault()} onClick={() => dokun(o)}
@@ -300,7 +303,8 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                                         ? <img src={onizleme[o.id]} alt="" draggable={false} className="h-full w-full object-cover" />
                                         : <span className="flex h-full w-full flex-col gap-1 bg-white p-2 text-left">
                                             <FileText size={14} className="shrink-0 text-moss-600" aria-hidden="true" />
-                                            <span className="line-clamp-5 whitespace-pre-wrap break-words text-[11px] leading-snug text-sand-800">{o.metin}</span>
+                                            <span className="line-clamp-4 whitespace-pre-wrap break-words text-[11px] leading-snug text-sand-800">{o.tur === 'dosya' ? o.ad : o.metin}</span>
+                                            {o.tur === 'dosya' && <span className="mt-auto text-[10px] text-sand-500">{dosyaBoyutu(o.veri?.size ?? 0)}</span>}
                                         </span>}
                                 </button>
                                 {secimKipi && <span aria-hidden="true" className={cx('pointer-events-none absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow',
@@ -324,6 +328,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                 <div className="flex shrink-0 items-center">
                     <button type="button" id="galeri-kamera" onClick={() => setKamera(true)} aria-label="Fotoğraf çek" title="Fotoğraf çek" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><Camera size={20} /></button>
                     <button type="button" id="galeri-telefondan" onClick={() => galeriRef.current?.click()} aria-label="Telefon galerisinden ekle" title="Telefon galerisinden ekle" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><ImagePlus size={20} /></button>
+                    <button type="button" id="galeri-dosya-ekle" onClick={() => dosyaRef.current?.click()} aria-label="Dosya ekle" title="Dosya ekle (en çok 40 MB)" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><FilePlus2 size={20} /></button>
                 </div>
                 <div className="flex min-h-11 min-w-0 flex-1 items-end rounded-3xl border border-sand-200 bg-sand-50 pl-3.5 pr-1 focus-within:border-moss-400">
                     <textarea id="galeri-kutu" value={taslak} rows={1} onChange={e => setTaslak(e.target.value)} onPaste={yapistirildi}
@@ -341,6 +346,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
 
         <input ref={kameraRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { void dosyaEkle(e.target.files); e.target.value = ''; }} />
         <input ref={galeriRef} type="file" accept="image/*" multiple hidden onChange={e => { void dosyaEkle(e.target.files); e.target.value = ''; }} />
+        <input id="galeri-dosya-secici" ref={dosyaRef} type="file" multiple hidden onChange={e => { void dosyaEkle(e.target.files, true); e.target.value = ''; }} />
 
         {kamera && <Kamera geriTusu={false} onKapat={() => setKamera(false)}
             onCek={foto => { void dosyalariGaleriyeEkle(notId, [foto]).catch(e => bildir({ metin: e instanceof Error ? e.message : 'Eklenemedi.', ton: 'error' })); }}
@@ -359,7 +365,13 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                 {buyuk.tur === 'gorsel' && onizleme[buyuk.id]
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={onizleme[buyuk.id]} alt="" className="max-h-full max-w-full rounded-lg object-contain" />
-                    : <p className="max-h-full max-w-xl overflow-auto whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm text-sand-900" onClick={e => e.stopPropagation()}>{buyuk.metin}</p>}
+                    : buyuk.tur === 'dosya' ? <div className="flex max-w-sm flex-col items-center gap-3 rounded-2xl bg-white p-6 text-center text-sand-900" onClick={e => e.stopPropagation()}>
+                        <FileText size={40} className="text-moss-600" />
+                        <p className="break-all font-semibold">{buyuk.ad}</p>
+                        <p className="text-sm text-sand-600">{dosyaBoyutu(buyuk.veri?.size ?? 0)} · Dosya başına en çok 40 MB</p>
+                        <p className="text-xs text-sand-600">Seçip bilgisayara veya PC panosuna gönderebilirsiniz.</p>
+                        <a href={onizleme[buyuk.id]} download={buyuk.ad} className="btn btn-secondary min-h-11 gap-2"><Download size={16} /> Dosyayı indir</a>
+                    </div> : <p className="max-h-full max-w-xl overflow-auto whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm text-sand-900" onClick={e => e.stopPropagation()}>{buyuk.metin}</p>}
             </div>
         </div>}
     </div>, document.body);
