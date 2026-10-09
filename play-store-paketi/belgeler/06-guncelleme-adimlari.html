@@ -100,9 +100,9 @@ git push origin main</code></pre>
 <h3>Adımlar</h3>
 <p><strong>1. Sürüm numarasını artır</strong></p>
 <p><code>android/app/build.gradle</code> dosyasını aç:</p>
-<pre><code>versionCode 56         // her yüklemede 1 artır (55 -&gt; 56 -&gt; 57 ...)
-versionName "2.2.12"   // kullanıcının gördüğü sürüm</code></pre>
-<p>Şu anki sürüm <code>55</code> / <code>2.2.11</code> (hedef API 36). Bir sonraki yükleme en az 56 olmalıdır.</p>
+<pre><code>versionCode 68         // önceki yükleme 67; her yeni pakette artır
+versionName "2.2.24"   // kullanıcının gördüğü sürüm</code></pre>
+<p>Şu anki sürüm <code>67</code> / <code>2.2.23</code> (hedef API 36). Bir sonraki yükleme en az 68 olmalıdır. İlk genel yayın için görünen ad <code>1.0.0</code> seçilebilir; bu durumda da sürüm kodu 68 veya daha yüksek kalmalıdır. Testte kullanılan kodlar sıfırlanmaz.</p>
 <p><strong>2. Yeni paketi üret</strong></p>
 <pre><code>npm run build:android</code></pre>
 <p>Sonra:</p>

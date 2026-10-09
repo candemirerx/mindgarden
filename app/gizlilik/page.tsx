@@ -98,10 +98,26 @@ export default function PrivacyPage() {
                             bu iletişim açık HTTP kullanıyorsa ağ üzerinde şifrelenmez. Yalnız güvenilen yerel ağ kullanın.
                         </p>
                         <p>
+                            Tailscale yolunu seçtiğinizde telefon ve bilgisayar arasındaki bağlantı kendi Tailscale ağınızdan
+                            geçer; iki cihazda da Tailscale açık olmalıdır. Tailscale'in hizmet ve gizlilik koşulları ayrıca geçerlidir.
+                            "Açılışta otomatik bağlan" açıksa uygulama açıldığında veya yeniden ön plana geldiğinde
+                            önceden kurduğunuz bağlantıyı yeniden dener. Kart Bluetooth bağlantısında kayıtlı kart bulunamazsa
+                            tanınan kart adlarını tarayabilir. Bu seçenek bağlantı ayarlarından kapatılabilir;
+                            bağlantı kurmak tek başına not metninizi veya galeri görsellerinizi göndermez.
+                        </p>
+                        <p>
+                            Mini galeriye kameradan veya telefonunuzun seçicisinden eklediğiniz görseller uygulamanın
+                            cihazdaki özel deposunda saklanır. Kamera yalnız siz açtığınızda kullanılır. Seçtiğiniz
+                            görselleri bilgisayara veya PC panosuna gönderdiğinizde görsel verisi kendi bilgisayarınızdaki
+                            yardımcıya iletilir. Uygulama bu görselleri kendiliğinden bulut yapay zekâya göndermez.
+                            Görselleri galeriden silebilirsiniz; uygulamayı kaldırmak cihazdaki uygulama verilerini kaldırır.
+                        </p>
+                        <p>
                             BLE tarama için Yakındaki Cihazlar izni (eski Android sürümlerinde konum izni) gerekir; konum bilgisi
                             uygulama tarafından kaydedilmez. Dikte başlatıldığında mikrofon/sistem konuşma tanıma hizmeti açılır.
                             Sesin işlenmesi seçili Android konuşma hizmetinin çevrim içi veya çevrim dışı ayarlarına bağlıdır;
-                            uygulama ham ses kaydı saklamaz. Tanınan metin yalnız sizin notunuza eklenir.
+                            uygulama ham ses kaydı saklamaz. Tanınan metin seçtiğiniz hedefe göre notunuza,
+                            bilgisayarınıza veya ikisine birden yazılır.
                         </p>
                     </section>
 

@@ -31,12 +31,19 @@ Aşağıdaki tabloyu birebir gir. "Toplanıyor" = uygulamadan dışarı çıkıy
 |---|---|---|---|---|---|
 | **Kişisel bilgiler → E-posta adresi** | Evet | Hayır | Hayır (isteğe bağlı) | Uygulama işlevselliği, Hesap yönetimi | Google ile giriş yapılırsa alınır |
 | **Kişisel bilgiler → Ad** | Evet | Hayır | Hayır (isteğe bağlı) | Uygulama işlevselliği | Google profili ile gelir |
-| **Uygulama etkinliği → Diğer kullanıcı içeriği** | Evet | Evet | Evet | Uygulama işlevselliği | Not metinleri; yapay zekâ kullanıldığında seçilen sağlayıcıya, bilgisayar araçları kullanıldığında kullanıcının kendi bilgisayarına gönderilir |
+| **Uygulama etkinliği → Diğer kullanıcı içeriği** | Evet | Evet | Hayır (isteğe bağlı) | Uygulama işlevselliği | Not metinleri cihazda tutulur; kullanıcı bulut yapay zekâ veya aktarım seçtiğinde dışarı gönderilir |
 | **Ses → Ses kayıtları** | Evet | Evet | Hayır (isteğe bağlı) | Uygulama işlevselliği | Yalnızca Dikte kullanıldığında. Tanımayı Android'in konuşma tanıma servisi yapar; uygulama ayrıca ses kaydı saklamaz |
 | **Cihaz veya diğer kimlikler** | Hayır | Hayır | — | — | Uygulama reklam kimliği veya cihaz kimliği toplamaz |
 
-Diğer tüm kategoriler (konum, kişiler, takvim, fotoğraf, dosyalar, sağlık, mesajlar,
+Diğer kategoriler (konum, kişiler, takvim, sağlık, mesajlar,
 ödeme bilgileri, uygulama içi arama geçmişi) için: **Hayır**.
+
+**Fotoğraflar ve dosyalar:** Mini galeriye eklenen görseller cihazın uygulamaya özel
+deposunda tutulur. Kullanıcı seçtiği görselleri kendi bilgisayarına veya PC panosuna
+gönderebilir; uygulama bunları kendiliğinden bulut yapay zekâya göndermez. Play
+formunu doldururken bu kullanıcı tarafından başlatılan aktarımın güncel veri
+toplama/paylaşma istisnalarını karşılayıp karşılamadığını değerlendirin; fotoğraf
+ve dosya kategorilerine yalnızca eski kılavuza bakarak otomatik **Hayır** vermeyin.
 
 ### Cihazda kalan, toplanmayan veriler
 
@@ -53,6 +60,7 @@ uygulamanın bir sunucusuna gönderilmez:
 | Bluetooth eşleşme bilgisi (cihaz adı/adresi) | Kart veya bilgisayarla bağlantı kurmak | Yalnızca telefon ile eşleşen cihaz arasında |
 | Yerel ağ adresi (kart/PC IP'si) | Wi‑Fi üzerinden bağlanmak | Yalnızca kullanıcının kendi yerel ağı |
 | Panoya gönderilen metin | Bilgisayarın panosuna kopyalamak | Kullanıcının kendi bilgisayarı |
+| Mini galeri görselleri | Kameradan/seçiciden ekleme; seçilenleri bilgisayara veya PC panosuna gönderme | Cihazın özel deposu; kullanıcı gönderirse kendi bilgisayarı |
 | Mikrofon sesi | Dikteyi yazıya çevirmek | Android'in konuşma tanıma servisi (cihazda ya da servis sağlayıcısının, ör. Google'ın, sunucusunda işlenebilir; bu yüzden yukarıdaki tabloda "Ses kayıtları" toplanıyor ve paylaşılıyor olarak beyan edilir) |
 
 > Bluetooth ve yerel ağ izinleri yalnızca eşleştirme ve bağlantı için kullanılır;
@@ -99,8 +107,10 @@ Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:
 
 ## 5. Bilgisayar araçları için ayrı beyan
 
-Uygulamadaki bilgisayar araçları **isteğe bağlıdır** ve kendiliğinden çalışmaz; her
-işlem kullanıcının bir düğmeye basmasıyla başlar.
+Uygulamadaki bilgisayar araçları **isteğe bağlıdır**. Kullanıcı kurduğu bağlantının
+uygulama açılışında veya yeniden ön plana gelişte otomatik denenmesini seçebilir.
+Bağlantının kurulması tek başına not veya görsel göndermez; gönderme, canlı yazma
+ve dikte işlemleri kullanıcı tarafından başlatılır.
 
 - **Amaç:** Telefonu bilgisayarın klavyesi, faresi ve panosu gibi kullanmak.
 - **Kullanılan izinler:** Bluetooth/Yakındaki cihazlar (Android 12+) veya eski
@@ -108,8 +118,9 @@ işlem kullanıcının bir düğmeye basmasıyla başlar.
 - **Veri akışı:** Yazılan metin, fare komutları ve pano içeriği doğrudan kullanıcının
   kendi bilgisayarına gönderilir. Bu veriler uygulamanın sunucusuna veya üçüncü bir
   tarafa gitmez.
-- **Bağlantı yolları:** Wi‑Fi üzerinden doğrudan bilgisayar, klasik Bluetooth veya
-  kullanıcının kendi kartı üzerinden köprü.
+- **Bağlantı yolları:** Bilgisayar Wi‑Fi, Tailscale, bilgisayar Bluetooth, Kart Wi‑Fi,
+  Kart AP ve Kart Bluetooth. Tailscale yolunda kullanıcının kendi Tailscale ağı
+  kullanılır; bu hizmetin koşulları ayrıca geçerlidir.
 - **Güvenlik uyarısı:** Telefon ile bilgisayar arasındaki yerel ağ trafiği şifrelenmez.
   Bu özellik yalnızca güvenilen yerel ağlarda kullanılmalı, bilgisayar tarafındaki
   yardımcı program internete açılmamalıdır.

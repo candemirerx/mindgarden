@@ -42,11 +42,13 @@ artırmak zorundasın**. Aynı sürüm kodunu ikinci kez yükleyemezsin.
 `android/app/build.gradle` dosyasını aç:
 
 ```gradle
-versionCode 56         // her yüklemede 1 artır (55 -> 56 -> 57 ...)
-versionName "2.2.12"   // kullanıcının gördüğü sürüm
+versionCode 68         // önceki yükleme 67; her yeni pakette artır
+versionName "2.2.24"   // kullanıcının gördüğü sürüm
 ```
 
-Şu anki sürüm `55` / `2.2.11` (hedef API 36). Bir sonraki yükleme en az 56 olmalıdır.
+Şu anki sürüm `67` / `2.2.23` (hedef API 36). Bir sonraki yükleme en az 68 olmalıdır.
+İlk genel yayın için görünen ad `1.0.0` seçilebilir; bu durumda da sürüm kodu
+68 veya daha yüksek kalmalıdır. Testte kullanılan kodlar sıfırlanmaz.
 
 **2. Yeni paketi üret**
 
