@@ -10,15 +10,15 @@ artırman ve yeni bir paket üretmen gerekir.
 `android/app/build.gradle` dosyasını aç ve şu iki satırı güncelle:
 
 ```gradle
-versionCode 68         // her yüklemede 1 artır — Play bunu zorunlu tutar
-versionName "2.2.24"   // kullanıcının gördüğü sürüm
+versionCode 69         // her yüklemede 1 artır — Play bunu zorunlu tutar
+versionName "1.0.1"    // kullanıcının gördüğü sürüm
 ```
 
 > `versionCode` daha önce kullandığın bir değere eşit veya küçük olursa Play yüklemeyi
 > reddeder. Yayınlanan en yüksek değerin üzerine çık.
 
-**Şu anki durum:** `versionCode 67`, `versionName "2.2.23"`, hedef API seviyesi 36.
-Bir sonraki yükleme en az 68 olmalıdır.
+**Şu anki durum:** `versionCode 68`, `versionName "1.0.0"`, hedef API seviyesi 36.
+Bir sonraki yükleme en az 69 olmalıdır. Test sürümlerinde kullanılan kodlar sıfırlanmaz.
 
 ---
 

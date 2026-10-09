@@ -3,7 +3,7 @@
 Bu klasör, Not Bahçesi'ni Google Play Store'a **ilk kez** yükleyip yayınlamak için
 gereken her şeyi içerir.
 
-**Sürüm:** 2.2.23 (sürüm kodu 67) · **Paket adı:** com.notbahcesi.app · **Hedef API:** 36 (Android 16)
+**Sürüm:** 1.0.0 (sürüm kodu 68) · **Paket adı:** com.notbahcesi.app · **Hedef API:** 36 (Android 16)
 
 ---
 
@@ -12,7 +12,7 @@ gereken her şeyi içerir.
 1. **`belgeler/01-yukleme-rehberi.html`** dosyasını aç (çift tıkla, tarayıcıda açılır).
    Play Console'da yapılacak her şey, sırasıyla ve "✅ Bitti mi?" kontrolleriyle orada.
 2. Rehber bir dosya istediğinde bu klasörden seç:
-   - Yüklenecek paket → `uygulama/not-bahcesi-2.2.23.aab`
+   - Yüklenecek paket → `uygulama/not-bahcesi-1.0.0.aab`
    - Görseller → `gorseller/`
    - Kopyalanacak metinler → `belgeler/03-magaza-metinleri.html`
 3. Takıldığın yerde ekranda ne yazdığını Claude'a söyle; birlikte çözeriz.
@@ -47,8 +47,8 @@ Not Bahcesi Play Store/
 │   ├── ekran-6-kisayollar.png
 │   └── ekran-7-kilavuz.png
 ├── uygulama/
-│   ├── not-bahcesi-2.2.23.aab    ← ★ Play Console'a YÜKLENECEK dosya
-│   └── not-bahcesi-2.2.23.apk    ← yalnız kendi telefonuna elle kurmak için (Play'e yüklenmez)
+│   ├── not-bahcesi-1.0.0.aab    ← ★ Play Console'a YÜKLENECEK dosya
+│   └── not-bahcesi-1.0.0.apk    ← yalnız kendi telefonuna elle kurmak için (Play'e yüklenmez)
 └── bilgisayar-yardimcisi/        ← Windows PC yardımcısı (Wi‑Fi bağlantısı ve pano için)
 ```
 

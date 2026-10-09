@@ -16,10 +16,10 @@
  */
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 const KOK = resolve(import.meta.dirname, '..');
 const PAKET = join(KOK, 'play-store-paketi');
@@ -34,7 +34,8 @@ if (!surum || !surumKodu) throw new Error('Surum bilgisi okunamadi (lib/config.t
 
 const aab = join(PAKET, 'uygulama', 'not-bahcesi-' + surum + '.aab');
 const apk = join(PAKET, 'uygulama', 'not-bahcesi-' + surum + '.apk');
-for (const dosya of [aab, apk]) {
+const ikiz = join(PAKET, 'uygulama', 'not-bahcesi-2-' + surum + '.apk');
+for (const dosya of [aab, apk, ikiz]) {
     if (!existsSync(dosya)) {
         throw new Error('Paket bulunamadi: ' + dosya + '\nOnce derleyin: npm run build:android, sonra android klasorunde: gradlew assembleRelease bundleRelease');
     }
@@ -46,6 +47,7 @@ const ozet = async (yol) => {
 };
 const aabBilgi = await ozet(aab);
 const apkBilgi = await ozet(apk);
+const ikizBilgi = await ozet(ikiz);
 
 let parmakIzi = '(assetlinks.json okunamadi)';
 try {
@@ -73,6 +75,11 @@ const bilgi = [
     '    Boyut  : ' + apkBilgi.boyut.toLocaleString('tr-TR') + ' bayt',
     '    SHA-256: ' + apkBilgi.sha256,
     '',
+    'Ikinci uygulama (com.notbahcesi.app2, "Not Bahcesi 2") - ayni imza:',
+    '  uygulama/not-bahcesi-2-' + surum + '.apk',
+    '    Boyut  : ' + ikizBilgi.boyut.toLocaleString('tr-TR') + ' bayt',
+    '    SHA-256: ' + ikizBilgi.sha256,
+    '',
     'Not: Her yeni yuklemede android/app/build.gradle icindeki versionCode artirilmalidir.',
     'Yayin adresleri:',
     '  Gizlilik    : https://mindgarden-neon.vercel.app/gizlilik',
@@ -87,8 +94,8 @@ const yardimciOkU = [
     'NOT BAHCESI - PC YARDIMCISI',
     '',
     'NE ZAMAN GEREKIR?',
-    '  - Bilgisayar - Wi-Fi baglantisinda: yazma, fare, kisayol ve pano icin.',
-    '  - Diger baglantilarda (Kart Wi-Fi, Kart Bluetooth, Bilgisayar Bluetooth)',
+    '  - Bilgisayar Wi-Fi ve Tailscale: yazma, fare, kisayol ve pano icin.',
+    '  - Kart Wi-Fi, Kart AP, Kart Bluetooth ve Bilgisayar Bluetooth yollarinda',
     '    yazma ve fare programsiz calisir; yalniz PANOYA GONDERMEK icin gerekir.',
     '',
     'BASLATMA',
@@ -103,19 +110,25 @@ const yardimciOkU = [
     '  - Bluetooth: telefon bilgisayarla Bluetooth uzerinden eslesmisse KOD',
     '    GEREKMEZ; bilgisayari secip baglanmaniz yeterli.',
     '  - Wi-Fi: "Agda bilgisayar ara" > penceredeki kodu yazin > Eslestir.',
+    '  - Tailscale: iki cihazda ayni hesapla Tailscale acik olsun. Bilgisayarda',
+    '    pc_tailscale_izni.cmd ile guvenlik duvari iznini bir kez verin;',
+    '    telefonda bilgisayarin 100.x adresini/adini ve ilk eslesme kodunu girin.',
+    '  - Kart yollarinda pano, kartin bilgisayara bagli USB kablosundan yardimciya',
+    '    iletilir; ayrica bilgisayar eslesmesi gerekmez.',
     '  Eslesen telefon bir daha kod sormaz. Sonraki kullanimlarda yalniz bu',
     '  programi calistirmaniz yeterlidir.',
     '',
     'Bilgisayar her acildiginda yardimciyi yeniden calistirin (pencere kapaninca durur).',
-    'Gizlilik: Yardimci yalniz yerel agda/Bluetooth ile calisir, internete veri',
-    'gondermez. Erisim anahtari bu klasorde .pc_clipboard_token dosyasindadir;',
+    'Gizlilik: Yardimci kullanicinin kendi bilgisayarina yerel ag/Bluetooth veya',
+    'kendi Tailscale agi uzerinden ulasir. Erisim anahtari .pc_clipboard_token dosyasindadir;',
     'kimseyle paylasmayin. Kapatmak icin pencerede Ctrl+C.',
     'Ayrintili anlatim: bilgisayar-araclari.md',
     ''
 ].join('\n');
 
-const stage = join(tmpdir(), 'nb-play-staging');
-if (!stage.startsWith(tmpdir())) throw new Error('Gecici klasor yolu beklenmedik: ' + stage);
+const geciciKok = resolve(tmpdir());
+const stage = resolve(geciciKok, 'nb-play-staging');
+if (dirname(stage) !== geciciKok || basename(stage) !== 'nb-play-staging') throw new Error('Gecici klasor yolu beklenmedik: ' + stage);
 await rm(stage, { recursive: true, force: true });
 await mkdir(join(stage, 'belgeler'), { recursive: true });
 await mkdir(join(stage, 'gorseller'), { recursive: true });
@@ -136,10 +149,12 @@ for (const dosya of await readdir(join(PAKET, 'gorseller'))) {
 }
 await kopyala(aab, join(stage, 'uygulama'));
 await kopyala(apk, join(stage, 'uygulama'));
+await kopyala(ikiz, join(stage, 'uygulama'));
 
 const yardimciDosyalar = [
     'pc_yardimcisi_baslat.cmd',
     'pc_guvenlik_duvari.ps1',
+    'pc_tailscale_izni.cmd',
     'pc_clipboard_helper.ps1',
     'RemoteInput.cs',
     'vendor/InTheHand.Net.Personal.dll',
@@ -163,35 +178,40 @@ const masaustu = ['Masaüstü', 'Desktop']
     .find((yol) => existsSync(yol)) || process.env.USERPROFILE;
 const arsiv = join(masaustu, 'Not Bahçesi Arşiv');
 const damga = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+const klasor = join(masaustu, 'Not Bahcesi Play Store');
+const zipIstendi = process.argv.includes('--zip') || !!process.env.NB_ZIP_HEDEF;
+const hedef = process.env.NB_ZIP_HEDEF
+    || process.argv.slice(2).find((a) => a.toLowerCase().endsWith('.zip'))
+    || join(masaustu, 'Not Bahcesi Guncel.zip');
+const izinliHedefler = new Set([resolve(klasor), resolve(hedef)]);
 
 /** Var olan hedefi masaüstünü doldurmasın diye "Not Bahçesi Arşiv" klasörüne taşır. */
-function arsivle(yol) {
+async function arsivle(yol) {
+    if (!izinliHedefler.has(resolve(yol))) throw new Error('Arsiv hedefi beklenmedik: ' + yol);
     if (!existsSync(yol)) return;
     const ad = yol.split(/[\\/]/).pop();
     let yeni = join(arsiv, ad.replace(/(\.zip)?$/i, ' - onceki ' + damga + '$1'));
     for (let sayac = 2; existsSync(yeni); sayac++) yeni = join(arsiv, ad.replace(/(\.zip)?$/i, ' - onceki ' + damga + '-' + sayac + '$1'));
-    execFileSync('powershell.exe', ['-NoProfile', '-Command', 'New-Item -ItemType Directory -Force -Path "' + arsiv + '" | Out-Null; Move-Item -LiteralPath "' + yol + '" -Destination "' + yeni + '" -Force']);
+    const altYol = relative(resolve(arsiv), resolve(yeni));
+    if (!altYol || altYol.startsWith('..') || isAbsolute(altYol)) throw new Error('Arsiv yolu klasor disinda: ' + yeni);
+    await mkdir(arsiv, { recursive: true });
+    await rename(yol, yeni);
     console.log('Onceki surum arsivlendi: ' + yeni);
 }
 
 // 1) Açık klasör: Play Console'a yüklerken dosyalar doğrudan seçilir.
-const klasor = join(masaustu, 'Not Bahcesi Play Store');
-arsivle(klasor);
-execFileSync('powershell.exe', ['-NoProfile', '-Command', 'Copy-Item -Path "' + stage + '" -Destination "' + klasor + '" -Recurse -Force'], { stdio: 'inherit' });
+await arsivle(klasor);
+await cp(stage, klasor, { recursive: true, force: false, errorOnExist: true });
 console.log('Hazir: ' + klasor);
 
 // 2) İstenirse zip (paylaşmak için).
-const zipIstendi = process.argv.includes('--zip') || !!process.env.NB_ZIP_HEDEF;
 if (zipIstendi) {
-    const hedef = process.env.NB_ZIP_HEDEF
-        || process.argv.slice(2).find((a) => a.toLowerCase().endsWith('.zip'))
-        || join(masaustu, 'Not Bahcesi Guncel.zip');
-    arsivle(hedef);
+    await arsivle(hedef);
     execFileSync('powershell.exe', [
         '-NoProfile',
         '-Command',
-        'Compress-Archive -Path "' + join(stage, '*') + '" -DestinationPath "' + hedef + '" -CompressionLevel Optimal -Force'
-    ], { stdio: 'inherit' });
+        'Compress-Archive -Path (Join-Path $env:NB_PAKET_STAGE "*") -DestinationPath $env:NB_PAKET_ZIP -CompressionLevel Optimal -Force'
+    ], { stdio: 'inherit', env: { ...process.env, NB_PAKET_STAGE: stage, NB_PAKET_ZIP: resolve(hedef) } });
     console.log('Zip: ' + hedef + '  (' + ((await stat(hedef)).size / 1048576).toFixed(2) + ' MB)');
 }
 console.log('Surum: ' + surum + ' (' + surumKodu + ') - AAB ' + aabBilgi.sha256.slice(0, 16) + '...');
