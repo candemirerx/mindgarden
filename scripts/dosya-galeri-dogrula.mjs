@@ -48,7 +48,13 @@ const checks=`
  await run('document.querySelector("#galeri-pc-panosu").click()');await until('document.querySelector("#galeri-durum")?.textContent.includes("kopyalandı")');
  for(const width of [320,430]){await c.gonder('Emulation.setDeviceMetricsOverride',{width,height:932,deviceScaleFactor:1,mobile:true});await wait(100);assert.ok(await run('document.querySelector("#mini-galeri").scrollWidth<=innerWidth'));}
  await run(${JSON.stringify('document.querySelector(\'[aria-label="Seçimi kapat"]\').click()')});await wait(100);await run(${JSON.stringify('document.querySelector(\'[aria-label="Galeriyi kapat"]\').click()')});await wait(100);
- assert.ok(await run('document.querySelector(".studio-footer").scrollWidth<=innerWidth'));
+ for(const width of [320,360,379,380,390,430,640]){
+  await c.gonder('Emulation.setDeviceMetricsOverride',{width,height:932,deviceScaleFactor:1,mobile:true});await wait(100);
+  const row=await run('(()=>{const footer=document.querySelector(".studio-footer");const buttons=Array.from(document.querySelectorAll(".studio-galeri>button")).map(b=>{const r=b.getBoundingClientRect();return {top:r.top,bottom:r.bottom,width:r.width,height:r.height};});const controls=document.querySelector(".studio-footer-details").getBoundingClientRect();return {buttons,controls:{top:controls.top,bottom:controls.bottom},overflow:footer.scrollWidth>innerWidth};})()');
+  assert.equal(row.overflow,false,'footer overflow at '+width);
+  assert.equal(row.buttons.length,4);
+  for(const b of row.buttons){assert.ok(b.width>=44&&b.height>=44);assert.ok(Math.abs((b.top+b.bottom)/2-(row.controls.top+row.controls.bottom)/2)<1,'buttons must share the bottom row at '+width);}
+ }
  console.log('PASS: four editor buttons, file picker, exact binary persistence after reload, preview, PC/file clipboard transport and 320px layout');
 } finally { socket?.close(); browser.kill(); }
 `;

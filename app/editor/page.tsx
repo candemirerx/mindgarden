@@ -1251,18 +1251,18 @@ function EditorPageInner() {
 
             {/* Footer */}
             <footer ref={footerRef} className="studio-footer bg-white border-t border-sand-200 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 text-xs text-sand-600">
+                <div className="flex items-center justify-between gap-x-2 text-xs text-sand-600">
                     {/* Sol alt: mini galeri, kamera, telefon galerisi. Kayıt zamanı yazılmaz;
                         yalnız kayıt başarısızsa ya da otomatik kayıt kapalıyken bekleyen değişiklik varsa uyarı çıkar. */}
                     <GaleriDugmeleri notId={nodeId} editorMetni={content}
                         onBaglantiAyarlari={() => { setSettingsBolumu('remote'); setSettingsOpen(true); }}
                         uyari={kayitHatasi ? 'Kayıt başarısız · taslak korundu' : !autoSave && hasChanges ? '● Kaydedilmedi' : undefined} />
-                    <div className="flex items-center gap-3 sm:gap-6">
+                    <div className="studio-footer-details flex shrink-0 items-center gap-2 sm:gap-6">
                         <label className="studio-autosave flex min-h-[44px] cursor-pointer items-center gap-2" title="Otomatik kaydet">
                             <input type="checkbox" checked={autoSave} onChange={e => setAutoSave(e.target.checked)} aria-label="Otomatik kaydetmeyi aç/kapat" className="h-4 w-4 accent-moss-600" />
                             <span>Otomatik<span className="hidden sm:inline"> kayıt</span></span>
                         </label>
-                        <span>{content.split(/\s+/).filter(w => w.length > 0).length} kelime</span>
+                        <span className="studio-word-count">{content.split(/\s+/).filter(w => w.length > 0).length} kelime</span>
                         <button type="button" onClick={() => setFocusMode(true)} aria-label="Tam ekran" title="Tam ekran"
                             className="studio-footer-fullscreen -my-2 h-11 w-11 items-center justify-center rounded-lg text-sand-600 hover:bg-sand-100">
                             <Maximize2 size={18} />

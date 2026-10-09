@@ -1,6 +1,6 @@
 # Not Bahçesi — Kullanım Kılavuzu
 
-**Sürüm:** 1.0.1
+**Sürüm:** 1.0.2
 
 Not Bahçesi, notlarını bir ağaç gibi büyütmen için tasarlandı. Her bahçe bir konu,
 her not bir ağaç, her alt not bir dal ya da yaprak.

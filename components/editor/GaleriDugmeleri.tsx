@@ -11,7 +11,7 @@ import { belgeleriGaleriyeEkle, dosyalariGaleriyeEkle, useMiniGaleri } from '@/l
 import MiniGaleri from './MiniGaleri';
 import Kamera from './Kamera';
 
-const SIMGE = 'relative flex h-11 w-11 items-center justify-center rounded-xl text-sand-600 transition-colors hover:bg-sand-100 hover:text-sand-800 active:scale-95 disabled:opacity-40';
+const SIMGE = 'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sand-600 transition-colors hover:bg-sand-100 hover:text-sand-800 active:scale-95 disabled:opacity-40';
 
 export default function GaleriDugmeleri({ notId, editorMetni, uyari, onBaglantiAyarlari }: { notId: string; editorMetni: string; uyari?: string; onBaglantiAyarlari?: () => void }) {
     const { ogeler } = useMiniGaleri(notId);
@@ -37,7 +37,7 @@ export default function GaleriDugmeleri({ notId, editorMetni, uyari, onBaglantiA
         } catch (e) { goster(e instanceof Error ? e.message : 'Eklenemedi'); }
     };
 
-    return <div className="studio-galeri flex min-w-0 items-center gap-0.5 -ml-2">
+    return <div className="studio-galeri relative flex shrink-0 items-center gap-0.5 -ml-2">
         <button type="button" id="studio-mini-galeri" onClick={() => setAcik(true)} disabled={!notId} aria-label={'Mini galeri' + (ogeler.length ? ' (' + ogeler.length + ' öğe)' : '')} title="Mini galeri" className={SIMGE}>
             <GalleryThumbnails size={19} />
             {ogeler.length > 0 && <span aria-hidden="true" className="absolute right-0.5 top-1 min-w-[1.05rem] rounded-full bg-moss-600 px-1 text-center text-[10px] font-semibold leading-[1.05rem] text-white">{ogeler.length > 99 ? '99+' : ogeler.length}</span>}
@@ -51,7 +51,7 @@ export default function GaleriDugmeleri({ notId, editorMetni, uyari, onBaglantiA
         <button type="button" id="studio-dosya-ekle" onClick={() => dosyaRef.current?.click()} disabled={!notId} aria-label="Mini galeriye dosya ekle" title="Dosya ekle" className={SIMGE}>
             <FilePlus2 size={19} />
         </button>
-        {(ileti || uyari) && <span role="status" className={'ml-1 truncate text-xs ' + (ileti ? 'text-moss-700' : 'text-berry-700')}>{ileti || uyari}</span>}
+        {(ileti || uyari) && <span role="status" className={'absolute bottom-full left-0 mb-2 w-max max-w-[calc(100vw-2rem)] rounded-xl border border-sand-200 bg-white px-3 py-2 text-xs shadow-sm ' + (ileti ? 'text-moss-700' : 'text-berry-700')}>{ileti || uyari}</span>}
         <input ref={kameraRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { void ekle(e.target.files); e.target.value = ''; }} />
         <input ref={galeriRef} type="file" accept="image/*" multiple hidden onChange={e => { void ekle(e.target.files); e.target.value = ''; }} />
         <input id="studio-dosya-secici" ref={dosyaRef} type="file" multiple hidden onChange={e => { void ekle(e.target.files, true); e.target.value = ''; }} />
