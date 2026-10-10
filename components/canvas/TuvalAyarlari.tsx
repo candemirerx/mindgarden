@@ -140,8 +140,8 @@ function AyrintiSatiri({ baslik, aciklama, children }: { baslik: string; aciklam
 export function TuvalAyarlari() {
     const t = useTuvalTercihleri();
     const koyu = useKoyuTema();
-    const [makroSecimi, setMakroSecimi] = useState<string | null>(null);
-    useEffect(() => dinle('kart-makro-sec', ayrinti => { if (typeof ayrinti === 'string') setMakroSecimi(ayrinti); }), []);
+    const [makroSecimi, setMakroSecimi] = useState<{ yer: string; islev: KartIslevi } | null>(null);
+    useEffect(() => dinle('kart-makro-sec', ayrinti => { if (ayrinti && typeof ayrinti === 'object' && typeof (ayrinti as { yer?: unknown }).yer === 'string' && typeof (ayrinti as { islev?: unknown }).islev === 'string') setMakroSecimi(ayrinti as { yer: string; islev: KartIslevi }); }), []);
     return (
         <div id="tuval-ayarlari" className="space-y-4">
             <SettingsSection icon={GitFork} title="Düzen" description="Ağaçların ve dalların tuvalde nasıl dizileceği, dalların nasıl ilerleyeceği. Kartların görünümünden bağımsızdır; notlarınız değişmez.">
@@ -177,15 +177,17 @@ export function TuvalAyarlari() {
                                 onChange={e => {
                                     const islev = e.target.value as KartIslevi;
                                     const kartMakrolari = { ...t.kartMakrolari };
+                                    const kartAiMakrolari = { ...t.kartAiMakrolari };
                                     if (islev !== 'makro') delete kartMakrolari[yer as keyof typeof kartMakrolari];
-                                    tuvalTercihleriniKaydet({ ...t, dugmeler: { ...t.dugmeler, [yer]: islev }, kartMakrolari });
+                                    if (islev !== 'aiMakro') delete kartAiMakrolari[yer as keyof typeof kartAiMakrolari];
+                                    tuvalTercihleriniKaydet({ ...t, dugmeler: { ...t.dugmeler, [yer]: islev }, kartMakrolari, kartAiMakrolari });
                                 }}>
                                 {Object.entries(KART_ISLEVLERI).map(([id, isim]) => <option key={id} value={id}>{isim}</option>)}
                             </select>
-                            {t.dugmeler[yer as keyof KartDugmeleri] === 'makro' && <button type="button" id={'kart-makro-sec-' + yer}
-                                onClick={() => setMakroSecimi(yer)}
+                            {['makro', 'aiMakro'].includes(t.dugmeler[yer as keyof KartDugmeleri]) && <button type="button" id={'kart-makro-sec-' + yer}
+                                onClick={() => setMakroSecimi({ yer, islev: t.dugmeler[yer as keyof KartDugmeleri] })}
                                 className="mt-1 flex min-h-10 items-center gap-1.5 self-start rounded-xl border border-sand-200 px-2.5 text-xs font-semibold text-moss-700 hover:bg-moss-50">
-                                <Wand2 size={14} /> Makro seç
+                                <Wand2 size={14} /> {t.dugmeler[yer as keyof KartDugmeleri] === 'aiMakro' ? 'Görev seç' : 'Makro seç'}
                             </button>}
                         </label>
                     ))}
@@ -193,7 +195,7 @@ export function TuvalAyarlari() {
                 <button type="button" className="mt-3 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
                     onClick={() => tuvalTercihleriniKaydet({ ...t, dugmeler: { ...VARSAYILAN_KART_DUGMELERI }, kartMakrolari: {} })}>Düğmeleri varsayılana döndür</button>
             </SettingsSection>}
-            {makroSecimi && <KartMakroSecici yerKey={makroSecimi} yer={KART_YERLERI[makroSecimi as keyof typeof KART_YERLERI]} onKapat={() => setMakroSecimi(null)} />}
+            {makroSecimi && <KartMakroSecici yerKey={makroSecimi.yer} yer={KART_YERLERI[makroSecimi.yer as keyof typeof KART_YERLERI]} islev={makroSecimi.islev} onKapat={() => setMakroSecimi(null)} />}
 
             <SettingsSection icon={SlidersHorizontal} tone="moss" title="Ayrıntılar" flush>
                 <div className="divide-y divide-sand-100">

@@ -15,16 +15,22 @@
  * İlk uzun basış seçenekleri açar; kaydırıp bırakınca seçilen işlem uygulanır.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Copy, GitBranch, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sprout, TreePine, Wand2 } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, Copy, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, TreePine, Wand2 } from 'lucide-react';
 import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 import { VARSAYILAN_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
-import { makroHazir } from '@/lib/remoteTools';
+import { makroHazir, sendToComputerClipboard, typeOnComputer } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { makroCalisiyor, makroyuBaslat, makroyuDurdur } from '@/lib/makroCalistirici';
+import { readEnabledMacros } from '@/lib/aiMacro';
+import { readActiveProvider, readCustomUrl, readProviderKey, readProviderModel, providerHazir } from '@/lib/aiProvider';
+import { runCustomProviderDirect } from '@/lib/customProvider';
+import { runLocalInference } from '@/lib/localLlm';
+import { splitIntoChunks } from '@/lib/aiChunks';
+import { Capacitor } from '@capacitor/core';
 import { basHarf } from './KartMakroSecici';
-import type { KartMakrolari } from '@/lib/tuvalTercihleri';
+import type { KartAiMakrolari, KartMakrolari } from '@/lib/tuvalTercihleri';
 import type { KartDugmeleri, KartIslevi, TuvalEylem, TuvalKart, TuvalOnizleme, TuvalGosterim } from '@/lib/tuvalTercihleri';
 
 type Duzen = TuvalGosterim;
@@ -41,6 +47,8 @@ type Ortak = {
     dugmeler?: KartDugmeleri;
     /** "Makro çalıştır" işlevine bağlanan makro kimlikleri (yer -> makro). */
     kartMakrolari?: KartMakrolari;
+    /** "Yapay zekâ makrosu" işlevine bağlanan görev kimlikleri (yer -> görev). */
+    kartAiMakrolari?: KartAiMakrolari;
     onSettings?: () => void;
     /** Yan not: notun hemen yanına (sonrasına) kardeş ekler. */
     onAddSiblingAfter?: (siblingId: string) => void;
@@ -195,7 +203,7 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler = VARSAYILAN_KART_DUGMELERI, kartMakrolari, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler = VARSAYILAN_KART_DUGMELERI, kartMakrolari, kartAiMakrolari, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
@@ -328,6 +336,46 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         if (makroCalisiyor(bilgi.makro.id)) makroyuDurdur(bilgi.makro.id);
         else void makroyuBaslat(bilgi.makro, prefs).catch(() => { try { navigator.vibrate?.(30); } catch { } });
     };
+    const notGovdesi = () => node.content.split('\n').slice(1).join('\n').trim() || node.title;
+    const aiGorevleri = readEnabledMacros();
+    const aiGorev = (yer: keyof KartDugmeleri) => dugmeler[yer] === 'aiMakro' ? aiGorevleri.find(m => m.id === (kartAiMakrolari ?? {})[yer]) ?? null : null;
+    const aiGorevBilgisi = (yer: keyof KartDugmeleri) => {
+        const m = aiGorev(yer);
+        return m ? { makro: m, ad: m.title.trim() || 'Görev', harf: basHarf(m.title) } : null;
+    };
+    /** Editördeki AI çağrısıyla aynı yol: sunucu uç noktası, özel sunucuda cihazdan doğrudan istek, yerel model. */
+    const aiMakroCalistir = async (gorev: { id: string; title: string; instruction: string }) => {
+        const metin = notGovdesi();
+        if (!metin.trim()) throw new Error('Not içeriği boş.');
+        const provider = readActiveProvider();
+        if (!providerHazir(provider)) throw new Error('Yapay zekâ ayarlanmadı: editör → Yapay zekâ bölümünden sağlayıcı ve anahtar ekleyin.');
+        const calistirParca = async (parca: string): Promise<string> => {
+            if (provider === 'local') {
+                const yanit = await runLocalInference(gorev.instruction + '\n\nİNCELENECEK METİN:\n' + parca + '\n\nYANIT (Yalnızca işlenmiş nihai metni ver):');
+                return typeof yanit.text === 'string' && yanit.text.trim() ? yanit.text.trim() : parca;
+            }
+            if (provider === 'custom' && Capacitor.isNativePlatform()) {
+                return runCustomProviderDirect({ baseUrl: readCustomUrl(), apiKey: readProviderKey(provider), model: readProviderModel(provider), instruction: gorev.instruction, text: parca });
+            }
+            const adres = Capacitor.isNativePlatform() ? 'https://mindgarden-neon.vercel.app/api/spellcheck' : '/api/spellcheck';
+            const yanit = await fetch(adres, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: parca, clientApiKey: readProviderKey(provider), provider, customUrl: readCustomUrl(), customModel: readProviderModel(provider), macro: gorev.instruction }) });
+            if (!yanit.ok) { const h = await yanit.json().catch(() => null); throw new Error(h?.error || 'Yapay zekâ isteği başarısız oldu.'); }
+            const veri = await yanit.json();
+            return typeof veri.correctedText === 'string' ? veri.correctedText : parca;
+        };
+        const parcalar = splitIntoChunks(metin);
+        let sonuc = '';
+        for (const parca of parcalar) sonuc += (await calistirParca(parca.text)).trim() + parca.after;
+        if (parcalar.length === 1 && sonuc.trim() === metin.trim()) throw new Error('Model bir değişiklik döndürmedi.');
+        await useStore.getState().updateNode(node.id, sonuc.trimEnd());
+    };
+    const pcAktar = (islem: () => Promise<void>) => {
+        void islem().catch(hata => {
+            console.error('PC aktarımı başarısız:', hata);
+            try { navigator.vibrate?.(30); } catch { }
+            alert(hata instanceof Error ? hata.message : 'Bilgisayar bağlantısı gerekli.');
+        });
+    };
     const uygula = (id: KartIslevi) => {
         if (id === 'editor') onEdit(node);
         else if (id === 'kopya') void kopyala();
@@ -341,6 +389,14 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
             else if (onAddSiblingAfter) onAddSiblingAfter(node.id);
             else onAddChild(ebeveynId, id === 'sol' ? 'left' : 'right');
         }
+        else if (id === 'pcYaz') pcAktar(() => typeOnComputer(notGovdesi(), prefs));
+        else if (id === 'pcPano') pcAktar(() => sendToComputerClipboard(notGovdesi(), prefs));
+        else if (id === 'aiMakro') {
+            const atananYer = (Object.keys(dugmeler) as (keyof KartDugmeleri)[]).find(y => dugmeler[y] === 'aiMakro' && (kartAiMakrolari ?? {})[y] === (kartAiMakrolari ?? {})['ustSol'] && dugmeler[y] === id);
+            const yerAnahtari = atananYer ?? 'ustSol';
+            const gorev = aiGorevBilgisi(yerAnahtari);
+            if (gorev) void aiMakroCalistir(gorev.makro).catch(hata => { try { navigator.vibrate?.(30); } catch { } alert(hata instanceof Error ? hata.message : 'Yapay zekâ görevi çalıştırılamadı.'); });
+        }
     };
     const simge = (id: KartIslevi) => {
         if (id === 'editor') return <Pencil size={18} />;
@@ -348,6 +404,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         if (id === 'buda') return <Scissors size={17} />;
         if (id === 'tasi') return <Move size={17} />;
         if (id === 'ayarlar') return <SlidersHorizontal size={16} />;
+        if (id === 'pcYaz') return <Keyboard size={17} />;
+        if (id === 'pcPano') return <ClipboardList size={17} />;
+        if (id === 'aiMakro') return <Sparkles size={17} />;
         return <Plus size={17} />;
     };
     const buton = (yer: keyof KartDugmeleri, sinif = '') => {
@@ -355,19 +414,20 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         if (id === 'yok') return null;
         const ust = yer.startsWith('ust');
         const bilgi = makroBilgisi(yer);
-        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : 'Düzenle';
+        const aiBilgi = aiGorevBilgisi(yer);
+        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'aiMakro' ? 'Yapay zekâ' : 'Düzenle';
         return <button key={yer} data-kart-yer={yer} data-kart-eylem={id} type="button"
             onClick={e => {
                 e.stopPropagation();
                 // Gerçek dokunuşta capture aşamasında menüyü kaldırmak click işlevini yutuyor.
                 // Önce düğmenin işlevi çalışsın, ardından menü kapansın.
-                if (bilgi) makroCalistir(yer); else uygula(id);
+                if (bilgi) makroCalistir(yer); else if (aiBilgi) void aiMakroCalistir(aiBilgi.makro).catch(hata => { try { navigator.vibrate?.(30); } catch { } alert(hata instanceof Error ? hata.message : 'Yapay zekâ görevi çalıştırılamadı.'); }); else uygula(id);
                 hareket.kapat();
-            }} title={bilgi ? bilgi.ad + ' makrosu' : etiketler[id]} aria-label={bilgi ? bilgi.ad + ' makrosu' : etiketler[id]}
+            }} title={bilgi ? bilgi.ad + ' makrosu' : aiBilgi ? aiBilgi.ad + ' görevi' : etiketler[id]} aria-label={bilgi ? bilgi.ad + ' makrosu' : aiBilgi ? aiBilgi.ad + ' görevi' : etiketler[id]}
             aria-pressed={id === 'buda' ? budandi : undefined}
             className={dugme(id, ust && yer === 'ustOrta') + ' ' + sinif}>
-            {bilgi ? <span aria-hidden="true" className="kart-makro-harf">{bilgi.harf}</span> : id === 'makro' ? <Wand2 size={17} /> : simge(id)}
-            {!yer.startsWith('altS') && <span className="kart-eylem-yazi">{bilgi ? bilgi.ad : yazi}</span>}
+            {bilgi ? <span aria-hidden="true" className="kart-makro-harf">{bilgi.harf}</span> : aiBilgi ? <span aria-hidden="true" className="kart-makro-harf">{aiBilgi.harf}</span> : id === 'makro' ? <Wand2 size={17} /> : simge(id)}
+            {!yer.startsWith('altS') && <span className="kart-eylem-yazi">{bilgi ? bilgi.ad : aiBilgi ? aiBilgi.ad : yazi}</span>}
         </button>;
     };
 
