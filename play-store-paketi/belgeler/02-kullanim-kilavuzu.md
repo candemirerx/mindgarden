@@ -113,8 +113,9 @@ Notlarınızı düzenlemeyi öğrenin: dallandırma, renkler, arama, tuval gör�
 
 1. Bitişik, Yumuşak veya Kapsül seçiliyken **Tuval ve ağaçlar → Görünüm → Kart menüsü** bölümünden her konumun işlevini seçin.
 2. Düzenleme, kopyalama, budama, sola veya yana ekleme, altına ekleme, taşıma ve ayarlar işlevlerini atayabilirsiniz. **Yok** seçeneği o düğmeyi kaldırır; alt köşelerdeki yuvarlak düğmeler başlangıçta kapalıdır.
-3. Ağacın tuvaldeki yerini değiştirmek için önce karta **kısa dokunup bırakın**. Menü açıkken karta yeniden **basılı tutup sürükleyin**; ağacın yeni konumu kaydedilir.
-4. Menüye **Ağacı taşı** işlevini de atayabilirsiniz; bu düğme ağacı sonraki sürükleme için hazırlar.
+3. **Makro çalıştır** işlevini seçince **Makro seç** düğmesi belirir. Açılan sayfada kayıtlı makrolar baş harf rozetleriyle listelenir; dokunduğunuz makro o düğmeye bağlanır. Kart menüsünde bu düğme makronun baş harfini gösterir ve bilgisayarda çalıştırır.
+4. Ağacın tuvaldeki yerini değiştirmek için önce karta **kısa dokunup bırakın**. Menü açıkken karta yeniden **basılı tutup sürükleyin**; ağacın yeni konumu kaydedilir.
+5. Menüye **Ağacı taşı** işlevini de atayabilirsiniz; bu düğme ağacı sonraki sürükleme için hazırlar.
 
 ### 2.5 Budanan notları gösterin veya gizleyin
 

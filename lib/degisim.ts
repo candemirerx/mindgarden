@@ -18,17 +18,24 @@ export type DegisimKonusu =
     /** Bilgisayar bağlantısının canlı durumu yeniden yoklandı. */
     | 'baglanti-durumu'
     /** Tuval görünüm tercihleri (gösterim, gezinme, önizleme) değişti. */
-    | 'tuval';
+    | 'tuval'
+    /** Kart menüsüne bağlı makroların seçim sayfası açıldı (yer bilgisiyle). */
+    | 'kart-makro-sec';
 
-const dinleyiciler = new Map<DegisimKonusu, Set<() => void>>();
+const dinleyiciler = new Map<DegisimKonusu, Set<(ayrinti?: unknown) => void>>();
 
 export function bildir(konu: DegisimKonusu): void {
     const grup = dinleyiciler.get(konu);
     if (!grup) return;
     for (const geriCagri of grup) geriCagri();
 }
+export function bildirAyrintili(konu: DegisimKonusu, ayrinti: unknown): void {
+    const grup = dinleyiciler.get(konu);
+    if (!grup) return;
+    for (const geriCagri of grup) geriCagri(ayrinti);
+}
 
-export function dinle(konu: DegisimKonusu, geriCagri: () => void): () => void {
+export function dinle(konu: DegisimKonusu, geriCagri: (ayrinti?: unknown) => void): () => void {
     let grup = dinleyiciler.get(konu);
     if (!grup) {
         grup = new Set();

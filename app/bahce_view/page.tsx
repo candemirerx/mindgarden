@@ -762,6 +762,7 @@ function GardenPageInner() {
                                             onAddSiblingAfter={handleAddSiblingAfter}
                                             onAddSiblingBefore={handleAddSiblingBefore}
                                             dugmeler={tuval.dugmeler}
+                                            kartMakrolari={tuval.kartMakrolari}
                                             onSettings={() => setIsSettingsOpen(true)}
                                             duzen={tuval.gosterim}
                                             onizleme={tuval.onizleme}

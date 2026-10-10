@@ -15,11 +15,16 @@
  * İlk uzun basış seçenekleri açar; kaydırıp bırakınca seçilen işlem uygulanır.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Copy, GitBranch, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sprout, TreePine } from 'lucide-react';
+import { Check, ChevronDown, Copy, GitBranch, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sprout, TreePine, Wand2 } from 'lucide-react';
 import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 import { VARSAYILAN_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
+import { makroHazir } from '@/lib/remoteTools';
+import { useRemotePrefs } from '@/lib/useRemotePrefs';
+import { makroCalisiyor, makroyuBaslat, makroyuDurdur } from '@/lib/makroCalistirici';
+import { basHarf } from './KartMakroSecici';
+import type { KartMakrolari } from '@/lib/tuvalTercihleri';
 import type { KartDugmeleri, KartIslevi, TuvalEylem, TuvalKart, TuvalOnizleme, TuvalGosterim } from '@/lib/tuvalTercihleri';
 
 type Duzen = TuvalGosterim;
@@ -34,6 +39,8 @@ type Ortak = {
     onAddTree?: (rootId: string, direction?: 'left' | 'right') => void;
     onAddSiblingBefore?: (siblingId: string) => void;
     dugmeler?: KartDugmeleri;
+    /** "Makro çalıştır" işlevine bağlanan makro kimlikleri (yer -> makro). */
+    kartMakrolari?: KartMakrolari;
     onSettings?: () => void;
     /** Yan not: notun hemen yanına (sonrasına) kardeş ekler. */
     onAddSiblingAfter?: (siblingId: string) => void;
@@ -188,11 +195,12 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler = VARSAYILAN_KART_DUGMELERI, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler = VARSAYILAN_KART_DUGMELERI, kartMakrolari, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
     const [kopyalandi, setKopyalandi] = useState(false);
+    const prefs = useRemotePrefs();
     const disMenu = eylem === 'panel' || eylem === 'yuzen';
     const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined);
     const secili = selectedNodeId === node.id;
@@ -307,7 +315,19 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const yaricap = kart === 'hap' ? 9999 : kart === 'sade' ? 12 : kart === 'renkli' ? 16 : tur === 'kok' ? 24 : tur === 'branch' ? 18 : 16;
     const dugme = (id: string, ana = false) => `${ARAC} ${ana ? 'kart-eylem--ana' : ''} ${hareket.hedef === id ? 'kart-eylem--hedef' : ''}`;
     const tasi = () => hareket.kap.current?.dispatchEvent(new CustomEvent('nb-agac-tasi', { bubbles: true }));
-    const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları' };
+    const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları', makro: 'Makro seçilmedi' };
+    const makrolar = prefs.macros.filter(makroHazir);
+    const makro = (yer: keyof KartDugmeleri) => dugmeler[yer] === 'makro' ? makrolar.find(m => m.id === (kartMakrolari ?? {})[yer]) ?? null : null;
+    const makroBilgisi = (yer: keyof KartDugmeleri) => {
+        const m = makro(yer);
+        return m ? { makro: m, ad: m.name.trim() || 'Makro', harf: basHarf(m.name) } : null;
+    };
+    const makroCalistir = (yer: keyof KartDugmeleri) => {
+        const bilgi = makroBilgisi(yer);
+        if (!bilgi) return;
+        if (makroCalisiyor(bilgi.makro.id)) makroyuDurdur(bilgi.makro.id);
+        else void makroyuBaslat(bilgi.makro, prefs).catch(() => { try { navigator.vibrate?.(30); } catch { } });
+    };
     const uygula = (id: KartIslevi) => {
         if (id === 'editor') onEdit(node);
         else if (id === 'kopya') void kopyala();
@@ -334,18 +354,20 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         const id = dugmeler[yer];
         if (id === 'yok') return null;
         const ust = yer.startsWith('ust');
-        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : 'Düzenle';
+        const bilgi = makroBilgisi(yer);
+        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : 'Düzenle';
         return <button key={yer} data-kart-yer={yer} data-kart-eylem={id} type="button"
             onClick={e => {
                 e.stopPropagation();
                 // Gerçek dokunuşta capture aşamasında menüyü kaldırmak click işlevini yutuyor.
                 // Önce düğmenin işlevi çalışsın, ardından menü kapansın.
-                uygula(id);
+                if (bilgi) makroCalistir(yer); else uygula(id);
                 hareket.kapat();
-            }} title={etiketler[id]} aria-label={etiketler[id]}
+            }} title={bilgi ? bilgi.ad + ' makrosu' : etiketler[id]} aria-label={bilgi ? bilgi.ad + ' makrosu' : etiketler[id]}
             aria-pressed={id === 'buda' ? budandi : undefined}
             className={dugme(id, ust && yer === 'ustOrta') + ' ' + sinif}>
-            {simge(id)}{!yer.startsWith('altS') && <span className="kart-eylem-yazi">{yazi}</span>}
+            {bilgi ? <span aria-hidden="true" className="kart-makro-harf">{bilgi.harf}</span> : id === 'makro' ? <Wand2 size={17} /> : simge(id)}
+            {!yer.startsWith('altS') && <span className="kart-eylem-yazi">{bilgi ? bilgi.ad : yazi}</span>}
         </button>;
     };
 

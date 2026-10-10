@@ -94,6 +94,15 @@ html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60;
 .garden-page .kart-araclar .kart-eylem:last-child { border-radius: 0 15px 0 0; }
 .garden-page .kart-araclar .kart-eylem--ana { gap: 7px; }
 .kart-eylem-yazi { font-size: 11px; font-weight: 600; letter-spacing: .01em; }
+.garden-page .kart-makro-harf {
+    display: flex; align-items: center; justify-content: center;
+    min-width: 24px; height: 24px; padding: 0 6px;
+    border-radius: 999px; background: rgb(var(--moss-100)); color: rgb(var(--moss-800));
+    font-size: 12px; font-weight: 800; letter-spacing: .02em;
+}
+.garden-page .kart-eylem--ana .kart-makro-harf { background: rgb(var(--surface) / .22); color: inherit; }
+.garden-page .kart-eylem--hedef .kart-makro-harf { background: rgb(var(--surface)); color: rgb(var(--moss-800)); box-shadow: inset 0 0 0 1.5px rgb(var(--moss-500)); }
+.garden-page .kart-sol .kart-makro-harf, .garden-page .kart-yan .kart-makro-harf { min-width: 22px; height: 22px; font-size: 11px; }
 .garden-page .kart-araclar .kart-eylem:focus-visible { outline: none; box-shadow: inset 0 0 0 3px rgb(var(--moss-400)); }
 /* Yan ve alt düğmeler: şeritle aynı yüzey, ölçü ve gölge dili. */
 .kart-yan, .kart-alt, .kart-tasi { position: absolute; z-index: 50; animation: kart-dugme-ac .2s ease-out backwards; }

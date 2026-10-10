@@ -25,7 +25,7 @@ export type TuvalKart = 'bahce' | 'sade' | 'renkli' | 'hap';
 export const KART_ISLEVLERI = {
     yok: 'Düğme yok', editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: 'Buda / geri al',
     sol: 'Sol yanına ekle', yan: 'Sağ yanına ekle', alt: 'Altına ekle',
-    tasi: 'Ağacı taşı', ayarlar: 'Ağaç ayarları'
+    tasi: 'Ağacı taşı', ayarlar: 'Ağaç ayarları', makro: 'Makro çalıştır'
 } as const;
 export type KartIslevi = keyof typeof KART_ISLEVLERI;
 export const KART_YERLERI = {
@@ -34,14 +34,16 @@ export const KART_YERLERI = {
     altSol: 'Sol alt köşe', altSag: 'Sağ alt köşe'
 } as const;
 export type KartDugmeleri = Record<keyof typeof KART_YERLERI, KartIslevi>;
+/** Düğmeye bağlı makro: yer -> makro kimliği. Yalnız makro işlevinde okunur. */
+export type KartMakrolari = Partial<Record<keyof typeof KART_YERLERI, string>>;
 export const VARSAYILAN_KART_DUGMELERI: KartDugmeleri = {
     ustSol: 'kopya', ustOrta: 'editor', ustSag: 'buda',
     sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok'
 };
-export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri };
+export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri; kartMakrolari: KartMakrolari };
 
 const ANAHTAR = 'nb-tuval-v1';
-export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI };
+export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI, kartMakrolari: {} };
 
 function dugmeleriOku(v: unknown): KartDugmeleri {
     const k = v && typeof v === 'object' ? v as Partial<KartDugmeleri> : {};
@@ -53,6 +55,10 @@ function dugmeleriOku(v: unknown): KartDugmeleri {
 }
 
 const kartOku = (v: unknown): TuvalKart => v === 'sade' || v === 'renkli' || v === 'hap' ? v : 'bahce';
+function makrolariOku(v: unknown): KartMakrolari {
+    const k = v && typeof v === 'object' ? v as Record<string, unknown> : {};
+    return Object.fromEntries(Object.keys(KART_YERLERI).filter(yer => typeof k[yer] === 'string' && (k[yer] as string).length <= 80).map(yer => [yer, k[yer] as string]));
+}
 
 export function tuvalTercihleri(): TuvalTercihleri {
     if (typeof window === 'undefined') return VARSAYILAN_TUVAL;
@@ -65,7 +71,8 @@ export function tuvalTercihleri(): TuvalTercihleri {
             eylem: ['panel', 'yuzen', 'yumusak', 'kapsul'].includes(k.eylem ?? '') ? k.eylem! : 'hap',
             kart: kartOku(k.kart),
             kartKoyu: kartOku(k.kartKoyu),
-            dugmeler: dugmeleriOku(k.dugmeler)
+            dugmeler: dugmeleriOku(k.dugmeler),
+            kartMakrolari: makrolariOku(k.kartMakrolari)
         };
     } catch { return VARSAYILAN_TUVAL; }
 }
