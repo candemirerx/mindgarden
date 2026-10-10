@@ -6,7 +6,8 @@
  * listelenir; makro ve görevler baş harf rozetiyle görünür. Tek dokunuş seçimi
  * kaydeder ve sayfayı kapatır.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { createPortal } from 'react-dom';
 import { Ban, Check, ClipboardList, Copy, CornerDownLeft, Keyboard, Move, Pencil, Plus, Scissors, SlidersHorizontal, Sparkles, Wand2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -76,6 +77,20 @@ export default function KartAracEkle({ yerKey, onKapat }: { yerKey: string; onKa
         return () => window.removeEventListener('keydown', esc);
     }, [onKapat]);
 
+    // Android geri tuşu: bu sayfa üstteyken yalnız sayfayı kapatır.
+    const kapatRef = useRef(onKapat);
+    kapatRef.current = onKapat;
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return;
+        let bitti = false;
+        let kaldir: (() => void) | undefined;
+        void import('@capacitor/app').then(async ({ App }) => {
+            const dinleyici = await App.addListener('backButton', () => kapatRef.current());
+            if (bitti) void dinleyici.remove(); else kaldir = () => { void dinleyici.remove(); };
+        });
+        return () => { bitti = true; kaldir?.(); };
+    }, []);
+
     const sec = (oge: Oge) => {
         const t = tuvalTercihleri();
         const kartMakrolari = { ...t.kartMakrolari };
@@ -92,7 +107,7 @@ export default function KartAracEkle({ yerKey, onKapat }: { yerKey: string; onKa
     if (typeof document === 'undefined') return null;
     const yer = KART_YERLERI[yerKey as keyof typeof KART_YERLERI];
     return createPortal(
-        <div id="kart-arac-ekle" role="dialog" aria-modal="true" aria-label={yer + ' düğmesine araç ekle'} className="fixed inset-0 z-[130] flex flex-col bg-sand-50">
+        <div id="kart-arac-ekle" data-geri-yonetir="" data-ust-katman="" role="dialog" aria-modal="true" aria-label={yer + ' düğmesine araç ekle'} className="fixed inset-0 z-[130] flex flex-col bg-sand-50">
             <header className="shrink-0 border-b border-sand-200 bg-white pt-[env(safe-area-inset-top,0px)]">
                 <div className="flex h-14 items-center gap-1 px-2">
                     <button type="button" onClick={onKapat} aria-label="Sayfayı kapat" className="flex h-11 w-11 items-center justify-center rounded-full text-sand-700 hover:bg-sand-100"><X size={20} /></button>

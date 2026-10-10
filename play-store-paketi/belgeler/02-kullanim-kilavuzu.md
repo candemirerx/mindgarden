@@ -1,6 +1,6 @@
 # Not Bahçesi — Kullanım Kılavuzu
 
-**Sürüm:** 1.0.3
+**Sürüm:** 1.0.4
 
 Not Bahçesi, notlarını bir ağaç gibi büyütmen için tasarlandı. Her bahçe bir konu,
 her not bir ağaç, her alt not bir dal ya da yaprak.
@@ -60,6 +60,7 @@ Uygulamayı ilk kez açtıysanız buradan başlayın. Bu seviyenin sonunda ilk b
 3. Ayarlardaki değişiklikler **anında kaydedilir**; ayrıca Kaydet düğmesi yoktur.
 4. Bu kılavuz her zaman **Ayarlar → Kullanım kılavuzu**'ndadır. Kaldığınız yeri hatırlar.
 5. Tuvale özgü kart ve düğme seçenekleri ise tuvaldeki **Tuval ve ağaçlar → Görünüm** bölümündedir. Buradan geri dönünce aynı tuvalde kalırsınız.
+6. Telefonunuzun **geri tuşu** her zaman bir önceki ekrana döndürür. Açık bir pencere, kart menüsü ya da **Araç ekle** sayfası varsa önce onu kapatır; ana ekranda uygulamadan çıkar.
 
 ### 1.5 Deneme ağacında araçları deneyin
 

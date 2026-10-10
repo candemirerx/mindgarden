@@ -32,10 +32,18 @@ export function useMobileShell(): boolean {
                     if (document.querySelector('[data-settings-screen], [data-geri-yonetir]')) return;
                     // Editör tam ekrandaysa geri tuşu yalnızca tam ekrandan çıkar.
                     if (document.querySelector('[data-tam-ekran]')) return;
-                    if (window.history.length > 1) {
+                    // Kart menüsü ya da açık bir pencere varsa geri tuşu önce onu kapatır.
+                    if (document.documentElement.hasAttribute('data-kart-menusu') || document.querySelector('[role="dialog"], [role="alertdialog"], [role="listbox"], [role="menu"]')) {
+                        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
+                        return;
+                    }
+                    // Ana sayfadaysa uygulamayı kapat; başka her ekranda bir önceki ekrana dön.
+                    if (/^\/(index(\.html)?)?\/?$/.test(window.location.pathname)) {
+                        void App.exitApp();
+                    } else if (window.history.length > 1) {
                         window.history.back();
                     } else {
-                        void App.exitApp();
+                        window.location.assign('/');
                     }
                 });
                 if (cancelled) {

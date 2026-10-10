@@ -84,6 +84,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     'Ayarlardaki değişiklikler **anında kaydedilir**; ayrıca Kaydet düğmesi yoktur.',
                     'Bu kılavuz her zaman **Ayarlar → Kullanım kılavuzu**\'ndadır. Kaldığınız yeri hatırlar.',
                     'Tuvale özgü kart ve düğme seçenekleri ise tuvaldeki **Tuval ve ağaçlar → Görünüm** bölümündedir. Buradan geri dönünce aynı tuvalde kalırsınız.',
+                    'Telefonunuzun **geri tuşu** her zaman bir önceki ekrana döndürür. Açık bir pencere, kart menüsü ya da **Araç ekle** sayfası varsa önce onu kapatır; ana ekranda uygulamadan çıkar.',
                 ],
             },
             {

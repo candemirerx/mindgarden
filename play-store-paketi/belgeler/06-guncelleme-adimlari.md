@@ -42,12 +42,12 @@ artırmak zorundasın**. Aynı sürüm kodunu ikinci kez yükleyemezsin.
 `android/app/build.gradle` dosyasını aç:
 
 ```gradle
-versionCode 71         // önceki yükleme 70; her yeni pakette artır
-versionName "1.0.3"    // kullanıcının gördüğü sürüm
+versionCode 73         // önceki yükleme 72; her yeni pakette artır
+versionName "1.0.4"    // kullanıcının gördüğü sürüm
 ```
 
-Şu anki sürüm `71` / `1.0.3` (hedef API 36). Bir sonraki yükleme en az 72 olmalıdır.
-İlk genel yayın için görünen ad `1.0.3` olarak hazırlandı. Testte kullanılan
+Şu anki sürüm `73` / `1.0.4` (hedef API 36). Bir sonraki yükleme en az 74 olmalıdır.
+İlk genel yayın için görünen ad `1.0.4` olarak hazırlandı. Testte kullanılan
 kodlar sıfırlanmadı; Play Store güncellemeleri teknik sürüm koduyla sıralar.
 
 **2. Yeni paketi üret**

@@ -220,7 +220,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
         let disposed = false;
         let remove: (() => Promise<void>) | undefined;
         void import('@capacitor/app').then(async ({ App }) => {
-            const listener = await App.addListener('backButton', () => backRef.current());
+            const listener = await App.addListener('backButton', () => { if (document.querySelector('[data-ust-katman]')) return; backRef.current(); });
             if (disposed) await listener.remove();
             else remove = () => listener.remove();
         });
