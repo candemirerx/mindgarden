@@ -301,9 +301,11 @@ function Add-Parca([string]$id, [int]$sira, [string]$veri) {
     if ($sira -eq 0) {
         if ($script:parcalar.ContainsKey($id)) { $script:parcaToplam -= $script:parcalar[$id].Length; $script:parcalar[$id].Dispose() }
         if ($script:parcalar.Count -ge 60) { throw 'Çok fazla bekleyen dosya.' }
-        $script:parcalar[$id] = New-Object System.IO.MemoryStream
+        # Parçalar bellekte değil, kapanınca kendiliğinden silinen geçici dosyada birikir.
+        $parcaYolu = Join-Path ([System.IO.Path]::GetTempPath()) ('nb-parca-' + [guid]::NewGuid().ToString('N') + '.tmp')
+        $script:parcalar[$id] = New-Object System.IO.FileStream($parcaYolu, [System.IO.FileMode]::Create, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None, 81920, [System.IO.FileOptions]::DeleteOnClose)
     } elseif (-not $script:parcalar.ContainsKey($id)) { throw 'Parça sırası bozuk.' }
-    if ($script:parcaToplam + $bytes.Length -gt 200MB -or $script:parcalar[$id].Length + $bytes.Length -gt 40MB) { throw 'Dosya çok büyük.' }
+    if ($script:parcaToplam + $bytes.Length -gt 300MB -or $script:parcalar[$id].Length + $bytes.Length -gt 100MB) { throw 'Dosya çok büyük.' }
     $script:parcalar[$id].Write($bytes, 0, $bytes.Length)
     $script:parcaToplam += $bytes.Length
     $script:parcaZamani[$id] = Get-Date
@@ -327,7 +329,9 @@ function Save-Gorseller($ids, $adlar, [string]$klasor, [bool]$belge = $false) {
         $yol = Join-Path $klasor $ad
         $taban = [System.IO.Path]::GetFileNameWithoutExtension($ad); $uzanti = [System.IO.Path]::GetExtension($ad)
         for ($n = 2; Test-Path -LiteralPath $yol; $n++) { $yol = Join-Path $klasor ('{0} ({1}){2}' -f $taban, $n, $uzanti) }
-        [System.IO.File]::WriteAllBytes($yol, $script:parcalar[$id].ToArray())
+        $kaynak = $script:parcalar[$id]; $kaynak.Flush(); $kaynak.Position = 0
+        $hedefAkim = New-Object System.IO.FileStream($yol, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write)
+        try { $kaynak.CopyTo($hedefAkim) } finally { $hedefAkim.Dispose() }
         $yollar += $yol
     }
     foreach ($id in $ids) {
@@ -550,8 +554,10 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
                 'panometni' {
                     $id=[string]$inputAction.id
                     if($id -notmatch '^[A-Za-z0-9-]{8,48}$' -or -not $script:parcalar.ContainsKey($id)) { throw 'Metin eksik geldi.' }
-                    $bytes=$script:parcalar[$id].ToArray()
-                    if($bytes.Length -lt 1 -or $bytes.Length -gt 1MB) { throw 'Metin boyutu geçersiz.' }
+                    $metinAkim=$script:parcalar[$id]
+                    if($metinAkim.Length -lt 1 -or $metinAkim.Length -gt 1MB) { throw 'Metin boyutu geçersiz.' }
+                    $bellek=New-Object System.IO.MemoryStream; $metinAkim.Flush(); $metinAkim.Position=0; $metinAkim.CopyTo($bellek)
+                    $bytes=$bellek.ToArray()
                     $text=[System.Text.UTF8Encoding]::new($false,$true).GetString($bytes)
                     if(-not $dryRun) { Set-ClipboardRetry $text }
                     $script:parcaToplam-=$script:parcalar[$id].Length

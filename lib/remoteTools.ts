@@ -1210,8 +1210,8 @@ const blobBase64 = (blob: Blob) => new Promise<string>((coz, red) => {
 export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], hedef: 'dosya' | 'pano', prefs: RemotePrefs, ilerleme?: (oran: number) => void) {
     if (!dosyalar.length) throw new Error('Önce gönderilecek öğeleri seçin.');
     if (dosyalar.length > 50) throw new Error('Bir seferde en çok 50 öğe gönderilebilir.');
-    if (dosyalar.some(d => d.veri.size > 40 * 1024 * 1024)) throw new Error('Her dosya en çok 40 MB olabilir.');
-    if (dosyalar.reduce((s, d) => s + d.veri.size, 0) > 200 * 1024 * 1024) throw new Error('Bir aktarımın toplamı en çok 200 MB olabilir.');
+    if (dosyalar.some(d => d.veri.size > 100 * 1024 * 1024)) throw new Error('Her dosya en çok 100 MB olabilir.');
+    if (dosyalar.reduce((s, d) => s + d.veri.size, 0) > 300 * 1024 * 1024) throw new Error('Bir aktarımın toplamı en çok 300 MB olabilir.');
     const kartVar = prefs.connection === 'wifi' && !!prefs.cardUrl;
     if (!kartVar && !prefs.helperToken) throw new Error('Öğe göndermek için bilgisayarda Not Bahçesi PC Yardımcısı gerekir: Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayara bağlanın.');
     const wifiVar = !!prefs.helperUrl;

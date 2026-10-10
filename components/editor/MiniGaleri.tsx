@@ -281,7 +281,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                     <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-moss-100 text-moss-700"><GalleryThumbnails size={30} /></span>
                     <div className="space-y-1">
                         <p className="font-semibold text-sand-900">Galeri boş</p>
-                        <p className="text-sm text-sand-600">Fotoğraf çekin, galeriden aktarın, dosya ekleyin ya da aşağıdaki kutuya yapıştırın. Dosya başına en çok 40 MB.</p>
+                        <p className="text-sm text-sand-600">Fotoğraf çekin, galeriden aktarın, dosya ekleyin ya da aşağıdaki kutuya yapıştırın. Dosya başına en çok 100 MB.</p>
                     </div>
                     <div className="flex flex-wrap justify-center gap-2">
                         <button type="button" onClick={() => setKamera(true)} className="btn btn-primary min-h-11 gap-1.5 px-4 text-sm"><Camera size={16} /> Fotoğraf çek</button>
@@ -328,7 +328,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                 <div className="flex shrink-0 items-center">
                     <button type="button" id="galeri-kamera" onClick={() => setKamera(true)} aria-label="Fotoğraf çek" title="Fotoğraf çek" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><Camera size={20} /></button>
                     <button type="button" id="galeri-telefondan" onClick={() => galeriRef.current?.click()} aria-label="Telefon galerisinden ekle" title="Telefon galerisinden ekle" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><ImagePlus size={20} /></button>
-                    <button type="button" id="galeri-dosya-ekle" onClick={() => dosyaRef.current?.click()} aria-label="Dosya ekle" title="Dosya ekle (en çok 40 MB)" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><FilePlus2 size={20} /></button>
+                    <button type="button" id="galeri-dosya-ekle" onClick={() => dosyaRef.current?.click()} aria-label="Dosya ekle" title="Dosya ekle (en çok 100 MB)" className="flex h-11 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><FilePlus2 size={20} /></button>
                 </div>
                 <div className="flex min-h-11 min-w-0 flex-1 items-end rounded-3xl border border-sand-200 bg-sand-50 pl-3.5 pr-1 focus-within:border-moss-400">
                     <textarea id="galeri-kutu" value={taslak} rows={1} onChange={e => setTaslak(e.target.value)} onPaste={yapistirildi}
@@ -368,7 +368,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                     : buyuk.tur === 'dosya' ? <div className="flex max-w-sm flex-col items-center gap-3 rounded-2xl bg-white p-6 text-center text-sand-900" onClick={e => e.stopPropagation()}>
                         <FileText size={40} className="text-moss-600" />
                         <p className="break-all font-semibold">{buyuk.ad}</p>
-                        <p className="text-sm text-sand-600">{dosyaBoyutu(buyuk.veri?.size ?? 0)} · Dosya başına en çok 40 MB</p>
+                        <p className="text-sm text-sand-600">{dosyaBoyutu(buyuk.veri?.size ?? 0)} · Dosya başına en çok 100 MB</p>
                         <p className="text-xs text-sand-600">Seçip bilgisayara veya PC panosuna gönderebilirsiniz.</p>
                         <a href={onizleme[buyuk.id]} download={buyuk.ad} className="btn btn-secondary min-h-11 gap-2"><Download size={16} /> Dosyayı indir</a>
                     </div> : <p className="max-h-full max-w-xl overflow-auto whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm text-sand-900" onClick={e => e.stopPropagation()}>{buyuk.metin}</p>}

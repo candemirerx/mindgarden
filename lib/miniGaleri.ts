@@ -125,7 +125,7 @@ export async function dosyalariGaleriyeEkle(notId: string, dosyalar: Iterable<Bl
 /** Dosya seçicisinden gelen ekler değiştirilmeden, özgün adlarıyla saklanır. */
 export async function belgeleriGaleriyeEkle(notId: string, dosyalar: Iterable<File>): Promise<number> {
     const liste = [...dosyalar];
-    if (liste.some(d => d.size > 40 * 1024 * 1024)) throw new Error('Her dosya en çok 40 MB olabilir.');
+    if (liste.some(d => d.size > 100 * 1024 * 1024)) throw new Error('Her dosya en çok 100 MB olabilir.');
     return galeriyeEkle(notId, liste.map(d => ({ tur: 'dosya', veri: d, ad: d.name || 'dosya' })));
 }
 
