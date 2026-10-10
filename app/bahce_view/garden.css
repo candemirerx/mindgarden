@@ -64,11 +64,6 @@
 }
 
 /* Basılı tut menüsü: yerleşim korunur, yalnız eldeki kart görünür. */
-html[data-kart-menusu] .garden-page [data-kart-kap]:not([data-kart-aktif="1"]) { visibility: hidden; pointer-events: none; }
-html[data-kart-menusu] .garden-page .yeni-agac > svg,
-html[data-kart-menusu] .tuval-sekmeleri,
-html[data-kart-menusu] #secili-panel,
-html[data-kart-menusu] #secili-yuzen { visibility: hidden; }
 html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60; }
 /* Üst şerit: karta oturan, kart genişliğiyle orantılı üç bölmeli araç çubuğu. */
 .kart-araclar {
