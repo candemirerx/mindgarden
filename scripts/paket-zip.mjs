@@ -34,8 +34,7 @@ if (!surum || !surumKodu) throw new Error('Surum bilgisi okunamadi (lib/config.t
 
 const aab = join(PAKET, 'uygulama', 'not-bahcesi-' + surum + '.aab');
 const apk = join(PAKET, 'uygulama', 'not-bahcesi-' + surum + '.apk');
-const ikiz = join(PAKET, 'uygulama', 'not-bahcesi-2-' + surum + '.apk');
-for (const dosya of [aab, apk, ikiz]) {
+for (const dosya of [aab, apk]) {
     if (!existsSync(dosya)) {
         throw new Error('Paket bulunamadi: ' + dosya + '\nOnce derleyin: npm run build:android, sonra android klasorunde: gradlew assembleRelease bundleRelease');
     }
@@ -47,7 +46,6 @@ const ozet = async (yol) => {
 };
 const aabBilgi = await ozet(aab);
 const apkBilgi = await ozet(apk);
-const ikizBilgi = await ozet(ikiz);
 
 let parmakIzi = '(assetlinks.json okunamadi)';
 try {
@@ -74,11 +72,6 @@ const bilgi = [
     '  uygulama/not-bahcesi-' + surum + '.apk',
     '    Boyut  : ' + apkBilgi.boyut.toLocaleString('tr-TR') + ' bayt',
     '    SHA-256: ' + apkBilgi.sha256,
-    '',
-    'Ikinci uygulama (com.notbahcesi.app2, "Not Bahcesi 2") - ayni imza:',
-    '  uygulama/not-bahcesi-2-' + surum + '.apk',
-    '    Boyut  : ' + ikizBilgi.boyut.toLocaleString('tr-TR') + ' bayt',
-    '    SHA-256: ' + ikizBilgi.sha256,
     '',
     'Not: Her yeni yuklemede android/app/build.gradle icindeki versionCode artirilmalidir.',
     'Yayin adresleri:',
@@ -149,7 +142,6 @@ for (const dosya of await readdir(join(PAKET, 'gorseller'))) {
 }
 await kopyala(aab, join(stage, 'uygulama'));
 await kopyala(apk, join(stage, 'uygulama'));
-await kopyala(ikiz, join(stage, 'uygulama'));
 
 const yardimciDosyalar = [
     'pc_yardimcisi_baslat.cmd',

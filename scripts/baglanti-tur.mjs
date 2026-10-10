@@ -171,6 +171,21 @@ async function main() {
         const kodDurumu = await degerlendir(`(() => { const i = document.getElementById('pc-wifi-kod'); const b = i.parentElement.querySelector('button'); return { deger: i.value, kapali: b.disabled }; })()`);
         sart('Kod alanı harfleri atar, eksik kodda Eşleştir kapalı', kodDurumu.deger === '123' && kodDurumu.kapali, JSON.stringify(kodDurumu));
 
+        // Ortak indirme kartı hem uygulamada hem /pc sayfasında bulunur.
+        sart('Uygulamada indirme linki eylemleri var', await degerlendir(`!!document.getElementById('yardimci-link-kopyala') && !!document.getElementById('yardimci-link-yaz-ac') && !!document.getElementById('yardimci-bilgisayara-gonder')`));
+        await git('/pc', 6000);
+        sart('/pc: üç link eylemi var', await degerlendir(`!!document.getElementById('yardimci-link-kopyala') && !!document.getElementById('yardimci-link-yaz-ac') && !!document.getElementById('yardimci-bilgisayara-gonder')`));
+        sart('/pc: BASLAT ve WIFI dosyaları açıklanıyor', await degerlendir(`document.body.innerText.includes('BASLAT.cmd') && document.body.innerText.includes('WIFI.cmd')`));
+        await tikla(`document.getElementById('yardimci-link-yaz-ac')`); await bekle(300);
+        sart('Link yazma yalnız yardımcı gerektirmeyen yolları sunuyor', await degerlendir(`JSON.stringify([...document.querySelectorAll('#yardimci-link-yolu option')].map(o => o.value)) === JSON.stringify(['pc-bluetooth','bluetooth','wifi','kart-ap'])`));
+        sart('Adres çubuğu ve Enter talimatı var', await degerlendir(`document.body.innerText.includes('Ctrl+L') && document.body.innerText.includes('Enter’a siz basarsınız')`));
+        sart('Tarayıcıda Android Bluetooth yazma kapalı', await degerlendir(`document.getElementById('yardimci-link-yaz').disabled`));
+        sart('Mobil genişlikte yatay taşma yok', await degerlendir(`document.documentElement.scrollWidth <= innerWidth`));
+        if (GORSEL) {
+            await degerlendir(`document.getElementById('yardimci-indir-karti').scrollIntoView({ block: 'start' })`); await bekle(300);
+            const k = await cdp.gonder('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+            writeFileSync(join(GORSEL, 'yardimci-indirme.png'), Buffer.from(k.data, 'base64'));
+        }
         console.log('');
         for (const s of gecti) console.log('  ✓ ' + s);
         for (const s of kaldi) console.log('  ✗ ' + s);

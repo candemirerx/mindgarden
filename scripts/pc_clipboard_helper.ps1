@@ -46,22 +46,55 @@ if ($CardOnly) {
     # One listener per verified card: a connected first card must not prevent
     # the LCD/second card from reaching the PC clipboard and window actions.
     if (-not $CardPort) {
+        $supervisorLease=[System.Threading.Mutex]::new($false,'Local\CepKopruUsbSupervisor')
+        $supervisorHeld=$false
+        try { $supervisorHeld=$supervisorLease.WaitOne(0) }
+        catch [System.Threading.AbandonedMutexException] { $supervisorHeld=$true }
+        if(-not $supervisorHeld) { $supervisorLease.Dispose(); Write-Output 'USB supervisor already running'; return }
         $cardWorkers=@{}
+        $cardAbsentSince=@{}
         try {
             while ($true) {
                 $devices=@([UsbInternetRelay]::CardPorts())
+                foreach($known in @($cardWorkers.Keys)) {
+                    if($devices -contains $known) { $cardAbsentSince.Remove($known); continue }
+                    if(-not $cardAbsentSince.ContainsKey($known)) { $cardAbsentSince[$known]=[DateTime]::UtcNow; continue }
+                    if(([DateTime]::UtcNow-$cardAbsentSince[$known]).TotalSeconds -lt 10) { continue }
+                    $worker=$cardWorkers[$known]
+                    if(-not $worker.HasExited) { $worker.Kill();$worker.WaitForExit() }
+                    $worker.Dispose();$cardWorkers.Remove($known);$cardAbsentSince.Remove($known)
+                }
                 foreach($name in $devices) {
                     if($cardWorkers.ContainsKey($name) -and -not $cardWorkers[$name].HasExited) { continue }
+                    if($cardWorkers.ContainsKey($name)) { $cardWorkers[$name].Dispose();$cardWorkers.Remove($name) }
+                    $probeLease=[System.Threading.Mutex]::new($false,('Local\CepKopruUsb_'+$name))
+                    $portFree=$false
+                    try { $portFree=$probeLease.WaitOne(0) }
+                    catch [System.Threading.AbandonedMutexException] { $portFree=$true }
+                    if($portFree) { $probeLease.ReleaseMutex() }
+                    $probeLease.Dispose()
+                    if(-not $portFree) { continue }
                     $arguments=@('-NoProfile','-STA','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'),'-Port',[string]$Port,'-CardOnly','-CardPort',$name)
                     if($CardTrace) { $arguments+='-CardTrace' }
-                    $cardWorkers[$name]=Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList $arguments
+                    $usbLogDir=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'KablosuzBellekUsbInternet/logs'
+                    New-Item -ItemType Directory -Path $usbLogDir -Force | Out-Null
+                    $cardWorkers[$name]=Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput (Join-Path $usbLogDir ($name+'-out.log')) -RedirectStandardError (Join-Path $usbLogDir ($name+'-err.log'))
                 }
                 Start-Sleep -Seconds 2
             }
         } finally {
             foreach($worker in $cardWorkers.Values) { if(-not $worker.HasExited) { $worker.Kill();$worker.WaitForExit() };$worker.Dispose() }
+            $supervisorLease.ReleaseMutex();$supervisorLease.Dispose()
         }
     }
+    # Retain ownership across USB re-enumeration. A second tray/manual worker
+    # waits instead of taking this port during a firmware restart.
+    $cardLease = [System.Threading.Mutex]::new($false, ('Local\CepKopruUsb_' + $CardPort))
+    $cardHeld=$false
+    try { $cardHeld=$cardLease.WaitOne(0) }
+    catch [System.Threading.AbandonedMutexException] { $cardHeld=$true }
+    if(-not $cardHeld) { $cardLease.Dispose();Write-Output ('USB worker already running: '+$CardPort);return }
+    try {
     # Only this application's USB CDC identity; never open unrelated serial devices.
     while ($true) {
         $ports = @([UsbInternetRelay]::CardPorts() | Where-Object { $_ -eq $CardPort })
@@ -72,11 +105,15 @@ if ($CardOnly) {
                 $serial = [System.IO.Ports.SerialPort]::new($cardDevicePort,115200)
                 $serial.Encoding = [System.Text.UTF8Encoding]::new($false,$true)
                 $serial.NewLine = "`n"; $serial.ReadTimeout=1000; $serial.WriteTimeout=3000
+                $serial.ReadBufferSize=65536; $serial.WriteBufferSize=65536
                 $serial.DtrEnable=$true; $serial.RtsEnable=$true; $serial.Open()
                 # Refresh CDC line state after a firmware restart/re-enumeration.
                 $serial.DtrEnable=$false; Start-Sleep -Milliseconds 50; $serial.DtrEnable=$true
                 Write-Output ('CardReady:'+$cardDevicePort)
                 while ($true) {
+                    # NBI3/NBI4 binary batches are read, relayed and answered
+                    # entirely in compiled code. Text/clipboard frames retain
+                    # their existing PowerShell route, including older cards.
                     try { $line=$internetRelay.ReadFrame($serial) } catch [System.TimeoutException] { continue }
                     if ($line.StartsWith('NBI1:')) {
                         try {
@@ -101,8 +138,8 @@ if ($CardOnly) {
                             if($bytes.Length -gt 24000) { throw 'Payload too large' }
                             $command=$utf8.GetString($bytes) | ConvertFrom-Json
                             if($CardTrace) { Write-Output ('CardRequest:'+[string]$command.action+':'+$bytes.Length) }
-                            if([string]$command.action -notin @('ping','parca','gorseller','dosyalar','clipboard','panometni','window')) { throw 'Unsupported card action' }
-                            if($command.action -in @('gorseller','dosyalar') -and $command.hedef -ne 'pano') { throw 'Unsupported destination' }
+                            if([string]$command.action -notin @('ping','parca','parca2','gorseller','dosyalar','clipboard','panometni','window')) { throw 'Unsupported card action' }
+                            if($command.action -in @('gorseller','dosyalar') -and $command.hedef -notin @('pano','dosya')) { throw 'Unsupported destination' }
                             $reply=Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$Port/input" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $bytes -TimeoutSec 3
                         }
                         if($reply.ok -ne $true) { throw 'Rejected' }
@@ -110,10 +147,11 @@ if ($CardOnly) {
                         $serial.WriteLine('NBPANOOK:'+$id)
                     } catch { Write-Output ('CardError:'+ $_.Exception.GetType().Name);$serial.WriteLine('NBPANOERR:'+$id) }
                 }
-            } catch { } finally { $internetRelay.Dispose(); if($serial) { $serial.Dispose() } }
+            } catch { $innerEx=$_.Exception; while($innerEx.InnerException){$innerEx=$innerEx.InnerException}; Write-Output ('CardReconnect:'+$cardDevicePort+':'+$_.Exception.GetType().Name+':'+$innerEx.GetType().Name+':'+$innerEx.Message) } finally { $internetRelay.Dispose(); if($serial) { $serial.Dispose() } }
         }
         Start-Sleep -Seconds 2
     }
+    } finally { $cardLease.ReleaseMutex(); $cardLease.Dispose() }
 }
 
 if ($RfcommOnly) {
@@ -236,17 +274,30 @@ function Set-ClipboardRetry([string]$text) {
 # da, Ctrl+V her yerde çalışsın; birden çoksa dosya listesi olarak).
 $script:parcalar = @{}
 $script:parcaZamani = @{}
+$script:parcaSirasi = @{}
+$script:parcaOzet = @{}
 $script:parcaToplam = 0
 function Add-Parca([string]$id, [int]$sira, [string]$veri) {
     if ($id -notmatch '^[A-Za-z0-9-]{8,48}$') { throw 'Parça kimliği geçersiz.' }
+    if ($sira -lt 0) { throw 'Parça sırası geçersiz.' }
     # Yarım kalmış eski aktarımlar 5 dakika sonra atılır.
     foreach ($eski in @($script:parcaZamani.Keys)) {
         if (((Get-Date) - $script:parcaZamani[$eski]).TotalMinutes -gt 5) {
             $script:parcaToplam -= $script:parcalar[$eski].Length
             $script:parcalar[$eski].Dispose(); $script:parcalar.Remove($eski); $script:parcaZamani.Remove($eski)
+            $script:parcaSirasi.Remove($eski); $script:parcaOzet.Remove($eski)
         }
     }
     $bytes = [Convert]::FromBase64String($veri)
+    $digest = [System.Security.Cryptography.SHA256]::Create()
+    try { $ozet = [Convert]::ToBase64String($digest.ComputeHash($bytes)) } finally { $digest.Dispose() }
+    if ($script:parcalar.ContainsKey($id)) {
+        if ($sira -eq $script:parcaSirasi[$id] - 1 -and $ozet -ceq $script:parcaOzet[$id]) {
+            $script:parcaZamani[$id] = Get-Date
+            return # Lost ACK: an identical last chunk is acknowledged, not appended.
+        }
+        if ($sira -ne $script:parcaSirasi[$id]) { throw 'Parça sırası bozuk.' }
+    } elseif ($sira -ne 0) { throw 'Parça sırası bozuk.' }
     if ($sira -eq 0) {
         if ($script:parcalar.ContainsKey($id)) { $script:parcaToplam -= $script:parcalar[$id].Length; $script:parcalar[$id].Dispose() }
         if ($script:parcalar.Count -ge 60) { throw 'Çok fazla bekleyen dosya.' }
@@ -256,6 +307,7 @@ function Add-Parca([string]$id, [int]$sira, [string]$veri) {
     $script:parcalar[$id].Write($bytes, 0, $bytes.Length)
     $script:parcaToplam += $bytes.Length
     $script:parcaZamani[$id] = Get-Date
+    $script:parcaSirasi[$id] = $sira + 1; $script:parcaOzet[$id] = $ozet
 }
 function Get-GuvenliAd([string]$ad, [string]$varsayilan, [bool]$belge = $false) {
     $temiz = ($ad -replace '[\\/:*?"<>|\x00-\x1f]', '_').Trim(' .')
@@ -281,6 +333,7 @@ function Save-Gorseller($ids, $adlar, [string]$klasor, [bool]$belge = $false) {
     foreach ($id in $ids) {
         $id = [string]$id
         if ($script:parcalar.ContainsKey($id)) { $script:parcaToplam -= $script:parcalar[$id].Length; $script:parcalar[$id].Dispose(); $script:parcalar.Remove($id); $script:parcaZamani.Remove($id) }
+        $script:parcaSirasi.Remove($id); $script:parcaOzet.Remove($id)
     }
     return ,$yollar
 }
@@ -456,7 +509,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
             if ($length -gt 32768 -and [string]$inputAction.action -ne 'parca') { Send-Response $stream 413 '{"ok":false}'; return }
             switch ([string]$inputAction.action) {
                 'ping' { }
-                'parca' {
+                { $_ -in @('parca', 'parca2') } {
                     if ($inputAction.veri -isnot [string]) { throw 'Parça geçersiz.' }
                     Add-Parca ([string]$inputAction.id) ([int]$inputAction.sira) $inputAction.veri
                 }
@@ -503,6 +556,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
                     if(-not $dryRun) { Set-ClipboardRetry $text }
                     $script:parcaToplam-=$script:parcalar[$id].Length
                     $script:parcalar[$id].Dispose();$script:parcalar.Remove($id);$script:parcaZamani.Remove($id)
+                    $script:parcaSirasi.Remove($id); $script:parcaOzet.Remove($id)
                 }
                 'text' {
                     if ($inputAction.text -isnot [string] -or $inputAction.text.Length -gt 32000) { throw 'Metin geçersiz.' }
@@ -565,9 +619,11 @@ $cardJob = $null
 $directBluetooth = $false
 if (-not $TestMode) {
     $cardJob=Start-Job -ScriptBlock {
-        param($path,$port)
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $path -Port $port -CardOnly
-    } -ArgumentList $PSCommandPath,$Port
+        param($path,$port,$trace)
+        $workerArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$path,'-Port',$port,'-CardOnly')
+        if ($trace) { $workerArgs += '-CardTrace' }
+        & powershell.exe @workerArgs
+    } -ArgumentList $PSCommandPath,$Port,([bool]$CardTrace)
     if ($BluetoothPort -eq 'auto' -and (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'vendor/InTheHand.Net.Personal.dll'))) {
         $directBluetooth = $true
         $scriptPath = $PSCommandPath

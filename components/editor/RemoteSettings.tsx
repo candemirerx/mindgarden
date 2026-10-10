@@ -47,9 +47,9 @@ export default function RemoteSettings() {
             <BaglantiKurulumu prefs={prefs} update={update} />
         </SettingsSection>
 
-        <SettingsSection icon={Download} tone="clay" title="PC yardımcısı" description="Bilgisayara yazma, fare, pano ve görsel aktarımı için küçük Windows programı. İndirip bir klasöre çıkarın; hangi dosyanın ne işe yaradığı aşağıda.">
+        <SettingsSection icon={Download} tone="clay" title="PC yardımcısı" description="Pano, dosya aktarımı ve doğrudan PC Wi-Fi için tek program. Bluetooth klavye/fare ve kartla yazma yardımcı olmadan çalışır.">
             <div className="space-y-3">
-                <YardimciIndir />
+                <YardimciIndir prefs={prefs} />
                 <YardimciKlasorleri />
             </div>
         </SettingsSection>

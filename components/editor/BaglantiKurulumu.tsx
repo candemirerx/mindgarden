@@ -15,8 +15,9 @@
  */
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Activity, Bluetooth, Check, Copy, Download, ExternalLink, Globe, Loader2, MonitorSmartphone, Radio, RefreshCw, Search, Share2, ShieldCheck, Wifi } from 'lucide-react';
-import { PC_YARDIMCISI_SAYFASI, PC_YARDIMCISI_ZIP } from '@/lib/config';
+import { Activity, Bluetooth, Check, ExternalLink, Globe, Loader2, MonitorSmartphone, Radio, RefreshCw, Search, ShieldCheck, Wifi } from 'lucide-react';
+import YardimciIndir from '@/components/ui/PcYardimcisiIndir';
+export { default as YardimciIndir } from '@/components/ui/PcYardimcisiIndir';
 import {
     KART_AP_ADRESI, KART_AP_AGI, baglantiSatiriniCoz, baglantiTuru, baglantiTuruSec, bilgisayarAdresiniSina, wifiAyarlariniAc, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul,
     bluetoothAyarlariniAc, bluetoothKlavyeBagla, bluetoothKlavyeyiBaslat, connectCard, telefonuGorunurYap, disconnectCard, kartAdiEslesir, kartAginda, kartiWifidaBul, kayitliKartAdresi, scanCards, scanPairedComputers,
@@ -71,68 +72,6 @@ function Aciklama({ children }: { children: React.ReactNode }) {
     return <p className="text-xs leading-relaxed text-sand-600">{children}</p>;
 }
 
-/**
- * PC yardımcısını indirme kartı. Yardımcı Windows programı olduğu için asıl
- * hedef bilgisayardır:
- *  - Telefonda: indirme sayfasını bilgisayara gönder (paylaş), adresi kopyala
- *    ya da zip'i telefona indirip Quick Share/USB ile aktar.
- *  - Bilgisayarın tarayıcısında: doğrudan "İndir".
- * Yardımcı henüz kurulmamışsa açık ve belirgin durur; kurulduktan sonra
- * küçük bir "Yardımcıyı indir" satırına katlanır.
- */
-export function YardimciIndir({ kurulu = false }: { kurulu?: boolean }) {
-    const [bilgi, setBilgi] = useState('');
-    const telefon = Capacitor.isNativePlatform();
-    const kisaAdres = PC_YARDIMCISI_SAYFASI.replace(/^https?:\/\//, '');
-    const kopyala = async () => {
-        try { await navigator.clipboard.writeText(PC_YARDIMCISI_SAYFASI); setBilgi('Adres kopyalandı. Bilgisayarın tarayıcısına yapıştırın.'); }
-        catch { setBilgi('Adresi bilgisayarda elle yazın: ' + kisaAdres); }
-    };
-    const paylas = async () => {
-        try {
-            const { Share } = await import('@capacitor/share');
-            await Share.share({ title: 'Not Bahçesi PC Yardımcısı', text: 'Not Bahçesi PC Yardımcısı (Windows). Bilgisayarda açıp "Yardımcıyı indir"e basın:', url: PC_YARDIMCISI_SAYFASI, dialogTitle: 'Bilgisayara gönder' });
-            setBilgi('');
-        } catch (hata) {
-            // Kullanıcı paylaşımı iptal ettiyse sessiz kal; paylaşım yoksa adresi kopyala.
-            if (!/cancel/i.test(String((hata as Error)?.message ?? ''))) await kopyala();
-        }
-    };
-    const telefonaIndir = async () => {
-        try {
-            const { Browser } = await import('@capacitor/browser');
-            await Browser.open({ url: PC_YARDIMCISI_ZIP });
-            setBilgi('İndirme tarayıcıda başladı. Dosyayı Quick Share, e-posta ya da USB ile bilgisayara aktarın.');
-        } catch { window.open(PC_YARDIMCISI_ZIP, '_blank'); }
-    };
-    const icerik = <div className="space-y-2.5">
-        <Aciklama>
-            Yardımcı küçük bir <strong>Windows</strong> programıdır (~0,2 MB), kurulum istemez ve yönetici izni gerektirmez.
-            {telefon ? <> Bilgisayarda şu adresi açıp <strong>Yardımcıyı indir</strong>'e basın: <strong className="select-all break-all text-sand-900">{kisaAdres}</strong></> : <> İndirip zip'i bir klasöre çıkarın, içindeki <strong>pc_yardimcisi_baslat</strong> dosyasına çift tıklayın.</>}
-        </Aciklama>
-        <div className="flex flex-wrap gap-2">
-            {telefon ? <>
-                <button type="button" id="yardimci-bilgisayara-gonder" className={anaDugme} onClick={() => void paylas()}><Share2 size={15} aria-hidden="true" /> Bilgisayara gönder</button>
-                <button type="button" className={ikinciDugme} onClick={() => void kopyala()}><Copy size={15} aria-hidden="true" /> Adresi kopyala</button>
-                <button type="button" className={ikinciDugme} onClick={() => void telefonaIndir()}><Download size={15} aria-hidden="true" /> Telefona indir</button>
-            </> : <>
-                <a id="yardimci-indir" href={PC_YARDIMCISI_ZIP} download className={anaDugme}><Download size={15} aria-hidden="true" /> Yardımcıyı indir (Windows)</a>
-                <a href={PC_YARDIMCISI_SAYFASI} target="_blank" rel="noopener" className={ikinciDugme}>Kurulum adımları</a>
-            </>}
-        </div>
-        {telefon && <p className="text-[11px] leading-relaxed text-sand-500">"Bilgisayara gönder" ile bağlantıyı kendinize WhatsApp, e-posta ya da Quick Share ile gönderip bilgisayarda açın.</p>}
-        {bilgi && <p role="status" className="text-xs text-moss-700">{bilgi}</p>}
-    </div>;
-    if (kurulu) return <details className="rounded-xl border border-sand-200 bg-white">
-        <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700"><Download size={13} className="mr-1 inline" aria-hidden="true" /> Yardımcıyı indir (başka bilgisayar için)</summary>
-        <div className="px-3 pb-3">{icerik}</div>
-    </details>;
-    return <div id="yardimci-indir-karti" className="rounded-xl border border-moss-200 bg-moss-50/60 p-3">
-        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-moss-800"><Download size={14} aria-hidden="true" /> Yardımcı bilgisayarda yok mu? İndirin</p>
-        {icerik}
-    </div>;
-}
-
 /** Bilgisayardaki 6 haneli eşleştirme kodu alanı. */
 function KodAlani({ id, deger, onDegis, onGonder, mesgul, dugmeMetni }: { id: string; deger: string; onDegis: (v: string) => void; onGonder: () => void; mesgul: boolean; dugmeMetni: string }) {
     return <div className="flex flex-wrap items-stretch gap-2">
@@ -163,7 +102,7 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
         <ol className="space-y-4">
             <Adim no={1} baslik="Bilgisayarda yardımcıyı açın" tamam={eslesmis}>
                 <Aciklama>Bilgisayarda <strong>Not Bahçesi PC Yardımcısı</strong>nı açın (<code>pc_yardimcisi_baslat</code>). Pencerede <strong>6 haneli eşleştirme kodu</strong> görünür. Telefon ve bilgisayar aynı Wi‑Fi ağında olmalı.</Aciklama>
-                <YardimciIndir kurulu={eslesmis} />
+                <YardimciIndir kurulu={eslesmis} prefs={prefs} />
             </Adim>
             <Adim no={2} baslik="Bilgisayarı bulun" tamam={!!hedef}>
                 <div className="flex flex-wrap gap-2">
@@ -298,7 +237,7 @@ export function PcBluetoothPano({ prefs, update, yoluSec = true }: { prefs: Remo
         <ol className="space-y-4">
             <Adim no={1} baslik="Bilgisayarda Bluetooth'u ve yardımcıyı açın">
                 <Aciklama>Bilgisayarda Bluetooth açık olmalı ve <strong>Not Bahçesi PC Yardımcısı</strong> çalışmalı. Telefon bu bilgisayarla daha önce eşleşmediyse önce Bluetooth ayarlarından eşleştirin. <strong>Kod gerekmez.</strong></Aciklama>
-                <YardimciIndir kurulu={bagli} />
+                <YardimciIndir kurulu={bagli} prefs={prefs} />
                 <button type="button" className={ikinciDugme} onClick={() => void calistir('ayar', async () => { await bluetoothAyarlariniAc(); })}>
                     <Bluetooth size={15} aria-hidden="true" /> Bluetooth ayarlarını aç
                 </button>
@@ -524,7 +463,7 @@ function TailscaleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gunc
             </Adim>
             <Adim no={2} baslik="Bilgisayarda PC Yardımcısını açın" tamam={eslesmis}>
                 <Aciklama>Yardımcının penceresinde <strong>Tailscale adresi: http://100.x.x.x:8765</strong> satırı ve <strong>6 haneli eşleştirme kodu</strong> görünür. Başka şehirde olacaksanız yardımcının ve Tailscale'in bilgisayarda açık kalması gerekir. <strong>Bilgisayarda bir kez</strong> yardımcı klasöründeki <strong>pc_tailscale_izni.cmd</strong> dosyasına çift tıklayın (Windows yönetici izni sorar; güvenlik duvarında yalnız Tailscale ağından yardımcıya izin verir). Yardımcı penceresi izin yoksa bunu sarı bir satırla hatırlatır.</Aciklama>
-                <YardimciIndir kurulu={eslesmis} />
+                <YardimciIndir kurulu={eslesmis} prefs={prefs} />
             </Adim>
             <Adim no={3} baslik="Bilgisayarın Tailscale adresini yazın" tamam={!!pc || eslesmis}>
                 <Aciklama>Yardımcı penceresindeki ya da Tailscale uygulamasındaki <strong>100.x.x.x</strong> adresini (ya da bilgisayarın Tailscale adını, ör. <code>pc.tailnet.ts.net</code>) yazın.</Aciklama>

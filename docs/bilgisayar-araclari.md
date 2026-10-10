@@ -1,5 +1,13 @@
 # Bilgisayar araçları
 
+## Güncel yardımcı indirme akışı — 10 Ekim 2026
+
+Uygulamanın PC yardımcısı bölümünde ve `/pc` indirme sayfasında **Paylaş**, **Linki kopyala** ve **Bilgisayara linki yaz** bulunur. Link yazma, PC yardımcısı olmadan çalışan Bluetooth HID veya kart BLE/Wi-Fi/AP yolunu kullanır; PC Wi-Fi/Tailscale alıcısına düşmez. Önce hedef PC'de tarayıcının adres çubuğuna odak verin (Ctrl+L); link yazıldıktan sonra Enter'a kendiniz basın. Yazma yolunu burada seçmek editörün kayıtlı bağlantısını değiştirmez. Bluetooth yolları Android uygulamasını gerektirir; kartın USB kablosu hedef PC'de olmalı ve PC klavye dili Türkçe Q olmalıdır.
+
+Yeni ZIP düzeni: ana klasörde **BASLAT.cmd** (önerilen Bluetooth/kart girişi), **WIFI.cmd** (mevcut ağ izniyle doğrudan PC Wi-Fi) ve **OKUBENI.txt**; `scripts` içinde birlikte tutulacak teknik bileşenler; `ileri` içinde yalnız yöneticiye özel güvenlik duvarı betiği. Ana başlatıcı admin istemez. ZIP'in tamamını çıkarın, yalnız bir başlatıcı açın, pencereyi açık bırakın. Yeni Tailscale kurulumu ve güvenlik duvarı değişikliği normal kullanıcı akışına dahil değildir. Kurum kısıtlarını aşmayın.
+
+Kontroller: `node scripts/yardimci-indirme-test.mjs` indirme kartının eylemlerini taşıma taklitleriyle sınar; `node scripts/baglanti-tur.mjs` gerçek tarayıcıda uygulama ve `/pc` arayüzünü sınar. Bunlar gerçek Bluetooth/kart donanım testi yerine geçmez. Önceki sürümler için aşağıdaki `scripts/pc_yardimcisi_baslat.cmd` girişi yeni paket içinde de korunur; günlük kullanımda ana klasördeki BASLAT.cmd tercih edilir.
+
 Not Bahçesi editöründe Yazı, Fare, Makro ve Dikte görünümleri bulunur. **Bilgisayara yaz** düğmesi editörün gövde metnini (başlığı değil) PC'deki odaklı alana yazar. Doğrudan PC bağlantısında Windows yardımcısı, kart bağlantısında kartın USB HID klavyesi kullanılır. Kart yolunda kartın USB kablosu hedef PC'ye takılı olmalıdır; kart üzerinden fare ve konum makroları BLE NUS gerektirir.
 
 Fare, Dikte, Köprü Dikte, Bilgisayara Yaz (eski Köprü Yaz ile birleşik), Bilgisayar Panosuna Gönder ve Kısayollar, Ayarlar → Araçlar altında mevcut dört yerel araçla aynı listede ayrı aç/kapat kartlarıdır. Etkin araç sayısı hepsini kapsar. Editörde Kısayollar, Fare, Dikte, Bilgisayara Yaz ve Pano düğmeleri yerel araçların **aynı yatay satırında** görünür; ayrıca üçüncü/dördüncü araç satırı açılmaz. Kapatılan araç bu satırdan kalkar.

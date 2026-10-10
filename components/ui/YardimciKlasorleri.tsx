@@ -2,8 +2,8 @@ import { FileCode2, ShieldCheck, ShieldAlert, ChevronDown } from 'lucide-react';
 import { YARDIMCI_KLASORLERI } from '@/lib/yardimciProgramlar';
 
 /**
- * Zip içindeki yardımcı programlar, "yönetici izni isteyen / istemeyen" iki
- * klasör olarak. Uygulamadaki PC yardımcısı kartında ve sitedeki /pc
+ * Zip içeriği: kullanıcı girişleri, otomatik bileşenler ve yönetici araçları.
+ * Uygulamadaki PC yardımcısı kartında ve sitedeki /pc
  * sayfasında aynen kullanılır (durumsuz; sunucuda da çizilir).
  */
 export default function YardimciKlasorleri() {
@@ -13,14 +13,14 @@ export default function YardimciKlasorleri() {
                 const izinli = klasor.id === 'izinli';
                 const Simge = izinli ? ShieldAlert : ShieldCheck;
                 return (
-                    <details key={klasor.id} open={!izinli} id={'yardimci-klasor-' + klasor.id} className="group overflow-hidden rounded-2xl border border-sand-200 bg-white">
+                    <details key={klasor.id} open={klasor.id === 'izinsiz'} id={'yardimci-klasor-' + klasor.id} className="group overflow-hidden rounded-2xl border border-sand-200 bg-white">
                         <summary className="flex min-h-[56px] cursor-pointer list-none items-center gap-3 px-3.5 py-3 transition-colors hover:bg-sand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-moss-500 [&::-webkit-details-marker]:hidden">
                             <span aria-hidden="true" className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + (izinli ? 'bg-clay-100 text-clay-700' : 'bg-moss-100 text-moss-700')}>
                                 <Simge size={18} />
                             </span>
                             <span className="min-w-0 flex-1">
                                 <span className="block text-sm font-semibold leading-snug text-sand-900">{klasor.baslik}</span>
-                                <span className="mt-0.5 block text-[11.5px] font-normal leading-snug text-sand-600">{klasor.dosyalar.length} dosya</span>
+                                <span className="mt-0.5 block text-[11.5px] font-normal leading-snug text-sand-600">{klasor.dosyalar.length} öğe</span>
                             </span>
                             <ChevronDown size={17} aria-hidden="true" className="shrink-0 text-sand-500 transition-transform duration-200 group-open:rotate-180" />
                         </summary>
@@ -32,7 +32,7 @@ export default function YardimciKlasorleri() {
                                         <FileCode2 size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-sand-500" />
                                         <div className="min-w-0 flex-1">
                                             <p className="text-[13px] font-semibold leading-snug text-sand-900">{d.ad}</p>
-                                            <p className="mt-0.5 break-all font-mono text-[11px] leading-snug text-sand-500">scripts\{d.dosya}</p>
+                                            <p className="mt-0.5 break-all font-mono text-[11px] leading-snug text-sand-500">{d.dosya}</p>
                                             <p className="mt-1 text-xs leading-relaxed text-sand-600">{d.aciklama}</p>
                                         </div>
                                     </li>

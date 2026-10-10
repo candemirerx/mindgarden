@@ -12,7 +12,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     BAGLANTI_TURU_ADI, KART_AP_AGI, baglantiTuru, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul, bleDurumu, bluetoothKlavyeBagla, bluetoothKlavyeDurumu, connectCard, kartiWifidaBul,
-    kayitliKartAdresi, remotePrefs, saveRemotePrefs, sendCommand, sendKey, sendToComputerClipboard, testCard, testHelper, typeOnComputer
+    kayitliKartAdresi, remotePrefs, saveRemotePrefs, sendCommand, sendKey, sendToComputerClipboard, testCard, testHelper, typeOnComputer,
+    dosyalariBilgisayaraGonder, telefonPanosunaYaz, telefonPanosunuOku, telefonPanosunuBilgisayaraGonder
 } from './remoteTools';
 import type { ConnectionMode, RemotePrefs } from './remoteTools';
 import { bildir, dinle } from './degisim';
@@ -55,7 +56,7 @@ export async function baglantiyiYokla(prefs: RemotePrefs): Promise<BaglantiDurum
         }
         if (yol === 'wifi') {
             if (!prefs.cardUrl.trim()) return sonuc('kurulmadi', 'Kart adresi yok.');
-            await sureli(testCard(prefs), 9000, 'Kart yanıt vermedi.');
+            await sureli(testCard(prefs), 30000, 'Kart yanıt vermedi.');
             return sonuc('ok', prefs.agTuru === 'kart-ap' ? 'Kartın kendi ağına bağlı · 192.168.4.1.' : 'Karta bağlı · ' + prefs.cardUrl.replace(/^https?:\/\//, '') + '.');
         }
         const ble = await bleDurumu();
@@ -75,15 +76,25 @@ export async function baglantiyiYokla(prefs: RemotePrefs): Promise<BaglantiDurum
 
 /** Son bilinen durum: ayarlar ve editör aynı değeri paylaşır. */
 let sonDurum: BaglantiDurumu | null = null;
-let suren: Promise<BaglantiDurumu> | null = null;
+const suren = new Map<string, Promise<BaglantiDurumu>>();
+let sonAnahtar = '';
+let istenenAnahtar = '';
+const prefsAnahtari = (p: RemotePrefs) => JSON.stringify([p.connection, p.helperUrl, p.helperToken, p.helperBluetoothAddress, p.cardUrl, p.agTuru, kayitliKartAdresi()]);
 
 export function sonBaglantiDurumu(): BaglantiDurumu | null { return sonDurum; }
 
 /** Aynı anda tek yoklama yapılır; sonucu herkese duyurulur. */
 export function durumuTazele(prefs: RemotePrefs): Promise<BaglantiDurumu> {
-    if (suren) return suren;
-    suren = baglantiyiYokla(prefs).then(d => { sonDurum = d; bildir('baglanti-durumu'); return d; }).finally(() => { suren = null; });
-    return suren;
+    const anahtar = prefsAnahtari(prefs);
+    istenenAnahtar = anahtar;
+    const mevcut = suren.get(anahtar);
+    if (mevcut) return mevcut;
+    const is = baglantiyiYokla(prefs).then(d => {
+        if (istenenAnahtar === anahtar) { sonDurum = d; sonAnahtar = anahtar; bildir('baglanti-durumu'); }
+        return d;
+    }).finally(() => { suren.delete(anahtar); });
+    suren.set(anahtar, is);
+    return is;
 }
 
 /**
@@ -91,28 +102,33 @@ export function durumuTazele(prefs: RemotePrefs): Promise<BaglantiDurumu> {
  * değişince eski sonuç gösterilmez. `etkin` false iken yoklama yapılmaz.
  */
 export function useBaglantiDurumu(prefs: RemotePrefs, { aralikMs = 30000, etkin = true }: { aralikMs?: number; etkin?: boolean } = {}) {
-    const [durum, setDurum] = useState<BaglantiDurumu | null>(() => sonDurum && sonDurum.yol === prefs.connection ? sonDurum : null);
+    const [durum, setDurum] = useState<BaglantiDurumu | null>(() => sonAnahtar === prefsAnahtari(prefs) ? sonDurum : null);
+    const sonucAnahtari = useRef(sonAnahtar);
     const [bakiliyor, setBakiliyor] = useState(false);
     const guncel = useRef(prefs);
     guncel.current = prefs;
     const tazele = useCallback(async () => {
         setBakiliyor(true);
-        try { setDurum(await durumuTazele(guncel.current)); } finally { setBakiliyor(false); }
+        const anahtar = prefsAnahtari(guncel.current);
+        try {
+            const d = await durumuTazele(guncel.current);
+            if (anahtar === prefsAnahtari(guncel.current)) { sonucAnahtari.current = anahtar; setDurum(d); }
+        } finally { setBakiliyor(false); }
     }, []);
     useEffect(() => dinle('baglanti-durumu', () => {
-        if (sonDurum && sonDurum.yol === guncel.current.connection) setDurum(sonDurum);
+        if (sonDurum && sonAnahtar === prefsAnahtari(guncel.current)) { sonucAnahtari.current = sonAnahtar; setDurum(sonDurum); }
     }), []);
     // Yol ya da kurulum bilgisi değişince yeniden yokla.
-    const anahtar = [prefs.connection, prefs.helperUrl, prefs.helperToken, prefs.helperBluetoothAddress, prefs.cardUrl].join('|');
+    const anahtar = prefsAnahtari(prefs);
     useEffect(() => {
         if (!etkin) return;
-        setDurum(d => (d && d.yol === prefs.connection ? d : null));
+        setDurum(null);
         void tazele();
         const z = setInterval(() => { if (document.visibilityState === 'visible') void tazele(); }, aralikMs);
         return () => clearInterval(z);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [anahtar, etkin, aralikMs]);
-    const gorunen: BaglantiDurumu | null = durum && durum.yol === prefs.connection ? durum : null;
+    const gorunen: BaglantiDurumu | null = sonucAnahtari.current === anahtar ? durum : null;
     return { durum: gorunen, bakiliyor, tazele };
 }
 
@@ -130,6 +146,13 @@ if (typeof window !== 'undefined') {
         yaz: (metin: string) => typeOnComputer(metin, remotePrefs()),
         tus: (tuslar: string) => sendKey(tuslar, remotePrefs()),
         pano: (metin: string) => sendToComputerClipboard(metin, remotePrefs()),
+        dosya: (ad: string, veri: string, hedef: 'dosya' | 'pano', mime = 'application/octet-stream', tur: 'dosya' | 'gorsel' = 'dosya') => {
+            const bayt = Uint8Array.from(atob(veri), c => c.charCodeAt(0));
+            return dosyalariBilgisayaraGonder([{ ad, veri: new Blob([bayt], { type: mime }), tur: tur === 'dosya' ? 'dosya' : undefined }], hedef, remotePrefs());
+        },
+        telefonPanoYaz: telefonPanosunaYaz,
+        telefonPanoOku: telefonPanosunuOku,
+        telefonPanoGonder: () => telefonPanosunuBilgisayaraGonder(remotePrefs()),
         bul: () => bilgisayarlariBul(),
         eslestirWifi: (url: string, kod: string) => bilgisayarlaEslestirWifi(url, kod),
         eslestirBluetooth: (adres: string, kod: string) => bilgisayarlaEslestirBluetooth(adres, kod),

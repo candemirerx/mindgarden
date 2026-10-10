@@ -242,6 +242,8 @@ public class RemoteBridgePlugin extends Plugin {
     }
     @SuppressLint("MissingPermission") // Gerekçe: izin yoksa bile kaynağı serbest bırakmak zorundayız; SecurityException yutulur.
     private void closeGatt() {
+        failConnect("BLE bağlantısı kapatıldı.");
+        if (writing != null) { writing.reject("BLE bağlantısı yazma sırasında kapandı; komut yeniden gönderilmedi."); writing = null; }
         rx = null;
         if (gatt != null) {
             // İzin geri alınmışsa çağrı SecurityException fırlatabilir; bağlantı
@@ -392,6 +394,10 @@ public class RemoteBridgePlugin extends Plugin {
         if (adapter == null || !adapter.isEnabled()) { call.reject("Bluetooth kapalı."); return; }
         try {
             BluetoothDevice device = adapter.getRemoteDevice(address);
+            if (gatt != null && rx != null && gatt.getDevice().getAddress().equalsIgnoreCase(address)) {
+                JSObject result = new JSObject(); result.put("connected", true); call.resolve(result); return;
+            }
+            if (connecting != null) { call.reject("BLE bağlantısı zaten kuruluyor."); return; }
             closeGatt();
             connecting = call;
             BluetoothGattCallback callback = new BluetoothGattCallback() {
@@ -421,6 +427,7 @@ public class RemoteBridgePlugin extends Plugin {
                     if (connecting != null) { JSObject result = new JSObject(); result.put("connected", true); connecting.resolve(result); connecting = null; }
                 }
                 @Override public void onCharacteristicWrite(BluetoothGatt remote, BluetoothGattCharacteristic characteristic, int status) {
+                    if (remote != gatt) return;
                     if (writing == null) return;
                     if (status == BluetoothGatt.GATT_SUCCESS) writing.resolve(); else writing.reject("BLE yazma hatası: " + status);
                     writing = null;
@@ -470,12 +477,16 @@ public class RemoteBridgePlugin extends Plugin {
         if (!gatt.writeCharacteristic(rx)) { writing = null; call.reject("BLE yazma başlatılamadı.", "BLE_NOT_STARTED"); return; }
         handler.postDelayed(() -> { if (writing == call) { writing = null; call.reject("BLE yazma zaman aşımı."); } }, 8000);
     }
+    private final ExecutorService cardHttpWorker = Executors.newSingleThreadExecutor();
+    private final ExecutorService httpWorkers = Executors.newCachedThreadPool();
     @PluginMethod public void request(PluginCall call) {
         String address = call.getString("url", "");
         String method = call.getString("method", "GET");
         String body = call.getString("body", "");
         String token = call.getString("token", "");
-        new Thread(() -> {
+        boolean cardLocal = false;
+        try { cardLocal = new URL(address).getHost().startsWith("192.168.4."); } catch (Exception ignored) { }
+        (cardLocal ? cardHttpWorker : httpWorkers).execute(() -> {
             HttpURLConnection connection = null;
             try {
                 URL url = new URL(address);
@@ -485,12 +496,15 @@ public class RemoteBridgePlugin extends Plugin {
                 // bağlantı kurma adımı bir kez daha denenir; komut asla iki kez gitmez.
                 for (int deneme = 1; ; deneme++) {
                     connection = (HttpURLConnection) agdanBaglan(url);
-                    connection.setConnectTimeout(deneme == 1 ? 4000 : 6500); connection.setReadTimeout(10000);
+                    connection.setConnectTimeout(deneme == 1 ? 4000 : 6500); connection.setReadTimeout(25000);
                     connection.setUseCaches(false);
                     connection.setRequestProperty("Connection", "close");
                     connection.setRequestMethod(method);
                     if (!token.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + token);
-                    if (method.equals("POST")) { connection.setDoOutput(true); connection.setRequestProperty("Content-Type", "text/plain; charset=utf-8"); }
+                    if (method.equals("POST")) {
+                        connection.setDoOutput(true); connection.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
+                        connection.setFixedLengthStreamingMode(body.getBytes(StandardCharsets.UTF_8).length);
+                    }
                     try { connection.connect(); break; }
                     catch (java.net.ConnectException | java.net.SocketTimeoutException | java.net.NoRouteToHostException hata) {
                         connection.disconnect(); connection = null;
@@ -517,7 +531,7 @@ public class RemoteBridgePlugin extends Plugin {
                 else call.reject("Ağ isteği başarısız: " + ayrinti);
             }
             finally { if (connection != null) connection.disconnect(); }
-        }).start();
+        });
     }
     @PluginMethod public void discover(PluginCall call) {
         new Thread(() -> {
@@ -784,7 +798,9 @@ public class RemoteBridgePlugin extends Plugin {
     private java.net.URLConnection agdanBaglan(URL url) throws IOException {
         if (url.getHost().startsWith("192.168.4.")) {
             android.net.Network ag = kartWifiAgi();
-            if (ag != null) return ag.openConnection(url);
+            // The AP proxy carries Internet traffic via USB, not card-local HTTP.
+            if (ag != null) return ag.openConnection(url, java.net.Proxy.NO_PROXY);
+            return url.openConnection(java.net.Proxy.NO_PROXY);
         }
         return url.openConnection();
     }
@@ -1490,6 +1506,7 @@ public class RemoteBridgePlugin extends Plugin {
         clearBridgeDictation();
         handler.removeCallbacksAndMessages(null);
         classicWorker.shutdownNow();
+        cardHttpWorker.shutdownNow(); httpWorkers.shutdownNow(); udpYazici.shutdownNow(); hidYazici.shutdownNow();
         super.handleOnDestroy();
     }
 }

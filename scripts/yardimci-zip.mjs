@@ -8,7 +8,7 @@
  *   node scripts/yardimci-zip.mjs
  */
 import { execFileSync } from 'node:child_process';
-import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -35,17 +35,26 @@ const OKUBENI = [
     '',
     'NE ZAMAN GEREKIR?',
     '  - Bilgisayar - Wi-Fi baglantisinda: yazma, fare, kisayol ve pano icin.',
-    '  - Diger baglantilarda (Kart Wi-Fi, Kart Bluetooth, Bilgisayar Bluetooth)',
-    '    yazma ve fare programsiz calisir; yalniz PANOYA GONDERMEK icin gerekir.',
+    '  - Bluetooth klavye/fare ve kartla yazma icin yardimci gerekmez.',
+    '  - PC panosu, mini galeriden dosya aktarimi, telefon bellegi ve',
+    '    destekleyen kartla USB internet koprusu ayni yardimcinin parcalaridir.',
+    '',
+    'KLASOR DUZENI',
+    '  BASLAT.cmd : onerilen giris; Bluetooth / kart USB.',
+    '  WIFI.cmd   : alternatif; dogrudan PC Wi-Fi (mevcut ag izni gerekir).',
+    '  scripts    : otomatik yuklenen teknik dosyalar; elle acmayin, silmeyin.',
+    '  ileri      : yoneticiye ozel guvenlik duvari araci; admin yoksa acmayin.',
     '',
     'BASLATMA',
-    '  1) "scripts" klasorundeki pc_yardimcisi_baslat.cmd dosyasina cift tiklayin.',
+    '  1) ZIP\'in tamamini bir klasore cikarin; ana klasorde BASLAT.cmd acin.',
     '     Yonetici izni istemez. Varsayilan: Tailscale, kart USB ve Bluetooth.',
     '     Tailscale kurulu ve oturumu aciksa 8765 portunu yerel yardimciya',
     '     yonlendirir; baska yayinlara ve guvenlik duvarina dokunmaz.',
-    '     Ayni agda Wi-Fi icin pc_yardimcisi_wifi.cmd dosyasini acin.',
+    '     Ayni agda dogrudan PC Wi-Fi icin BASLAT yerine WIFI.cmd acin.',
     '     Windows Wi-Fi baglantisini engelliyorsa sistem yoneticisinin',
     '     verdigi bir guvenlik duvari izni gerekir; baslatici izin istemez.',
+    '     Admin kullanamiyorsaniz Bluetooth veya kart yolunu tercih edin.',
+    '     Kurum betik/USB/Bluetooth kullanimini engelliyorsa asmaya calismayin.',
     '  2) Pencere acik kalsin. Pencerede 6 haneli ESLESTIRME KODU gorunur.',
     '',
     'TELEFONLA ILK ESLESME (bir kez)',
@@ -57,6 +66,11 @@ const OKUBENI = [
     '    adresini uygulamaya girin; ilk seferde eslesme kodunu kullanin.',
     '  Eslesen telefon bir daha kod sormaz. Sonraki kullanimlarda yalniz bu',
     '  programi calistirmaniz yeterlidir.',
+    '',
+    'INDIRME LINKINI YARDIMCI OLMADAN PC\'YE YAZMA',
+    '  Uygulamada Paylas / Linki kopyala / Bilgisayara linki yaz secenekleri var.',
+    '  Link yazma Bluetooth klavye veya kart yolunu kullanir; PC yardimcisi',
+    '  istemez. PC tarayicisinda adres cubuguna tiklayin; link yazilinca Enter.',
     '',
     'GORSELLER',
     '  Telefondaki mini galeriden "Bilgisayara" ile gonderilen gorseller',
@@ -71,10 +85,14 @@ const OKUBENI = [
     ''
 ].join('\r\n');
 
-const stage = join(tmpdir(), 'nb-yardimci-zip');
-await rm(stage, { recursive: true, force: true });
+const stage = await mkdtemp(join(tmpdir(), 'nb-yardimci-zip-'));
 await mkdir(join(stage, 'scripts', 'vendor'), { recursive: true });
-for (const dosya of DOSYALAR) await copyFile(join(KOK, 'scripts', dosya), join(stage, 'scripts', dosya));
+await mkdir(join(stage, 'ileri'));
+for (const dosya of DOSYALAR) {
+    const hedef = dosya === 'pc_guvenlik_duvari.ps1' ? 'ileri' : 'scripts';
+    await copyFile(join(KOK, 'scripts', dosya), join(stage, hedef, dosya));
+}
+for (const dosya of ['BASLAT.cmd', 'WIFI.cmd']) await copyFile(join(KOK, 'scripts', 'yardimci-paket', dosya), join(stage, dosya));
 await writeFile(join(stage, 'OKUBENI.txt'), OKUBENI, 'utf8');
 await mkdir(HEDEF_KLASOR, { recursive: true });
 execFileSync('powershell.exe', ['-NoProfile', '-Command',

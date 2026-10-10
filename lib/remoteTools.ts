@@ -334,7 +334,7 @@ export type Device = { address: string; name: string; rssi: number; computer?: b
  * Tarama listesinde kartları öne almak ve açılışta otomatik bağlanırken
  * kayıtlı adres yanıt vermezse doğru cihazı seçmek için kullanılır.
  */
-export const kartAdiEslesir = (ad: string | undefined | null): boolean => /kablosuz|bellek|usb hid|can00/i.test(ad ?? '');
+export const kartAdiEslesir = (ad: string | undefined | null): boolean => /kablosuz|bellek|usb hid|can00|kablolu klavye/i.test(ad ?? '');
 
 /**
  * Açılışta otomatik bağlanmada cihaz seçme puanı. Yüksek puan daha güçlü
@@ -532,10 +532,21 @@ export async function bleDurumu(): Promise<{ connected: boolean; address: string
 export function kayitliKartAdresi(): string {
     try { return localStorage.getItem(KART_ADRESI) || ''; } catch { return ''; }
 }
-export async function connectCard(address: string) {
+let kartBaglaniyor: { address: string; promise: Promise<void> } | null = null;
+export async function connectCard(address: string): Promise<void> {
     if (!isNative()) throw new Error('Bluetooth bağlantısı Android uygulamasını gerektirir.');
-    await native.connect({ address });
-    localStorage.setItem(KART_ADRESI, address);
+    if (kartBaglaniyor) {
+        if (kartBaglaniyor.address === address) return kartBaglaniyor.promise;
+        await kartBaglaniyor.promise.catch(() => undefined);
+        return connectCard(address);
+    }
+    const promise = (async () => {
+        const durum = await native.bleStatus();
+        if (!durum.connected || durum.address.toUpperCase() !== address.toUpperCase()) await native.connect({ address });
+        localStorage.setItem(KART_ADRESI, address);
+    })();
+    kartBaglaniyor = { address, promise };
+    try { await promise; } finally { if (kartBaglaniyor?.promise === promise) kartBaglaniyor = null; }
 }
 export async function disconnectCard() {
     if (!isNative()) return;
@@ -557,7 +568,7 @@ function bleYaz(yaz: () => Promise<void>): Promise<void> {
             const kod = (hata as { code?: string }).code;
             const adres = localStorage.getItem(KART_ADRESI);
             if (!adres || (kod !== 'BLE_NOT_CONNECTED' && kod !== 'BLE_NOT_STARTED')) throw hata;
-            try { await native.connect({ address: adres }); }
+            try { await connectCard(adres); }
             catch { throw new Error('Kartla BLE bağlantısı koptu ve yeniden kurulamadı. Kart açık ve yakında mı?'); }
             await yaz();
         }
@@ -641,7 +652,7 @@ async function kartIstegi(prefs: RemotePrefs, yol: string, method: string, body 
     } catch (hata) {
         const ileti = hata instanceof Error ? hata.message : '';
         if (/^HTTP \d+/.test(ileti)) throw hata;
-        throw new Error('Karta ulaşılamadı (' + prefs.cardUrl.replace(/^https?:\/\//, '') + '). Kart açık mı, telefon kartla aynı ağda mı ya da kartın kendi ağına (can bellek s3) bağlı mı? Ayarlar → Bilgisayar bağlantısı → Kart · Wi‑Fi → "Kartı bul".');
+        throw new Error('Karta ulaşılamadı (' + prefs.cardUrl.replace(/^https?:\/\//, '') + '). Kart açık mı, telefon kartla aynı ağda mı ya da kartın kendi ağına (can bellek s3) bağlı mı? Ayarlar → Bilgisayar bağlantısı → Kart · Wi‑Fi → "Kartı bul". Ayrıntı: ' + ileti);
     }
 }
 export async function testCard(prefs: RemotePrefs) {
@@ -1201,17 +1212,20 @@ export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], 
     if (dosyalar.length > 50) throw new Error('Bir seferde en çok 50 öğe gönderilebilir.');
     if (dosyalar.some(d => d.veri.size > 40 * 1024 * 1024)) throw new Error('Her dosya en çok 40 MB olabilir.');
     if (dosyalar.reduce((s, d) => s + d.veri.size, 0) > 200 * 1024 * 1024) throw new Error('Bir aktarımın toplamı en çok 200 MB olabilir.');
-    if (!prefs.helperToken) throw new Error('Öğe göndermek için bilgisayarda Not Bahçesi PC Yardımcısı gerekir: Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayara bağlanın.');
+    const kartVar = prefs.connection === 'wifi' && !!prefs.cardUrl;
+    if (!kartVar && !prefs.helperToken) throw new Error('Öğe göndermek için bilgisayarda Not Bahçesi PC Yardımcısı gerekir: Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayara bağlanın.');
     const wifiVar = !!prefs.helperUrl;
     const bluetoothVar = prefs.connection === 'pc-bluetooth' || !!prefs.helperBluetoothAddress;
-    if (!wifiVar && !bluetoothVar) throw new Error('Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayarı eşleştirin.');
+    if (!kartVar && !wifiVar && !bluetoothVar) throw new Error('Ayarlar → Bilgisayar bağlantısı bölümünden bilgisayarı eşleştirin.');
     const veriler = await Promise.all(dosyalar.map(d => blobBase64(d.veri)));
     const toplam = veriler.reduce((t, v) => t + v.length, 0) || 1;
-    const aktar = async (yol: 'wifi' | 'bluetooth') => {
-        const gonder = (girdi: Record<string, unknown>) => yol === 'wifi'
+    const aktar = async (yol: 'wifi' | 'bluetooth' | 'kart') => {
+        const gonder = async (girdi: Record<string, unknown>) => yol === 'kart'
+            ? cardResponse(await kartIstegi(prefs, '/api/pcbridge', 'POST', JSON.stringify(girdi)))
+            : yol === 'wifi'
             ? pcInput(girdi, { ...prefs, connection: 'pc-wifi' })
             : pcInput(girdi, { ...prefs, connection: 'pc-bluetooth' });
-        const parca = yol === 'wifi' ? 256 * 1024 : 22000;
+        const parca = yol === 'wifi' ? 256 * 1024 : 20000;
         const ids: string[] = [];
         let giden = 0;
         for (const veri of veriler) {
@@ -1219,7 +1233,19 @@ export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], 
             ids.push(id);
             for (let i = 0, sira = 0; i < veri.length || sira === 0; i += parca, sira++) {
                 const dilim = veri.slice(i, i + parca);
-                try { await gonder({ action: 'parca', id, sira, veri: dilim }); }
+                try {
+                    const parcaGirdisi = { action: yol === 'kart' ? 'parca2' : 'parca', id, sira, veri: dilim };
+                    for (let deneme = 0; ; deneme++) {
+                        try { await gonder(parcaGirdisi); break; }
+                        catch (hata) {
+                            const ileti = hata instanceof Error ? hata.message : '';
+                            // Current USB helper deduplicates the identical last chunk.
+                            // Never retry a final file/clipboard action automatically.
+                            if (yol !== 'kart' || deneme >= 2 || /HTTP 4\d\d/.test(ileti)) throw hata;
+                            await new Promise(coz => setTimeout(coz, 500 * (deneme + 1)));
+                        }
+                    }
+                }
                 catch (hata) {
                     // Eski yardımcı "parca" eylemini tanımaz ve isteği reddeder.
                     if (sira === 0 && giden === 0 && /HTTP 400|reddedildi|reddetti/i.test(hata instanceof Error ? hata.message : '')) {
@@ -1241,13 +1267,18 @@ export async function dosyalariBilgisayaraGonder(dosyalar: GonderilecekDosya[], 
         }
         ilerleme?.(1);
     };
-    if (!wifiVar) { await aktar('bluetooth'); return; }
-    try { await aktar('wifi'); }
-    catch (hata) {
-        const ileti = hata instanceof Error ? hata.message : '';
-        if (!bluetoothVar || /eski|HTTP 4\d\d/.test(ileti)) throw hata;
-        await aktar('bluetooth');
+    // Ping before sending; never replay a transfer after a lost final ACK.
+    if (kartVar) {
+        cardResponse(await kartIstegi(prefs, '/api/pcbridge', 'POST', JSON.stringify({ action: 'ping' })));
+        await aktar('kart'); return;
     }
+    if (!wifiVar) { await aktar('bluetooth'); return; }
+    try { await pcInput({ action: 'ping' }, { ...prefs, connection: 'pc-wifi' }); }
+    catch (hata) {
+        if (!bluetoothVar || /HTTP 4\d\d/.test(hata instanceof Error ? hata.message : '')) throw hata;
+        await aktar('bluetooth'); return;
+    }
+    await aktar('wifi');
 }
 
 const base64Blob = (data: string, mime: string) => {
