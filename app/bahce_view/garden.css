@@ -64,6 +64,12 @@
 }
 
 /* Basılı tut menüsü: yerleşim korunur, yalnız eldeki kart görünür. */
+/* Tek dokunuş menüsü açıkken yalnız eldeki kart görünür; ağaç sürüklenirken çevre geri gelir. */
+html[data-kart-menusu]:not([data-agac-suruklenirken]) .garden-page [data-kart-kap]:not([data-kart-aktif="1"]) { visibility: hidden; pointer-events: none; }
+html[data-kart-menusu]:not([data-agac-suruklenirken]) .garden-page .yeni-agac > svg,
+html[data-kart-menusu]:not([data-agac-suruklenirken]) .tuval-sekmeleri,
+html[data-kart-menusu]:not([data-agac-suruklenirken]) #secili-panel,
+html[data-kart-menusu]:not([data-agac-suruklenirken]) #secili-yuzen { visibility: hidden; }
 html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60; }
 /* Üst şerit: karta oturan, kart genişliğiyle orantılı üç bölmeli araç çubuğu. */
 .kart-araclar {

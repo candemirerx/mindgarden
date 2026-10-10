@@ -60,7 +60,7 @@ try {
  const screenshot = async name => { const result=await c.gonder('Page.captureScreenshot',{format:'png'}); writeFileSync('tuval-tasarim/'+name,Buffer.from(result.data,'base64')); };
  const metinParlak = sel => `(()=>{const c=getComputedStyle(document.querySelector('${sel}')).color;const v=c.match(/[\\d.]+/g).slice(0,3).map(Number);const f=x=>{x/=255;return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4)};return .2126*f(v[0])+.7152*f(v[1])+.0722*f(v[2])})()`;
  await hold('branch');
- assert.equal(await run('Array.from(document.querySelectorAll("[data-yk-id]")).filter(e=>getComputedStyle(e).visibility!=="hidden").length'),1);
+ assert.equal(await run('Array.from(document.querySelectorAll("[data-yk-id]")).filter(e=>getComputedStyle(e).visibility!=="hidden").length'),1, "menu acikken yalniz eldeki kart gorunur");
  const card=await box('[data-yk-id="branch"]'); const edit=await box('[data-kart-eylem="editor"]'); const copy=await box('[data-kart-eylem="kopya"]'); const cut=await box('[data-kart-eylem="buda"]');
  console.log('ölçüm', JSON.stringify({kart:[card.left,card.right,card.w], bar:[copy.left,cut.right], copy:copy.w, cut:cut.w, edit:edit.w}));
  assert.ok(Math.abs(edit.x-card.x)<1); assert.ok(Math.abs(copy.w-cut.w)<0.6); assert.ok(Math.abs(edit.w-copy.w)<0.6); assert.ok(Math.abs((copy.left+cut.right)/2-card.x)<1);
@@ -84,9 +84,12 @@ try {
  assert.equal(await run('document.documentElement.hasAttribute("data-kart-menusu")'),true);
  assert.equal(await run('document.querySelectorAll(".kart-kose").length'),0);
  await touch('touchStart',before); await wait(500);
+ assert.equal(await run('document.documentElement.hasAttribute("data-agac-suruklenirken")'),true);
+ assert.equal(await run('Array.from(document.querySelectorAll("[data-yk-id]")).filter(e=>getComputedStyle(e).visibility!=="hidden").length'),await run('document.querySelectorAll("[data-yk-id]").length'),'surukleme sirasinda cevre gorunur');
  await touch('touchMove',{x:before.x+35,y:before.y+45}); await wait(80); await touch('touchEnd',before); await wait(400);
  const position=await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='root')`);
  assert.equal(position.position_x,35); assert.equal(position.position_y,45);
+ assert.equal(await run('document.documentElement.hasAttribute("data-agac-suruklenirken")'),false);
  assert.equal(await run('location.pathname'),'/bahce_view');
  console.log('PASS: tek dokunuş menüyü açar; ikinci uzun basış ağacı taşır ve konumu kaydeder; köşe düğmeleri kapalı');
  await hold('branch'); await choose('alt');
@@ -227,11 +230,13 @@ try {
  assert.equal(await run('document.querySelector("[data-kart-yer=altSol]").dataset.kartEylem'),'ayarlar');
  await choose('ayarlar'); await wait(300);
  assert.equal(await run('!!document.querySelector("[role=dialog]")'),true);
- await run(`(()=>{const s=document.querySelector('select[aria-label="Sağ kenar işlevi"]');s.value='kopya';s.dispatchEvent(new Event('change',{bubbles:true}));})()`);
- await wait(150);
+ await run('document.querySelector("#kart-arac-ekle-sag").click()'); await wait(200);
+ await run('document.querySelector(\'[data-arac="kopya:"]\').click()'); await wait(450);
+
  assert.equal(await run(`JSON.parse(localStorage.getItem('nb-tuval-v1')).dugmeler.sag`),'kopya');
- await run(`(()=>{const s=document.querySelector('select[aria-label="Sol alt köşe işlevi"]');s.value='yok';s.dispatchEvent(new Event('change',{bubbles:true}));})()`);
- await wait(150);
+ await run('document.querySelector("#kart-arac-ekle-altSol").click()'); await wait(200);
+ await run('document.querySelector(\'[data-arac="yok:"]\').click()'); await wait(450);
+
  assert.equal(await run(`JSON.parse(localStorage.getItem('nb-tuval-v1')).dugmeler.altSol`),'yok');
  await load(); await hold('branch');
  assert.equal(await run('document.querySelector("[data-kart-yer=sag]").dataset.kartEylem'),'kopya');
@@ -285,10 +290,10 @@ try {
  assert.equal(await run(`document.querySelector('[aria-label="Not düğmelerinin kullanım yöntemi"]')===null`),true);
  for (const model of ['panel','yuzen']) {
   await run(`document.querySelector('#tuval-eylem-${model}').click()`); await wait(100);
-  assert.equal(await run(`document.querySelector('select[aria-label="Sağ kenar işlevi"]')===null`),true);
+  assert.equal(await run(`document.querySelector('#kart-arac-ekle-sag')===null`),true);
  }
  await run(`document.querySelector('#tuval-eylem-kapsul').click()`); await wait(150);
- assert.equal(await run(`!!document.querySelector('select[aria-label="Sağ kenar işlevi"]')`),true);
+ assert.equal(await run(`!!document.querySelector('#kart-arac-ekle-sag')`),true);
  await run(`Array.from(document.querySelectorAll('[aria-label="Düzen"] button')).find(b=>b.textContent.includes('Klasik')).click()`); await wait(150);
  assert.deepEqual(await run(`(()=>{const t=JSON.parse(localStorage.getItem('nb-tuval-v1'));return [t.gosterim,t.eylem,Object.hasOwn(t,'kullanim')]})()`),['klasik','kapsul',false]);
  await run(`document.querySelector('[aria-label="Ağaç yönetiminden geri dön"]').click()`); await wait(250);

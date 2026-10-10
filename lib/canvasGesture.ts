@@ -28,10 +28,12 @@ export function kartMenusunuAyarla(acik: boolean): void {
 export function kartMenusuAcikMi(): boolean { return kartMenusuAcik; }
 
 export function agacSuruklemesiBasladi(): void {
+    if (typeof document !== 'undefined') document.documentElement.setAttribute('data-agac-suruklenirken', '');
     agacSurukleniyor = true;
 }
 
 export function agacSuruklemesiBitti(): void {
+    if (typeof document !== 'undefined') document.documentElement.removeAttribute('data-agac-suruklenirken');
     agacSurukleniyor = false;
 }
 
