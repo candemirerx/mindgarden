@@ -17,7 +17,7 @@ versionName "1.0.3"    // kullanıcının gördüğü sürüm
 > `versionCode` daha önce kullandığın bir değere eşit veya küçük olursa Play yüklemeyi
 > reddeder. Yayınlanan en yüksek değerin üzerine çık.
 
-**Şu anki durum:** `versionCode 70`, `versionName "1.0.2"`, hedef API seviyesi 36.
+**Şu anki durum:** `versionCode 71`, `versionName "1.0.3"`, hedef API seviyesi 36.
 Bir sonraki yükleme en az 71 olmalıdır. Test sürümlerinde kullanılan kodlar sıfırlanmaz.
 
 ---
