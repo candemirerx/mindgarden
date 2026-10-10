@@ -6,12 +6,13 @@
  * Ana Ayarlar ekranıyla aynı yapı taşları (SettingsSection) kullanılır.
  * Tercihler cihazda tutulur.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { GitFork, MousePointerClick, Palette, SlidersHorizontal, Wand2 } from 'lucide-react';
 import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { SettingsSection, cx } from '@/components/ui/settings';
-import { dinle } from '@/lib/degisim';
-import KartMakroSecici from '@/components/canvas/KartMakroSecici';
+import KartAracEkle, { islevAdi } from '@/components/canvas/KartAracEkle';
+import { useRemotePrefs } from '@/lib/useRemotePrefs';
+import { ChevronRight, Plus } from 'lucide-react';
 import { KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import type { KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
 import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
@@ -140,8 +141,8 @@ function AyrintiSatiri({ baslik, aciklama, children }: { baslik: string; aciklam
 export function TuvalAyarlari() {
     const t = useTuvalTercihleri();
     const koyu = useKoyuTema();
-    const [makroSecimi, setMakroSecimi] = useState<{ yer: string; islev: KartIslevi } | null>(null);
-    useEffect(() => dinle('kart-makro-sec', ayrinti => { if (ayrinti && typeof ayrinti === 'object' && typeof (ayrinti as { yer?: unknown }).yer === 'string' && typeof (ayrinti as { islev?: unknown }).islev === 'string') setMakroSecimi(ayrinti as { yer: string; islev: KartIslevi }); }), []);
+    const uzakTercihler = useRemotePrefs();
+    const [aracYeri, setAracYeri] = useState<string | null>(null);
     return (
         <div id="tuval-ayarlari" className="space-y-4">
             <SettingsSection icon={GitFork} title="Düzen" description="Ağaçların ve dalların tuvalde nasıl dizileceği, dalların nasıl ilerleyeceği. Kartların görünümünden bağımsızdır; notlarınız değişmez.">
@@ -167,35 +168,28 @@ export function TuvalAyarlari() {
             </SettingsSection>
 
             {t.eylem !== 'panel' && t.eylem !== 'yuzen' && <SettingsSection icon={MousePointerClick} title="Kart menüsü"
-                description="Düğme yerlerini ve işlevlerini düzenleyin. Makro seçiliyken düğme seçtiğiniz makroyu bilgisayarda çalıştırır; makroyu baş harfleriyle listelenen sayfadan onaylayın.">
-                <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(KART_YERLERI).map(([yer, ad]) => (
-                        <label key={yer} className="flex flex-col gap-1.5 text-sm text-sand-800">
-                            <span>{ad}</span>
-                            <select aria-label={ad + ' işlevi'} className="min-h-[44px] rounded-xl border border-sand-200 bg-sand-50 px-2 text-sm"
-                                value={t.dugmeler[yer as keyof KartDugmeleri]}
-                                onChange={e => {
-                                    const islev = e.target.value as KartIslevi;
-                                    const kartMakrolari = { ...t.kartMakrolari };
-                                    const kartAiMakrolari = { ...t.kartAiMakrolari };
-                                    if (islev !== 'makro') delete kartMakrolari[yer as keyof typeof kartMakrolari];
-                                    if (islev !== 'aiMakro') delete kartAiMakrolari[yer as keyof typeof kartAiMakrolari];
-                                    tuvalTercihleriniKaydet({ ...t, dugmeler: { ...t.dugmeler, [yer]: islev }, kartMakrolari, kartAiMakrolari });
-                                }}>
-                                {Object.entries(KART_ISLEVLERI).map(([id, isim]) => <option key={id} value={id}>{isim}</option>)}
-                            </select>
-                            {['makro', 'aiMakro'].includes(t.dugmeler[yer as keyof KartDugmeleri]) && <button type="button" id={'kart-makro-sec-' + yer}
-                                onClick={() => setMakroSecimi({ yer, islev: t.dugmeler[yer as keyof KartDugmeleri] })}
-                                className="mt-1 flex min-h-10 items-center gap-1.5 self-start rounded-xl border border-sand-200 px-2.5 text-xs font-semibold text-moss-700 hover:bg-moss-50">
-                                <Wand2 size={14} /> {t.dugmeler[yer as keyof KartDugmeleri] === 'aiMakro' ? 'Görev seç' : 'Makro seç'}
-                            </button>}
-                        </label>
-                    ))}
+                description="Düğme yerlerini ve işlevlerini düzenleyin. Bir konuma dokunup açılan sayfadan hazır işlev, bilgisayar aracı, makro ya da yapay zekâ görevi ekleyin.">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {Object.entries(KART_YERLERI).map(([yer, ad]) => {
+                        const islev = t.dugmeler[yer as keyof KartDugmeleri];
+                        const kimlik = islev === 'makro' ? t.kartMakrolari[yer as keyof typeof t.kartMakrolari] : islev === 'aiMakro' ? t.kartAiMakrolari[yer as keyof typeof t.kartAiMakrolari] : undefined;
+                        const bilgi = islevAdi(islev, kimlik, uzakTercihler.macros);
+                        return <button key={yer} type="button" id={'kart-arac-ekle-' + yer} onClick={() => setAracYeri(yer)}
+                            aria-label={ad + ' d\u00fc\u011fmesi: ' + bilgi.ad + '. Ara\u00e7 ekle ya da de\u011fi\u015ftir'}
+                            className="flex min-h-[56px] items-center gap-3 rounded-2xl border border-sand-200 bg-white px-3 text-left transition-colors hover:border-moss-300 hover:bg-moss-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40">
+                            <span aria-hidden="true" className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ' + (islev === 'yok' ? 'bg-sand-100 text-sand-500' : 'bg-moss-100 text-moss-700')}>{bilgi.harf ?? (islev === 'yok' ? <Plus size={16} /> : <Wand2 size={16} />)}</span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-[11px] text-sand-500">{ad}</span>
+                                <span className="block truncate text-sm font-semibold text-sand-900">{bilgi.ad}</span>
+                            </span>
+                            <ChevronRight size={16} className="shrink-0 text-sand-400" aria-hidden="true" />
+                        </button>;
+                    })}
                 </div>
                 <button type="button" className="mt-3 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
                     onClick={() => tuvalTercihleriniKaydet({ ...t, dugmeler: { ...VARSAYILAN_KART_DUGMELERI }, kartMakrolari: {} })}>Düğmeleri varsayılana döndür</button>
             </SettingsSection>}
-            {makroSecimi && <KartMakroSecici yerKey={makroSecimi.yer} yer={KART_YERLERI[makroSecimi.yer as keyof typeof KART_YERLERI]} islev={makroSecimi.islev} onKapat={() => setMakroSecimi(null)} />}
+            {aracYeri && <KartAracEkle yerKey={aracYeri} onKapat={() => setAracYeri(null)} />}
 
             <SettingsSection icon={SlidersHorizontal} tone="moss" title="Ayrıntılar" flush>
                 <div className="divide-y divide-sand-100">

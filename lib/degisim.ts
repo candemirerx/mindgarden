@@ -18,9 +18,7 @@ export type DegisimKonusu =
     /** Bilgisayar bağlantısının canlı durumu yeniden yoklandı. */
     | 'baglanti-durumu'
     /** Tuval görünüm tercihleri (gösterim, gezinme, önizleme) değişti. */
-    | 'tuval'
-    /** Kart menüsüne bağlı makroların seçim sayfası açıldı (yer bilgisiyle). */
-    | 'kart-makro-sec';
+    | 'tuval';
 
 const dinleyiciler = new Map<DegisimKonusu, Set<(ayrinti?: unknown) => void>>();
 

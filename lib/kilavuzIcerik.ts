@@ -153,8 +153,9 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 description: 'Düğmelere işlev verin, ağacı taşıyın.',
                 adimlar: [
                     'Bitişik, Yumuşak veya Kapsül seçiliyken **Tuval ve ağaçlar → Görünüm → Kart menüsü** bölümünden her konumun işlevini seçin.',
-                    'Düzenleme, kopyalama, budama, sola veya yana ekleme, altına ekleme, taşıma ve ayarlar işlevlerini atayabilirsiniz. **Yok** seçeneği o düğmeyi kaldırır; alt köşelerdeki yuvarlak düğmeler başlangıçta kapalıdır.',
-                    '**Makro çalıştır** işlevini seçince **Makro seç** düğmesi belirir. Açılan sayfada kayıtlı makrolar baş harf rozetleriyle listelenir; dokunduğunuz makro o düğmeye bağlanır. Kart menüsünde bu düğme makronun baş harfini gösterir ve bilgisayarda çalıştırır.',
+                    'Her konumun yanındaki düğmeye dokunun: **Araç ekle** sayfası açılır. Tek sayfada dört sekme vardır: **Hazır** (düzenle, kopyala, buda, yanına ve altına ekle, taşı, ayarlar, **Yok**), **Bilgisayar** (bilgisayara yaz, bilgisayar panosuna gönder, bilgisayarda Enter), **Makrolar** ve **Yapay zekâ**.',
+                    'Makro ve yapay zekâ görevleri baş harf rozetiyle listelenir. Dokunduğunuz öğe o düğmeye bağlanır ve sayfa kapanır; yeni seçim öncekinin yerini alır. Üst üç düğme, yan, alt ve köşe konumlarının hepsine istediğinizi ekleyebilirsiniz.',
+                    'Yapay zekâ düğmesi notun içeriğini seçtiğiniz görevden geçirip notu günceller; bilgisayar araçları için bilgisayar bağlantısı açık olmalıdır.',
                     'Ağacın tuvaldeki yerini değiştirmek için önce karta **kısa dokunup bırakın**. Menü açıkken karta yeniden **basılı tutup sürükleyin**; ağacın yeni konumu kaydedilir.',
                     'Menüye **Ağacı taşı** işlevini de atayabilirsiniz; bu düğme ağacı sonraki sürükleme için hazırlar.',
                 ],

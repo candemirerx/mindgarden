@@ -15,12 +15,12 @@
  * İlk uzun basış seçenekleri açar; kaydırıp bırakınca seçilen işlem uygulanır.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, ClipboardList, Copy, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, TreePine, Wand2 } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, Copy, CornerDownLeft, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, TreePine, Wand2 } from 'lucide-react';
 import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 import { VARSAYILAN_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
-import { makroHazir, sendToComputerClipboard, typeOnComputer } from '@/lib/remoteTools';
+import { makroHazir, sendKey, sendToComputerClipboard, typeOnComputer } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { makroCalisiyor, makroyuBaslat, makroyuDurdur } from '@/lib/makroCalistirici';
 import { readEnabledMacros } from '@/lib/aiMacro';
@@ -29,7 +29,7 @@ import { runCustomProviderDirect } from '@/lib/customProvider';
 import { runLocalInference } from '@/lib/localLlm';
 import { splitIntoChunks } from '@/lib/aiChunks';
 import { Capacitor } from '@capacitor/core';
-import { basHarf } from './KartMakroSecici';
+import { basHarf } from './KartAracEkle';
 import type { KartAiMakrolari, KartMakrolari } from '@/lib/tuvalTercihleri';
 import type { KartDugmeleri, KartIslevi, TuvalEylem, TuvalKart, TuvalOnizleme, TuvalGosterim } from '@/lib/tuvalTercihleri';
 
@@ -323,7 +323,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const yaricap = kart === 'hap' ? 9999 : kart === 'sade' ? 12 : kart === 'renkli' ? 16 : tur === 'kok' ? 24 : tur === 'branch' ? 18 : 16;
     const dugme = (id: string, ana = false) => `${ARAC} ${ana ? 'kart-eylem--ana' : ''} ${hareket.hedef === id ? 'kart-eylem--hedef' : ''}`;
     const tasi = () => hareket.kap.current?.dispatchEvent(new CustomEvent('nb-agac-tasi', { bubbles: true }));
-    const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları', makro: 'Makro seçilmedi' };
+    const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları', makro: 'Makro seçilmedi', pcYaz: 'Bilgisayara yaz', pcPano: 'Bilgisayar panosuna gönder', pcEnter: 'Bilgisayarda Enter' };
     const makrolar = prefs.macros.filter(makroHazir);
     const makro = (yer: keyof KartDugmeleri) => dugmeler[yer] === 'makro' ? makrolar.find(m => m.id === (kartMakrolari ?? {})[yer]) ?? null : null;
     const makroBilgisi = (yer: keyof KartDugmeleri) => {
@@ -391,12 +391,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         }
         else if (id === 'pcYaz') pcAktar(() => typeOnComputer(notGovdesi(), prefs));
         else if (id === 'pcPano') pcAktar(() => sendToComputerClipboard(notGovdesi(), prefs));
-        else if (id === 'aiMakro') {
-            const atananYer = (Object.keys(dugmeler) as (keyof KartDugmeleri)[]).find(y => dugmeler[y] === 'aiMakro' && (kartAiMakrolari ?? {})[y] === (kartAiMakrolari ?? {})['ustSol'] && dugmeler[y] === id);
-            const yerAnahtari = atananYer ?? 'ustSol';
-            const gorev = aiGorevBilgisi(yerAnahtari);
-            if (gorev) void aiMakroCalistir(gorev.makro).catch(hata => { try { navigator.vibrate?.(30); } catch { } alert(hata instanceof Error ? hata.message : 'Yapay zekâ görevi çalıştırılamadı.'); });
-        }
+        else if (id === 'pcEnter') pcAktar(() => sendKey('ENTER', prefs));
     };
     const simge = (id: KartIslevi) => {
         if (id === 'editor') return <Pencil size={18} />;
@@ -406,6 +401,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         if (id === 'ayarlar') return <SlidersHorizontal size={16} />;
         if (id === 'pcYaz') return <Keyboard size={17} />;
         if (id === 'pcPano') return <ClipboardList size={17} />;
+        if (id === 'pcEnter') return <CornerDownLeft size={17} />;
         if (id === 'aiMakro') return <Sparkles size={17} />;
         return <Plus size={17} />;
     };
@@ -415,7 +411,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         const ust = yer.startsWith('ust');
         const bilgi = makroBilgisi(yer);
         const aiBilgi = aiGorevBilgisi(yer);
-        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'aiMakro' ? 'Yapay zekâ' : 'Düzenle';
+        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'pcEnter' ? 'Enter' : id === 'aiMakro' ? 'Yapay zekâ' : 'Düzenle';
         return <button key={yer} data-kart-yer={yer} data-kart-eylem={id} type="button"
             onClick={e => {
                 e.stopPropagation();

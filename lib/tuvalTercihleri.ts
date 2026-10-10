@@ -26,7 +26,7 @@ export const KART_ISLEVLERI = {
     yok: 'Düğme yok', editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: 'Buda / geri al',
     sol: 'Sol yanına ekle', yan: 'Sağ yanına ekle', alt: 'Altına ekle',
     tasi: 'Ağacı taşı', ayarlar: 'Ağaç ayarları', makro: 'Makro çalıştır',
-    pcYaz: 'Bilgisayara yaz', pcPano: 'Bilgisayar panosu', aiMakro: 'Yapay zekâ makrosu'
+    pcYaz: 'Bilgisayara yaz', pcEnter: 'Bilgisayarda Enter', pcPano: 'Bilgisayar panosu', aiMakro: 'Yapay zekâ makrosu'
 } as const;
 export type KartIslevi = keyof typeof KART_ISLEVLERI;
 export const KART_YERLERI = {

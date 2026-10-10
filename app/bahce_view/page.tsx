@@ -10,9 +10,8 @@ import { budamaFiltresi } from '@/lib/uiPrefs';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { YeniAgac } from '@/components/canvas/YeniAgac';
 import { SeciliEylemler } from '@/components/canvas/SeciliEylemler';
-import { useKoyuTema, useTuvalTercihleri, tuvalTercihleri } from '@/lib/tuvalTercihleri';
-import { bildirAyrintili, dinle } from '@/lib/degisim';
-import { readEnabledMacros } from '@/lib/aiMacro';
+import { useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
+import { dinle } from '@/lib/degisim';
 import { TreeManagementModal } from '@/components/canvas/TreeManagementModal';
 import { Modal } from '@/components/editor/Modal';
 import { MindTextEditor } from '@/components/editor/MindTextEditor';
@@ -248,28 +247,6 @@ function GardenPageInner() {
     const koyuTema = useKoyuTema();
     const notSayisi = (n: MindNode): number => 1 + n.children.reduce((t, c) => t + notSayisi(c), 0);
 
-    /** "?makro=YerKey" kısayolu: kart menüsü ayarındaki seçim sayfasını açar. */
-    useEffect(() => {
-        const hedef = new URLSearchParams(window.location.search).get('makro');
-        if (!hedef) return;
-        const t = tuvalTercihleri();
-        const yer = hedef as keyof typeof t.dugmeler;
-        const islev = t.dugmeler[yer];
-        if (islev === 'makro' || islev === 'aiMakro') bildirAyrintili('kart-makro-sec', { yer: hedef, islev });
-        window.history.replaceState(null, '', window.location.pathname + window.location.search.replace(/[?&]makro=[^&]+/g, ''));
-    }, []);
-
-    /** Uygulama içi yönlendirme: "?ai=GörevKimliği" ağacı güncelleyen görevi çalıştırır. */
-    useEffect(() => {
-        const gorevId = new URLSearchParams(window.location.search).get('ai');
-        if (!gorevId) return;
-        const gorev = readEnabledMacros().find(m => m.id === gorevId);
-        const kokId = mindRoots[0]?.id;
-        if (gorev && kokId) {
-            bildirAyrintili('kart-makro-sec', { yer: 'ustSol', islev: 'aiMakro', __gorev: gorevId });
-        }
-        window.history.replaceState(null, '', window.location.pathname + window.location.search.replace(/[?&]ai=[^&]+/g, ''));
-    }, [mindRoots.length]);
 
     // Modals state
     const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
