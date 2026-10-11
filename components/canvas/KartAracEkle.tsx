@@ -35,7 +35,7 @@ const ACIKLAMA: Partial<Record<KartIslevi, string>> = {
     alt: 'Altına yeni not ekler', tasi: 'Ağacı sürükleyerek taşır', ayarlar: 'Ağaç ayarlarını açar',
     pcYaz: 'Notu bilgisayarda yazar', pcPano: 'Notu bilgisayar panosuna gönderir', pcEnter: 'Bilgisayara Enter tuşu yollar'
 };
-const SIMGE: Partial<Record<KartIslevi, ReactNode>> = {
+export const SIMGE: Partial<Record<KartIslevi, ReactNode>> = {
     yok: <Ban size={18} />, editor: <Pencil size={18} />, kopya: <Copy size={18} />, buda: <Scissors size={18} />,
     sol: <Plus size={18} />, yan: <Plus size={18} />, alt: <Plus size={18} />, tasi: <Move size={18} />,
     ayarlar: <SlidersHorizontal size={18} />, pcYaz: <Keyboard size={18} />, pcPano: <ClipboardList size={18} />, pcEnter: <CornerDownLeft size={18} />

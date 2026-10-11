@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { GitFork, MousePointerClick, Palette, SlidersHorizontal, Wand2 } from 'lucide-react';
 import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { SettingsSection, cx } from '@/components/ui/settings';
-import KartAracEkle, { islevAdi } from '@/components/canvas/KartAracEkle';
+import KartAracEkle, { SIMGE, islevAdi } from '@/components/canvas/KartAracEkle';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { ChevronRight, Plus } from 'lucide-react';
 import { DUGME_BOYUTLARI, KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
@@ -133,6 +133,45 @@ function AyrintiSatiri({ baslik, aciklama, children }: { baslik: string; aciklam
     );
 }
 
+/** Kart menüsü haritası: düğmeler gerçek konumlarında, karta bitişik gösterilir; dokununca işlev sayfası açılır. */
+function KartMenuHaritasi({ t, macros, sec }: { t: ReturnType<typeof useTuvalTercihleri>; macros: Parameters<typeof islevAdi>[2]; sec: (yer: string) => void }) {
+    const yuva = (yer: keyof KartDugmeleri, cls: string, yuvarlak?: boolean) => {
+        const islev = t.dugmeler[yer];
+        const kimlik = islev === 'makro' ? t.kartMakrolari[yer] : islev === 'aiMakro' ? t.kartAiMakrolari[yer] : undefined;
+        const bilgi = islevAdi(islev, kimlik, macros);
+        const bos = islev === 'yok';
+        const simge = bilgi.harf ? <span className="text-sm font-bold leading-none">{bilgi.harf}</span> : (SIMGE[islev] ?? <Wand2 size={18} />);
+        return <button key={yer} type="button" id={'kart-arac-ekle-' + yer} onClick={() => sec(yer)}
+            aria-label={KART_YERLERI[yer] + ' düğmesi: ' + bilgi.ad + '. Araç ekle ya da değiştir'}
+            className={cx('flex flex-col items-center justify-center gap-0.5 overflow-hidden border px-1 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/50 active:scale-[.98]',
+                bos ? 'border-dashed border-sand-300 bg-sand-50 text-sand-400 hover:border-moss-400 hover:text-moss-600'
+                    : 'border-moss-300 bg-white text-moss-700 shadow-soft hover:bg-moss-50', yuvarlak ? 'rounded-full' : '', cls)}>
+            {bos ? <Plus size={16} aria-hidden="true" /> : <span aria-hidden="true">{simge}</span>}
+            <span className="max-w-full truncate text-[10px] font-medium leading-tight">{bos ? KART_YERLERI[yer] : bilgi.ad}</span>
+        </button>;
+    };
+    return <div className="mx-auto w-full max-w-[360px] rounded-2xl bg-sand-100 p-3">
+        <div className="grid grid-cols-[72px_minmax(0,1fr)_72px]">
+            <div className="col-start-2 grid grid-cols-3">
+                {yuva('ustSol', 'h-12 rounded-tl-2xl border-r-0')}
+                {yuva('ustOrta', 'h-12 rounded-none border-r-0 bg-moss-50')}
+                {yuva('ustSag', 'h-12 rounded-tr-2xl')}
+            </div>
+            <div className="col-start-1 row-start-2">{yuva('sol', 'h-28 w-full rounded-l-2xl border-r-0')}</div>
+            <div className="col-start-2 row-start-2 flex h-28 flex-col justify-center gap-2 border-y border-moss-200 bg-[rgb(var(--surface))] px-3" aria-hidden="true">
+                <span className="h-2 w-1/3 rounded-full bg-moss-300" />
+                <span className="h-3 w-4/5 rounded-full bg-sand-300" />
+                <span className="h-2 w-3/5 rounded-full bg-sand-200" />
+            </div>
+            <div className="col-start-3 row-start-2">{yuva('sag', 'h-28 w-full rounded-r-2xl border-l-0')}</div>
+            <div className="col-start-2 row-start-3">{yuva('alt', 'h-12 w-full rounded-b-2xl border-t-0')}</div>
+            <div className="col-start-1 row-start-3 flex justify-end pr-1 pt-2">{yuva('altSol', 'h-14 w-14', true)}</div>
+            <div className="col-start-3 row-start-3 flex justify-start pl-1 pt-2">{yuva('altSag', 'h-14 w-14', true)}</div>
+        </div>
+        <p className="mt-3 text-center text-[11px] text-sand-600">Bir düğmeye dokunun: işlevini seçin ya da <strong>Yok</strong> ile kaldırın.</p>
+    </div>;
+}
+
 export function TuvalAyarlari() {
     const t = useTuvalTercihleri();
     const koyu = useKoyuTema();
@@ -180,24 +219,8 @@ export function TuvalAyarlari() {
             </SettingsSection>}
 
             {t.eylem !== 'panel' && <SettingsSection icon={MousePointerClick} title="Kart menüsü"
-                description="Düğme yerlerini ve işlevlerini düzenleyin. Bir konuma dokunup açılan sayfadan hazır işlev, bilgisayar aracı, makro ya da yapay zekâ görevi ekleyin.">
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {Object.entries(KART_YERLERI).map(([yer, ad]) => {
-                        const islev = t.dugmeler[yer as keyof KartDugmeleri];
-                        const kimlik = islev === 'makro' ? t.kartMakrolari[yer as keyof typeof t.kartMakrolari] : islev === 'aiMakro' ? t.kartAiMakrolari[yer as keyof typeof t.kartAiMakrolari] : undefined;
-                        const bilgi = islevAdi(islev, kimlik, uzakTercihler.macros);
-                        return <button key={yer} type="button" id={'kart-arac-ekle-' + yer} onClick={() => setAracYeri(yer)}
-                            aria-label={ad + ' d\u00fc\u011fmesi: ' + bilgi.ad + '. Ara\u00e7 ekle ya da de\u011fi\u015ftir'}
-                            className="flex min-h-[56px] items-center gap-3 rounded-2xl border border-sand-200 bg-white px-3 text-left transition-colors hover:border-moss-300 hover:bg-moss-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40">
-                            <span aria-hidden="true" className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ' + (islev === 'yok' ? 'bg-sand-100 text-sand-500' : 'bg-moss-100 text-moss-700')}>{bilgi.harf ?? (islev === 'yok' ? <Plus size={16} /> : <Wand2 size={16} />)}</span>
-                            <span className="min-w-0 flex-1">
-                                <span className="block text-[11px] text-sand-500">{ad}</span>
-                                <span className="block truncate text-sm font-semibold text-sand-900">{bilgi.ad}</span>
-                            </span>
-                            <ChevronRight size={16} className="shrink-0 text-sand-400" aria-hidden="true" />
-                        </button>;
-                    })}
-                </div>
+                description="Düğmelerin kartın çevresindeki yerleri. Bir düğmeye dokunun: işlevini değiştirin ya da Yok seçerek kaldırın.">
+                <KartMenuHaritasi t={t} macros={uzakTercihler.macros} sec={setAracYeri} />
                 <button type="button" className="mt-3 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
                     onClick={() => tuvalTercihleriniKaydet({ ...t, dugmeler: { ...VARSAYILAN_KART_DUGMELERI }, kartMakrolari: {} })}>Düğmeleri varsayılana döndür</button>
             </SettingsSection>}
