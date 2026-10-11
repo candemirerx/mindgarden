@@ -468,7 +468,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
                 style={{ borderRadius: yaricap, touchAction: 'none' }}>
                 {govde}
             </div>
-            {dikte.durum && !araclar && <span role="status" aria-label="Dikte sürüyor" data-dikte-rozet="" className="pointer-events-none absolute -top-2 left-2 z-40 flex h-5 items-center gap-1 rounded-full bg-berry-600 px-2 text-[10px] font-semibold text-white shadow-soft"><Pencil size={10} className="animate-pulse" />yazıyor</span>}
+            {dikte.durum && !araclar && <button type="button" data-dikte-rozet="" disabled={dikte.durum === 'bitiyor'} aria-label="Dikteyi durdur" title="Dinlemeyi durdur"
+                onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); dikte.degistir(dikte.durum === 'kopru' ? 'kopru' : 'dikte'); }}
+                className="absolute -top-3 left-1 z-40 flex min-h-8 items-center gap-1.5 rounded-full bg-berry-600 px-3 text-[11px] font-semibold text-white shadow-soft touch-manipulation active:scale-95"><Mic size={13} className="animate-pulse" />{dikte.durum === 'bitiyor' ? 'Bitiriyor…' : 'Yazıyor · durdur'}</button>}
             {pcKlavyeAcik && <PcHizliYaz prefs={prefs} onKapat={() => setPcKlavyeAcik(false)} />}
             {cocukSayisi > 0 && !araclar && (
                 <button type="button" onClick={acKapa} aria-expanded={acik} title={acik ? 'Dalları kapat' : 'Dalları aç'} aria-label={acik ? 'Dalları kapat' : 'Dalları aç'}
