@@ -19,7 +19,17 @@ export type TuvalGosterim = 'organik' | 'yatay' | 'klasik';
 export type TuvalGezinme = 'cubuk' | 'sekme' | 'yok';
 export type TuvalOnizleme = 0 | 2 | 3;
 /** Kart çevresindeki üç güncel tasarım veya dokunarak açılan panel/yüzen düğme. */
-export type TuvalEylem = 'hap' | 'yumusak' | 'kapsul' | 'panel' | 'yuzen';
+export type TuvalEylem = 'hap' | 'yumusak' | 'panel';
+/** Kart düğmelerinin boyutları (px). Boş bırakılan değer varsayılan ölçüyü kullanır. */
+export const DUGME_BOYUTLARI = {
+    ustY: { ad: 'Üst şerit yüksekliği', min: 40, max: 84, varsayilan: 54 },
+    yanG: { ad: 'Yan düğme genişliği', min: 26, max: 72, varsayilan: 34 },
+    yanY: { ad: 'Yan düğme yüksekliği', min: 56, max: 180, varsayilan: 112 },
+    altG: { ad: 'Alt düğme genişliği', min: 64, max: 220, varsayilan: 112 },
+    altY: { ad: 'Alt düğme yüksekliği', min: 26, max: 72, varsayilan: 34 },
+    kose: { ad: 'Köşe düğmesi boyutu', min: 32, max: 72, varsayilan: 44 }
+} as const;
+export type DugmeBoyutlari = Partial<Record<keyof typeof DUGME_BOYUTLARI, number>>;
 /** Not kartlarının tasarımı: bahçe (gölgeli, katmanlı), sade (ince çerçeve), renkli (seviyeye göre dolgu), hap (tek satır, yuvarlak). */
 export type TuvalKart = 'bahce' | 'sade' | 'renkli' | 'hap';
 export const KART_ISLEVLERI = {
@@ -43,10 +53,10 @@ export const VARSAYILAN_KART_DUGMELERI: KartDugmeleri = {
     ustSol: 'kopya', ustOrta: 'editor', ustSag: 'buda',
     sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok'
 };
-export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri; kartMakrolari: KartMakrolari; kartAiMakrolari: KartAiMakrolari };
+export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri; kartMakrolari: KartMakrolari; kartAiMakrolari: KartAiMakrolari; boyut: DugmeBoyutlari };
 
 const ANAHTAR = 'nb-tuval-v1';
-export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI, kartMakrolari: {}, kartAiMakrolari: {} };
+export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI, kartMakrolari: {}, kartAiMakrolari: {}, boyut: {} };
 
 function dugmeleriOku(v: unknown): KartDugmeleri {
     const k = v && typeof v === 'object' ? v as Partial<KartDugmeleri> : {};
@@ -65,6 +75,16 @@ function makrolariOku(v: unknown): KartMakrolari {
 /** Yapay zekâ makro bağlantıları aynı doğrulamayla okunur. */
 const kartAiMakrolariOku = (v: unknown): KartAiMakrolari => makrolariOku(v) as KartAiMakrolari;
 
+function boyutOku(v: unknown): DugmeBoyutlari {
+    const k = v && typeof v === 'object' ? v as Record<string, unknown> : {};
+    const cikti: DugmeBoyutlari = {};
+    for (const [anahtar, sinir] of Object.entries(DUGME_BOYUTLARI)) {
+        const d = k[anahtar];
+        if (typeof d === 'number' && Number.isFinite(d) && d !== sinir.varsayilan) cikti[anahtar as keyof DugmeBoyutlari] = Math.min(sinir.max, Math.max(sinir.min, Math.round(d)));
+    }
+    return cikti;
+}
+
 export function tuvalTercihleri(): TuvalTercihleri {
     if (typeof window === 'undefined') return VARSAYILAN_TUVAL;
     try {
@@ -73,12 +93,13 @@ export function tuvalTercihleri(): TuvalTercihleri {
             gosterim: k.gosterim === 'yatay' || k.gosterim === 'organik' ? k.gosterim : 'klasik',
             gezinme: k.gezinme === 'cubuk' || k.gezinme === 'yok' ? k.gezinme : 'sekme',
             onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
-            eylem: ['panel', 'yuzen', 'yumusak', 'kapsul'].includes(k.eylem ?? '') ? k.eylem! : 'hap',
+            eylem: k.eylem === 'panel' || k.eylem === 'yumusak' ? k.eylem : 'hap',
             kart: kartOku(k.kart),
             kartKoyu: kartOku(k.kartKoyu),
             dugmeler: dugmeleriOku(k.dugmeler),
             kartMakrolari: makrolariOku(k.kartMakrolari),
-            kartAiMakrolari: kartAiMakrolariOku(k.kartAiMakrolari)
+            kartAiMakrolari: kartAiMakrolariOku(k.kartAiMakrolari),
+            boyut: boyutOku(k.boyut)
         };
     } catch { return VARSAYILAN_TUVAL; }
 }

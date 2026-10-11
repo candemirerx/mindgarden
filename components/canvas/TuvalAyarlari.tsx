@@ -13,7 +13,7 @@ import { SettingsSection, cx } from '@/components/ui/settings';
 import KartAracEkle, { islevAdi } from '@/components/canvas/KartAracEkle';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { ChevronRight, Plus } from 'lucide-react';
-import { KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
+import { DUGME_BOYUTLARI, KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import type { KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
 import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
@@ -34,17 +34,17 @@ const GOSTERIMLER: { id: TuvalGosterim; ad: string; aciklama: string; resim: Rea
         resim: <svg viewBox="0 0 120 64" aria-hidden="true"><path d="M28 32C38 32 36 16 46 16M28 32H46M28 32C38 32 36 48 46 48" stroke={CIZGI} strokeWidth="2" fill="none" strokeLinecap="round" /><path d="M72 16C80 16 78 10 86 10M72 16C80 16 78 22 86 22M72 32H86M72 48H86" stroke={CIZGI} strokeWidth="1.5" fill="none" strokeLinecap="round" /><rect x="6" y="26" width="22" height="12" rx="3" fill={KUTU} /><rect x="46" y="12" width="26" height="8" rx="3" fill={KUTU} /><rect x="46" y="28" width="26" height="8" rx="3" fill={KUTU} /><rect x="46" y="44" width="26" height="8" rx="3" fill={KUTU} /><rect x="86" y="6" width="28" height="7" rx="2.5" fill={KUTU} /><rect x="86" y="18" width="28" height="7" rx="2.5" fill={KUTU} /><rect x="86" y="29" width="28" height="7" rx="2.5" fill={KUTU} /><rect x="86" y="45" width="28" height="7" rx="2.5" fill={KUTU} /></svg>
     }
 ];
-function MenuOnizleme({ model }: { model: 'hap' | 'yumusak' | 'kapsul' }) {
-    const kapsul = model === 'kapsul', yumusak = model === 'yumusak';
+function MenuOnizleme({ model }: { model: 'hap' | 'yumusak' }) {
+    const yumusak = model === 'yumusak';
     const yesil = 'rgb(var(--moss-600))', yuzey = 'rgb(var(--surface))';
     return <svg viewBox="0 0 120 64" aria-hidden="true">
         <rect x="32" y="21" width="56" height="29" rx="8" fill={yesil} />
-        <rect x="32" y={kapsul ? 4 : 7} width="56" height={kapsul ? 14 : 15} rx={kapsul || yumusak ? 7 : 3} fill={yuzey} stroke={yesil} />
+        <rect x="32" y="7" width="56" height="15" rx={yumusak ? 7 : 3} fill={yuzey} stroke={yesil} />
         <path d="M51 8v12M69 8v12" stroke={yesil} opacity=".3" />
         <path d="M40 11h5v6h-5zM58 15l4-4M76 12l4 5M80 12l-4 5" stroke={yesil} fill="none" strokeWidth="1.5" />
-        <rect x={kapsul ? 18 : 24} y="25" width={kapsul ? 11 : 8} height="22" rx={kapsul || yumusak ? 5 : 2} fill={yuzey} stroke={yesil} />
-        <rect x={kapsul ? 91 : 88} y="25" width={kapsul ? 11 : 8} height="22" rx={kapsul || yumusak ? 5 : 2} fill={yuzey} stroke={yesil} />
-        <rect x="47" y={kapsul ? 53 : 50} width="26" height="8" rx={kapsul || yumusak ? 4 : 2} fill={yuzey} stroke={yesil} />
+        <rect x="24" y="25" width="8" height="22" rx={yumusak ? 5 : 2} fill={yuzey} stroke={yesil} />
+        <rect x="88" y="25" width="8" height="22" rx={yumusak ? 5 : 2} fill={yuzey} stroke={yesil} />
+        <rect x="47" y="50" width="26" height="8" rx={yumusak ? 4 : 2} fill={yuzey} stroke={yesil} />
         <path d="M26 36h4M28 34v4M90 36h4M92 34v4M58 54h4M60 52v4" stroke={yesil} strokeWidth="1.2" />
         <path d="M40 32h33M40 38h22" stroke={yuzey} opacity=".8" strokeLinecap="round" strokeWidth="2" />
     </svg>;
@@ -55,14 +55,9 @@ const EYLEMLER: { id: TuvalEylem; ad: string; aciklama: string; resim: React.Rea
         resim: <MenuOnizleme model="hap" />
     },
     { id: 'yumusak', ad: 'Yumuşak', aciklama: 'Bitişik düğmeler, daha oval köşeler ve yumuşak yüzey', resim: <MenuOnizleme model="yumusak" /> },
-    { id: 'kapsul', ad: 'Kapsül', aciklama: 'Kartın yakınında ayrı, yuvarlak düğmeler', resim: <MenuOnizleme model="kapsul" /> },
     {
         id: 'panel', ad: 'Alttan panel', aciklama: 'Dokununca alttan büyük, yazılı düğmeler',
         resim: <svg viewBox="0 0 120 64" aria-hidden="true"><rect x="34" y="6" width="52" height="16" rx="5" fill="#fff" stroke="rgb(var(--moss-500))" strokeWidth="2" /><rect x="6" y="30" width="108" height="34" rx="8" fill="#fff" stroke="rgb(var(--sand-200))" /><rect x="14" y="36" width="92" height="8" rx="3" fill="rgb(var(--moss-600))" /><rect x="14" y="48" width="44" height="8" rx="3" fill="rgb(var(--moss-600))" /><rect x="62" y="48" width="44" height="8" rx="3" fill="rgb(var(--sand-200))" /></svg>
-    },
-    {
-        id: 'yuzen', ad: 'Yüzen düğme', aciklama: 'Sağ altta düğme; açılınca yazılı seçenekler',
-        resim: <svg viewBox="0 0 120 64" aria-hidden="true"><rect x="10" y="10" width="44" height="16" rx="5" fill="#fff" stroke="rgb(var(--moss-500))" strokeWidth="2" /><rect x="58" y="10" width="30" height="7" rx="3" fill="#fff" stroke="rgb(var(--sand-200))" /><circle cx="100" cy="13" r="6" fill="rgb(var(--moss-600))" /><rect x="58" y="24" width="30" height="7" rx="3" fill="#fff" stroke="rgb(var(--sand-200))" /><circle cx="100" cy="27" r="6" fill="#fff" stroke="rgb(var(--sand-200))" /><rect x="91" y="40" width="18" height="18" rx="6" fill="rgb(var(--moss-700))" /><path d="M100 44v10M95 49h10" stroke="#fff" strokeWidth="2" /></svg>
     }
 ];
 // Kart önizlemeleri: bağlantı ve dizilim yok; yalnız kök, dal ve yaprak kartı alt alta
@@ -167,7 +162,24 @@ export function TuvalAyarlari() {
                 </div>
             </SettingsSection>
 
-            {t.eylem !== 'panel' && t.eylem !== 'yuzen' && <SettingsSection icon={MousePointerClick} title="Kart menüsü"
+            {t.eylem !== 'panel' && <SettingsSection icon={SlidersHorizontal} tone="sand" title="Düğme boyutu"
+                description="Bitişik ve Yumuşak görünümde düğmelerin genişliğini ve yüksekliğini ayarlayın.">
+                <div className="space-y-3">
+                    {(Object.entries(DUGME_BOYUTLARI) as [keyof typeof DUGME_BOYUTLARI, (typeof DUGME_BOYUTLARI)[keyof typeof DUGME_BOYUTLARI]][]).map(([anahtar, sinir]) => {
+                        const deger = t.boyut[anahtar] ?? sinir.varsayilan;
+                        return <label key={anahtar} className="flex flex-col gap-1.5 text-sm text-sand-800">
+                            <span className="flex items-center justify-between"><span>{sinir.ad}</span><span className="tabular-nums text-xs font-semibold text-moss-700">{deger} px</span></span>
+                            <input type="range" id={'tuval-boyut-' + anahtar} min={sinir.min} max={sinir.max} step={2} value={deger} aria-label={sinir.ad}
+                                onChange={e => { const v = Number(e.target.value); const boyut = { ...t.boyut }; if (v === sinir.varsayilan) delete boyut[anahtar]; else boyut[anahtar] = v; tuvalTercihleriniKaydet({ ...t, boyut }); }}
+                                className="h-8 w-full accent-moss-600" />
+                        </label>;
+                    })}
+                </div>
+                <button type="button" className="mt-2 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
+                    onClick={() => tuvalTercihleriniKaydet({ ...t, boyut: {} })}>Boyutları varsayılana döndür</button>
+            </SettingsSection>}
+
+            {t.eylem !== 'panel' && <SettingsSection icon={MousePointerClick} title="Kart menüsü"
                 description="Düğme yerlerini ve işlevlerini düzenleyin. Bir konuma dokunup açılan sayfadan hazır işlev, bilgisayar aracı, makro ya da yapay zekâ görevi ekleyin.">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {Object.entries(KART_YERLERI).map(([yer, ad]) => {

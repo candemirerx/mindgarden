@@ -68,8 +68,7 @@
 html[data-kart-menusu]:not([data-agac-suruklenirken]) .garden-page [data-kart-kap]:not([data-kart-aktif="1"]) { visibility: hidden; pointer-events: none; }
 html[data-kart-menusu]:not([data-agac-suruklenirken]) .garden-page .yeni-agac > svg,
 html[data-kart-menusu]:not([data-agac-suruklenirken]) .tuval-sekmeleri,
-html[data-kart-menusu]:not([data-agac-suruklenirken]) #secili-panel,
-html[data-kart-menusu]:not([data-agac-suruklenirken]) #secili-yuzen { visibility: hidden; }
+html[data-kart-menusu]:not([data-agac-suruklenirken]) #secili-panel { visibility: hidden; }
 html[data-kart-menusu] .tree-drag-area:has([data-kart-aktif="1"]) { z-index: 60; }
 /* Üst şerit: karta oturan, kart genişliğiyle orantılı üç bölmeli araç çubuğu. */
 .kart-araclar {
@@ -148,7 +147,7 @@ html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-sha
 
 /* Bitişik menü: kenar boyunca geniş hedef, dışarı doğru kısa çıkıntı. */
 .garden-page .kart-araclar { width:100%; margin-bottom:-1px; border-radius:16px 16px 0 0; }
-.garden-page .kart-araclar .kart-eylem { height:54px; flex-direction:column; gap:3px; }
+.garden-page .kart-araclar .kart-eylem { height:var(--kd-ust-y,54px); flex-direction:column; gap:3px; }
 .garden-page .kart-araclar .kart-eylem--ana { flex:1 1 0; }
 .garden-page .kart-eylem-yazi { font-size:11px; font-weight:600; }
 .garden-page .kart-sol, .garden-page .kart-yan, .garden-page .kart-alt, .garden-page .kart-kose {
@@ -159,7 +158,7 @@ html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-sha
     transition:background .13s ease, color .13s ease;
 }
 .garden-page .kart-sol, .garden-page .kart-yan {
-    width:34px; height:min(112px, 85%); min-height:60px;
+    width:var(--kd-yan-g,34px); height:var(--kd-yan-y, min(112px, 85%)); min-height:56px;
     top:50%; transform:translateY(-50%); flex-direction:column;
 }
 .garden-page .kart-sol { right:calc(100% - 1px); border-radius:16px 0 0 16px; }
@@ -167,9 +166,9 @@ html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-sha
 .garden-page .kart-sol .kart-eylem-yazi, .garden-page .kart-yan .kart-eylem-yazi { writing-mode:vertical-rl; }
 .garden-page .kart-alt {
     top:calc(100% - 1px); left:50%; transform:translateX(-50%);
-    width:min(112px, 55%); height:34px; border-radius:0 0 16px 16px; flex-direction:row;
+    width:var(--kd-alt-g, min(112px, 55%)); height:var(--kd-alt-y,34px); border-radius:0 0 16px 16px; flex-direction:row;
 }
-.garden-page .kart-kose { top:calc(100% - 1px); width:44px; height:44px; border-radius:50%; }
+.garden-page .kart-kose { top:calc(100% - 1px); width:var(--kd-kose,44px); height:var(--kd-kose,44px); border-radius:50%; }
 .garden-page .kart-kose--sol { left:0; }
 .garden-page .kart-kose--sag { right:0; }
 .garden-page .kart-sol:hover, .garden-page .kart-yan:hover, .garden-page .kart-alt:hover, .garden-page .kart-kose:hover { background:rgb(var(--moss-50)); }
@@ -186,9 +185,3 @@ html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-sha
 .garden-page [data-kart-model="yumusak"] .kart-sol { border-radius:26px 0 0 26px; }
 .garden-page [data-kart-model="yumusak"] .kart-yan { border-radius:0 26px 26px 0; }
 .garden-page [data-kart-model="yumusak"] .kart-alt { border-radius:0 0 26px 26px; }
-.garden-page [data-kart-model="kapsul"] .kart-araclar { margin-bottom:6px; border-radius:999px; }
-.garden-page [data-kart-model="kapsul"] .kart-araclar .kart-eylem:first-child { border-radius:999px 0 0 999px; }
-.garden-page [data-kart-model="kapsul"] .kart-araclar .kart-eylem:last-child { border-radius:0 999px 999px 0; }
-.garden-page [data-kart-model="kapsul"] .kart-sol { right:calc(100% + 6px); border-radius:999px; width:40px; }
-.garden-page [data-kart-model="kapsul"] .kart-yan { left:calc(100% + 6px); border-radius:999px; width:40px; }
-.garden-page [data-kart-model="kapsul"] .kart-alt { top:calc(100% + 6px); border-radius:999px; height:40px; }

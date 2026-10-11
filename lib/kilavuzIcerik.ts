@@ -129,7 +129,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     '**İki parmakla** yakınlaştırıp uzaklaştırın, **parmağınızla sürükleyerek** gezinin.',
                     'Karta **kısa dokunup bırakın**; menü açık kalır. Varsayılan üst düğmeler **Kopyala**, **Düzenle** ve **Buda** işlevlerini çalıştırır.',
                     'Soldaki ve sağdaki **Yanına** düğmeleri aynı seviyeye, seçilen notun önüne veya arkasına not ekler; kökte yeni ağaç oluşturur. Alttaki **Altına** düğmesi alt not ekler.',
-                    'Karta ilk dokunuşta **basılı tutup bir düğmeye kaydırarak bırakmak** da o işlevi seçer. Bitişik, Yumuşak ve Kapsül modellerinde bu hareket yerleşiktir.',
+                    'Karta ilk dokunuşta **basılı tutup bir düğmeye kaydırarak bırakmak** da o işlevi seçer. Bitişik ve Yumuşak modellerde bu hareket yerleşiktir.',
                     '**Tuval ve ağaçlar** bölümünden ağaçları yönetin. Kart menüsü açıkken diğer kartlar ve bağlantılar gizlenir; boş alana dokununca menü kapanır.',
                 ],
             },
@@ -141,7 +141,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 adimlar: [
                     '**Tuval ve ağaçlar → Görünüm** bölümünde düzeni **Klasik**, **Organik** veya **Yatay akış** olarak seçin.',
                     '**Kart tasarımı** seçenekleri **Bahçe**, **Sade**, **Renkli** ve **Hap**tır. Önizlemeler etkin açık veya koyu temaya göre gösterilir; iki temanın tercihleri ayrı saklanır.',
-                    '**Not düğmeleri** bölümünde **Bitişik**, **Yumuşak**, **Kapsül**, **Alttan panel** veya **Yüzen düğme** seçin. Panel ve yüzen modelde karta dokunduktan sonra yazılı seçeneklere dokunun.',
+                    '**Not düğmeleri** bölümünde **Bitişik**, **Yumuşak** veya **Alttan panel** seçin. Panel modelde karta dokunduktan sonra yazılı seçeneklere dokunun. Bitişik ve Yumuşak seçiliyken altta **Düğme boyutu** bölümü açılır: üst şeridin yüksekliğini, yan ve alt düğmelerin genişlik ve yüksekliğini, köşe düğmesinin boyutunu kaydırıcılarla ayarlayabilirsiniz.',
                     'Başlangıç seçimleri **Klasik düzen**, **Bahçe kartı** ve **Bitişik düğmeler**dir. Görünüm tercihleri bu cihazda saklanır.',
                     'Aynı bölümde kart içeriği önizlemesini **Başlık**, **2 satır** veya **3 satır**; tuval gezinmesini **Çubuklar**, **Sekmeler** veya **Hiçbiri** olarak seçebilirsiniz.',
                     'Geri düğmesi sizi bulunduğunuz tuvale döndürür.',
@@ -153,7 +153,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 title: 'Kart menüsünü ve ağaç konumunu ayarlayın',
                 description: 'Düğmelere işlev verin, ağacı taşıyın.',
                 adimlar: [
-                    'Bitişik, Yumuşak veya Kapsül seçiliyken **Tuval ve ağaçlar → Görünüm → Kart menüsü** bölümünden her konumun işlevini seçin.',
+                    'Bitişik veya Yumuşak seçiliyken **Tuval ve ağaçlar → Görünüm → Kart menüsü** bölümünden her konumun işlevini seçin.',
                     'Her konumun yanındaki düğmeye dokunun: **Araç ekle** sayfası açılır. Tek sayfada dört sekme vardır: **Hazır** (düzenle, kopyala, buda, yanına ve altına ekle, taşı, ayarlar, **Yok**), **Bilgisayar** (bilgisayara yaz, bilgisayar panosuna gönder, bilgisayarda Enter), **Makrolar** ve **Yapay zekâ**.',
                     'Makro ve yapay zekâ görevleri baş harf rozetiyle listelenir. Dokunduğunuz öğe o düğmeye bağlanır ve sayfa kapanır; yeni seçim öncekinin yerini alır. Üst üç düğme, yan, alt ve köşe konumlarının hepsine istediğinizi ekleyebilirsiniz.',
                     'Yapay zekâ düğmesi notun içeriğini seçtiğiniz görevden geçirip notu günceller; bilgisayar araçları için bilgisayar bağlantısı açık olmalıdır.',
@@ -526,7 +526,7 @@ export const SSS: Array<{ soru: string; cevap: string }> = [
     },
     {
         soru: 'Karta dokununca neden metin editörü açılmıyor?',
-        cevap: 'Kısa dokunuş kart menüsünü açar ve açık tutar. Metni düzenlemek için Düzenle düğmesine dokunun. Bitişik, Yumuşak ve Kapsül modellerinde ilk dokunuşta basılı tutup düğmeye kaydırarak bırakabilirsiniz.',
+        cevap: 'Kısa dokunuş kart menüsünü açar ve açık tutar. Metni düzenlemek için Düzenle düğmesine dokunun. Bitişik ve Yumuşak modellerde ilk dokunuşta basılı tutup düğmeye kaydırarak bırakabilirsiniz.',
     },
     {
         soru: 'Ağacı sürüklemek için ne yapmalıyım?',

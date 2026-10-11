@@ -248,7 +248,13 @@ try {
   await run(`localStorage.setItem('nb-tuval-v1',JSON.stringify({gosterim:'organik',gezinme:'yok',onizleme:2,eylem:'hap',kart:'bahce',...${JSON.stringify(values)}}))`);
   await load();
  };
- for (const model of ['hap','yumusak','kapsul']) {
+ await tercih({eylem:'hap'});
+ await run(`localStorage.setItem('nb-tuval-v1',JSON.stringify({...JSON.parse(localStorage.getItem('nb-tuval-v1')),eylem:'kapsul'}));location.reload()`); await wait(2500);
+ for(let i=0;i<50;i++){ if(await run('document.querySelectorAll("[data-yk-id]").length>=4')) break; await wait(200); }
+ await hold('branch');
+ assert.equal(await run(`document.querySelector('[data-kart-aktif="1"]').dataset.kartModel`),'hap','eski kapsul secimi Bitisik olur');
+ await touch('touchCancel',await box('[data-yk-id="branch"]'));
+ for (const model of ['hap','yumusak']) {
   await tercih({eylem:model,kullanim:'birlikte'});
   await hold('branch');
   assert.equal(await run(`document.querySelector('[data-kart-aktif="1"]').dataset.kartModel`),model);
@@ -274,31 +280,34 @@ try {
   assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),true);
  }
  console.log('PASS: eski yöntem ayarları seçimleri kısıtlamaz; dokunma ve kaydırma yerleşik çalışır');
- for(const model of ['panel','yuzen']) {
+ for(const model of ['panel']) {
   await tercih({eylem:model,kullanim:'kaydir'});
   await tapAt(await box('[data-yk-id="branch"]'));
   assert.equal(await run('document.documentElement.hasAttribute("data-kart-menusu")'),false);
   assert.equal(await run(`!!document.querySelector('#secili-${model}')`),true);
-  if(model==='yuzen') await run(`document.querySelector('#secili-yuzen button').click()`);
   await tapAt(await box('#secili-buda'));
   assert.equal(await run(`JSON.parse(localStorage.getItem('nb-local-db-v1')).nodes.find(n=>n.id==='branch').is_pruned`),true);
  }
  console.log('PASS: panel ve yüzen düğme gerçek dokunuşla açılır, budama çalışır');
  await tercih({dugmeler:{ustSol:'kopya',ustOrta:'editor',ustSag:'buda',sol:'sol',sag:'yan',alt:'alt',altSol:'ayarlar',altSag:'yok'}});
  await hold('branch'); await choose('ayarlar'); await wait(200);
- for(const model of ['hap','yumusak','kapsul','panel','yuzen']) assert.equal(await run(`!!document.querySelector('#tuval-eylem-${model}')`),true);
+ for(const model of ['hap','yumusak','panel']) assert.equal(await run(`!!document.querySelector('#tuval-eylem-${model}')`),true);
+ for(const model of ['kapsul','yuzen']) assert.equal(await run(`document.querySelector('#tuval-eylem-${model}')===null`),true);
  assert.equal(await run(`document.querySelector('[aria-label="Not düğmelerinin kullanım yöntemi"]')===null`),true);
- for (const model of ['panel','yuzen']) {
+ for (const model of ['panel']) {
   await run(`document.querySelector('#tuval-eylem-${model}').click()`); await wait(100);
   assert.equal(await run(`document.querySelector('#kart-arac-ekle-sag')===null`),true);
  }
- await run(`document.querySelector('#tuval-eylem-kapsul').click()`); await wait(150);
+ await run(`document.querySelector('#tuval-eylem-yumusak').click()`); await wait(150);
  assert.equal(await run(`!!document.querySelector('#kart-arac-ekle-sag')`),true);
+ await run(`(()=>{const e=document.querySelector('#tuval-boyut-yanG');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(e,'50');e.dispatchEvent(new Event('input',{bubbles:true}));})()`); await wait(150);
+ assert.equal(await run(`JSON.parse(localStorage.getItem('nb-tuval-v1')).boyut.yanG`),50);
  await run(`Array.from(document.querySelectorAll('[aria-label="Düzen"] button')).find(b=>b.textContent.includes('Klasik')).click()`); await wait(150);
- assert.deepEqual(await run(`(()=>{const t=JSON.parse(localStorage.getItem('nb-tuval-v1'));return [t.gosterim,t.eylem,Object.hasOwn(t,'kullanim')]})()`),['klasik','kapsul',false]);
+ assert.deepEqual(await run(`(()=>{const t=JSON.parse(localStorage.getItem('nb-tuval-v1'));return [t.gosterim,t.eylem,Object.hasOwn(t,'kullanim')]})()`),['klasik','yumusak',false]);
  await run(`document.querySelector('[aria-label="Ağaç yönetiminden geri dön"]').click()`); await wait(250);
  await navigate('/'); await load(); await wait(350); await hold('branch');
- assert.equal(await run(`document.querySelector('[data-kart-aktif="1"]').dataset.kartModel`),'kapsul');
- await screenshot('guncel-kapsul-klasik.png'); await touch('touchCancel',await box('[data-yk-id="branch"]'));
+ assert.equal(await run(`document.querySelector('[data-kart-aktif="1"]').dataset.kartModel`),'yumusak');
+ const sagKutu=await box('[data-kart-yer="sag"]'); assert.equal(Math.round(sagKutu.right-sagKutu.left),50,'yan dugme genisligi ayardan gelir');
+ await screenshot('guncel-yumusak-klasik.png'); await touch('touchCancel',await box('[data-yk-id="branch"]'));
  console.log('PASS: Görünüm seçenekleri ayarlardan değişir, yenilemede korunur ve tuvale uygulanır');
 } finally { socket?.close(); browser.kill(); }

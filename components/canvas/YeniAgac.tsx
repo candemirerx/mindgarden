@@ -209,7 +209,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
     const [kopyalandi, setKopyalandi] = useState(false);
     const prefs = useRemotePrefs();
-    const disMenu = eylem === 'panel' || eylem === 'yuzen';
+    const disMenu = eylem === 'panel';
     const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined);
     const secili = selectedNodeId === node.id;
     const budandi = node.isPruned ?? false;

@@ -7,8 +7,8 @@
  * Eylemler: metin editöründe aç, içeriği kopyala, yanına not ekle
  * (kökte: yanına ağaç), altına not ekle, buda.
  */
-import { useEffect, useState } from 'react';
-import { Check, Copy, CornerDownRight, ListPlus, Pencil, Plus, Scissors, Sprout, X } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Copy, CornerDownRight, ListPlus, Pencil, Scissors, Sprout, X } from 'lucide-react';
 import type { MindNode } from '@/lib/types';
 import type { TuvalEylem } from '@/lib/tuvalTercihleri';
 
@@ -35,12 +35,9 @@ export function SeciliEylemler({ kip, kokler, seciliId, onKapat, onEdit, onYanin
     onAgacEkle: (kokId: string) => void;
     onBuda: (id: string, budandi: boolean) => void;
 }) {
-    const [acik, setAcik] = useState(false);
     const [kopyalandi, setKopyalandi] = useState(false);
     const secili = seciliId ? bul(kokler, seciliId) : null;
-    // Seçim değişince yüzen düğme kapalı başlar.
-    useEffect(() => { setAcik(false); }, [seciliId]);
-    if ((kip !== 'panel' && kip !== 'yuzen') || !secili) return null;
+    if (kip !== 'panel' || !secili) return null;
     const { node, derinlik } = secili;
     const budandi = node.isPruned ?? false;
     const tur = derinlik === 0 ? 'ağaç' : derinlik === 1 ? 'dal' : 'yaprak';
@@ -58,11 +55,10 @@ export function SeciliEylemler({ kip, kokler, seciliId, onKapat, onEdit, onYanin
         { id: 'kopya', ad: kopyalandi ? 'Kopyalandı' : 'İçeriği kopyala', Icon: kopyalandi ? Check : Copy, calis: kopyala },
         { id: 'buda', ad: budandi ? 'Budamayı geri al' : 'Buda', Icon: Scissors, calis: () => onBuda(node.id, budandi) }
     ];
-    // Panel/yüzen düğme tuvale dokunuşları yutmasın diye olaylar burada durdurulur.
+    // Panel tuvale dokunuşları yutmasın diye olaylar burada durdurulur.
     const yut = { onMouseDown: (e: React.SyntheticEvent) => e.stopPropagation(), onTouchStart: (e: React.SyntheticEvent) => e.stopPropagation() };
 
-    if (kip === 'panel') {
-        return (
+    return (
             <div id="secili-panel" role="dialog" aria-label={node.title + ' eylemleri'} {...yut}
                 className="absolute inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-sand-200 bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-2.5 shadow-[0_-18px_40px_-20px_rgba(30,24,19,.45)]">
                 <div className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-sand-300" aria-hidden="true" />
@@ -79,24 +75,5 @@ export function SeciliEylemler({ kip, kokler, seciliId, onKapat, onEdit, onYanin
                     ))}
                 </div>
             </div>
-        );
-    }
-
-    // Yüzen düğme
-    return (
-        <div id="secili-yuzen" {...yut} className="pointer-events-none absolute bottom-[calc(76px+max(48px,env(safe-area-inset-bottom,0px)))] right-[max(12px,env(safe-area-inset-right,0px))] z-50 flex flex-col items-end gap-2.5 md:bottom-[84px]">
-            {acik && eylemler.map(({ id, ad, Icon, ana, calis }) => (
-                <button key={id} type="button" id={'secili-' + id} onClick={() => { calis(); if (id !== 'kopya') setAcik(false); }}
-                    className="pointer-events-auto flex items-center gap-2.5">
-                    <span className="rounded-xl bg-white px-3 py-1.5 text-[13px] font-semibold text-sand-800 shadow-[0_6px_16px_-8px_rgba(0,0,0,.45)]">{ad}</span>
-                    <span className={`flex h-12 w-12 items-center justify-center rounded-full shadow-[0_8px_18px_-8px_rgba(0,0,0,.45)] ${ana ? 'bg-moss-600 text-white' : 'bg-white text-moss-700'}`}><Icon size={19} aria-hidden="true" /></span>
-                </button>
-            ))}
-            <button type="button" id="secili-yuzen-ana" onClick={() => setAcik(a => !a)} aria-expanded={acik} aria-label={acik ? 'Eylemleri kapat' : node.title + ' için eylemler'}
-                className="pointer-events-auto flex items-center gap-2.5">
-                <span className="max-w-[170px] truncate rounded-xl bg-sand-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(0,0,0,.5)]">{node.title}</span>
-                <span className={`flex h-14 w-14 items-center justify-center rounded-[20px] text-white shadow-[0_12px_26px_-10px_rgba(20,16,12,.7)] transition-transform ${acik ? 'rotate-45 bg-sand-900' : 'bg-moss-700'}`}><Plus size={26} aria-hidden="true" /></span>
-            </button>
-        </div>
     );
 }

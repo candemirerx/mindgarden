@@ -94,7 +94,7 @@ Notlarınızı düzenlemeyi öğrenin: dallandırma, renkler, arama, tuval gör�
 2. **İki parmakla** yakınlaştırıp uzaklaştırın, **parmağınızla sürükleyerek** gezinin.
 3. Karta **kısa dokunup bırakın**; menü açık kalır. Varsayılan üst düğmeler **Kopyala**, **Düzenle** ve **Buda** işlevlerini çalıştırır.
 4. Soldaki ve sağdaki **Yanına** düğmeleri aynı seviyeye, seçilen notun önüne veya arkasına not ekler; kökte yeni ağaç oluşturur. Alttaki **Altına** düğmesi alt not ekler.
-5. Karta ilk dokunuşta **basılı tutup bir düğmeye kaydırarak bırakmak** da o işlevi seçer. Bitişik, Yumuşak ve Kapsül modellerinde bu hareket yerleşiktir.
+5. Karta ilk dokunuşta **basılı tutup bir düğmeye kaydırarak bırakmak** da o işlevi seçer. Bitişik ve Yumuşak modellerde bu hareket yerleşiktir.
 6. **Tuval ve ağaçlar** bölümünden ağaçları yönetin. Kart menüsü açıkken diğer kartlar ve bağlantılar gizlenir; boş alana dokununca menü kapanır.
 
 ### 2.3 Tuval, kart ve not düğmeleri
@@ -103,7 +103,7 @@ Notlarınızı düzenlemeyi öğrenin: dallandırma, renkler, arama, tuval gör�
 
 1. **Tuval ve ağaçlar → Görünüm** bölümünde düzeni **Klasik**, **Organik** veya **Yatay akış** olarak seçin.
 2. **Kart tasarımı** seçenekleri **Bahçe**, **Sade**, **Renkli** ve **Hap**tır. Önizlemeler etkin açık veya koyu temaya göre gösterilir; iki temanın tercihleri ayrı saklanır.
-3. **Not düğmeleri** bölümünde **Bitişik**, **Yumuşak**, **Kapsül**, **Alttan panel** veya **Yüzen düğme** seçin. Panel ve yüzen modelde karta dokunduktan sonra yazılı seçeneklere dokunun.
+3. **Not düğmeleri** bölümünde **Bitişik**, **Yumuşak** veya **Alttan panel** seçin. Panel modelde karta dokunduktan sonra yazılı seçeneklere dokunun. Bitişik ve Yumuşak seçiliyken altta **Düğme boyutu** bölümü açılır: üst şeridin yüksekliğini, yan ve alt düğmelerin genişlik ve yüksekliğini, köşe düğmesinin boyutunu kaydırıcılarla ayarlayabilirsiniz.
 4. Başlangıç seçimleri **Klasik düzen**, **Bahçe kartı** ve **Bitişik düğmeler**dir. Görünüm tercihleri bu cihazda saklanır.
 5. Aynı bölümde kart içeriği önizlemesini **Başlık**, **2 satır** veya **3 satır**; tuval gezinmesini **Çubuklar**, **Sekmeler** veya **Hiçbiri** olarak seçebilirsiniz.
 6. Geri düğmesi sizi bulunduğunuz tuvale döndürür.
@@ -112,7 +112,7 @@ Notlarınızı düzenlemeyi öğrenin: dallandırma, renkler, arama, tuval gör�
 
 *Düğmelere işlev verin, ağacı taşıyın.*
 
-1. Bitişik, Yumuşak veya Kapsül seçiliyken **Tuval ve ağaçlar → Görünüm → Kart menüsü** bölümünden her konumun işlevini seçin.
+1. Bitişik veya Yumuşak seçiliyken **Tuval ve ağaçlar → Görünüm → Kart menüsü** bölümünden her konumun işlevini seçin.
 2. Her konumun yanındaki düğmeye dokunun: **Araç ekle** sayfası açılır. Tek sayfada dört sekme vardır: **Hazır** (düzenle, kopyala, buda, yanına ve altına ekle, taşı, ayarlar, **Yok**), **Bilgisayar** (bilgisayara yaz, bilgisayar panosuna gönder, bilgisayarda Enter), **Makrolar** ve **Yapay zekâ**.
 3. Makro ve yapay zekâ görevleri baş harf rozetiyle listelenir. Dokunduğunuz öğe o düğmeye bağlanır ve sayfa kapanır; yeni seçim öncekinin yerini alır. Üst üç düğme, yan, alt ve köşe konumlarının hepsine istediğinizi ekleyebilirsiniz.
 4. Yapay zekâ düğmesi notun içeriğini seçtiğiniz görevden geçirip notu günceller; bilgisayar araçları için bilgisayar bağlantısı açık olmalıdır.
@@ -390,7 +390,7 @@ Evet. Bluetooth yolunda yeni bilgisayarı telefonla eşleştirip Bilgisayar bağ
 
 ### Karta dokununca neden metin editörü açılmıyor?
 
-Kısa dokunuş kart menüsünü açar ve açık tutar. Metni düzenlemek için Düzenle düğmesine dokunun. Bitişik, Yumuşak ve Kapsül modellerinde ilk dokunuşta basılı tutup düğmeye kaydırarak bırakabilirsiniz.
+Kısa dokunuş kart menüsünü açar ve açık tutar. Metni düzenlemek için Düzenle düğmesine dokunun. Bitişik ve Yumuşak modellerde ilk dokunuşta basılı tutup düğmeye kaydırarak bırakabilirsiniz.
 
 ### Ağacı sürüklemek için ne yapmalıyım?
 

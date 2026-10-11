@@ -245,6 +245,16 @@ function GardenPageInner() {
     const gorunenAgaclar = budamaFiltresi(mindRoots, budamaModu);
     const tuval = useTuvalTercihleri();
     const koyuTema = useKoyuTema();
+    // Kullanıcının düğme boyutları CSS değişkeni olarak uygulanır; boş olanlar varsayılanı korur.
+    useEffect(() => {
+        const kok = document.documentElement;
+        const eslesme = { ustY: '--kd-ust-y', yanG: '--kd-yan-g', yanY: '--kd-yan-y', altG: '--kd-alt-g', altY: '--kd-alt-y', kose: '--kd-kose' } as const;
+        for (const [anahtar, degisken] of Object.entries(eslesme)) {
+            const v = tuval.boyut[anahtar as keyof typeof eslesme];
+            if (v) kok.style.setProperty(degisken, v + 'px'); else kok.style.removeProperty(degisken);
+        }
+        return () => { for (const degisken of Object.values(eslesme)) kok.style.removeProperty(degisken); };
+    }, [tuval.boyut]);
     const notSayisi = (n: MindNode): number => 1 + n.children.reduce((t, c) => t + notSayisi(c), 0);
 
 
