@@ -248,10 +248,10 @@ function GardenPageInner() {
     // Kullanıcının düğme boyutları CSS değişkeni olarak uygulanır; boş olanlar varsayılanı korur.
     useEffect(() => {
         const kok = document.documentElement;
-        const eslesme = { ustY: '--kd-ust-y', yanG: '--kd-yan-g', yanY: '--kd-yan-y', altG: '--kd-alt-g', altY: '--kd-alt-y', kose: '--kd-kose' } as const;
+        const eslesme = { ustSolG: '--kd-ust-sol-f', ustSolY: '--kd-ust-sol-y', ustOrtaG: '--kd-ust-orta-f', ustOrtaY: '--kd-ust-orta-y', ustSagG: '--kd-ust-sag-f', ustSagY: '--kd-ust-sag-y', yanG: '--kd-yan-g', yanY: '--kd-yan-y', altG: '--kd-alt-g', altY: '--kd-alt-y', kose: '--kd-kose' } as const;
         for (const [anahtar, degisken] of Object.entries(eslesme)) {
             const v = tuval.boyut[anahtar as keyof typeof eslesme];
-            if (v) kok.style.setProperty(degisken, v + 'px'); else kok.style.removeProperty(degisken);
+            if (v) kok.style.setProperty(degisken, degisken.endsWith('-f') ? '0 1 ' + v + 'px' : v + 'px'); else kok.style.removeProperty(degisken);
         }
         return () => { for (const degisken of Object.values(eslesme)) kok.style.removeProperty(degisken); };
     }, [tuval.boyut]);

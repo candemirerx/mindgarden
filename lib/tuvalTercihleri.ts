@@ -21,14 +21,20 @@ export type TuvalOnizleme = 0 | 2 | 3;
 /** Kart çevresindeki üç güncel tasarım veya dokunarak açılan panel/yüzen düğme. */
 export type TuvalEylem = 'hap' | 'yumusak' | 'panel';
 /** Kart düğmelerinin boyutları (px). Boş bırakılan değer varsayılan ölçüyü kullanır. */
-export const DUGME_BOYUTLARI = {
-    ustY: { ad: 'Üst şerit yüksekliği', min: 40, max: 84, varsayilan: 54 },
+export type DugmeSiniri = { ad: string; min: number; max: number; varsayilan: number; otomatik?: boolean };
+export const DUGME_BOYUTLARI: Record<'ustSolG' | 'ustSolY' | 'ustOrtaG' | 'ustOrtaY' | 'ustSagG' | 'ustSagY' | 'yanG' | 'yanY' | 'altG' | 'altY' | 'kose', DugmeSiniri> = {
+    ustSolG: { ad: 'Üst sol genişliği', min: 32, max: 160, varsayilan: 32, otomatik: true },
+    ustSolY: { ad: 'Üst sol yüksekliği', min: 40, max: 84, varsayilan: 54 },
+    ustOrtaG: { ad: 'Üst orta genişliği', min: 32, max: 160, varsayilan: 32, otomatik: true },
+    ustOrtaY: { ad: 'Üst orta yüksekliği', min: 40, max: 84, varsayilan: 54 },
+    ustSagG: { ad: 'Üst sağ genişliği', min: 32, max: 160, varsayilan: 32, otomatik: true },
+    ustSagY: { ad: 'Üst sağ yüksekliği', min: 40, max: 84, varsayilan: 54 },
     yanG: { ad: 'Yan düğme genişliği', min: 26, max: 72, varsayilan: 34 },
     yanY: { ad: 'Yan düğme yüksekliği', min: 56, max: 180, varsayilan: 112 },
     altG: { ad: 'Alt düğme genişliği', min: 64, max: 220, varsayilan: 112 },
     altY: { ad: 'Alt düğme yüksekliği', min: 26, max: 72, varsayilan: 34 },
     kose: { ad: 'Köşe düğmesi boyutu', min: 32, max: 72, varsayilan: 44 }
-} as const;
+};
 export type DugmeBoyutlari = Partial<Record<keyof typeof DUGME_BOYUTLARI, number>>;
 /** Not kartlarının tasarımı: bahçe (gölgeli, katmanlı), sade (ince çerçeve), renkli (seviyeye göre dolgu), hap (tek satır, yuvarlak). */
 export type TuvalKart = 'bahce' | 'sade' | 'renkli' | 'hap';
@@ -78,8 +84,11 @@ const kartAiMakrolariOku = (v: unknown): KartAiMakrolari => makrolariOku(v) as K
 function boyutOku(v: unknown): DugmeBoyutlari {
     const k = v && typeof v === 'object' ? v as Record<string, unknown> : {};
     const cikti: DugmeBoyutlari = {};
+    // Eski tek üst şerit yüksekliği, üç düğmenin yüksekliğine aktarılır.
+    const eskiUst = k.ustY;
     for (const [anahtar, sinir] of Object.entries(DUGME_BOYUTLARI)) {
-        const d = k[anahtar];
+        let d = k[anahtar];
+        if (d === undefined && /^ust(Sol|Orta|Sag)Y$/.test(anahtar)) d = eskiUst;
         if (typeof d === 'number' && Number.isFinite(d) && d !== sinir.varsayilan) cikti[anahtar as keyof DugmeBoyutlari] = Math.min(sinir.max, Math.max(sinir.min, Math.round(d)));
     }
     return cikti;

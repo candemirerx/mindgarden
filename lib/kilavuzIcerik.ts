@@ -141,7 +141,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 adimlar: [
                     '**Tuval ve ağaçlar → Görünüm** bölümünde düzeni **Klasik**, **Organik** veya **Yatay akış** olarak seçin.',
                     '**Kart tasarımı** seçenekleri **Bahçe**, **Sade**, **Renkli** ve **Hap**tır. Önizlemeler etkin açık veya koyu temaya göre gösterilir; iki temanın tercihleri ayrı saklanır.',
-                    '**Not düğmeleri** bölümünde **Bitişik**, **Yumuşak** veya **Alttan panel** seçin. Panel modelde karta dokunduktan sonra yazılı seçeneklere dokunun. Bitişik ve Yumuşak seçiliyken altta **Düğme boyutu** bölümü açılır: üst şeridin yüksekliğini, yan ve alt düğmelerin genişlik ve yüksekliğini, köşe düğmesinin boyutunu kaydırıcılarla ayarlayabilirsiniz.',
+                    '**Not düğmeleri** bölümünde **Bitişik**, **Yumuşak** veya **Alttan panel** seçin. Panel modelde karta dokunduktan sonra yazılı seçeneklere dokunun. Bitişik ve Yumuşak seçiliyken altta **Düğme boyutu** bölümü açılır: üst şeritteki üç düğmenin her birinin genişliğini ve yüksekliğini, yan ve alt düğmelerin genişlik ve yüksekliğini, köşe düğmesinin boyutunu kaydırıcılarla ayarlayabilirsiniz. Kaydırıcıların üstündeki önizleme, düğmelerin kartta nasıl duracağını anında gösterir.',
                     'Başlangıç seçimleri **Klasik düzen**, **Bahçe kartı** ve **Bitişik düğmeler**dir. Görünüm tercihleri bu cihazda saklanır.',
                     'Aynı bölümde kart içeriği önizlemesini **Başlık**, **2 satır** veya **3 satır**; tuval gezinmesini **Çubuklar**, **Sekmeler** veya **Hiçbiri** olarak seçebilirsiniz.',
                     'Geri düğmesi sizi bulunduğunuz tuvale döndürür.',

@@ -147,8 +147,11 @@ html[data-kart-menusu] .garden-page [data-kart-aktif="1"] .dugum-karti { box-sha
 
 /* Bitişik menü: kenar boyunca geniş hedef, dışarı doğru kısa çıkıntı. */
 .garden-page .kart-araclar { width:100%; margin-bottom:-1px; border-radius:16px 16px 0 0; }
-.garden-page .kart-araclar .kart-eylem { height:var(--kd-ust-y,54px); flex-direction:column; gap:3px; }
-.garden-page .kart-araclar .kart-eylem--ana { flex:1 1 0; }
+.garden-page .kart-araclar { align-items:flex-end; justify-content:center; }
+.garden-page .kart-araclar .kart-eylem { height:54px; flex-direction:column; gap:3px; }
+.garden-page .kart-araclar [data-kart-yer="ustSol"] { height:var(--kd-ust-sol-y,54px); flex:var(--kd-ust-sol-f,1 1 0); }
+.garden-page .kart-araclar [data-kart-yer="ustOrta"] { height:var(--kd-ust-orta-y,54px); flex:var(--kd-ust-orta-f,1 1 0); }
+.garden-page .kart-araclar [data-kart-yer="ustSag"] { height:var(--kd-ust-sag-y,54px); flex:var(--kd-ust-sag-f,1 1 0); }
 .garden-page .kart-eylem-yazi { font-size:11px; font-weight:600; }
 .garden-page .kart-sol, .garden-page .kart-yan, .garden-page .kart-alt, .garden-page .kart-kose {
     position:absolute; z-index:50; border:1px solid rgb(var(--moss-200));

@@ -14,7 +14,7 @@ import KartAracEkle, { SIMGE, islevAdi } from '@/components/canvas/KartAracEkle'
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { ChevronRight, Plus } from 'lucide-react';
 import { DUGME_BOYUTLARI, KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
-import type { KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
+import type { DugmeBoyutlari, KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
 import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
 /* Düzen önizlemeleri: kartlar bilerek hepsi aynı sade gri kutu; yalnız dizilim ve dalların gidişi görünür. */
@@ -172,6 +172,39 @@ function KartMenuHaritasi({ t, macros, sec }: { t: ReturnType<typeof useTuvalTer
     </div>;
 }
 
+/** Düğme boyutu önizlemesi: kart ve düğmeler ayarlanan ölçülerle (px) çizilir. */
+function BoyutOnizleme({ b, yumusak, dugmeler }: { b: DugmeBoyutlari; yumusak: boolean; dugmeler: KartDugmeleri }) {
+    const g = (k: keyof typeof DUGME_BOYUTLARI) => b[k] ?? DUGME_BOYUTLARI[k].varsayilan;
+    const sinir = 'rgb(var(--moss-300))', yuzey = 'rgb(var(--surface))', yazi = 'rgb(var(--moss-800))';
+    const kutu = (yer: keyof KartDugmeleri, stil: React.CSSProperties) => dugmeler[yer] === 'yok' ? null :
+        <div key={yer} style={{ border: '1px solid ' + sinir, background: yuzey, color: yazi, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, overflow: 'hidden', ...stil }}>
+            {SIMGE[dugmeler[yer]] ?? <Wand2 size={16} />}
+        </div>;
+    const ust = (yer: 'ustSol' | 'ustOrta' | 'ustSag', gk: 'ustSolG' | 'ustOrtaG' | 'ustSagG', yk: 'ustSolY' | 'ustOrtaY' | 'ustSagY', ana: boolean) => {
+        const ozel = b[gk];
+        return kutu(yer, { height: g(yk), flex: ozel ? '0 1 ' + ozel + 'px' : '1 1 0', minWidth: 0, border: 0, borderLeft: yer === 'ustSol' ? 0 : '1px solid ' + sinir, background: ana ? 'rgb(var(--moss-600))' : yuzey, color: ana ? yuzey : yazi });
+    };
+    const r = yumusak ? 22 : 12;
+    return <div className="overflow-hidden rounded-2xl bg-sand-100 py-4" aria-label="Düğme boyutu önizlemesi" role="img">
+        <div style={{ zoom: 0.8, width: 300, margin: '0 auto', position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', border: '1px solid ' + sinir, borderBottom: 0, borderRadius: r + 'px ' + r + 'px 0 0', overflow: 'hidden', background: yuzey }}>
+                {ust('ustSol', 'ustSolG', 'ustSolY', false)}{ust('ustOrta', 'ustOrtaG', 'ustOrtaY', true)}{ust('ustSag', 'ustSagG', 'ustSagY', false)}
+            </div>
+            <div style={{ position: 'relative', height: 88, border: '1px solid rgb(var(--moss-500))', borderRadius: '0 0 14px 14px', background: yuzey, padding: 14 }}>
+                <div style={{ height: 8, width: '35%', borderRadius: 4, background: 'rgb(var(--moss-300))' }} />
+                <div style={{ height: 12, width: '75%', borderRadius: 6, background: 'rgb(var(--sand-300))', marginTop: 10 }} />
+                <div style={{ height: 8, width: '55%', borderRadius: 4, background: 'rgb(var(--sand-200))', marginTop: 8 }} />
+                {kutu('sol', { position: 'absolute', right: 'calc(100% - 1px)', top: '50%', transform: 'translateY(-50%)', width: g('yanG'), height: Math.min(g('yanY'), 150), borderRadius: yumusak ? '22px 0 0 22px' : '14px 0 0 14px' })}
+                {kutu('sag', { position: 'absolute', left: 'calc(100% - 1px)', top: '50%', transform: 'translateY(-50%)', width: g('yanG'), height: Math.min(g('yanY'), 150), borderRadius: yumusak ? '0 22px 22px 0' : '0 14px 14px 0' })}
+                {kutu('alt', { position: 'absolute', top: 'calc(100% - 1px)', left: '50%', transform: 'translateX(-50%)', width: Math.min(g('altG'), 260), height: g('altY'), borderRadius: '0 0 14px 14px' })}
+                {kutu('altSol', { position: 'absolute', top: 'calc(100% - 1px)', left: 0, width: g('kose'), height: g('kose'), borderRadius: '50%' })}
+                {kutu('altSag', { position: 'absolute', top: 'calc(100% - 1px)', right: 0, width: g('kose'), height: g('kose'), borderRadius: '50%' })}
+            </div>
+            <div style={{ height: Math.max(g('altY'), g('kose')) + 4 }} />
+        </div>
+    </div>;
+}
+
 export function TuvalAyarlari() {
     const t = useTuvalTercihleri();
     const koyu = useKoyuTema();
@@ -202,12 +235,13 @@ export function TuvalAyarlari() {
             </SettingsSection>
 
             {t.eylem !== 'panel' && <SettingsSection icon={SlidersHorizontal} tone="sand" title="Düğme boyutu"
-                description="Bitişik ve Yumuşak görünümde düğmelerin genişliğini ve yüksekliğini ayarlayın.">
-                <div className="space-y-3">
+                description="Üst şeritteki üç düğmenin her birinin, yan ve alt düğmelerin boyutunu ayarlayın. Önizleme değişikliği anında gösterir.">
+                <BoyutOnizleme b={t.boyut} yumusak={t.eylem === 'yumusak'} dugmeler={t.dugmeler} />
+                <div className="mt-4 space-y-3">
                     {(Object.entries(DUGME_BOYUTLARI) as [keyof typeof DUGME_BOYUTLARI, (typeof DUGME_BOYUTLARI)[keyof typeof DUGME_BOYUTLARI]][]).map(([anahtar, sinir]) => {
                         const deger = t.boyut[anahtar] ?? sinir.varsayilan;
                         return <label key={anahtar} className="flex flex-col gap-1.5 text-sm text-sand-800">
-                            <span className="flex items-center justify-between"><span>{sinir.ad}</span><span className="tabular-nums text-xs font-semibold text-moss-700">{deger} px</span></span>
+                            <span className="flex items-center justify-between"><span>{sinir.ad}</span><span className="tabular-nums text-xs font-semibold text-moss-700">{sinir.otomatik && deger <= sinir.min ? 'Otomatik' : deger + ' px'}</span></span>
                             <input type="range" id={'tuval-boyut-' + anahtar} min={sinir.min} max={sinir.max} step={2} value={deger} aria-label={sinir.ad}
                                 onChange={e => { const v = Number(e.target.value); const boyut = { ...t.boyut }; if (v === sinir.varsayilan) delete boyut[anahtar]; else boyut[anahtar] = v; tuvalTercihleriniKaydet({ ...t, boyut }); }}
                                 className="h-8 w-full accent-moss-600" />
