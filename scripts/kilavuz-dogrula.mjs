@@ -55,7 +55,7 @@ const checks = `
  for(const item of faq) assert.ok(body.includes(item.soru));
  const doc=readFileSync('play-store-paketi/belgeler/02-kullanim-kilavuzu.md','utf8');
  const html=readFileSync('play-store-paketi/belgeler/02-kullanim-kilavuzu.html','utf8');
- assert.ok(doc.includes('**Sürüm:** ${version}'));assert.ok(html.includes('${version}'));
+ assert.ok(!doc.includes('**Sürüm:**'));
  for(const level of levels)for(const lesson of level.dersler)for(const step of lesson.adimlar)assert.ok(doc.includes(step));
  for(const item of faq)assert.ok(doc.includes(item.cevap));
  console.log('PASS: SSS, uygulama ve dağıtım kılavuzu aynı sürümü ve içeriği gösteriyor');

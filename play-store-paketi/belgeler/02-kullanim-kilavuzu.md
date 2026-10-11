@@ -1,7 +1,5 @@
 # Not Bahçesi — Kullanım Kılavuzu
 
-**Sürüm:** 1.0.5
-
 Not Bahçesi, notlarını bir ağaç gibi büyütmen için tasarlandı. Her bahçe bir konu,
 her not bir ağaç, her alt not bir dal ya da yaprak.
 
@@ -113,7 +111,7 @@ Notlarınızı düzenlemeyi öğrenin: dallandırma, renkler, arama, tuval gör�
 *Düğmelere işlev verin, ağacı taşıyın.*
 
 1. Bitişik veya Yumuşak seçiliyken **Tuval ve ağaçlar → Görünüm → Kart menüsü** bölümünden her konumun işlevini seçin.
-2. Her konumun yanındaki düğmeye dokunun: **Araç ekle** sayfası açılır. Tek sayfada dört sekme vardır: **Hazır** (düzenle, kopyala, buda, yanına ve altına ekle, taşı, ayarlar, **Yok**), **Bilgisayar** (**Dikte**: konuşulanlar kartın içeriğine eklenir; **Köprü dikte**: konuşulanlar doğrudan bilgisayara yazılır. İkisi de Uzaktan araçlardaki dikte motorunu kullanır; düğme dinlerken "Yazıyor…" gösterir ve tekrar dokunmak durdurur. Ayrıca telefon klavyesiyle yazma penceresi, notu bilgisayara yazma, notu ya da telefon panosunu bilgisayar panosuna gönderme, bilgisayarda Enter; gruplar halinde listelenir), **Makrolar** ve **Yapay zekâ**.
+2. Her konumun yanındaki düğmeye dokunun: **Araç ekle** sayfası açılır. Tek sayfada dört sekme vardır: **Hazır** (düzenle, kopyala, buda, yanına ve altına ekle, taşı, ayarlar, **Yok**), **Bilgisayar** (**Dikte**: konuşulanlar kartın içeriğine eklenir; **Köprü dikte**: konuşulanlar doğrudan bilgisayara yazılır. İkisi de Uzaktan araçlardaki dikte motorunu kullanır; düğme dinlerken "Yazıyor…" gösterir ve tekrar dokunmak durdurur. Menü kapansa bile dikte sürerken kartın sol üstünde "Yazıyor · durdur" düğmesi kalır; ona dokunarak dinlemeyi durdurabilirsiniz. Ayrıca telefon klavyesiyle yazma penceresi, notu bilgisayara yazma, notu ya da telefon panosunu bilgisayar panosuna gönderme, bilgisayarda Enter; gruplar halinde listelenir), **Makrolar** ve **Yapay zekâ**.
 3. Makro ve yapay zekâ görevleri baş harf rozetiyle listelenir. Dokunduğunuz öğe o düğmeye bağlanır ve sayfa kapanır; yeni seçim öncekinin yerini alır. Üst üç düğme, yan, alt ve köşe konumlarının hepsine istediğinizi ekleyebilirsiniz.
 4. Yapay zekâ düğmesi notun içeriğini seçtiğiniz görevden geçirip notu günceller; bilgisayar araçları için bilgisayar bağlantısı açık olmalıdır.
 5. Ağacın tuvaldeki yerini değiştirmek için önce karta **kısa dokunup bırakın**. Menü açıkken karta yeniden **basılı tutup sürükleyin**; ağacın yeni konumu kaydedilir.
