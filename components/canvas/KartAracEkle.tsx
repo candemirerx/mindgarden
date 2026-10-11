@@ -9,7 +9,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { createPortal } from 'react-dom';
-import { Ban, Check, ClipboardList, ClipboardPaste, Copy, Mic, Smartphone, CornerDownLeft, Keyboard, Move, Pencil, Plus, Scissors, SlidersHorizontal, Sparkles, Wand2, X } from 'lucide-react';
+import { AudioLines, Ban, Check, ClipboardList, ClipboardPaste, Copy, Mic, Smartphone, CornerDownLeft, Keyboard, Move, Pencil, Plus, Scissors, SlidersHorizontal, Sparkles, Wand2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cx } from '@/components/ui/settings';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
@@ -34,13 +34,13 @@ const ACIKLAMA: Partial<Record<KartIslevi, string>> = {
     buda: 'Notu buda ya da geri al', sol: 'Sol yanına yeni not ekler', yan: 'Sağ yanına yeni not ekler',
     alt: 'Altına yeni not ekler', tasi: 'Ağacı sürükleyerek taşır', ayarlar: 'Ağaç ayarlarını açar',
     pcYaz: 'Notu bilgisayarda yazar', pcPano: 'Notu bilgisayar panosuna gönderir', pcEnter: 'Bilgisayara Enter tuşu yollar',
-    pcDikte: 'Konuşun, söyledikleriniz bilgisayara yazılsın', pcKlavye: 'Telefon klavyesiyle yazın, bilgisayara gönderin', pcTelPano: 'Telefon panosundaki metin ya da görseli bilgisayara yollar'
+    pcDikte: 'Konuşun, söyledikleriniz bu kartın içeriğine yazılsın', pcKopru: 'Konuşun, söyledikleriniz doğrudan bilgisayara yazılsın', pcKlavye: 'Telefon klavyesiyle yazın, bilgisayara gönderin', pcTelPano: 'Telefon panosundaki metin ya da görseli bilgisayara yollar'
 };
 export const SIMGE: Partial<Record<KartIslevi, ReactNode>> = {
     yok: <Ban size={18} />, editor: <Pencil size={18} />, kopya: <Copy size={18} />, buda: <Scissors size={18} />,
     sol: <Plus size={18} />, yan: <Plus size={18} />, alt: <Plus size={18} />, tasi: <Move size={18} />,
     ayarlar: <SlidersHorizontal size={18} />, pcYaz: <Keyboard size={18} />, pcPano: <ClipboardList size={18} />, pcEnter: <CornerDownLeft size={18} />,
-    pcDikte: <Mic size={18} />, pcKlavye: <Smartphone size={18} />, pcTelPano: <ClipboardPaste size={18} />
+    pcDikte: <Mic size={18} />, pcKopru: <AudioLines size={18} />, pcKlavye: <Smartphone size={18} />, pcTelPano: <ClipboardPaste size={18} />
 };
 
 type Sekme = 'hazir' | 'bilgisayar' | 'makro' | 'ai';
@@ -48,8 +48,8 @@ const SEKMELER: { id: Sekme; ad: string }[] = [
     { id: 'hazir', ad: 'Hazır' }, { id: 'bilgisayar', ad: 'Bilgisayar' }, { id: 'makro', ad: 'Makrolar' }, { id: 'ai', ad: 'Yapay zekâ' }
 ];
 const HAZIR: KartIslevi[] = ['editor', 'kopya', 'buda', 'sol', 'yan', 'alt', 'tasi', 'ayarlar', 'yok'];
-const BILGISAYAR: KartIslevi[] = ['pcDikte', 'pcKlavye', 'pcYaz', 'pcPano', 'pcTelPano', 'pcEnter'];
-const BILGISAYAR_GRUP: Partial<Record<KartIslevi, string>> = { pcDikte: 'Bilgisayara yaz', pcKlavye: 'Bilgisayara yaz', pcYaz: 'Bilgisayara yaz', pcPano: 'Pano', pcTelPano: 'Pano', pcEnter: 'Tuşlar' };
+const BILGISAYAR: KartIslevi[] = ['pcDikte', 'pcKopru', 'pcKlavye', 'pcYaz', 'pcPano', 'pcTelPano', 'pcEnter'];
+const BILGISAYAR_GRUP: Partial<Record<KartIslevi, string>> = { pcDikte: 'Dikte', pcKopru: 'Dikte', pcKlavye: 'Bilgisayara yaz', pcYaz: 'Bilgisayara yaz', pcPano: 'Pano', pcTelPano: 'Pano', pcEnter: 'Tuşlar' };
 
 type Oge = { anahtar: string; islev: KartIslevi; kimlik?: string; ad: string; aciklama: string; simge: ReactNode; grup?: string };
 
