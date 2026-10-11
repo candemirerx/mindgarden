@@ -6,10 +6,10 @@
  * listelenir; makro ve görevler baş harf rozetiyle görünür. Tek dokunuş seçimi
  * kaydeder ve sayfayı kapatır.
  */
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { createPortal } from 'react-dom';
-import { Ban, Check, ClipboardList, Copy, CornerDownLeft, Keyboard, Move, Pencil, Plus, Scissors, SlidersHorizontal, Sparkles, Wand2, X } from 'lucide-react';
+import { Ban, Check, ClipboardList, ClipboardPaste, Copy, Mic, Smartphone, CornerDownLeft, Keyboard, Move, Pencil, Plus, Scissors, SlidersHorizontal, Sparkles, Wand2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cx } from '@/components/ui/settings';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
@@ -33,12 +33,14 @@ const ACIKLAMA: Partial<Record<KartIslevi, string>> = {
     yok: 'Bu konumda düğme gösterme', editor: 'Metin editörünü açar', kopya: 'Not içeriğini panoya kopyalar',
     buda: 'Notu buda ya da geri al', sol: 'Sol yanına yeni not ekler', yan: 'Sağ yanına yeni not ekler',
     alt: 'Altına yeni not ekler', tasi: 'Ağacı sürükleyerek taşır', ayarlar: 'Ağaç ayarlarını açar',
-    pcYaz: 'Notu bilgisayarda yazar', pcPano: 'Notu bilgisayar panosuna gönderir', pcEnter: 'Bilgisayara Enter tuşu yollar'
+    pcYaz: 'Notu bilgisayarda yazar', pcPano: 'Notu bilgisayar panosuna gönderir', pcEnter: 'Bilgisayara Enter tuşu yollar',
+    pcDikte: 'Konuşun, söyledikleriniz bilgisayara yazılsın', pcKlavye: 'Telefon klavyesiyle yazın, bilgisayara gönderin', pcTelPano: 'Telefon panosundaki metin ya da görseli bilgisayara yollar'
 };
 export const SIMGE: Partial<Record<KartIslevi, ReactNode>> = {
     yok: <Ban size={18} />, editor: <Pencil size={18} />, kopya: <Copy size={18} />, buda: <Scissors size={18} />,
     sol: <Plus size={18} />, yan: <Plus size={18} />, alt: <Plus size={18} />, tasi: <Move size={18} />,
-    ayarlar: <SlidersHorizontal size={18} />, pcYaz: <Keyboard size={18} />, pcPano: <ClipboardList size={18} />, pcEnter: <CornerDownLeft size={18} />
+    ayarlar: <SlidersHorizontal size={18} />, pcYaz: <Keyboard size={18} />, pcPano: <ClipboardList size={18} />, pcEnter: <CornerDownLeft size={18} />,
+    pcDikte: <Mic size={18} />, pcKlavye: <Smartphone size={18} />, pcTelPano: <ClipboardPaste size={18} />
 };
 
 type Sekme = 'hazir' | 'bilgisayar' | 'makro' | 'ai';
@@ -46,9 +48,10 @@ const SEKMELER: { id: Sekme; ad: string }[] = [
     { id: 'hazir', ad: 'Hazır' }, { id: 'bilgisayar', ad: 'Bilgisayar' }, { id: 'makro', ad: 'Makrolar' }, { id: 'ai', ad: 'Yapay zekâ' }
 ];
 const HAZIR: KartIslevi[] = ['editor', 'kopya', 'buda', 'sol', 'yan', 'alt', 'tasi', 'ayarlar', 'yok'];
-const BILGISAYAR: KartIslevi[] = ['pcYaz', 'pcPano', 'pcEnter'];
+const BILGISAYAR: KartIslevi[] = ['pcDikte', 'pcKlavye', 'pcYaz', 'pcPano', 'pcTelPano', 'pcEnter'];
+const BILGISAYAR_GRUP: Partial<Record<KartIslevi, string>> = { pcDikte: 'Bilgisayara yaz', pcKlavye: 'Bilgisayara yaz', pcYaz: 'Bilgisayara yaz', pcPano: 'Pano', pcTelPano: 'Pano', pcEnter: 'Tuşlar' };
 
-type Oge = { anahtar: string; islev: KartIslevi; kimlik?: string; ad: string; aciklama: string; simge: ReactNode };
+type Oge = { anahtar: string; islev: KartIslevi; kimlik?: string; ad: string; aciklama: string; simge: ReactNode; grup?: string };
 
 /** Bir konumun şu anki işlevinin okunur adı (ayarlar satırında gösterilir). */
 export function islevAdi(islev: KartIslevi, kimlik: string | undefined, macros: RemoteMacro[]): { ad: string; harf?: string } {
@@ -65,7 +68,7 @@ export default function KartAracEkle({ yerKey, onKapat }: { yerKey: string; onKa
     const [sekme, setSekme] = useState<Sekme>(simdiki === 'makro' ? 'makro' : simdiki === 'aiMakro' ? 'ai' : BILGISAYAR.includes(simdiki) ? 'bilgisayar' : 'hazir');
     const [secili, setSecili] = useState<string>(simdiki + ':' + (simdikiKimlik ?? ''));
 
-    const hazirOge = (islev: KartIslevi): Oge => ({ anahtar: islev + ':', islev, ad: KART_ISLEVLERI[islev], aciklama: ACIKLAMA[islev] ?? '', simge: SIMGE[islev] });
+    const hazirOge = (islev: KartIslevi): Oge => ({ anahtar: islev + ':', islev, ad: KART_ISLEVLERI[islev], aciklama: ACIKLAMA[islev] ?? '', simge: SIMGE[islev], grup: sekme === 'bilgisayar' ? BILGISAYAR_GRUP[islev] : undefined });
     const ogeler: Oge[] = sekme === 'hazir' ? HAZIR.map(hazirOge)
         : sekme === 'bilgisayar' ? BILGISAYAR.map(hazirOge)
         : sekme === 'makro' ? prefs.macros.filter(makroHazir).map(m => ({ anahtar: 'makro:' + m.id, islev: 'makro' as const, kimlik: m.id, ad: m.name.trim() || 'Adsız makro', aciklama: TUR_ADI[m.type], simge: <span className="text-sm font-bold">{basHarf(m.name)}</span> }))
@@ -122,10 +125,11 @@ export default function KartAracEkle({ yerKey, onKapat }: { yerKey: string; onKa
                 </div>
             </header>
             <main className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+                {sekme === 'bilgisayar' && <p className="mb-3 rounded-2xl bg-moss-50 px-3 py-2 text-xs leading-snug text-moss-800">Bu araçlar bağlı bilgisayarda çalışır. Bağlantı yoksa düğmeye dokununca uyarı görürsünüz.</p>}
                 {ogeler.length ? <div role="radiogroup" aria-label="Araçlar" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {ogeler.map(oge => {
+                    {ogeler.map((oge, i) => {
                         const act = secili === oge.anahtar;
-                        return <button key={oge.anahtar} type="button" role="radio" aria-checked={act} data-arac={oge.anahtar} onClick={() => sec(oge)}
+                        return <Fragment key={oge.anahtar}>{oge.grup && oge.grup !== ogeler[i - 1]?.grup && <p className="col-span-full mt-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-sand-500">{oge.grup}</p>}<button type="button" role="radio" aria-checked={act} data-arac={oge.anahtar} onClick={() => sec(oge)}
                             className={cx('flex items-center gap-3 rounded-2xl border bg-white p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40', act ? 'border-moss-500 bg-moss-50' : 'border-sand-200 hover:border-sand-300')}>
                             <span aria-hidden="true" className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', act ? 'bg-moss-600 text-white' : 'bg-moss-100 text-moss-700')}>{oge.simge}</span>
                             <span className="min-w-0 flex-1">
@@ -133,7 +137,7 @@ export default function KartAracEkle({ yerKey, onKapat }: { yerKey: string; onKa
                                 <span className="block truncate text-[11px] text-sand-500">{oge.aciklama}</span>
                             </span>
                             {act && <Check size={18} className="shrink-0 text-moss-600" aria-hidden="true" />}
-                        </button>;
+                        </button></Fragment>;
                     })}
                 </div>
                     : <div className="flex h-full flex-col items-center justify-center gap-2 text-center">

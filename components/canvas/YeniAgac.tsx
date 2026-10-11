@@ -15,12 +15,13 @@
  * İlk uzun basış seçenekleri açar; kaydırıp bırakınca seçilen işlem uygulanır.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, ClipboardList, Copy, CornerDownLeft, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, TreePine, Wand2 } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, ClipboardPaste, Copy, Mic, Smartphone, CornerDownLeft, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, TreePine, Wand2 } from 'lucide-react';
 import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
 import { VARSAYILAN_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
-import { makroHazir, sendKey, sendToComputerClipboard, typeOnComputer } from '@/lib/remoteTools';
+import { dictate, makroHazir, sendKey, sendToComputerClipboard, telefonPanosunuBilgisayaraGonder, typeOnComputer } from '@/lib/remoteTools';
+import PcHizliYaz from './PcHizliYaz';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { makroCalisiyor, makroyuBaslat, makroyuDurdur } from '@/lib/makroCalistirici';
 import { readEnabledMacros } from '@/lib/aiMacro';
@@ -208,6 +209,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
     const [kopyalandi, setKopyalandi] = useState(false);
+    const [pcKlavyeAcik, setPcKlavyeAcik] = useState(false);
     const prefs = useRemotePrefs();
     const disMenu = eylem === 'panel';
     const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined);
@@ -323,7 +325,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const yaricap = kart === 'hap' ? 9999 : kart === 'sade' ? 12 : kart === 'renkli' ? 16 : tur === 'kok' ? 24 : tur === 'branch' ? 18 : 16;
     const dugme = (id: string, ana = false) => `${ARAC} ${ana ? 'kart-eylem--ana' : ''} ${hareket.hedef === id ? 'kart-eylem--hedef' : ''}`;
     const tasi = () => hareket.kap.current?.dispatchEvent(new CustomEvent('nb-agac-tasi', { bubbles: true }));
-    const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları', makro: 'Makro seçilmedi', pcYaz: 'Bilgisayara yaz', pcPano: 'Bilgisayar panosuna gönder', pcEnter: 'Bilgisayarda Enter' };
+    const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları', makro: 'Makro seçilmedi', pcYaz: 'Bilgisayara yaz', pcPano: 'Bilgisayar panosuna gönder', pcEnter: 'Bilgisayarda Enter', pcDikte: 'Bilgisayara sesle yaz', pcKlavye: 'Telefon klavyesiyle yaz', pcTelPano: 'Telefon panosunu gönder' };
     const makrolar = prefs.macros.filter(makroHazir);
     const makro = (yer: keyof KartDugmeleri) => dugmeler[yer] === 'makro' ? makrolar.find(m => m.id === (kartMakrolari ?? {})[yer]) ?? null : null;
     const makroBilgisi = (yer: keyof KartDugmeleri) => {
@@ -392,6 +394,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         else if (id === 'pcYaz') pcAktar(() => typeOnComputer(notGovdesi(), prefs));
         else if (id === 'pcPano') pcAktar(() => sendToComputerClipboard(notGovdesi(), prefs));
         else if (id === 'pcEnter') pcAktar(() => sendKey('ENTER', prefs));
+        else if (id === 'pcDikte') pcAktar(async () => { const soylenen = (await dictate(prefs.dictationLanguage)).trim(); if (!soylenen) throw new Error('Ses algılanamadı.'); await typeOnComputer(soylenen, prefs); });
+        else if (id === 'pcKlavye') setPcKlavyeAcik(true);
+        else if (id === 'pcTelPano') pcAktar(async () => { await telefonPanosunuBilgisayaraGonder(prefs); });
     };
     const simge = (id: KartIslevi) => {
         if (id === 'editor') return <Pencil size={18} />;
@@ -402,6 +407,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         if (id === 'pcYaz') return <Keyboard size={17} />;
         if (id === 'pcPano') return <ClipboardList size={17} />;
         if (id === 'pcEnter') return <CornerDownLeft size={17} />;
+        if (id === 'pcDikte') return <Mic size={17} />;
+        if (id === 'pcKlavye') return <Smartphone size={17} />;
+        if (id === 'pcTelPano') return <ClipboardPaste size={17} />;
         if (id === 'aiMakro') return <Sparkles size={17} />;
         return <Plus size={17} />;
     };
@@ -411,7 +419,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         const ust = yer.startsWith('ust');
         const bilgi = makroBilgisi(yer);
         const aiBilgi = aiGorevBilgisi(yer);
-        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'pcEnter' ? 'Enter' : id === 'aiMakro' ? 'Yapay zekâ' : 'Düzenle';
+        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'pcEnter' ? 'Enter' : id === 'pcDikte' ? 'Sesle yaz' : id === 'pcKlavye' ? 'PC klavye' : id === 'pcTelPano' ? 'Telefon pano' : id === 'aiMakro' ? 'Yapay zekâ' : 'Düzenle';
         return <button key={yer} data-kart-yer={yer} data-kart-eylem={id} type="button"
             onClick={e => {
                 e.stopPropagation();
@@ -453,6 +461,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
                 style={{ borderRadius: yaricap, touchAction: 'none' }}>
                 {govde}
             </div>
+            {pcKlavyeAcik && <PcHizliYaz prefs={prefs} onKapat={() => setPcKlavyeAcik(false)} />}
             {cocukSayisi > 0 && !araclar && (
                 <button type="button" onClick={acKapa} aria-expanded={acik} title={acik ? 'Dalları kapat' : 'Dalları aç'} aria-label={acik ? 'Dalları kapat' : 'Dalları aç'}
                     className="absolute bottom-0 right-0 z-30 flex h-10 w-10 translate-x-1/3 translate-y-1/3 items-center justify-center touch-manipulation">

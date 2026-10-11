@@ -154,7 +154,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 description: 'Düğmelere işlev verin, ağacı taşıyın.',
                 adimlar: [
                     'Bitişik veya Yumuşak seçiliyken **Tuval ve ağaçlar → Görünüm → Kart menüsü** bölümünden her konumun işlevini seçin.',
-                    'Her konumun yanındaki düğmeye dokunun: **Araç ekle** sayfası açılır. Tek sayfada dört sekme vardır: **Hazır** (düzenle, kopyala, buda, yanına ve altına ekle, taşı, ayarlar, **Yok**), **Bilgisayar** (bilgisayara yaz, bilgisayar panosuna gönder, bilgisayarda Enter), **Makrolar** ve **Yapay zekâ**.',
+                    'Her konumun yanındaki düğmeye dokunun: **Araç ekle** sayfası açılır. Tek sayfada dört sekme vardır: **Hazır** (düzenle, kopyala, buda, yanına ve altına ekle, taşı, ayarlar, **Yok**), **Bilgisayar** (sesle yazma, telefon klavyesiyle yazma penceresi, notu bilgisayara yazma, notu ya da telefon panosunu bilgisayar panosuna gönderme, bilgisayarda Enter; gruplar halinde listelenir), **Makrolar** ve **Yapay zekâ**.',
                     'Makro ve yapay zekâ görevleri baş harf rozetiyle listelenir. Dokunduğunuz öğe o düğmeye bağlanır ve sayfa kapanır; yeni seçim öncekinin yerini alır. Üst üç düğme, yan, alt ve köşe konumlarının hepsine istediğinizi ekleyebilirsiniz.',
                     'Yapay zekâ düğmesi notun içeriğini seçtiğiniz görevden geçirip notu günceller; bilgisayar araçları için bilgisayar bağlantısı açık olmalıdır.',
                     'Ağacın tuvaldeki yerini değiştirmek için önce karta **kısa dokunup bırakın**. Menü açıkken karta yeniden **basılı tutup sürükleyin**; ağacın yeni konumu kaydedilir.',
