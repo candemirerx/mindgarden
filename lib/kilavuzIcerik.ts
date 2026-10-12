@@ -47,6 +47,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     'Notlarınız **bahçelerde** durur. Her bahçe bir konu ya da proje gibidir: "Kitap", "Ders notları", "İş" gibi.',
                     'Bir bahçenin içinde **ağaçlar** vardır. Ağacın altına **dal** (alt başlık) ve **yaprak** (not) eklersiniz; böylece notlar iç içe, düzenli kalır.',
                     'Notlarınız önce **bu telefonda** saklanır. İnternet olmadan da çalışır.',
+                    'Başlangıç dersinde **Uygulamalı öğren** düğmesine basarsanız uygulama sizi adım adım gezdirir; istediğiniz an atlayabilirsiniz.',
                 ],
             },
             {

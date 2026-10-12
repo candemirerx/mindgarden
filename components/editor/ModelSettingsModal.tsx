@@ -15,6 +15,7 @@ import SettingsHome, { SETTINGS_SECTIONS, bolumuNormallestir } from './SettingsH
 import type { SettingsSectionId } from './SettingsHome';
 import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
+import { turuBaslat } from '@/lib/turAdimlari';
 import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
 import { readAiMacros, saveAiMacros, createMacro, DEFAULT_MACROS, SPELLCHECK_MACRO_ID } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
@@ -389,7 +390,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                         title="Kullanım kılavuzu"
                                         description="Başlangıçtan uzmana beş seviye: ilk notunuzdan bilgisayar araçlarına kadar istediğiniz kadarını öğrenin."
                                     />
-                                    <UsageGuide onNavigate={setActiveTab} />
+                                    <UsageGuide onNavigate={setActiveTab} onTurBaslat={() => { onClose(); turuBaslat(); }} />
                                 </>
                             )}
                             {activeTab === 'models' && <AiSettings />}

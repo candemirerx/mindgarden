@@ -12,6 +12,7 @@ import {
     Cpu,
     Download,
     GraduationCap,
+    PlayCircle,
     HelpCircle,
     Keyboard,
     LayoutDashboard,
@@ -48,6 +49,8 @@ import { SEVIYELER, SSS, type KilavuzIkonu, type KilavuzSeviyesi } from '@/lib/k
 interface UsageGuideProps {
     /** Kılavuzdan ilgili ayar bölümüne geçmek için. */
     onNavigate?: (id: SettingsSectionId) => void;
+    /** Uygulamalı turu başlatır (ayarlar kapanır, tur ana ekranda çalışır). */
+    onTurBaslat?: () => void;
 }
 
 /** Veri dosyasındaki simge adlarının bileşenleri. */
@@ -81,7 +84,7 @@ function metinParcalari(metin: string): ReactNode[] {
     );
 }
 
-export default function UsageGuide({ onNavigate }: UsageGuideProps) {
+export default function UsageGuide({ onNavigate, onTurBaslat }: UsageGuideProps) {
     const [seviyeId, setSeviyeId] = useState(SEVIYELER[0].id);
     const [ogrenilen, setOgrenilen] = useState<string[]>([]);
     const [acikDers, setAcikDers] = useState<string | null>(null);
@@ -244,6 +247,15 @@ export default function UsageGuide({ onNavigate }: UsageGuideProps) {
                                         >
                                             <Check size={16} aria-hidden="true" /> {ogrenildi ? 'Öğrenildi' : 'Öğrendim'}
                                         </button>
+                                        {seviyeSira === 0 && onTurBaslat && (
+                                            <button
+                                                type="button"
+                                                onClick={onTurBaslat}
+                                                className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-moss-700 px-3.5 text-sm font-semibold text-white transition-colors hover:bg-moss-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500"
+                                            >
+                                                <PlayCircle size={16} aria-hidden="true" /> Uygulamalı öğren
+                                            </button>
+                                        )}
                                         {ders.ayarId && onNavigate && (
                                             <button
                                                 type="button"

@@ -14,6 +14,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Garden } from '@/lib/types';
 
 // Sidebar'ı lazy load et - ilk yüklemede ağırlık yaratmasın
+import UygulamaliTur from '@/components/tour/UygulamaliTur';
 const Sidebar = lazy(() => import('@/components/layout/Sidebar'));
 
 // Garden kartını ayrı component olarak memoize et
@@ -54,7 +55,7 @@ const GardenCard = memo(function GardenCard({
     const menuButtonRef = useRef<HTMLButtonElement>(null);
 
     return (
-        <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-card transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-moss-200 hover:shadow-lift">
+        <div data-tur="bahce-karti" className="group relative flex flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-card transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-moss-200 hover:shadow-lift">
             {/* Bahçe kimliğini taşıyan ince şerit */}
             <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-moss-600 via-moss-400 to-clay-300 opacity-70 transition-opacity duration-200 group-hover:opacity-100" />
 
@@ -319,6 +320,7 @@ export default function HomePage() {
                     <div className="flex items-center gap-3.5">
                         <button
                             onClick={() => { setSettingsEntry('home'); setSidebarOpen(true); }}
+                            data-tur="ayarlar"
                             title="Ayarlar"
                             aria-label="Ayarları aç"
                             aria-haspopup="dialog"
@@ -348,6 +350,7 @@ export default function HomePage() {
                             )}
                             <button
                                 onClick={() => setIsModalOpen(true)}
+                                data-tur="yeni-bahce"
                                 className="btn btn-primary w-full px-5 py-3 md:w-auto md:px-6"
                             >
                                 <Plus size={19} />
@@ -446,6 +449,8 @@ export default function HomePage() {
                     )}
                 </main>
             </div>
+
+            <UygulamaliTur />
 
             <CreateGardenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 

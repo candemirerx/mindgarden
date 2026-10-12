@@ -29,6 +29,7 @@ Uygulamayı ilk kez açtıysanız buradan başlayın. Bu seviyenin sonunda ilk b
 1. Notlarınız **bahçelerde** durur. Her bahçe bir konu ya da proje gibidir: "Kitap", "Ders notları", "İş" gibi.
 2. Bir bahçenin içinde **ağaçlar** vardır. Ağacın altına **dal** (alt başlık) ve **yaprak** (not) eklersiniz; böylece notlar iç içe, düzenli kalır.
 3. Notlarınız önce **bu telefonda** saklanır. İnternet olmadan da çalışır.
+4. Başlangıç dersinde **Uygulamalı öğren** düğmesine basarsanız uygulama sizi adım adım gezdirir; istediğiniz an atlayabilirsiniz.
 
 ### 1.2 İlk bahçenizi kurun
 
@@ -268,7 +269,7 @@ Telefonunuzu bilgisayarın klavyesi, faresi ve panosu gibi kullanın. Bu seviyen
 1. **Fare** aracında yüzeyde parmağınızı kaydırınca imleç hareket eder; dokunmak sol tıktır. Alttaki düğmelerle sağ tık ve kaydırma yapılır.
 2. **Dikte** konuşmanızı yazıya çevirir. Sonucun **nota**, **bilgisayara** ya da **ikisine birden** yazılacağını **Ayarlar → Bilgisayar araçları** listesinde Dikte satırındaki **dişli** simgesinden seçersiniz.
 3. **Bilgisayara Yaz** notu bilgisayara yazar. Aracın dişlisinden biçimi seçersiniz: **Düğmeyle** (notun tamamı bir kerede) ya da **Yazdıkça canlı** (notta yazdığınız her şey anında bilgisayara da yazılır). Hedef olarak bilgisayar, not metni ya da ikisi birden seçilebilir.
-4. **Köprü Dikte** konuşurken yazar: sözünüz cümle sonu beklenmeden görünür. Nereye yazılacağını (nota, bilgisayara ya da ikisine birden), dinleme süresini ve durdurana kadar dinleme seçeneğini aracın kendi **dişli** simgesinden ayarlarsınız. Ses tanıma motorunu ise **Bilgisayar bağlantısı → Dikte motoru** bölümünden seçersiniz.
+4. **Köprü Dikte** konuşurken yazar: sözünüz cümle sonu beklenmeden görünür. Nereye yazılacağını (nota, bilgisayara ya da ikisine birden), dinleme süresini ve durdurana kadar dinleme seçeneğini aracın kendi **dişli** simgesinden ayarlarsınız. Ses tanıma motorunu ise **Bilgisayar bağlantısı → Dikte motoru** bölümünden seçersiniz (telefon, ya da kendi anahtarınızla OpenAI, Gemini, Groq, Deepgram veya özel bir API). Aynı sayfadaki **Dikte tuşları** ile kulaklığın oynat/duraklat, sonraki, önceki komutlarına ve telefonun ses tuşlarına dikte başlat/durdur atayabilirsiniz; telefon tuşunda basılı tutarken dikte de seçilebilir. Tuşlar yalnız Android uygulamasında ve editör açıkken çalışır.
 
 ### 4.8 PC yardımcısı ne zaman gerekir?
 
