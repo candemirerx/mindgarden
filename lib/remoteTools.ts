@@ -18,6 +18,34 @@ export type YazBicimi = 'dugme' | 'canli';
 export const hedefNota = (h: DikteHedefi) => h !== 'computer';
 export const hedefBilgisayara = (h: DikteHedefi) => h !== 'editor';
 
+/** Bir tuşa atanabilecek dikte eylemi. hold: basılı tutarken dikte (yalnız telefon ses tuşlarında). */
+export type DikteTusEylemi = 'none' | 'start' | 'stop' | 'toggle' | 'hold';
+export type DikteTuslari = {
+    /** Kulaklığın Oynat/duraklat, Sonraki ve Önceki komutları. */
+    play: DikteTusEylemi; next: DikteTusEylemi; prev: DikteTusEylemi;
+    /** Telefonun ses artır / azalt tuşları (uygulama öndeyken). */
+    volUp: DikteTusEylemi; volDown: DikteTusEylemi;
+    /** Bluetooth kulaklık bağlıyken medya sesinin artması / azalması. */
+    btVolUp: DikteTusEylemi; btVolDown: DikteTusEylemi;
+    /** Tuşların başlattığı araç: Dikte (nota) ya da Köprü Dikte (bilgisayara). */
+    tool: 'dictation' | 'bridgeDictation';
+};
+export const VARSAYILAN_DIKTE_TUSLARI: DikteTuslari = { play: 'none', next: 'none', prev: 'none', volUp: 'none', volDown: 'none', btVolUp: 'none', btVolDown: 'none', tool: 'dictation' };
+const TUS_ANAHTARLARI = ['play', 'next', 'prev', 'volUp', 'volDown', 'btVolUp', 'btVolDown'] as const;
+export function dikteTuslariniDuzelt(v: unknown): DikteTuslari {
+    const kayit = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+    const gecerli = ['none', 'start', 'stop', 'toggle', 'hold'];
+    const sonuc: DikteTuslari = { ...VARSAYILAN_DIKTE_TUSLARI };
+    for (const k of TUS_ANAHTARLARI) {
+        const e = kayit[k];
+        // Kulaklık komutları ve ses seviyesi tetikleyicisi basılı tutmayı ayırt edemez.
+        sonuc[k] = gecerli.includes(e as string) && !(e === 'hold' && k !== 'volUp' && k !== 'volDown') ? e as DikteTusEylemi : 'none';
+    }
+    sonuc.tool = kayit.tool === 'bridgeDictation' ? 'bridgeDictation' : 'dictation';
+    return sonuc;
+}
+
+
 export type ConnectionMode = 'wifi' | 'bluetooth' | 'pc-wifi' | 'pc-bluetooth';
 /**
  * Kurulum ekranındaki altı bağlantı türü. İkisi, mantıkta mevcut yolların
@@ -240,7 +268,9 @@ export type RemotePrefs = {
      */
     dictationEngine: 'auto' | 'google' | 'device' | 'system' | 'cloud';
     /** dictationEngine 'cloud' iken kullanılan servis (kendi API anahtarıyla). */
-    dictationCloud: 'openai' | 'gemini' | 'groq';
+    dictationCloud: 'openai' | 'gemini' | 'groq' | 'deepgram' | 'custom';
+    /** Kulaklık ve telefon tuşlarının dikteye atamaları (yalnız Android uygulamasında çalışır). */
+    dictationKeys: DikteTuslari;
     appendDictation: boolean;
     dictationTarget: DikteHedefi;
     /** Köprü Dikte'nin yazacağı yer; varsayılan yalnız bilgisayar. */
@@ -265,7 +295,7 @@ export type RemotePrefs = {
 const key = 'nb-remote-prefs-v1';
 const defaults: RemotePrefs = {
     connection: 'wifi', cardUrl: 'http://192.168.4.1', helperUrl: '', helperToken: '', helperBluetoothAddress: '', autoBaglan: true,
-    mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', appendDictation: true, dictationTarget: 'editor', bridgeDictationTarget: 'computer', writeMode: 'dugme', writeTarget: 'both',
+    mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', dictationKeys: { ...VARSAYILAN_DIKTE_TUSLARI }, appendDictation: true, dictationTarget: 'editor', bridgeDictationTarget: 'computer', writeMode: 'dugme', writeTarget: 'both',
     enabledTools: { mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, enter: true, clipboard: true, imageToComputer: true, imageToClipboard: true, phoneClipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
 };
 
@@ -284,7 +314,7 @@ export function remotePrefs(): RemotePrefs {
     if (typeof window === 'undefined') return defaults;
     try {
         const data = JSON.parse(localStorage.getItem(key) || '{}');
-        return { ...defaults, ...data, dictationTarget: dikteHedefiGecerli(data.dictationTarget, defaults.dictationTarget), bridgeDictationTarget: dikteHedefiGecerli(data.bridgeDictationTarget, defaults.bridgeDictationTarget), writeMode: data.writeMode === 'canli' ? 'canli' : 'dugme', writeTarget: dikteHedefiGecerli(data.writeTarget, defaults.writeTarget), enabledTools: araclariBirlestir(data.enabledTools), macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts.map(normalizeScreenLayout) : [] };
+        return { ...defaults, ...data, dictationKeys: dikteTuslariniDuzelt(data.dictationKeys), dictationTarget: dikteHedefiGecerli(data.dictationTarget, defaults.dictationTarget), bridgeDictationTarget: dikteHedefiGecerli(data.bridgeDictationTarget, defaults.bridgeDictationTarget), writeMode: data.writeMode === 'canli' ? 'canli' : 'dugme', writeTarget: dikteHedefiGecerli(data.writeTarget, defaults.writeTarget), enabledTools: araclariBirlestir(data.enabledTools), macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts.map(normalizeScreenLayout) : [] };
     } catch { return defaults; }
 }
 /** Tercihlerden seçili bağlantı türü. */
@@ -389,6 +419,7 @@ type NativeRemote = {
     startBridgeDictation(options: { language: string; seconds: number; engine?: string }): Promise<{ text: string }>;
     getDictationEngines(): Promise<{ onDevice: boolean; system: boolean; google?: boolean }>;
     stopBridgeDictation(): Promise<void>;
+    setDictationKeys(options: Record<string, string>): Promise<void>;
     setImmersive(options: { enabled: boolean }): Promise<void>;
     readClipboard(): Promise<{ text?: string; mime?: string; data?: string; turler?: string[]; ogeSayisi?: number }>;
     setImagePaste(options: { enabled: boolean }): Promise<void>;
@@ -1404,5 +1435,22 @@ export async function dinleKopruDikte(geriCagri: (olay: BridgeDictationEvent) =>
         const kayit = (veri ?? {}) as { text?: unknown; kesin?: unknown };
         const tam = typeof kayit.text === 'string' ? kayit.text : '';
         geriCagri({ text: tam, kesin: typeof kayit.kesin === 'string' ? kayit.kesin : tam });
+    });
+}
+
+
+/** Tuş atamalarını Android'e iletir (atama yoksa kulaklık oturumu kapanır). Web'de bir şey yapmaz. */
+export async function dikteTuslariniUygula(tuslar: DikteTuslari): Promise<void> {
+    if (!isNative()) return;
+    const { tool: _arac, ...eylemler } = tuslar;
+    try { await native.setDictationKeys(eylemler); } catch { /* eski sürümde yok */ }
+}
+
+/** Kulaklık / telefon tuşundan gelen dikte komutunu dinler: start, stop ya da toggle. */
+export async function dinleDikteTusu(geriCagri: (eylem: 'start' | 'stop' | 'toggle') => void): Promise<{ remove: () => Promise<void> } | null> {
+    if (!isNative()) return null;
+    return native.addListener('dikteTusu', (veri: unknown) => {
+        const e = (veri as { action?: unknown } | null)?.action;
+        if (e === 'start' || e === 'stop' || e === 'toggle') geriCagri(e);
     });
 }

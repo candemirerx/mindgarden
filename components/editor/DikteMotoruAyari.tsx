@@ -1,16 +1,17 @@
 'use client';
 
 /**
- * Dikte motoru seçimi: Yapay zekâ ayarlarındaki gibi üç sekme.
+ * Dikte motoru seçimi: üç sekme.
  *  - Telefon: ücretsiz, anahtarsız (Google – Gboard ile aynı, cihaz içi, varsayılan).
- *  - Bulut: kendi API anahtarıyla OpenAI / Gemini / Groq; OpenAI ve Gemini,
- *    yapay zekâdaki anahtarı kullanır.
+ *  - Bulut: kendi API anahtarıyla OpenAI / Gemini / Groq / Deepgram ya da özel
+ *    bir API (OpenAI ya da Deepgram biçiminde); OpenAI ve Gemini, yapay
+ *    zekâdaki anahtarı kullanır.
  *  - Yerel: indirilebilir Whisper modeli (sonraki sürüm).
  * Seçilen motoru Köprü Dikte kullanır; Bulut seçiliyse Dikte düğmesi de.
  */
 import { useEffect, useState } from 'react';
 import { Check, Cloud, Cpu, ExternalLink, Eye, EyeOff, Loader2, Mic, Smartphone } from 'lucide-react';
-import { BULUT_SAGLAYICILAR, SesKaydedici, bulutAnahtari, bulutAnahtariKaydet, bulutModeli, bulutModeliKaydet, sesiYaziyaCevir, type BulutSaglayici } from '@/lib/bulutDikte';
+import { BULUT_SAGLAYICILAR, SesKaydedici, adresHatasi, bulutAdresi, bulutAdresiKaydet, bulutAnahtari, bulutAnahtariKaydet, bulutModeli, bulutModeliKaydet, ozelBicim, ozelBicimKaydet, sesiYaziyaCevir, type BulutSaglayici, type OzelBicim } from '@/lib/bulutDikte';
 import type { RemotePrefs } from '@/lib/remoteTools';
 import { SettingsField, SettingsNote, cx, settingsFieldClass } from '@/components/ui/settings';
 
@@ -30,17 +31,27 @@ export default function DikteMotoruAyari({ prefs, update, motorlar, telefon }: {
     const [saglayici, setSaglayici] = useState<BulutSaglayici>(prefs.dictationCloud);
     const [anahtar, setAnahtar] = useState('');
     const [model, setModel] = useState('');
+    const [adres, setAdres] = useState('');
+    const [bicim, setBicim] = useState<OzelBicim>('openai');
     const [goster, setGoster] = useState(false);
     const [deneme, setDeneme] = useState<{ durum: 'kayit' | 'gonder' | 'ok' | 'hata'; metin: string } | null>(null);
-    useEffect(() => { setAnahtar(bulutAnahtari(saglayici)); setModel(bulutModeli(saglayici)); setDeneme(null); }, [saglayici]);
+    useEffect(() => { setAnahtar(bulutAnahtari(saglayici)); setModel(bulutModeli(saglayici)); setAdres(bulutAdresi(saglayici)); setBicim(ozelBicim()); setDeneme(null); }, [saglayici]);
 
     const bilgi = BULUT_SAGLAYICILAR.find(b => b.id === saglayici)!;
+    const adresGerekli = saglayici === 'deepgram' || saglayici === 'custom';
+    const adresSorunu = adresGerekli ? adresHatasi(adres) : null;
+    const kaydet = () => {
+        bulutAnahtariKaydet(saglayici, anahtar); bulutModeliKaydet(saglayici, model);
+        if (adresGerekli) bulutAdresiKaydet(saglayici, adres);
+        if (saglayici === 'custom') ozelBicimKaydet(bicim);
+    };
     const kullanilan = bulutSecili
         ? 'Bulut · ' + (BULUT_SAGLAYICILAR.find(b => b.id === prefs.dictationCloud)?.ad ?? '')
         : (telefon ? 'Telefon · ' : 'Tarayıcı · ') + (TELEFON_MOTORLARI.find(m => m.id === prefs.dictationEngine)?.ad ?? 'Otomatik');
 
     const dene = async () => {
-        bulutAnahtariKaydet(saglayici, anahtar); bulutModeliKaydet(saglayici, model);
+        if (adresSorunu) { setDeneme({ durum: 'hata', metin: adresSorunu }); return; }
+        kaydet();
         const kaydedici = new SesKaydedici({ bolumle: false });
         try {
             setDeneme({ durum: 'kayit', metin: '4 saniye konuşun…' });
@@ -98,11 +109,29 @@ export default function DikteMotoruAyari({ prefs, update, motorlar, telefon }: {
 
         {sekme === 'bulut' && <div role="tabpanel" className="space-y-3">
             <p className="text-xs leading-relaxed text-sand-600">Kendi API anahtarınızla. Ses doğrudan seçtiğiniz servise gider; konuşma duraklayınca cümle cümle yazılır. Seçiliyken hem Dikte hem Köprü Dikte bu motoru kullanır.</p>
-            <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Bulut ses tanıma servisi">
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Bulut ses tanıma servisi">
                 {BULUT_SAGLAYICILAR.map(b => <button key={b.id} type="button" role="radio" aria-checked={saglayici === b.id} onClick={() => setSaglayici(b.id)}
-                    className={cx('min-h-11 rounded-xl border px-2 text-xs font-semibold', saglayici === b.id ? 'border-moss-400 bg-moss-50 text-moss-800' : 'border-sand-200 bg-white text-sand-700')}>{b.ad}</button>)}
+                    className={cx('inline-flex min-h-11 items-center gap-1 rounded-full border px-3.5 text-xs font-semibold transition-colors', saglayici === b.id ? 'border-moss-500 bg-moss-100 text-moss-800' : 'border-sand-200 bg-white text-sand-700 hover:border-sand-300')}>
+                    {saglayici === b.id && <Check size={13} aria-hidden="true" />}{b.kisa}
+                    {bulutSecili && prefs.dictationCloud === b.id && <span className="rounded-full bg-moss-600 px-1.5 py-px text-[10px] font-bold text-white">Etkin</span>}
+                </button>)}
             </div>
             <p className="text-xs text-sand-600">{bilgi.not}</p>
+            {adresGerekli && <SettingsField label={saglayici === 'custom' ? 'Tam HTTPS API adresi' : 'API adresi'} htmlFor="dikte-bulut-adres">
+                <input id="dikte-bulut-adres" value={adres} spellCheck={false} autoCapitalize="none" inputMode="url" onChange={e => setAdres(e.target.value)} onBlur={() => { if (!adresHatasi(adres)) bulutAdresiKaydet(saglayici, adres); }}
+                    placeholder="https://sunucum.example/v1/audio/transcriptions" className={settingsFieldClass} aria-invalid={adres.trim() !== '' && !!adresSorunu} />
+                {adres.trim() !== '' && adresSorunu && <span className="mt-1 block text-xs text-berry-700">{adresSorunu}</span>}
+            </SettingsField>}
+            {saglayici === 'custom' && <div className="space-y-1.5">
+                <span className="block text-xs font-medium text-sand-700">API biçimi</span>
+                <div role="radiogroup" aria-label="Özel API biçimi" className="grid grid-cols-2 gap-1.5">
+                    {([['openai', 'OpenAI uyumlu'], ['deepgram', 'Deepgram uyumlu']] as const).map(([id, ad]) => <button key={id} type="button" role="radio" aria-checked={bicim === id} onClick={() => setBicim(id)}
+                        className={cx('min-h-11 rounded-xl border px-2 text-xs font-semibold', bicim === id ? 'border-moss-400 bg-moss-50 text-moss-800' : 'border-sand-200 bg-white text-sand-700')}>{ad}</button>)}
+                </div>
+                <p className="text-xs leading-relaxed text-sand-600">{bicim === 'deepgram'
+                    ? 'Ham WAV gövdesi gönderilir, "Token" yetkisi kullanılır; yanıt results.channels biçiminde olmalı.'
+                    : 'Dosya yüklemeli /audio/transcriptions isteği, "Bearer" yetkisi; yanıt {"text": …} biçiminde olmalı. Sohbet ya da metin düzeltme adresleri dikte için kullanılamaz.'}</p>
+            </div>}
             <SettingsField label={bilgi.ad + ' API anahtarı'} htmlFor="dikte-bulut-anahtar">
                 <div className="flex gap-1.5">
                     <input id="dikte-bulut-anahtar" type={goster ? 'text' : 'password'} autoComplete="off" spellCheck={false} value={anahtar}
@@ -110,7 +139,7 @@ export default function DikteMotoruAyari({ prefs, update, motorlar, telefon }: {
                     <button type="button" aria-label={goster ? 'Anahtarı gizle' : 'Anahtarı göster'} onClick={() => setGoster(!goster)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sand-300 bg-white text-sand-700">{goster ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                 </div>
             </SettingsField>
-            <a href={bilgi.anahtarSayfasi} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-moss-700 underline"><ExternalLink size={13} /> {bilgi.ad} anahtarı al</a>
+            {bilgi.anahtarSayfasi && <a href={bilgi.anahtarSayfasi} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-moss-700 underline"><ExternalLink size={13} /> {bilgi.ad} anahtarı al</a>}
             <SettingsField label="Model" htmlFor="dikte-bulut-model">
                 <input id="dikte-bulut-model" value={model} spellCheck={false} autoCapitalize="none" onChange={e => setModel(e.target.value)} onBlur={() => bulutModeliKaydet(saglayici, model)} className={settingsFieldClass} />
             </SettingsField>
@@ -118,7 +147,7 @@ export default function DikteMotoruAyari({ prefs, update, motorlar, telefon }: {
                 <button type="button" disabled={!anahtar.trim() || deneme?.durum === 'kayit' || deneme?.durum === 'gonder'} onClick={() => void dene()} className="btn btn-secondary min-h-[44px] gap-1.5 px-4 text-sm">
                     {deneme?.durum === 'kayit' || deneme?.durum === 'gonder' ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />} 4 saniye dene
                 </button>
-                <button type="button" disabled={!anahtar.trim()} onClick={() => { bulutAnahtariKaydet(saglayici, anahtar); bulutModeliKaydet(saglayici, model); update({ ...prefs, dictationEngine: 'cloud', dictationCloud: saglayici }); }}
+                <button type="button" disabled={!anahtar.trim() || !!adresSorunu} onClick={() => { kaydet(); update({ ...prefs, dictationEngine: 'cloud', dictationCloud: saglayici }); }}
                     className="btn btn-primary min-h-[44px] gap-1.5 px-4 text-sm">
                     {bulutSecili && prefs.dictationCloud === saglayici ? <><Check size={15} /> Bu motor kullanılıyor</> : <><Cloud size={15} /> {bilgi.ad} kullan</>}
                 </button>

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AudioLines, Check, Clipboard, ClipboardCopy, ClipboardPaste, CornerDownLeft, MonitorUp, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
 import { BULUT_SAGLAYICILAR, SesKaydedici, sesiYaziyaCevir } from '@/lib/bulutDikte';
-import { dosyalariBilgisayaraGonder, telefonPanosunuBilgisayaraGonder, hedefBilgisayara, hedefNota, sendKey, bridgeDictate, dictate, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer } from '@/lib/remoteTools';
+import { dosyalariBilgisayaraGonder, telefonPanosunuBilgisayaraGonder, hedefBilgisayara, hedefNota, sendKey, bridgeDictate, dictate, dikteTuslariniUygula, dinleDikteTusu, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer, VARSAYILAN_DIKTE_TUSLARI } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import FareYuzeyi from './FareYuzeyi';
@@ -56,6 +56,35 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     guncelIcerik.current = content;
     const guncelPrefs = useRef(prefs);
     guncelPrefs.current = prefs;
+    /** Kulaklık / telefon tuşlarının dikte komutu için güncel durum. */
+    const tusDurumu = useRef({ bulutDikte, busy, bridgeListening, bridgeStopping });
+    tusDurumu.current = { bulutDikte, busy, bridgeListening, bridgeStopping };
+    const tuslarAnahtari = placement === 'toolbar' ? JSON.stringify(prefs.dictationKeys) : '';
+    useEffect(() => {
+        // Atamalar yalnız araç satırı ekrandayken Android'e bildirilir; çıkınca kaldırılır.
+        if (placement !== 'toolbar') return;
+        void dikteTuslariniUygula(JSON.parse(tuslarAnahtari));
+        return () => { void dikteTuslariniUygula(VARSAYILAN_DIKTE_TUSLARI); };
+    }, [placement, tuslarAnahtari]);
+    useEffect(() => {
+        if (placement !== 'toolbar') return;
+        let kaldirildi = false;
+        let dinleyici: { remove: () => Promise<void> } | null = null;
+        void dinleDikteTusu(eylem => {
+            const p = guncelPrefs.current;
+            const d = tusDurumu.current;
+            const kopru = p.dictationKeys.tool === 'bridgeDictation';
+            const dugme = document.getElementById(kopru ? 'studio-kopru-dikte' : 'studio-dikte') as HTMLButtonElement | null;
+            if (!dugme || !(kopru ? p.enabledTools.bridgeDictation : p.enabledTools.dictation)) return;
+            // Telefonun kendi ses penceresi (bulut dışı Dikte) dışarıdan durdurulamaz; yalnız başlatılır.
+            const aktif = kopru ? d.bridgeListening : d.bulutDikte === 'kayit';
+            if (eylem === 'start' && aktif) return;
+            if (eylem === 'stop' && !aktif) return;
+            try { navigator.vibrate?.(aktif ? [20, 40, 20] : 25); } catch { /* yok say */ }
+            dugme.click();
+        }).then(h => { if (kaldirildi) void h?.remove(); else dinleyici = h; });
+        return () => { kaldirildi = true; void dinleyici?.remove(); };
+    }, [placement]);
     useEffect(() => {
         // Canlı yazma yalnız araç açık, biçim canlı ve hedef bilgisayarı içeriyorken sürer.
         if (kopruYaz && (!(prefs.enabledTools.computerWrite && prefs.writeMode === 'canli' && hedefBilgisayara(prefs.writeTarget)) || (mode !== 'write' && mode !== 'dictation'))) {

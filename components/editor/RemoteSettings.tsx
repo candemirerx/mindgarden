@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/settings';
 import { Capacitor } from '@capacitor/core';
 import DikteMotoruAyari from './DikteMotoruAyari';
+import DikteTuslariAyari from './DikteTuslariAyari';
 import BaglantiKurulumu, { PcBluetoothPano, PcWifiEslestirme, YardimciIndir } from './BaglantiKurulumu';
 import YardimciKlasorleri from '@/components/ui/YardimciKlasorleri';
 
@@ -92,6 +93,8 @@ export default function RemoteSettings() {
                 </p>
             </div>
         </SettingsSection>
+
+        <DikteTuslariAyari prefs={prefs} telefon={Capacitor.isNativePlatform()} />
 
     </div>;
 }

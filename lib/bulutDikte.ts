@@ -1,33 +1,43 @@
 /**
- * Bulut ses tanıma (kendi API anahtarıyla): OpenAI, Gemini, Groq.
+ * Bulut ses tanıma (kendi API anahtarıyla): OpenAI, Gemini, Groq, Deepgram ve özel API.
  *
  * Mikrofon sesi tarayıcıda (WebView) kaydedilir, konuşmadaki duraklamalarla
  * cümlelere bölünür ve 16 kHz tek kanallı WAV olarak seçilen servise
  * gönderilir. OpenAI ve Gemini, Yapay zekâ ayarlarındaki aynı anahtarı
- * kullanır; Groq'un anahtarı ayrıca saklanır. İstekler doğrudan servise gider;
- * uygulamanın sunucusundan geçmez.
+ * kullanır; diğerlerinin anahtarı ayrıca saklanır. İstekler doğrudan servise
+ * gider; uygulamanın sunucusundan geçmez.
+ *
+ * Özel API iki açık sözleşmeden birini konuşur: OpenAI uyumlu
+ * (/audio/transcriptions, çok parçalı dosya, JSON "text") ya da Deepgram uyumlu
+ * (ham WAV gövdesi, "Token" yetkisi, results.channels yanıtı).
  */
 import { readProviderKey, saveProviderKey } from './aiProvider';
 
-export type BulutSaglayici = 'openai' | 'gemini' | 'groq';
+export type BulutSaglayici = 'openai' | 'gemini' | 'groq' | 'deepgram' | 'custom';
+export type OzelBicim = 'openai' | 'deepgram';
 
-export const BULUT_SAGLAYICILAR: Array<{ id: BulutSaglayici; ad: string; model: string; anahtarSayfasi: string; not: string }> = [
-    { id: 'openai', ad: 'OpenAI', model: 'gpt-4o-mini-transcribe', anahtarSayfasi: 'https://platform.openai.com/api-keys', not: 'Çok isabetli, ucuz. Yapay zekâdaki OpenAI anahtarı kullanılır.' },
-    { id: 'gemini', ad: 'Google Gemini', model: 'gemini-2.5-flash', anahtarSayfasi: 'https://aistudio.google.com/apikey', not: 'Ücretsiz kotası geniş. Yapay zekâdaki Gemini anahtarı kullanılır.' },
-    { id: 'groq', ad: 'Groq (Whisper)', model: 'whisper-large-v3-turbo', anahtarSayfasi: 'https://console.groq.com/keys', not: 'Çok hızlı ve çok ucuz; ücretsiz kotası var.' }
+export const BULUT_SAGLAYICILAR: Array<{ id: BulutSaglayici; ad: string; kisa: string; model: string; anahtarSayfasi: string; not: string; adres?: string }> = [
+    { id: 'openai', ad: 'OpenAI', kisa: 'OpenAI', model: 'gpt-4o-mini-transcribe', anahtarSayfasi: 'https://platform.openai.com/api-keys', not: 'Çok isabetli, ucuz. Yapay zekâdaki OpenAI anahtarı kullanılır.' },
+    { id: 'gemini', ad: 'Google Gemini', kisa: 'Gemini', model: 'gemini-2.5-flash', anahtarSayfasi: 'https://aistudio.google.com/apikey', not: 'Ücretsiz kotası geniş. Yapay zekâdaki Gemini anahtarı kullanılır.' },
+    { id: 'groq', ad: 'Groq (Whisper)', kisa: 'Groq', model: 'whisper-large-v3-turbo', anahtarSayfasi: 'https://console.groq.com/keys', not: 'Çok hızlı ve çok ucuz; ücretsiz kotası var.' },
+    { id: 'deepgram', ad: 'Deepgram', kisa: 'Deepgram', model: 'nova-3', anahtarSayfasi: 'https://console.deepgram.com/', not: 'Hızlı ve isabetli. Türkçe için nova-3 ya da nova-2 seçin.', adres: 'https://api.deepgram.com/v1/listen' },
+    { id: 'custom', ad: 'Özel API', kisa: 'Özel', model: 'whisper-1', anahtarSayfasi: '', not: 'Kendi sunucunuz ya da başka bir servis: tam HTTPS adresini ve API biçimini girin.' }
 ];
 
-const GROQ_ANAHTAR = 'nb-stt-key-groq';
+const YEREL_ANAHTAR_ONEK = 'nb-stt-key-';
 const MODEL_ONEK = 'nb-stt-model-';
+const ADRES_ONEK = 'nb-stt-endpoint-';
+const OZEL_BICIM = 'nb-stt-format-custom';
+const YEREL_ANAHTARLI: BulutSaglayici[] = ['groq', 'deepgram', 'custom'];
 
 export function bulutAnahtari(s: BulutSaglayici): string {
     if (typeof window === 'undefined') return '';
-    if (s === 'groq') { try { return localStorage.getItem(GROQ_ANAHTAR) ?? ''; } catch { return ''; } }
-    return readProviderKey(s);
+    if (YEREL_ANAHTARLI.includes(s)) { try { return localStorage.getItem(YEREL_ANAHTAR_ONEK + s) ?? ''; } catch { return ''; } }
+    return readProviderKey(s as 'openai' | 'gemini');
 }
 export function bulutAnahtariKaydet(s: BulutSaglayici, anahtar: string): void {
-    if (s === 'groq') { try { localStorage.setItem(GROQ_ANAHTAR, anahtar.trim()); } catch { /* yok say */ } return; }
-    saveProviderKey(s, anahtar.trim());
+    if (YEREL_ANAHTARLI.includes(s)) { try { localStorage.setItem(YEREL_ANAHTAR_ONEK + s, anahtar.trim()); } catch { /* yok say */ } return; }
+    saveProviderKey(s as 'openai' | 'gemini', anahtar.trim());
 }
 export function bulutModeli(s: BulutSaglayici): string {
     const varsayilan = BULUT_SAGLAYICILAR.find(b => b.id === s)!.model;
@@ -36,6 +46,37 @@ export function bulutModeli(s: BulutSaglayici): string {
 }
 export function bulutModeliKaydet(s: BulutSaglayici, model: string): void {
     try { localStorage.setItem(MODEL_ONEK + s, model.trim()); } catch { /* yok say */ }
+}
+
+export function bulutAdresi(s: BulutSaglayici): string {
+    const varsayilan = BULUT_SAGLAYICILAR.find(b => b.id === s)?.adres ?? '';
+    if (typeof window === 'undefined') return varsayilan;
+    try { return localStorage.getItem(ADRES_ONEK + s)?.trim() || varsayilan; } catch { return varsayilan; }
+}
+export function bulutAdresiKaydet(s: BulutSaglayici, adres: string): void {
+    try { localStorage.setItem(ADRES_ONEK + s, adres.trim()); } catch { /* yok say */ }
+}
+export function ozelBicim(): OzelBicim {
+    try { return localStorage.getItem(OZEL_BICIM) === 'deepgram' ? 'deepgram' : 'openai'; } catch { return 'openai'; }
+}
+export function ozelBicimKaydet(b: OzelBicim): void {
+    try { localStorage.setItem(OZEL_BICIM, b); } catch { /* yok say */ }
+}
+/** Adres HTTPS olmalı; içinde kullanıcı bilgisi ya da # bölümü bulunmamalı. Geçerliyse null, değilse hata metni. */
+export function adresHatasi(adres: string): string | null {
+    let u: URL;
+    try { u = new URL(adres.trim()); } catch { return 'Tam adres girin (https:// ile başlamalı).'; }
+    if (u.protocol !== 'https:') return 'Adres https:// ile başlamalı.';
+    if (u.username || u.password) return 'API anahtarını adresin içine yazmayın; anahtar alanına girin.';
+    if (u.hash) return 'Adreste # bölümü olmamalı.';
+    return null;
+}
+/** Seçilen servisin yanıt biçimi. */
+function bicimOf(s: BulutSaglayici): OzelBicim | 'gemini' {
+    if (s === 'gemini') return 'gemini';
+    if (s === 'deepgram') return 'deepgram';
+    if (s === 'custom') return ozelBicim();
+    return 'openai';
 }
 
 /** 'tr-TR' → 'tr' (servislerin beklediği ISO-639-1). */
@@ -56,6 +97,7 @@ export async function sesiYaziyaCevir(wav: Blob, s: BulutSaglayici, dil: string)
     const ad = BULUT_SAGLAYICILAR.find(b => b.id === s)!.ad;
     if (!anahtar) throw new Error(ad + ' için API anahtarı girilmemiş. Ayarlar → Bilgisayar bağlantısı → Dikte motoru → Bulut.');
     const model = bulutModeli(s);
+    if (s === 'custom' || s === 'deepgram') { const adresSorunu = adresHatasi(bulutAdresi(s)); if (adresSorunu) throw new Error(ad + ': ' + adresSorunu); }
     let yanit: Response;
     try {
         if (s === 'gemini') {
@@ -71,13 +113,19 @@ export async function sesiYaziyaCevir(wav: Blob, s: BulutSaglayici, dil: string)
                     generationConfig: { temperature: 0 }
                 })
             });
+        } else if (bicimOf(s) === 'deepgram') {
+            const url = new URL(bulutAdresi(s));
+            url.searchParams.set('model', model);
+            url.searchParams.set('language', dilKodu(dil));
+            url.searchParams.set('smart_format', 'true');
+            yanit = await fetch(url.toString(), { method: 'POST', headers: { Authorization: 'Token ' + anahtar, 'Content-Type': 'audio/wav' }, body: wav });
         } else {
             const form = new FormData();
             form.append('file', wav, 'ses.wav');
             form.append('model', model);
             form.append('language', dilKodu(dil));
             form.append('response_format', 'json');
-            const adres = s === 'openai' ? 'https://api.openai.com/v1/audio/transcriptions' : 'https://api.groq.com/openai/v1/audio/transcriptions';
+            const adres = s === 'openai' ? 'https://api.openai.com/v1/audio/transcriptions' : s === 'custom' ? bulutAdresi(s) : 'https://api.groq.com/openai/v1/audio/transcriptions';
             yanit = await fetch(adres, { method: 'POST', headers: { Authorization: 'Bearer ' + anahtar }, body: form });
         }
     } catch {
@@ -87,9 +135,12 @@ export async function sesiYaziyaCevir(wav: Blob, s: BulutSaglayici, dil: string)
     if (!yanit.ok) throw new Error(hataMetni(ad, yanit.status, govde));
     try {
         const json = JSON.parse(govde);
-        const metin = s === 'gemini'
+        const bicim = bicimOf(s);
+        const metin = bicim === 'gemini'
             ? (json.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('')
-            : String(json.text ?? '');
+            : bicim === 'deepgram'
+                ? String(json.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? '')
+                : String(json.text ?? '');
         return metin.trim();
     } catch { throw new Error(ad + ' yanıtı okunamadı.'); }
 }

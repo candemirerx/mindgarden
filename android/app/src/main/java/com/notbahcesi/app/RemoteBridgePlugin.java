@@ -1493,7 +1493,18 @@ public class RemoteBridgePlugin extends Plugin {
         if (bridgeRecognizer != null) { bridgeRecognizer.destroy(); bridgeRecognizer = null; }
     }
     @SuppressLint("MissingPermission") // Cleanup must also work after permission revocation.
+    /** Kulaklık ve telefon tuşlarının dikte atamaları (web katmanı gönderir). */
+    @PluginMethod public void setDictationKeys(PluginCall call) {
+        try {
+            DikteTuslari.baglan(eylem -> { JSObject o = new JSObject(); o.put("action", eylem); notifyListeners("dikteTusu", o); });
+            JSObject veri = call.getData();
+            DikteTuslari.ayarla(getContext(), veri == null ? new JSONObject() : new JSONObject(veri.toString()));
+            call.resolve();
+        } catch (Exception e) { call.reject("Tuş atamaları uygulanamadı: " + e.getMessage()); }
+    }
+
     @Override protected void handleOnDestroy() {
+        DikteTuslari.baglan(null); DikteTuslari.birak(getContext());
         closeClassic(); closeGatt();
         if (scanning != null) {
             try {
