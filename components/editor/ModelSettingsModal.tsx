@@ -5,8 +5,9 @@ import {
     X, Sparkles, Database, Check, RefreshCw, Key, HardDriveDownload, UploadCloud, Loader2,
     Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2, Wrench, Hash, ListOrdered,
     Eraser, Type, MonitorSmartphone, Info, ShieldCheck, Server, Cpu, Cloud, ExternalLink, Mail, Keyboard, TreePine, LayoutGrid, BookOpen, Palette,
-    WifiOff, Download, Play, CheckCircle2, FolderOpen, FolderKanban, LayoutDashboard
+    WifiOff, Download, Play, CheckCircle2, FolderOpen, FolderKanban, LayoutDashboard, GalleryThumbnails
 } from 'lucide-react';
+import { galeriEsitlemeAcik, galeriEsitlemeAyarla } from '@/lib/galeriDrive';
 import { Capacitor } from '@capacitor/core';
 import AccountSettings from './AccountSettings';
 import AiSettings from './AiSettings';
@@ -16,6 +17,8 @@ import type { SettingsSectionId } from './SettingsHome';
 import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
 import { turuBaslat } from '@/lib/turAdimlari';
+import { dersTamamla, gorevBaslat, gosterIstegi } from '@/lib/kilavuzIlerleme';
+import { useRouter } from 'next/navigation';
 import { getDriveToken, restoreBackup, mergeSync, isAutoSyncEnabled, setAutoSyncEnabled, lastSyncTime } from '@/lib/driveSync';
 import { readAiMacros, saveAiMacros, createMacro, DEFAULT_MACROS, SPELLCHECK_MACRO_ID } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
@@ -53,6 +56,7 @@ interface ModelSettingsModalProps {
 }
 
 export default function ModelSettingsModal({ isOpen, onClose, initialSection = 'home' }: ModelSettingsModalProps) {
+    const router = useRouter();
     const [activeTab, setActiveTabHam] = useState<SettingsSectionId | 'home'>(bolumuNormallestir(initialSection));
     /** Eski bölüm kimlikleri (ör. 'tools') yeni sayfalara yönlenir. */
     const setActiveTab = (id: SettingsSectionId | 'home') => setActiveTabHam(bolumuNormallestir(id));
@@ -82,6 +86,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
     const [driveBusy, setDriveBusy] = useState<'idle' | 'upload' | 'restore' | 'merge'>('idle');
     const [driveMessage, setDriveMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
     const [autoSync, setAutoSync] = useState(false);
+    const [galeriEsitleme, setGaleriEsitleme] = useState(true);
     const [lastSync, setLastSync] = useState<string | null>(null);
     const { fetchGardens } = useStore();
     /** Pencere kökü: açılışta odak buraya taşınır. */
@@ -150,11 +155,18 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
             setAraclarAcik(bolumAcik('araclar'));
             setBilgisayarAcik(bolumAcik('bilgisayar'));
             setAutoSync(isAutoSyncEnabled());
+            setGaleriEsitleme(galeriEsitlemeAcik());
             setLastSync(lastSyncTime());
             setActiveTab(initialSection);
-
+            // Kılavuz: ayarları bulan kullanıcı "Ayarları ve bu kılavuzu bulun" dersini uygulamış olur.
+            dersTamamla('b-ayarlar');
         }
     }, [isOpen, initialSection]);
+
+    // Kılavuz: Drive düğmelerinden biri başarıyla çalıştıysa eşitleme dersi uygulanmıştır.
+    useEffect(() => {
+        if (driveMessage?.type === 'ok') dersTamamla('o-yedek');
+    }, [driveMessage]);
 
 
     /**
@@ -388,9 +400,14 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                         icon={BookOpen}
                                         tone="clay"
                                         title="Kullanım kılavuzu"
-                                        description="Başlangıçtan uzmana beş seviye: ilk notunuzdan bilgisayar araçlarına kadar istediğiniz kadarını öğrenin."
+                                        description="İki yoldan öğrenin: Teorik öğrenimde kısa dersleri okuyun, Uygulamalı öğrenimde görevleri gerçek ekranlarda adım adım yapın."
                                     />
-                                    <UsageGuide onNavigate={setActiveTab} onTurBaslat={() => { onClose(); turuBaslat(); }} />
+                                    <UsageGuide
+                                        onNavigate={setActiveTab}
+                                        onTurBaslat={() => { onClose(); turuBaslat(); }}
+                                        onGoster={(goster) => { onClose(); router.push(gosterIstegi(goster)); }}
+                                        onGorevBaslat={(gorev) => { onClose(); router.push(gorevBaslat(gorev.id, gorev.baslangic)); }}
+                                    />
                                 </>
                             )}
                             {activeTab === 'models' && <AiSettings />}
@@ -759,6 +776,26 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                                 {lastSync
                                                     ? 'Son yedek: ' + new Date(lastSync).toLocaleString('tr-TR')
                                                     : 'Bu cihazda henüz bir yedek kaydı yok.'}
+                                            </p>
+                                        </SettingsSection>
+
+                                        <SettingsSection
+                                            icon={GalleryThumbnails}
+                                            title="Mini galeri"
+                                            description="Notlardaki görseller, dosyalar ve metin kartları."
+                                            action={
+                                                <SettingsSwitch
+                                                    checked={galeriEsitleme}
+                                                    onChange={(v) => { setGaleriEsitleme(v); galeriEsitlemeAyarla(v); }}
+                                                    label="Mini galeriyi Google Drive ile eşitle"
+                                                />
+                                            }
+                                        >
+                                            <p className="text-xs leading-relaxed text-sand-600">
+                                                Açıkken galeriye eklediğiniz her öğe Google Drive'ınızdaki gizli uygulama alanına
+                                                yüklenir; aynı Google hesabıyla girdiğiniz telefonda, bilgisayarda ve web sitesinde
+                                                not açılınca galerisi gelir. Bir cihazda silinen öğe diğerlerinden de silinir.
+                                                Öğeler Drive kotanızdan yer kaplar. Kapalıyken galeri yalnız bu cihazda kalır.
                                             </p>
                                         </SettingsSection>
                                     </div>

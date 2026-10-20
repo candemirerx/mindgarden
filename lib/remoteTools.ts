@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { Plugin } from '@capacitor/core';
 import { bildir } from './degisim';
+import { dersTamamla } from './kilavuzIlerleme';
 import { fareHareketRaporlari, fareTekerRaporlari, fareTikRaporlari, hidYazamadiklari, kisayolRaporlari, metinRaporlari } from './hidKodlari';
 import type { HidRapor } from './hidKodlari';
 
@@ -48,12 +49,13 @@ export function dikteTuslariniDuzelt(v: unknown): DikteTuslari {
 
 export type ConnectionMode = 'wifi' | 'bluetooth' | 'pc-wifi' | 'pc-bluetooth';
 /**
- * Kurulum ekranındaki altı bağlantı türü. İkisi, mantıkta mevcut yolların
+ * Kurulum ekranındaki yedi bağlantı türü. Üçü, mantıkta mevcut yolların
  * adlandırılmış biçimidir: Kart · AP kartın kendi Wi‑Fi ağıdır (kart yolu,
  * adres 192.168.4.1); Tailscale ise PC yardımcısına Tailscale adresiyle
  * (başka şehirden de) bağlanmaktır (PC yolu).
  */
-export type BaglantiTuru = ConnectionMode | 'kart-ap' | 'tailscale';
+export type BaglantiTuru = ConnectionMode | 'kart-ap' | 'tailscale' | 'usb';
+export const USB_YARDIMCI_URL = 'http://127.0.0.1:18775';
 export const KART_AP_ADRESI = 'http://192.168.4.1';
 export const KART_AP_AGI = 'can bellek s3';
 export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'enter' | 'clipboard' | 'imageToComputer' | 'imageToClipboard' | 'phoneClipboard' | 'shortcuts' | 'screen';
@@ -245,7 +247,9 @@ export function konumYuzdesi(deger: number): number {
 export type RemotePrefs = {
     connection: ConnectionMode;
     /** Seçili yolun adlandırılmış türü: kartın kendi ağı ya da Tailscale (yoksa standart). */
-    agTuru?: 'kart-ap' | 'tailscale';
+    agTuru?: 'kart-ap' | 'tailscale' | 'usb';
+    helperTokenUsb?: string;
+    helperTokenAg?: string;
     /** Tür değişince eski adresler kaybolmasın: ev ağındaki kart, yerel ağdaki ve Tailscale'deki bilgisayar. */
     cardUrlEv?: string;
     helperUrlLan?: string;
@@ -319,12 +323,14 @@ export function remotePrefs(): RemotePrefs {
 }
 /** Tercihlerden seçili bağlantı türü. */
 export function baglantiTuru(p: Pick<RemotePrefs, 'connection' | 'agTuru'>): BaglantiTuru {
+    if (p.connection === 'pc-wifi' && p.agTuru === 'usb') return 'usb';
     if (p.connection === 'wifi' && p.agTuru === 'kart-ap') return 'kart-ap';
     if (p.connection === 'pc-wifi' && p.agTuru === 'tailscale') return 'tailscale';
     return p.connection;
 }
 /** Tür adı (durum göstergesi ve iletiler için). */
 export const BAGLANTI_TURU_ADI: Record<BaglantiTuru, string> = {
+    usb: 'Bilgisayar · USB',
     'pc-wifi': 'Bilgisayar · Wi‑Fi',
     'pc-bluetooth': 'Bilgisayar · Bluetooth',
     wifi: 'Kart · Wi‑Fi',
@@ -340,18 +346,26 @@ export function baglantiTuruSec(p: RemotePrefs, tur: BaglantiTuru): RemotePrefs 
     const simdiki = baglantiTuru(p);
     if (simdiki === tur) return p;
     const s: RemotePrefs = { ...p };
+    // USB'den çıkınca yerel 127.0.0.1 adresi başka yola (kart yolu üzerinden Wi‑Fi'ye dönüşte bile) taşınmasın.
+    if (simdiki === 'usb') { s.helperTokenUsb = p.helperToken; s.helperToken = p.helperTokenAg || ''; s.helperUrl = p.helperUrlLan || ''; }
+    else { s.helperTokenAg = p.helperToken; }
     if (simdiki === 'wifi') s.cardUrlEv = p.cardUrl;
     if (simdiki === 'tailscale') s.helperUrlTs = p.helperUrl;
     else if (simdiki === 'pc-wifi') s.helperUrlLan = p.helperUrl;
     switch (tur) {
+        case 'usb': return { ...s, connection: 'pc-wifi', agTuru: 'usb', helperUrl: USB_YARDIMCI_URL, helperToken: s.helperTokenUsb || '' };
         case 'kart-ap': return { ...s, connection: 'wifi', agTuru: 'kart-ap', cardUrl: KART_AP_ADRESI };
         case 'wifi': return { ...s, connection: 'wifi', agTuru: undefined, cardUrl: s.cardUrlEv || s.cardUrl };
         case 'tailscale': return { ...s, connection: 'pc-wifi', agTuru: 'tailscale', helperUrl: s.helperUrlTs || '' };
-        case 'pc-wifi': return { ...s, connection: 'pc-wifi', agTuru: undefined, helperUrl: simdiki === 'tailscale' ? (s.helperUrlLan || '') : s.helperUrl };
+        case 'pc-wifi': return { ...s, connection: 'pc-wifi', agTuru: undefined, helperUrl: simdiki === 'tailscale' || simdiki === 'usb' ? (s.helperUrlLan || '') : s.helperUrl };
         default: return { ...s, connection: tur, agTuru: undefined };
     }
 }
 export function saveRemotePrefs(prefs: RemotePrefs) {
+    // Kılavuz: yeni makro ya da ekran düzeni ekleyen kullanıcı ilgili dersi uygulamış olur.
+    const onceki = remotePrefs();
+    if ((prefs.macros?.length ?? 0) > (onceki.macros?.length ?? 0)) dersTamamla('u-makro');
+    if ((prefs.screenLayouts?.length ?? 0) > (onceki.screenLayouts?.length ?? 0)) dersTamamla('u-ekran');
     localStorage.setItem(key, JSON.stringify(prefs));
     bildir('remote-prefs');
 }
@@ -519,6 +533,19 @@ export async function bilgisayarlaEslestirWifi(url: string, kod: string): Promis
     catch (hata) { throw yardimciHatasi(hata, 'Eşleştirilemedi.'); }
     if (!govde.ok || !govde.token) throw new Error(govde.error || 'Eşleştirme kodu yanlış.');
     return { helperUrl: url, helperToken: govde.token, helperName: govde.name || 'Bilgisayar' };
+}
+/** Yerel bilgisayar ekranında açık onay; USB de kimlik doğrulamayı atlamaz. */
+export async function bilgisayarlaEslestirUsb(): Promise<{ helperUrl: string; helperToken: string; helperName: string }> {
+    const start = JSON.parse(await request(endpoint(USB_YARDIMCI_URL, '/pair-request'), 'POST', JSON.stringify({ device: 'Not Bahçesi · USB' })));
+    if (!start.ok || !start.requestId) throw new Error(start.error || 'Bağlantı isteği gönderilemedi.');
+    const deadline = Date.now() + 65000;
+    while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const status = JSON.parse(await request(endpoint(USB_YARDIMCI_URL, '/pair-status'), 'POST', JSON.stringify({ requestId: start.requestId })));
+        if (status.state === 'approved' && status.token) return { helperUrl: USB_YARDIMCI_URL, helperToken: status.token, helperName: status.name || 'Bilgisayar' };
+        if (status.state !== 'pending') throw new Error('Bilgisayar onayı verilmedi; yeniden deneyin.');
+    }
+    throw new Error('Bilgisayar onayı zaman aşımına uğradı.');
 }
 /** Klasik Bluetooth ile eşleştirme: kod RFCOMM üzerinden yardımcıya gider. */
 /**
@@ -803,7 +830,7 @@ export async function testHelper(prefs: RemotePrefs) {
     }
     if (!prefs.helperUrl || !prefs.helperToken) throw new Error('Yardımcı program adresi ve anahtarı gerekli.');
     const result = JSON.parse(await request(endpoint(prefs.helperUrl, '/health'), 'GET', '', prefs.helperToken));
-    if (result.app !== 'not-bahcesi-clipboard') throw new Error('Bu adreste pano yardımcı programı bulunamadı.');
+    if (result.app !== 'not-bahcesi-clipboard' && result.app !== 'cep-kopru-pc') throw new Error('Bu adreste pano yardımcı programı bulunamadı.');
     try { await pcInput({ action: 'ping' }, prefs); }
     catch (error) {
         if (error instanceof Error && /HTTP 404/.test(error.message)) throw new Error('Bu yardımcı yalnız panoyu destekliyor. Güncel Not Bahçesi PC Yardımcısı’nı açın.');
@@ -961,6 +988,8 @@ async function yardimciIstegi(prefs: RemotePrefs, yol: string, govde: string): P
         return await request(endpoint(prefs.helperUrl, yol), 'POST', govde, prefs.helperToken);
     } catch (hata) {
         const ileti = hata instanceof Error ? hata.message : '';
+        // Yardımcı yeniden kurulduysa anahtarı değişir; ağda aramak işe yaramaz, yeniden eşleşmek gerekir.
+        if (/^HTTP 401/.test(ileti)) throw new Error('Bilgisayardaki PC Yardımcısı bu telefonu tanımadı; yardımcı yeniden kurulmuş ya da başka bir bilgisayar olabilir. Ayarlar → Bilgisayar bağlantısı bölümünden eşleştirme koduyla yeniden bağlanın (HTTP 401).');
         if (/^HTTP \d+/.test(ileti) || !isNative()) throw hata;
         const yeni = await yardimciyiYenidenBul(prefs);
         if (!yeni) throw hata;
@@ -970,7 +999,7 @@ async function yardimciIstegi(prefs: RemotePrefs, yol: string, govde: string): P
 let yenidenAraniyor: Promise<string | null> | null = null;
 async function yardimciyiYenidenBul(prefs: RemotePrefs): Promise<string | null> {
     // Tailscale adresi sabittir; yerel ağda aranıp başka adrese çevrilmez.
-    if (prefs.agTuru === 'tailscale') return null;
+    if (prefs.agTuru === 'tailscale' || prefs.agTuru === 'usb') return null;
     if (yenidenAraniyor) return yenidenAraniyor;
     yenidenAraniyor = (async () => {
         try {
@@ -1082,7 +1111,12 @@ export async function previewPosition(x: number, y: number, prefs = remotePrefs(
     if (prefs.connection === 'pc-wifi' || prefs.connection === 'pc-bluetooth') await konumGonder({ action: 'absolute', x: Math.round(x), y: Math.round(y), click: false }, prefs);
     else await bleYaz(() => native.moveAbsolute({ x: Math.round(x), y: Math.round(y) }));
 }
+/** Metni bilgisayara klavyeden yazılmış gibi gönderir. */
 export async function typeOnComputer(text: string, prefs: RemotePrefs) {
+    await bilgisayaraYazIc(text, prefs);
+    dersTamamla('i-yaz');
+}
+async function bilgisayaraYazIc(text: string, prefs: RemotePrefs) {
     if (!text) throw new Error('Editör metni boş.');
     const encoder = new TextEncoder();
     const chunks: string[] = [];
@@ -1171,7 +1205,34 @@ async function kartlaPanoya(text: string, prefs: RemotePrefs): Promise<void> {
     await bleYaz(() => native.send({ command: 'pe' }));
 }
 
+/** Tek komutla gönderilebilen pano metni: yardımcı 32000 karakter, Bluetooth satırı 32 KB kabul eder. */
+const TEK_PARCA_PANO_BAYT = 24000;
+/**
+ * Pano metnini yardımcının /input eylemiyle (Bluetooth ya da Wi‑Fi) gönderir.
+ * Uzun metin parça parça yollanır ve yardımcı "panometni" ile birleştirip
+ * panoya koyar; tek satıra sığmayan not Bluetooth'ta reddediliyordu.
+ */
+async function pcPanoMetni(text: string, prefs: RemotePrefs) {
+    if (new TextEncoder().encode(text).length <= TEK_PARCA_PANO_BAYT) {
+        await pcInput({ action: 'clipboard', text }, prefs);
+        return;
+    }
+    const b64 = utf8Base64(text);
+    const id = 'nbm' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    // 4'ün katı: yardımcı her parçayı ayrı çözer.
+    const parca = 20000;
+    for (let i = 0, sira = 0; i < b64.length; i += parca, sira++) {
+        await pcInput({ action: 'parca', id, sira, veri: b64.slice(i, i + parca) }, prefs);
+    }
+    await pcInput({ action: 'panometni', id }, prefs);
+}
+
+/** Metni bilgisayarın panosuna koyar. */
 export async function sendToComputerClipboard(text: string, prefs: RemotePrefs) {
+    await bilgisayarPanosunaIc(text, prefs);
+    dersTamamla('i-yaz');
+}
+async function bilgisayarPanosunaIc(text: string, prefs: RemotePrefs) {
     if (!text) throw new Error('Editör metni boş.');
     // Kart bağlıyken önce kart yolu denenir (kart USB'den PC'ye takılı, yardımcı açık).
     if (prefs.connection === 'wifi' || prefs.connection === 'bluetooth') {
@@ -1196,14 +1257,14 @@ export async function sendToComputerClipboard(text: string, prefs: RemotePrefs) 
             if (!result.ok) throw new Error('Pano güncellenemedi.');
             return;
         }
-        if (prefs.helperToken) { await pcInput({ action: 'clipboard', text }, prefs); return; }
+        if (prefs.helperToken) { await pcPanoMetni(text, prefs); return; }
         throw new Error('Bluetooth klavye yazar ama panoya erişemez. Pano için bilgisayarda Not Bahçesi PC Yardımcısı\'nı açıp Ayarlar → Bilgisayar bağlantısı → "PC panosu" bölümünden bir kez bağlanın.');
     }
     // Kart panoya yazamaz (yalnız klavye/fare). Kart bağlıyken pano PC yardımcısına gider:
     // önce Wi‑Fi (eşleşme varsa), ulaşılamazsa ya da yoksa Bluetooth (bilgisayar seçiliyse).
     const kart = prefs.connection === 'wifi' || prefs.connection === 'bluetooth';
     const bluetoothVar = !!(prefs.helperToken && prefs.helperBluetoothAddress);
-    const bluetoothIle = () => pcInput({ action: 'clipboard', text }, { ...prefs, connection: 'pc-bluetooth' });
+    const bluetoothIle = () => pcPanoMetni(text, { ...prefs, connection: 'pc-bluetooth' });
     if (!prefs.helperUrl || !prefs.helperToken) {
         if (kart && bluetoothVar) { await bluetoothIle(); return; }
         throw new Error(kart

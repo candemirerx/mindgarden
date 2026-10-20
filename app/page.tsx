@@ -15,6 +15,7 @@ import type { Garden } from '@/lib/types';
 
 // Sidebar'ı lazy load et - ilk yüklemede ağırlık yaratmasın
 import UygulamaliTur from '@/components/tour/UygulamaliTur';
+import { dersTamamla } from '@/lib/kilavuzIlerleme';
 const Sidebar = lazy(() => import('@/components/layout/Sidebar'));
 
 // Garden kartını ayrı component olarak memoize et
@@ -179,7 +180,7 @@ const GardenCard = memo(function GardenCard({
                  * Önceden biri dolu yeşil (birincil), diğeri soluk kalıyordu ve
                  * hiyerarşi yanlış okunuyordu.
                  */}
-                <div className="mt-auto flex gap-2.5">
+                <div data-kilavuz="bahce-gorunumleri" className="mt-auto flex gap-2.5">
                     <button
                         type="button"
                         onClick={onOpenProjects}
@@ -225,6 +226,7 @@ export default function HomePage() {
                 if (!mounted) return;
 
                 setUser(session?.user ?? null);
+                if (session?.user) dersTamamla('b-giris');
 
                 if (session?.user) {
                     await fetchGardens();
@@ -246,6 +248,7 @@ export default function HomePage() {
             if (event === 'INITIAL_SESSION') return;
 
             setUser(session?.user ?? null);
+            if (session?.user) dersTamamla('b-giris');
 
             if (event === 'SIGNED_IN' && session?.user) {
                 setIsLoading(true);

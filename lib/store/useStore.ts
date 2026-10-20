@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../supabaseClient';
 import type { Garden, TreeNode, StoreState } from '../types';
+import { dersTamamla, ekranAdi } from '../kilavuzIlerleme';
 
 const activeOnly = <T extends { deleted_at?: string | null }>(rows: T[] | null | undefined): T[] =>
     (rows ?? []).filter((row) => !row.deleted_at);
@@ -51,6 +52,7 @@ export const useStore = create<StoreState>((set, get) => ({
             // Listede en yeni bahçe en üstte görünür; bu sıralama fetchGardens
             // sorgusundaki `created_at` azalan düzeniyle aynı olmalıdır.
             set((state) => ({ gardens: [data as Garden, ...state.gardens] }));
+            dersTamamla('b-bahce');
             return { success: true };
         } catch (error) {
             return { success: false, error: error instanceof Error ? error.message : 'Bilinmeyen hata' };
@@ -200,6 +202,10 @@ export const useStore = create<StoreState>((set, get) => ({
             if (error) throw error;
             if (!data) return null;
             set((state) => ({ nodes: [...state.nodes, data as TreeNode] }));
+            // Kılavuz: notu hangi ekranda eklediyse o ekranın dersi tamamlanır.
+            const ekran = ekranAdi();
+            if (ekran === 'liste') dersTamamla('b-liste');
+            else if (ekran === 'tuval') dersTamamla('b-tuval');
             return data as TreeNode;
         } catch (error) {
             console.error('Node eklenirken hata:', error);
@@ -220,6 +226,7 @@ export const useStore = create<StoreState>((set, get) => ({
                     node.id === id ? { ...node, content, updated_at: updatedAt } : node
                 ),
             }));
+            if (ekranAdi() === 'editor') dersTamamla('b-not');
         } catch (error) {
             console.error('Node güncellenirken hata:', error);
         }
@@ -387,6 +394,7 @@ export const useStore = create<StoreState>((set, get) => ({
                 .update({ color, updated_at: updatedAt })
                 .eq('id', id);
             if (error) throw error;
+            dersTamamla('t-liste');
             return true;
         } catch (error) {
             console.error('Dal rengi güncellenirken hata:', error);
@@ -415,6 +423,7 @@ export const useStore = create<StoreState>((set, get) => ({
                 .update({ is_pruned: isPruned, updated_at: updatedAt })
                 .eq('id', id);
             if (error) throw error;
+            if (isPruned) dersTamamla('t-budama');
         } catch (error) {
             console.error('Budama durumu güncellenirken hata:', error);
         }

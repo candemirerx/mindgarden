@@ -23,7 +23,7 @@ export default function PcYardimcisiIndir({ kurulu = false, prefs }: { kurulu?: 
     const [yol, setYol] = useState<BaglantiTuru | null>(null);
     const telefon = Capacitor.isNativePlatform();
     const secili = baglantiTuru(prefs ?? remotePrefs());
-    const yazmaYolu = yol ?? (secili === 'pc-wifi' || secili === 'tailscale' ? 'pc-bluetooth' : secili);
+    const yazmaYolu = yol ?? (secili === 'pc-wifi' || secili === 'tailscale' || secili === 'usb' ? 'pc-bluetooth' : secili);
     const islem = async (ad: string, fn: () => Promise<string | void>) => {
         if (mesgul) return;
         setMesgul(ad); setMesaj(null);

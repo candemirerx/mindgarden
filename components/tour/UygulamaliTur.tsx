@@ -10,10 +10,11 @@ import {
     TUR_BASLAT_OLAYI,
     TUR_BEKLIYOR_ANAHTARI,
 } from '@/lib/turAdimlari';
+import { dersTamamla } from '@/lib/kilavuzIlerleme';
 
 /**
  * Başlangıç seviyesi için uygulamalı tur: hedefi vurgulayan karartma + açıklama kartı.
- * - Kılavuzdaki "Uygulamalı öğren" düğmesi ya da ilk açılıştaki öneri başlatır.
+ * - Kılavuzdaki "Hızlı tur" düğmesi ya da ilk açılıştaki öneri başlatır.
  * - İleri / Geri / Atla; Escape ve Android geri tuşu turu kapatır.
  * - Tamamlanınca ya da atlanınca nb-tur-v1 yazılır, öneri bir daha çıkmaz.
  */
@@ -35,6 +36,8 @@ export default function UygulamaliTur() {
 
     const kapat = useCallback((durum: 'bitti' | 'atlandi') => {
         isaretle(durum);
+        // Kılavuz: turu sonuna kadar izleyen kullanıcı ilk dersi uygulamış olur.
+        if (durum === 'bitti') dersTamamla('b-fikir');
         setAktif(false);
         setOneri(false);
         setSira(0);

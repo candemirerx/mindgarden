@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Download, MonitorSmartphone, MousePointer2, Radio } from 'lucide-react';
-import { remotePrefs, saveRemotePrefs, dictationEngines } from '@/lib/remoteTools';
+import { remotePrefs, saveRemotePrefs, dictationEngines, BAGLANTI_TURU_ADI, baglantiTuru } from '@/lib/remoteTools';
 import type { RemotePrefs } from '@/lib/remoteTools';
 import {
     SettingsField,
@@ -41,7 +41,7 @@ export default function RemoteSettings() {
         <SettingsPageHeader
             icon={Radio}
             title="Bilgisayar bağlantısı"
-            badge={<SettingsPill tone={kartKipi ? 'clay' : 'moss'}>{CONNECTION_LABELS[prefs.connection]}</SettingsPill>}
+            badge={<SettingsPill tone={kartKipi ? 'clay' : 'moss'}>{BAGLANTI_TURU_ADI[baglantiTuru(prefs)]}</SettingsPill>}
         />
 
         <SettingsSection icon={Radio} title="Bağlantı yolu" description="Yolu seçin ve adımları sırayla izleyin. Bilgisayar yolları için kart gerekmez; kart yolları için kartın USB kablosu hedef bilgisayarda olmalı. Açılışta otomatik bağlan açıkken uygulama her açılışta seçili yolu kendisi kurar.">

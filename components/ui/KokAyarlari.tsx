@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { MotionConfig } from 'framer-motion';
 import { temaDegisiminiIzle, temaUygula } from '@/lib/tema';
+import KilavuzKatmani from '@/components/tour/KilavuzKatmani';
+import GorevRehberi from '@/components/tour/GorevRehberi';
 
 /**
  * Kök ayarlar: tema eşitlemesi ve hareket tercihi.
@@ -36,6 +38,13 @@ export default function KokAyarlari({ children }: { children: React.ReactNode })
         return temaDegisiminiIzle();
     }, []);
 
-    return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
+    return (
+        <MotionConfig reducedMotion="user">
+            {children}
+            {/* Kılavuz: "Bana göster" vurgusu, "Ders tamamlandı" bildirimi ve uygulamalı görevler her ekranda çalışır. */}
+            <KilavuzKatmani />
+            <GorevRehberi />
+        </MotionConfig>
+    );
 }
 

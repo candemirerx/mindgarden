@@ -5,6 +5,7 @@
  * çevrilmesiyle çalışır; burada yalnızca <html> üzerindeki sınıf, tarayıcı
  * renk şeması, tema rengi meta etiketi ve Android durum çubuğu yönetilir.
  */
+import { dersTamamla } from './kilavuzIlerleme';
 
 export type Tema = 'acik' | 'koyu' | 'sistem';
 
@@ -71,6 +72,7 @@ export function temaAyarla(tema: Tema): void {
     if (tema === 'sistem') window.localStorage.removeItem(TEMA_ANAHTARI);
     else window.localStorage.setItem(TEMA_ANAHTARI, tema);
     temaUygula(tema);
+    dersTamamla('t-gorunum');
 }
 
 /**

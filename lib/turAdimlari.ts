@@ -37,12 +37,17 @@ export const BASLANGIC_TURU: TurAdimi[] = [
         id: 'bahce-karti',
         hedef: '[data-tur="bahce-karti"]',
         baslik: 'Bahçenizi açın',
-        metin: 'Karta dokunarak bahçeye girersiniz. Menüden adını değiştirebilir ya da silebilirsiniz.',
+        metin: 'Kartın altındaki Liste ve Tuval düğmeleri bahçeyi iki ayrı ekranda açar. Adına dokunursanız son kullandığınız ekran açılır. Üç nokta menüsünden adını değiştirebilir ya da silebilirsiniz.',
+    },
+    {
+        id: 'iki-ekran',
+        baslik: 'Liste ve Tuval',
+        metin: 'İki ekran aynı notları gösterir. Liste notları alt alta, iç içe satırlar olarak; Tuval kartlar ve dallar olarak gösterir. Bir ekranda eklediğiniz not ötekinde de vardır.',
     },
     {
         id: 'agac',
         baslik: 'Ağaç ve dallar',
-        metin: 'Bahçenin içinde artı düğmesiyle yeni ağaç eklersiniz. Bir kartın yanından yeni dal çıkararak fikri dallandırın.',
+        metin: 'Bahçedeki en üst notlar ağaçtır, altlarına eklediğiniz notlar dal ve yapraktır. Listede artı düğmesiyle, boş Tuval\'de ortadaki alana dokunarak ilk ağacı açarsınız.',
     },
     {
         id: 'kart',
@@ -52,7 +57,7 @@ export const BASLANGIC_TURU: TurAdimi[] = [
     {
         id: 'bitis',
         baslik: 'Hazırsınız',
-        metin: 'Bu turu ayarlardaki kullanım kılavuzundan Uygulamalı öğren düğmesiyle istediğiniz zaman yeniden başlatabilirsiniz.',
+        metin: 'Bu turu ve adım adım görevleri Ayarlar → Kullanım kılavuzu → Uygulamalı öğrenim bölümünde bulursunuz. Okuyarak öğrenmek isterseniz Teorik öğrenim sekmesine geçin.',
     },
 ];
 

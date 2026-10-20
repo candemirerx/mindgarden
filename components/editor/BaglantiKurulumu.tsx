@@ -15,13 +15,13 @@
  */
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Activity, Bluetooth, Check, ExternalLink, Globe, Loader2, MonitorSmartphone, Radio, RefreshCw, Search, ShieldCheck, Wifi } from 'lucide-react';
+import { Activity, Bluetooth, Cable, Check, ExternalLink, Globe, Loader2, MonitorSmartphone, Radio, RefreshCw, Search, ShieldCheck, Wifi } from 'lucide-react';
 import YardimciIndir from '@/components/ui/PcYardimcisiIndir';
 export { default as YardimciIndir } from '@/components/ui/PcYardimcisiIndir';
 import {
     KART_AP_ADRESI, KART_AP_AGI, baglantiSatiriniCoz, baglantiTuru, baglantiTuruSec, bilgisayarAdresiniSina, wifiAyarlariniAc, bilgisayarlaEslestirBluetooth, bilgisayarlaEslestirWifi, bilgisayarlariBul,
     bluetoothAyarlariniAc, bluetoothKlavyeBagla, bluetoothKlavyeyiBaslat, connectCard, telefonuGorunurYap, disconnectCard, kartAdiEslesir, kartAginda, kartiWifidaBul, kayitliKartAdresi, scanCards, scanPairedComputers,
-    sendToComputerClipboard, telefonWifiAdresi, testCard, testHelper
+    sendToComputerClipboard, telefonWifiAdresi, testCard, testHelper, bilgisayarlaEslestirUsb
 } from '@/lib/remoteTools';
 import type { BaglantiTuru, BulunanBilgisayar, Device, RemotePrefs } from '@/lib/remoteTools';
 import { SettingsField, SettingsGroupLabel, SettingsNote, SettingsSwitch, cx, settingsFieldClass } from '@/components/ui/settings';
@@ -563,7 +563,29 @@ function KartBleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncel
 
 type YolTanimi = { id: BaglantiTuru; label: string; detail: string; Icon: typeof Wifi; grup: 'bilgisayar' | 'kart' };
 
+function UsbKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }) {
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState('');
+    return <div className="space-y-3">
+        <Aciklama>Telefonu USB kablosuyla bağlayın. Geliştirici seçeneklerinde USB hata ayıklama açık olmalı; yalnız güvendiğiniz bilgisayarın iznini onaylayın. Bilgisayardaki USB köprüsü arka planda otomatik çalışır. Wi‑Fi, Tailscale ve güvenlik duvarı izni gerekmez. Kablo çıkarsa bu yol durur.</Aciklama>
+        <Aciklama>İlk bilgisayar kurulumu: <a href="https://cep-kopru-indir.upbeat-lamb-7436.chatgpt.site/" target="_blank" rel="noopener noreferrer" className="underline">Ortak Windows yardımcısını (2.2.0 veya üzeri) indirin</a>. ZIP’i çıkarıp Yonetici-Gerektirmeyen → 10-Telefon-USB-Otomatik-Kur dosyasını bir kez açın. İki uygulama aynı arka plan köprüsünü kullanır; ayrı yardımcı açmanız gerekmez.</Aciklama>
+        <button type="button" className={anaDugme} disabled={busy} onClick={() => void (async () => {
+            setBusy(true); setMessage('Bilgisayarda açılan pencerede İzin ver seçin · 60 saniye');
+            try {
+                const result = await bilgisayarlaEslestirUsb();
+                const next = { ...prefs, ...result, helperTokenUsb: result.helperToken };
+                update(next); await testHelper(next); void durumuTazele(next);
+                setMessage('USB bağlantısı hazır.');
+            } catch (error) { setMessage(error instanceof Error ? error.message : 'USB bağlantısı kurulamadı.'); }
+            finally { setBusy(false); }
+        })()}>{busy ? 'Bilgisayarın onayı bekleniyor…' : 'Bağlantı isteği gönder'}</button>
+        <button type="button" className={ikinciDugme} disabled={busy || !prefs.helperToken} onClick={() => void durumuTazele(prefs)}>USB bağlantısını dene</button>
+        {message && <Aciklama>{message}</Aciklama>}
+    </div>;
+}
+
 const YOLLAR: YolTanimi[] = [
+    { id: 'usb', label: 'Bilgisayar · USB', detail: 'Kablo; otomatik arka plan köprüsü', Icon: Cable, grup: 'bilgisayar' },
     { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'Aynı ağ; yardımcı + 6 haneli kod', Icon: Wifi, grup: 'bilgisayar' },
     { id: 'tailscale', label: 'Tailscale', detail: 'Başka şehirden de; yardımcı', Icon: Globe, grup: 'bilgisayar' },
     { id: 'pc-bluetooth', label: 'Bilgisayar · Bluetooth', detail: 'Klavye/fare; program gerekmez', Icon: Bluetooth, grup: 'bilgisayar' },
@@ -581,8 +603,9 @@ const yolTanimi = (id: BaglantiTuru): YolTanimi => YOLLAR.find(y => y.id === id)
 
 /** Yol hazır mı? (kayıtlı bilgilere göre; canlı bağlantıyı "Dene" doğrular). */
 function yolHazir(id: BaglantiTuru, prefs: RemotePrefs): boolean {
-    if (id === 'pc-wifi') return !!((prefs.agTuru === 'tailscale' ? prefs.helperUrlLan : prefs.helperUrl) && prefs.helperToken);
-    if (id === 'tailscale') return !!((prefs.agTuru === 'tailscale' ? prefs.helperUrl : prefs.helperUrlTs) && prefs.helperToken);
+    if (id === 'usb') return !!(prefs.agTuru === 'usb' ? prefs.helperToken : prefs.helperTokenUsb);
+    if (id === 'pc-wifi') return !!((prefs.agTuru === 'tailscale' || prefs.agTuru === 'usb' ? prefs.helperUrlLan : prefs.helperUrl) && (prefs.agTuru === 'usb' ? prefs.helperTokenAg : prefs.helperToken));
+    if (id === 'tailscale') return !!((prefs.agTuru === 'tailscale' ? prefs.helperUrl : prefs.helperUrlTs) && (prefs.agTuru === 'usb' ? prefs.helperTokenAg : prefs.helperToken));
     if (id === 'pc-bluetooth') return !!prefs.helperBluetoothAddress;
     if (id === 'wifi') return !!((prefs.agTuru === 'kart-ap' ? prefs.cardUrlEv : prefs.cardUrl) || '').trim();
     if (id === 'bluetooth') return !!kayitliKartAdresi();
@@ -713,6 +736,7 @@ export default function BaglantiKurulumu({ prefs, update }: { prefs: RemotePrefs
             <div className="p-3.5">
                 {secili === 'pc-wifi' && <PcWifiEslestirme prefs={prefs} update={update} yoluSec />}
                 {secili === 'tailscale' && <TailscaleKurulumu prefs={prefs} update={update} />}
+                {secili === 'usb' && <UsbKurulumu prefs={prefs} update={update} />}
                 {secili === 'pc-bluetooth' && <BilgisayarBluetoothKlavye prefs={prefs} update={update} />}
                 {secili === 'wifi' && <KartWifiKurulumu prefs={prefs} update={update} />}
                 {secili === 'kart-ap' && <KartApKurulumu prefs={prefs} update={update} />}

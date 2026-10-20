@@ -26,7 +26,7 @@ export default function TemaSecici({ className = '' }: { className?: string }) {
     }, []);
 
     return (
-        <fieldset className={className}>
+        <fieldset className={className} data-kilavuz="tema-secici">
             <legend className="label">Görünüm</legend>
             <div className="grid grid-cols-3 gap-2">
                 {SECENEKLER.map(({ deger, etiket, Ikon }) => (

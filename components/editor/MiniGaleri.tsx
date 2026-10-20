@@ -9,11 +9,14 @@
  * dokunuşlar seçimi değiştirir; "Tümünü seç" hepsini seçer. Altta WhatsApp'taki
  * gibi küçük bir yazma kutusu: telefon panosundaki görsel ya da metin
  * yapıştırılıp galeriye gönderilir.
+ *
+ * Galeri Google Drive ile cihazlar arasında eşitlenir (lib/galeriDrive);
+ * başlığın altındaki şerit izin gerektiğinde ya da hata olduğunda görünür.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Capacitor } from '@capacitor/core';
-import { ArrowLeft, Camera, Check, CheckCheck, ClipboardCopy, ClipboardPaste, Copy, FileText, FilePlus2, Download, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Camera, Check, CheckCheck, Cloud, CloudOff, RefreshCw, ClipboardCopy, ClipboardPaste, Copy, FileText, FilePlus2, Download, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
 import { dosyalariBilgisayaraGonder, klavyeGorselleriniDinle, sendToComputerClipboard, telefonPanosunaYaz, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { useBaglantiDurumu, yolAdi } from '@/lib/baglantiDurumu';
@@ -21,9 +24,36 @@ import BaglantiGostergesi from './BaglantiGostergesi';
 import { belgeleriGaleriyeEkle, dosyaBoyutu, dosyalariGaleriyeEkle, galeridenSil, galeriyeEkle, gorseliHazirla, metinKarti, useMiniGaleri } from '@/lib/miniGaleri';
 import type { GaleriOgesi } from '@/lib/miniGaleri';
 import { cx } from '@/components/ui/settings';
+import { useGaleriEsitleme, type GaleriEsitlemeDurumu } from '@/lib/galeriDrive';
 import Kamera from './Kamera';
 
 type Durum = { metin: string; ton: 'sending' | 'ok' | 'error' } | null;
+
+/** Başlık altındaki kısa durum: eşitleniyor / eşitlendi. */
+function esitlemeOzeti(durum: GaleriEsitlemeDurumu): string {
+    if (durum.tur === 'esitleniyor') return 'Drive ile eşitleniyor…';
+    if (durum.tur === 'tamam') return durum.indirilen ? durum.indirilen + ' öğe başka cihazdan geldi · Drive ile eşit' : 'Drive ile eşit';
+    return '';
+}
+
+/** İzin gerektiğinde, kapalıyken ya da hata olduğunda başlığın altında çıkan şerit. */
+function EsitlemeSeridi({ durum, onEsitle }: { durum: GaleriEsitlemeDurumu; onEsitle: () => void }) {
+    if (durum.tur !== 'izin' && durum.tur !== 'kapali' && durum.tur !== 'hata') return null;
+    const hata = durum.tur === 'hata';
+    return <div id="galeri-esitleme" role={hata ? 'alert' : 'status'} className={cx('flex items-center gap-2.5 border-t px-3 py-2 text-xs leading-snug sm:px-4',
+        hata ? 'border-berry-200 bg-berry-50 text-berry-800' : 'border-sand-200 bg-sand-50 text-sand-700')}>
+        {durum.tur === 'kapali' ? <CloudOff size={16} className="shrink-0" aria-hidden="true" /> : <Cloud size={16} className="shrink-0" aria-hidden="true" />}
+        <span className="min-w-0 flex-1">
+            {hata ? durum.ileti
+                : durum.tur === 'kapali' ? 'Drive eşitlemesi kapalı: bu galeri yalnız bu cihazda.'
+                    : 'Bu galeri yalnız bu cihazda. Diğer cihazlarınızda da görmek için Google Drive ile eşitleyin.'}
+        </span>
+        <button type="button" id="galeri-esitle" onClick={onEsitle}
+            className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-moss-700 px-3 text-xs font-semibold text-white hover:bg-moss-800">
+            <RefreshCw size={13} aria-hidden="true" />{hata ? 'Yeniden dene' : durum.tur === 'kapali' ? 'Aç ve eşitle' : 'Eşitle'}
+        </button>
+    </div>;
+}
 
 /** Öğenin önizleme adresi: görseller için nesne adresi, kapanınca bırakılır. */
 function useOnizlemeler(ogeler: GaleriOgesi[]) {
@@ -45,6 +75,8 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
     const prefs = useRemotePrefs();
     const baglanti = useBaglantiDurumu(prefs, { aralikMs: 30000, etkin: true });
     const { ogeler, yukleniyor } = useMiniGaleri(notId);
+    const esitleme = useGaleriEsitleme(notId);
+    const ozet = esitlemeOzeti(esitleme.durum);
     const onizleme = useOnizlemeler(ogeler);
     const [secili, setSecili] = useState<Set<string>>(new Set());
     const [buyuk, setBuyuk] = useState<GaleriOgesi | null>(null);
@@ -241,7 +273,10 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                     <button type="button" onClick={onKapat} aria-label="Galeriyi kapat" className="flex h-11 w-11 items-center justify-center rounded-full text-sand-700 hover:bg-sand-100"><ArrowLeft size={20} /></button>
                     <div className="min-w-0 flex-1">
                         <p className="truncate text-base font-semibold text-sand-900">Mini galeri</p>
-                        <p className="text-[11px] leading-none text-sand-500">{ogeler.length ? ogeler.length + ' öğe · seçmek için basılı tutun' : 'Bu nota özel'}</p>
+                        <p className="flex items-center gap-1 truncate text-[11px] leading-none text-sand-500">
+                            {esitleme.durum.tur === 'esitleniyor' ? <Loader2 size={11} className="shrink-0 animate-spin" aria-hidden="true" /> : esitleme.durum.tur === 'tamam' ? <Cloud size={11} className="shrink-0 text-moss-600" aria-hidden="true" /> : null}
+                            <span className="truncate">{ozet || (ogeler.length ? ogeler.length + ' öğe · seçmek için basılı tutun' : 'Bu nota özel')}</span>
+                        </p>
                     </div>
                 </>}
                 <BaglantiGostergesi kompakt id="galeri-baglanti-durumu" yol={prefs.connection} ad={yolAdi(prefs)} durum={baglanti.durum} bakiliyor={baglanti.bakiliyor}
@@ -264,6 +299,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                     </button>;
                 })}
             </div>
+            <EsitlemeSeridi durum={esitleme.durum} onEsitle={() => void esitleme.simdiEsitle()} />
         </header>
 
         {/* Durum bildirimi */}

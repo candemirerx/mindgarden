@@ -442,6 +442,19 @@ function Read-Headers($stream) {
     throw 'HTTP başlığı çok uzun.'
 }
 
+# Gövdeyi okumadan yanıt verip bağlantıyı kapatmak, okunmamış veri yüzünden
+# bağlantıyı sıfırlar (TCP RST): telefon yanıtı göremez ve "Anahtar yanlış"
+# yerine ağ hatası alıp bilgisayarı boşuna ağda arar. Erken yanıttan önce kısa
+# gövde okunup atılır; çok büyük gövdede beklenmez.
+function Skip-Body($stream, [int]$length) {
+    if ($length -lt 1 -or $length -gt 2MB) { return }
+    $atik = New-Object byte[] ([Math]::Min($length, 65536))
+    $kalan = $length
+    try {
+        while ($kalan -gt 0) { $n = $stream.Read($atik, 0, [Math]::Min($kalan, $atik.Length)); if ($n -le 0) { break }; $kalan -= $n }
+    } catch { }
+}
+
 function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
     # Sunucu istemcileri sırayla işler: yarıda kalan tek bir bağlantı (ör. Wi‑Fi'si
     # istek ortasında kopan telefon) sonraki tüm komutları bu süre kadar bekletir.
@@ -473,7 +486,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
             $cevap = Test-PairPin $pin $expectedToken
             Send-Response $stream ($(if ($cevap -like '{"ok":true*' -or $cevap -like '*"ok":true*') { 200 } else { 403 })) $cevap; return
         }
-        if (-not (Same-Token $authorization "Bearer $expectedToken")) { Send-Response $stream 401 '{"ok":false,"error":"Anahtar yanlış"}'; return }
+        if (-not (Same-Token $authorization "Bearer $expectedToken")) { Skip-Body $stream $length; Send-Response $stream 401 '{"ok":false,"error":"Anahtar yanlış"}'; return }
         if ($parts[0] -eq 'GET' -and $parts[1] -eq '/health') { Send-Response $stream 200 (@{ ok = $true; app = 'not-bahcesi-clipboard'; surum = 7; fileTransfer = $true; phoneStorage = $script:phoneDriveReady; cardClipboard = $true; windowActions = $true; screenWidth = [RemoteInput]::DesktopWidth; screenHeight = [RemoteInput]::DesktopHeight } | ConvertTo-Json -Compress); return }
         if ($parts[0] -eq 'POST' -and $parts[1] -eq '/phone-storage') {
             if (-not $script:phoneDriveReady) { Send-Response $stream 503 '{"ok":false,"error":"PC dosya paylaşım bileşeni açılamadı."}'; return }
@@ -493,7 +506,7 @@ function Handle-Client($client, [string]$expectedToken, [bool]$dryRun) {
             } catch { Send-Response $stream 400 (@{ ok = $false; error = $_.Exception.Message } | ConvertTo-Json -Compress) }
             return
         }
-        if ($parts[0] -ne 'POST' -or @('/clipboard', '/input') -notcontains $parts[1]) { Send-Response $stream 404 '{"ok":false}'; return }
+        if ($parts[0] -ne 'POST' -or @('/clipboard', '/input') -notcontains $parts[1]) { Skip-Body $stream $length; Send-Response $stream 404 '{"ok":false}'; return }
         if ($length -lt 1 -or $length -gt 1048576) { Send-Response $stream 413 '{"ok":false,"error":"Metin 1 MB sınırını aşıyor"}'; return }
         $payload = New-Object byte[] $length
         $readTotal = 0

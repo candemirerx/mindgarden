@@ -15,6 +15,7 @@
 import { Capacitor } from '@capacitor/core';
 import { supabase, isLocalBackend } from './supabaseClient';
 import type { useStore } from './store/useStore';
+import { dersTamamla } from './kilavuzIlerleme';
 
 export const GOOGLE_CLIENT_ID =
     '745502376472-dqf1pus06s224bakb2i3sls86flgfjm5.apps.googleusercontent.com';
@@ -214,6 +215,27 @@ export async function getDriveToken(force = false): Promise<string> {
 
 export function clearDriveToken(): void {
     cachedToken = null;
+}
+
+/**
+ * Kullanıcıya pencere göstermeden Drive anahtarı: önbellekte varsa o,
+ * APK'da daha önce izin verilmişse sessiz yenileme. Tarayıcıda Google penceresi
+ * yalnız bir dokunuşla açılabildiği için önbellek yoksa null döner.
+ */
+export async function sessizDriveToken(): Promise<string | null> {
+    if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.token;
+    if (!Capacitor.isNativePlatform()) return null;
+    try {
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        try { await (GoogleAuth as any).initialize({ scopes: SCOPES.split(' ') }); } catch { /* zaten hazır */ }
+        const yanit: any = await (GoogleAuth as any).refresh();
+        const token = yanit?.authentication?.accessToken ?? yanit?.accessToken ?? null;
+        if (!token) return null;
+        cachedToken = { token, expiresAt: Date.now() + 55 * 60 * 1000 };
+        return token;
+    } catch {
+        return null;
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -812,6 +834,8 @@ export async function syncOnStartup(): Promise<void> {
     try {
         const token = await getDriveToken(true);
         await mergeSync(token);
+        // Kılavuz: Google ile eşitleme çalışıyor; çoklu cihaz dersi uygulanmış olur.
+        dersTamamla('b-cihazlar');
     } catch {
         // Sessiz geç: çevrimdışı olabilir; sonraki açılışta tekrar denenir.
     }

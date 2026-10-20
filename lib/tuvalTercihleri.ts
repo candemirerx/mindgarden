@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react';
 import { bildir, dinle } from './degisim';
 import { temaAboneGec } from './tema';
+import { dersTamamla } from './kilavuzIlerleme';
 
 export type TuvalGosterim = 'organik' | 'yatay' | 'klasik';
 export type TuvalGezinme = 'cubuk' | 'sekme' | 'yok';
@@ -115,6 +116,10 @@ export function tuvalTercihleri(): TuvalTercihleri {
 
 export function tuvalTercihleriniKaydet(t: TuvalTercihleri): void {
     if (typeof window === 'undefined') return;
+    // Kılavuz: görünümü ya da kart düğmelerini değiştiren kullanıcı ilgili dersi uygulamış olur.
+    const onceki = tuvalTercihleri();
+    if (onceki.gosterim !== t.gosterim || onceki.kart !== t.kart || onceki.kartKoyu !== t.kartKoyu || onceki.eylem !== t.eylem || onceki.onizleme !== t.onizleme || onceki.gezinme !== t.gezinme) dersTamamla('t-kart-gorunum');
+    if (JSON.stringify(onceki.dugmeler) !== JSON.stringify(t.dugmeler)) dersTamamla('t-kart-menu');
     try { localStorage.setItem(ANAHTAR, JSON.stringify(t)); } catch { /* depolama kapalı */ }
     bildir('tuval');
 }

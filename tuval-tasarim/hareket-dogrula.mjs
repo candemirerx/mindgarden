@@ -238,6 +238,14 @@ try {
  await run('document.querySelector(\'[data-arac="yok:"]\').click()'); await wait(450);
 
  assert.equal(await run(`JSON.parse(localStorage.getItem('nb-tuval-v1')).dugmeler.altSol`),'yok');
+ await run('document.querySelector("#kart-arac-ekle-altSag").click()'); await wait(200);
+ await run('document.querySelector("#kart-arac-sekme-bilgisayar").click()'); await wait(150);
+ assert.equal(await run(`document.querySelectorAll('[data-arac]').length`),7,'bilgisayar sekmesinde yedi arac var');
+ await run('document.querySelector(\'[data-arac="pcKlavye:"]\').click()'); await wait(450);
+ assert.equal(await run(`JSON.parse(localStorage.getItem('nb-tuval-v1')).dugmeler.altSag`),'pcKlavye');
+ await run('document.querySelector("#kart-arac-ekle-altSag").click()'); await wait(200);
+ await run('document.querySelector("#kart-arac-sekme-hazir").click()'); await wait(150);
+ await run('document.querySelector(\'[data-arac="yok:"]\').click()'); await wait(450);
  await load(); await hold('branch');
  assert.equal(await run('document.querySelector("[data-kart-yer=sag]").dataset.kartEylem'),'kopya');
  assert.equal(await run('document.querySelector("[data-kart-yer=altSol]")===null'),true);
@@ -302,12 +310,16 @@ try {
  assert.equal(await run(`!!document.querySelector('#kart-arac-ekle-sag')`),true);
  await run(`(()=>{const e=document.querySelector('#tuval-boyut-yanG');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(e,'50');e.dispatchEvent(new Event('input',{bubbles:true}));})()`); await wait(150);
  assert.equal(await run(`JSON.parse(localStorage.getItem('nb-tuval-v1')).boyut.yanG`),50);
+ const ayarla=async(k,v)=>{await run(`(()=>{const e=document.querySelector('#tuval-boyut-${k}');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(e,'${v}');e.dispatchEvent(new Event('input',{bubbles:true}));})()`);await wait(120);};
+ await ayarla('ustOrtaG',120); await ayarla('ustSolY',70);
+ assert.deepEqual(await run(`(()=>{const b=JSON.parse(localStorage.getItem('nb-tuval-v1')).boyut;return [b.ustOrtaG,b.ustSolY,b.ustSagG??null]})()`),[120,70,null]);
  await run(`Array.from(document.querySelectorAll('[aria-label="Düzen"] button')).find(b=>b.textContent.includes('Klasik')).click()`); await wait(150);
  assert.deepEqual(await run(`(()=>{const t=JSON.parse(localStorage.getItem('nb-tuval-v1'));return [t.gosterim,t.eylem,Object.hasOwn(t,'kullanim')]})()`),['klasik','yumusak',false]);
  await run(`document.querySelector('[aria-label="Ağaç yönetiminden geri dön"]').click()`); await wait(250);
  await navigate('/'); await load(); await wait(350); await hold('branch');
  assert.equal(await run(`document.querySelector('[data-kart-aktif="1"]').dataset.kartModel`),'yumusak');
  const sagKutu=await box('[data-kart-yer="sag"]'); assert.equal(Math.round(sagKutu.right-sagKutu.left),50,'yan dugme genisligi ayardan gelir');
+ const ortaK=await box('[data-kart-yer="ustOrta"]'), solK=await box('[data-kart-yer="ustSol"]'); assert.equal(Math.round(ortaK.right-ortaK.left),120,'ust orta genisligi ayardan gelir'); assert.equal(Math.round(solK.bottom-solK.top),70,'ust sol yuksekligi ayardan gelir');
  await screenshot('guncel-yumusak-klasik.png'); await touch('touchCancel',await box('[data-yk-id="branch"]'));
  console.log('PASS: Görünüm seçenekleri ayarlardan değişir, yenilemede korunur ve tuvale uygulanır');
 } finally { socket?.close(); browser.kill(); }

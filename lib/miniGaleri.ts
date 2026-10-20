@@ -3,11 +3,12 @@
  *
  * Her notun kendi galerisi vardır: kameradan çekilen, telefon galerisinden
  * aktarılan ya da panodan yapıştırılan görseller ve küçük metin kartları.
- * Öğeler yalnız bu cihazda, IndexedDB'de durur (bahçe verisine, dışa aktarmaya
- * ve Drive yedeğine girmez). Deneme notunun galerisi yalnız bellektedir; çıkınca
- * kaybolur.
+ * Öğeler cihazda IndexedDB'de durur ve Google Drive ile cihazlar arasında
+ * eşitlenir (bkz. galeriDrive; bahçe verisine ve dışa aktarmaya girmez).
+ * Deneme notunun galerisi yalnız bellektedir; çıkınca kaybolur, eşitlenmez.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { galeriEsitlemeIste, driveSilinecekEkle } from './galeriDrive';
 
 export type GaleriOgesi = {
     id: string;
@@ -20,6 +21,10 @@ export type GaleriOgesi = {
     /** Bilgisayara gönderilirken kullanılan dosya adı. */
     ad: string;
     olusturma: number;
+    /** Drive'daki kopyanın kimliği; yoksa henüz yüklenmedi. */
+    driveId?: string;
+    /** Kopyanın bulunduğu Drive hesabı: başka hesaba geçilince öğe silinmiş sanılmasın. */
+    driveHesap?: string;
 };
 
 const VT_ADI = 'nb-mini-galeri';
@@ -72,13 +77,30 @@ export async function galeriyeEkle(notId: string, ogeler: Omit<GaleriOgesi, 'id'
     if (bellekte(notId)) bellek.set(notId, [...(bellek.get(notId) ?? []), ...kayitlar]);
     else await islem('readwrite', depo => { kayitlar.forEach(k => depo.put(k)); });
     degisti(notId);
+    if (!bellekte(notId)) galeriEsitlemeIste(notId);
     return kayitlar.length;
 }
 
 export async function galeridenSil(notId: string, idler: string[]): Promise<void> {
     if (!idler.length) return;
     if (bellekte(notId)) bellek.set(notId, (bellek.get(notId) ?? []).filter(o => !idler.includes(o.id)));
-    else await islem('readwrite', depo => { idler.forEach(id => depo.delete(id)); });
+    else {
+        // Drive'a yüklenmiş öğeler orada da silinir; çevrimdışıysa sıraya alınır.
+        const silinenler = (await galeriListele(notId)).filter(o => idler.includes(o.id) && o.driveId);
+        driveSilinecekEkle(silinenler.map(o => ({ driveId: o.driveId!, hesap: o.driveHesap ?? '' })));
+        await islem('readwrite', depo => { idler.forEach(id => depo.delete(id)); });
+    }
+    degisti(notId);
+    if (!bellekte(notId)) galeriEsitlemeIste(notId);
+}
+
+/**
+ * Eşitlemenin yerel yazmaları: Drive'dan inen öğeyi ekler, Drive kimliğini
+ * kaydeder ya da başka cihazda silineni kaldırır. Yeni eşitleme istemez.
+ */
+export async function galeriEsitlemeYaz(notId: string, yaz: GaleriOgesi[], sil: string[]): Promise<void> {
+    if ((!yaz.length && !sil.length) || bellekte(notId)) return;
+    await islem('readwrite', depo => { yaz.forEach(k => depo.put(k)); sil.forEach(id => depo.delete(id)); });
     degisti(notId);
 }
 
@@ -146,6 +168,8 @@ export function useMiniGaleri(notId: string) {
         void yenile();
         const dinle = (degisen: string) => { if (degisen === notId) void yenile(); };
         dinleyiciler.add(dinle);
+        // Not açılınca başka cihazlarda eklenen ya da silinen öğeler Drive'dan alınır.
+        if (notId && !bellekte(notId)) galeriEsitlemeIste(notId);
         return () => { dinleyiciler.delete(dinle); };
     }, [notId, yenile]);
     return { ogeler, yukleniyor };

@@ -17,6 +17,7 @@ import { sonrakiRenk } from '@/lib/branchColors';
 import { siraliAdEtkin, siraliAd } from '@/lib/tools';
 import { BudananlarDugmesi, useBudamaModu } from '@/components/ui/BudananlarDugmesi';
 import { budamaFiltresi } from '@/lib/uiPrefs';
+import { bahceEkraniAcildi } from '@/lib/kilavuzIlerleme';
 
 interface TreeItem {
     id: string;
@@ -94,6 +95,8 @@ function ProjectsPageInner() {
                 await fetchGardens();
             }
             await fetchNodes(gardenId);
+            // Kılavuz: son bahçeyi hatırla (Bana göster buraya döner), iki ekranı gören kullanıcının dersini tamamla.
+            if (gardenId && useStore.getState().gardens.some((g) => g.id === gardenId)) bahceEkraniAcildi('liste', gardenId);
             setIsLoading(false);
         };
         loadData();
@@ -387,6 +390,7 @@ function ProjectsPageInner() {
                     <div className="w-full">
                         <div
                             onClick={() => setSelectedNodeId(item.id)}
+                            data-kilavuz-secili={isSelected ? '' : undefined}
                             className={`relative rounded-2xl border bg-white p-3 shadow-card transition-all duration-200 cursor-pointer ${
                                 isSelected
                                     ? 'border-moss-500 ring-2 ring-moss-500/15 shadow-lift'
@@ -517,6 +521,7 @@ function ProjectsPageInner() {
                             e.stopPropagation();
                             setSelectedNodeId(item.id);
                         }}
+                        data-kilavuz-secili={isSelected ? '' : undefined}
                         className={`group relative flex items-center gap-1.5 rounded-xl py-1.5 pl-2.5 pr-1 transition-all duration-200 cursor-pointer ${
                             isSelected
                                 ? 'bg-moss-100/70 ring-1 ring-moss-400'
@@ -671,6 +676,7 @@ function ProjectsPageInner() {
                 type="button"
                 role="menuitem"
                 onClick={() => handleAddChild(item.id, hasChildren)}
+                data-kilavuz="menu-dal-ekle"
                 className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
             >
                 {hasChildren ? (
@@ -722,6 +728,7 @@ function ProjectsPageInner() {
                 type="button"
                 role="menuitem"
                 onClick={() => handleTogglePrune(item.id, item.isPruned)}
+                data-kilavuz="menu-buda"
                 className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
             >
                 <Scissors size={15} className="text-moss-600" />

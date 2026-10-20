@@ -796,6 +796,7 @@ public class RemoteBridgePlugin extends Plugin {
         return null;
     }
     private java.net.URLConnection agdanBaglan(URL url) throws IOException {
+        if (url.getHost().equals("127.0.0.1")) return url.openConnection(java.net.Proxy.NO_PROXY);
         if (url.getHost().startsWith("192.168.4.")) {
             android.net.Network ag = kartWifiAgi();
             // The AP proxy carries Internet traffic via USB, not card-local HTTP.

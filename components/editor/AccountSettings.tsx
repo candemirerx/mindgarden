@@ -8,6 +8,7 @@ import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { GUEST_EMAIL, localClient, signInAsGuest } from '@/lib/localClient';
 import { useStore } from '@/lib/store/useStore';
+import { dersTamamla } from '@/lib/kilavuzIlerleme';
 import { clearDriveToken, fetchGoogleProfile, setAutoSyncEnabled, syncOnStartup } from '@/lib/driveSync';
 import {
     cx, SettingsField, SettingsHint, SettingsNote, SettingsPageHeader, SettingsPill,
@@ -102,6 +103,8 @@ export default function AccountSettings({ onDone }: { onDone?: () => void }) {
                 const { error } = await localClient.auth.signInWithGoogleProfile(profile);
                 if (error) throw error;
                 setAutoSyncEnabled(true);
+                dersTamamla('b-giris');
+                dersTamamla('b-cihazlar');
                 setSuccessMessage('Google hesabınız bağlandı. Otomatik Drive yedeklemesi açık.');
                 void syncOnStartup().catch(() => {
                     // Senkronizasyon bölümünde bağlantı tekrar denenebilir; oturum geçerlidir.

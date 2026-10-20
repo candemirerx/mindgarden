@@ -26,7 +26,10 @@ if ($Denetle) {
         $psYolu = Join-Path $PSHOME 'powershell.exe'
         $engel = @(Get-NetFirewallApplicationFilter -Program $psYolu -ErrorAction SilentlyContinue |
             Get-NetFirewallRule | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' -and $_.Name -like 'TCP Query User*' -and ([int]$_.Profile -band 2) -ne 0 }).Count -gt 0
-        if ($hazir -and -not $engel) { exit 0 }
+        $taskCompatRule = Get-NetFirewallRule -DisplayName 'Not Bahcesi PowerShell diger TCP portlari' -ErrorAction SilentlyContinue
+        $taskCompatPorts = @($taskCompatRule | Get-NetFirewallPortFilter | ForEach-Object { $_.LocalPort }) -join ','
+        $taskCompatReady = -not $taskCompatRule -or $taskCompatPorts -eq '1-8764,8766-8774,8776-65535'
+        if ($hazir -and -not $engel -and $taskCompatReady) { exit 0 }
     } catch { }
     exit 1
 }
@@ -40,21 +43,28 @@ if (-not $yonetici) {
 
 # Windows'un onceki izin penceresinde "Iptal" secilmesi PowerShell icin
 # tum portlari engelleyen kurallar olusturur. Acik engel, port izninden ustundur.
-# Yalniz TCP 8765 istisnasini ac: Ortak ag engeli ve diger portlar korunur.
+# Iki yardimcinin portunu ayir: 8765 Not Bahcesi, 8775 Cep Kopru.
+# Kullanicinin mevcut Windows engelini tumden kaldirma; Ortak ag korunur.
 $taskPowerShellPath = Join-Path $PSHOME 'powershell.exe'
+$taskOtherPortsName = 'Not Bahcesi PowerShell diger TCP portlari'
+$taskSafePorts = @('1-8764','8766-8774','8776-65535')
+$taskOldRule = Get-NetFirewallRule -DisplayName $taskOtherPortsName -ErrorAction SilentlyContinue
+if ($taskOldRule) {
+    $taskOldRule | Get-NetFirewallPortFilter | Set-NetFirewallPortFilter -LocalPort $taskSafePorts
+    Write-Host 'Eski engel duzeltildi: TCP 8765 ve 8775 engellenmiyor.' -ForegroundColor Green
+}
 $taskPrivateBlocks = @(Get-NetFirewallApplicationFilter -Program $taskPowerShellPath -ErrorAction SilentlyContinue |
     Get-NetFirewallRule | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' -and $_.Name -like 'TCP Query User*' -and ([int]$_.Profile -band 2) -ne 0 })
 if ($taskPrivateBlocks.Count -gt 0) {
-    $taskOtherPortsName = 'Not Bahcesi PowerShell diger TCP portlari'
     if (-not (Get-NetFirewallRule -DisplayName $taskOtherPortsName -ErrorAction SilentlyContinue)) {
-        New-NetFirewallRule -DisplayName $taskOtherPortsName -Direction Inbound -Action Block -Program $taskPowerShellPath -Protocol TCP -LocalPort @('1-8764','8766-65535') -Profile Private | Out-Null
+        New-NetFirewallRule -DisplayName $taskOtherPortsName -Direction Inbound -Action Block -Program $taskPowerShellPath -Protocol TCP -LocalPort $taskSafePorts -Profile Private | Out-Null
     }
     foreach ($taskBlock in $taskPrivateBlocks) {
         $taskRemainingProfiles = [int]$taskBlock.Profile -band (-bnot 2)
         if ($taskRemainingProfiles -eq 0) { $taskBlock | Disable-NetFirewallRule | Out-Null }
         else { $taskBlock | Set-NetFirewallRule -Profile $taskRemainingProfiles | Out-Null }
     }
-    Write-Host 'Onceki PowerShell engelinde yalniz yerel TCP 8765 baglantisi icin istisna hazirlandi.' -ForegroundColor Green
+    Write-Host 'Onceki PowerShell engelinde TCP 8765 ve 8775 istisnalari hazirlandi; diger korumalar korundu.' -ForegroundColor Green
 }
 
 $kural = $null

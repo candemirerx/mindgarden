@@ -8,6 +8,7 @@
  * anahtarıyla seçtiği sağlayıcıya gönderilir ve dönen cevap nota yazılır.
  */
 import { bildir } from './degisim';
+import { dersTamamla } from './kilavuzIlerleme';
 
 export interface AiMacro {
     id: string;
@@ -155,6 +156,8 @@ export function readAiMacros(): AiMacro[] {
 
 export function saveAiMacros(macros: AiMacro[]): void {
     if (typeof window === 'undefined') return;
+    // Kılavuz: makro sayısı arttıysa kullanıcı kendi yapay zekâ komutunu eklemiştir.
+    if (macros.length > readAiMacros().length) dersTamamla('o-ai-makro');
     localStorage.setItem(AI_MACROS_KEY, JSON.stringify(macros));
     // Editör açıkken değişiklik anında görünsün.
     bildir('makrolar');

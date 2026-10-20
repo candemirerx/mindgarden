@@ -17,6 +17,7 @@ import {
 } from './remoteTools';
 import type { ConnectionMode, RemotePrefs } from './remoteTools';
 import { bildir, dinle } from './degisim';
+import { dersTamamla } from './kilavuzIlerleme';
 
 export type DurumTuru = 'ok' | 'hata' | 'kurulmadi' | 'bakiliyor';
 export type BaglantiDurumu = { tur: DurumTuru; mesaj: string; yol: ConnectionMode; zaman: number };
@@ -41,13 +42,21 @@ function sureli<T>(is: Promise<T>, ms: number, mesaj: string): Promise<T> {
 /** Seçili yolu yoklar. Kurulum eksikse ağa hiç çıkılmaz. */
 export async function baglantiyiYokla(prefs: RemotePrefs): Promise<BaglantiDurumu> {
     const yol = prefs.connection;
-    const sonuc = (tur: DurumTuru, mesaj: string): BaglantiDurumu => ({ tur, mesaj, yol, zaman: Date.now() });
+    const sonuc = (tur: DurumTuru, mesaj: string): BaglantiDurumu => {
+        // Kılavuz: çalışan bir bağlantı, bağlantı derslerini uygulamada tamamlar.
+        if (tur === 'ok') {
+            dersTamamla('i-yol');
+            if (prefs.agTuru === 'usb') dersTamamla('i-usb');
+            if (prefs.agTuru === 'tailscale') dersTamamla('i-tailscale');
+        }
+        return { tur, mesaj, yol, zaman: Date.now() };
+    };
     const ad = prefs.helperName || 'bilgisayar';
     try {
         if (yol === 'pc-wifi') {
             if (!prefs.helperUrl || !prefs.helperToken) return sonuc('kurulmadi', 'Bilgisayar eşleştirilmedi.');
             await sureli(testHelper(prefs), 9000, 'Bilgisayar yanıt vermedi.');
-            return sonuc('ok', ad + (prefs.agTuru === 'tailscale' ? ' ile Tailscale üzerinden bağlı.' : ' ile bağlı (Wi‑Fi).'));
+            return sonuc('ok', ad + (prefs.agTuru === 'usb' ? ' ile USB kablosundan bağlı.' : prefs.agTuru === 'tailscale' ? ' ile Tailscale üzerinden bağlı.' : ' ile bağlı (Wi‑Fi).'));
         }
         if (yol === 'pc-bluetooth') {
             if (!prefs.helperBluetoothAddress) return sonuc('kurulmadi', 'Bilgisayar seçilmedi.');
@@ -68,6 +77,7 @@ export async function baglantiyiYokla(prefs: RemotePrefs): Promise<BaglantiDurum
         return sonuc('ok', 'Karta Bluetooth ile bağlı.');
     } catch (hata) {
         const ileti = hata instanceof Error ? hata.message : 'Bağlantı kurulamadı.';
+        if (yol === 'pc-wifi' && prefs.agTuru === 'usb') return sonuc('hata', 'USB bağlantısı yok. Kablo, USB hata ayıklama izni ve bilgisayardaki USB köprüsünü kontrol edin. (' + ileti + ')');
         if (yol === 'pc-wifi' && prefs.agTuru === 'tailscale') return sonuc('hata', 'Tailscale üzerinden bilgisayara ulaşılamadı. Telefonda ve bilgisayarda Tailscale açık mı, PC Yardımcısı çalışıyor mu? (' + ileti + ')');
         if (yol === 'wifi' && prefs.agTuru === 'kart-ap') return sonuc('hata', 'Karta ulaşılamadı. Telefon kartın kendi Wi‑Fi ağına (' + KART_AP_AGI + ') bağlı mı? (' + ileti + ')');
         return sonuc('hata', ileti);

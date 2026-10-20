@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
+import { dersTamamla } from '@/lib/kilavuzIlerleme';
 import { Capacitor } from '@capacitor/core';
 import {
     YEDEK_EN_BUYUK_BAYT,
@@ -675,6 +676,7 @@ export default function DataSection() {
      * ise normal indirme kullanılır.
      */
     const saveFile = async (blob: Blob, filename: string) => {
+        dersTamamla('o-dosya');
         if (Capacitor.isNativePlatform()) {
             try {
                 const base64 = await blobToBase64(blob);

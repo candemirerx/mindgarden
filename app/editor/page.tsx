@@ -30,6 +30,7 @@ import { runLocalInference, isOfflineFallbackEnabled } from '@/lib/localLlm';
 import { Capacitor } from '@capacitor/core';
 import { imleciGorunurTut } from '@/lib/imlecGorunur';
 import { DENEME_AGACLARI, ayarlaraDonOku, denemeTuru } from '@/lib/denemeAgaci';
+import { dersTamamla } from '@/lib/kilavuzIlerleme';
 
 /**
  * Yerel taslak: uygulama kapanırken veya arka plana atılırken kayıt yetişmese
@@ -90,6 +91,8 @@ function EditorPageInner() {
     /** Ayar penceresi istenen bölümde açılabilsin: kısayol panosu doğrudan makrolara gider. */
     const [settingsBolumu, setSettingsBolumu] = useState<SettingsSectionId | 'home'>('home');
     const [focusMode, setFocusMode] = useState(false);
+    // Kılavuz: deneme ağacını açan kullanıcı ilgili dersi uygulamış olur.
+    useEffect(() => { if (deneme) dersTamamla('b-deneme'); }, [deneme]);
     const [toolTab, setToolTab] = useState<'tools' | 'computer' | 'ai'>('tools');
     useEffect(() => { setToolTab(sonAracSekmesi()); }, []);
     /** Ayar penceresi kapanınca odak bu düğmeye döner. */
@@ -205,6 +208,7 @@ function EditorPageInner() {
     // Tam ekran: Android sistem çubukları gizlenir, geri tuşu ve Esc tam ekrandan çıkar.
     useEffect(() => {
         if (!focusMode) return;
+        dersTamamla('t-editor');
         let iptal = false;
         let geriTemizle: (() => void) | null = null;
         void sistemCubuklariniGizle(true);
@@ -778,6 +782,7 @@ function EditorPageInner() {
     };
 
     const handleAcceptSpellCheck = () => {
+        dersTamamla('o-ai');
         revizyonRef.current += 1;
         setHasChanges(true);
         setPendingSpellCheck(null);
@@ -971,7 +976,7 @@ function EditorPageInner() {
                         {/* Export */}
                         <div className="relative" ref={exportMenuRef}>
                             <button
-                                onClick={() => setShowExportMenu(!showExportMenu)}
+                                onClick={() => { setShowExportMenu(!showExportMenu); dersTamamla('t-editor'); }}
                                 className="flex h-11 w-11 items-center justify-center rounded-lg text-sand-600 transition-colors hover:bg-sand-100 hover:text-sand-700"
                                 title="Dışa Aktar"
                                 aria-label="Dışa aktar"

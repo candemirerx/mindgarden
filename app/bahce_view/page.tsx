@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store/useStore';
 import { ArrowLeft, Sprout, Settings2, List, TreePine, X } from 'lucide-react';
 import { useBudamaModu } from '@/components/ui/BudananlarDugmesi';
 import { budamaFiltresi } from '@/lib/uiPrefs';
+import { bahceEkraniAcildi, dersTamamla } from '@/lib/kilavuzIlerleme';
 import { GardenCanvas } from '@/components/canvas/GardenCanvas';
 import { YeniAgac } from '@/components/canvas/YeniAgac';
 import { SeciliEylemler } from '@/components/canvas/SeciliEylemler';
@@ -241,6 +242,8 @@ function GardenPageInner() {
     const [ortalanacak, setOrtalanacak] = useState<{ id: string; sayac: number } | null>(null);
     const [editingNode, setEditingNode] = useState<MindNode | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    // Kılavuz: tuval ve ağaç ayarlarını açan kullanıcı "Tuvalde ustalaşın" dersini uygulamış olur.
+    useEffect(() => { if (isSettingsOpen) dersTamamla('t-tuval'); }, [isSettingsOpen]);
     const budamaModu = useBudamaModu();
     const gorunenAgaclar = budamaFiltresi(mindRoots, budamaModu);
     const tuval = useTuvalTercihleri();
@@ -305,6 +308,8 @@ function GardenPageInner() {
                 await fetchGardens();
             }
             await fetchNodes(gardenId);
+            // Kılavuz: son bahçeyi hatırla (Bana göster buraya döner), iki ekranı gören kullanıcının dersini tamamla.
+            if (gardenId && useStore.getState().gardens.some((g) => g.id === gardenId)) bahceEkraniAcildi('tuval', gardenId);
             setIsLoading(false);
         };
         loadData();

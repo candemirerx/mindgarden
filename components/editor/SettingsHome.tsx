@@ -75,7 +75,7 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     { id: 'gorunum', title: 'Görünüm', description: 'Açık, koyu ya da sistem teması', icon: Palette, group: 'Uygulama', ton: 'moss', keywords: ['tema', 'koyu', 'açık', 'gece', 'görünüm', 'renk', 'dark'] },
     { id: 'data', title: 'Veri yönetimi', description: 'Dışa aktar, geri yükle', icon: Database, group: 'Uygulama', ton: 'moss', keywords: ['yedek', 'dosya', 'json', 'indir', 'yükle', 'sil', 'depolama', 'pdf', 'docx'] },
     { id: 'about', title: 'Uygulama hakkında', description: 'Sürüm ve gizlilik', icon: Info, group: 'Uygulama', ton: 'moss', keywords: ['not bahçesi', 'sürüm', 'versiyon', 'gizlilik', 'güvenlik', 'hakkında'] },
-    { id: 'usage', title: 'Kullanım kılavuzu', description: 'Başlangıçtan uzmana beş seviye', icon: BookOpen, group: 'Yardım', ton: 'clay', keywords: ['kullanım', 'kılavuz', 'yardım', 'nasıl', 'başlangıç', 'rehber', 'sss'] },
+    { id: 'usage', title: 'Kullanım kılavuzu', description: 'Teorik dersler ve uygulamalı görevler', icon: BookOpen, group: 'Yardım', ton: 'clay', keywords: ['kullanım', 'kılavuz', 'yardım', 'nasıl', 'başlangıç', 'rehber', 'sss', 'görev', 'uygulamalı', 'teorik'] },
 ];
 
 /** Eski bölüm kimliklerini günceline çevirir. */
@@ -153,7 +153,7 @@ export default function SettingsHome({ onSelect }: { onSelect: (id: SettingsSect
 
     const satir = ({ id, title, description, icon: Icon, ton }: SettingsSectionDefinition) => (
         <li key={id} className="border-b border-sand-100 last:border-b-0">
-            <button type="button" onClick={() => onSelect(id)}
+            <button type="button" data-ayar={id} onClick={() => onSelect(id)}
                 className="group flex min-h-[64px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-moss-50/70 focus-visible:bg-moss-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-moss-500 active:bg-moss-100/60">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ${TON[ton]}`} aria-hidden="true"><Icon size={19} strokeWidth={1.8} /></span>
                 <span className="min-w-0 flex-1">
@@ -167,7 +167,7 @@ export default function SettingsHome({ onSelect }: { onSelect: (id: SettingsSect
 
     const kutu = ({ id, title, description, icon: Icon, ton }: SettingsSectionDefinition) => (
         <li key={id}>
-            <button type="button" id={'ayar-kutu-' + id} onClick={() => onSelect(id)}
+            <button type="button" id={'ayar-kutu-' + id} data-ayar={id} onClick={() => onSelect(id)}
                 className="group flex h-full min-h-[118px] w-full flex-col items-start gap-2.5 rounded-2xl border border-sand-200 bg-white p-3.5 text-left shadow-soft transition-all hover:-translate-y-0.5 hover:border-moss-300 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 active:translate-y-0 active:scale-[.98]">
                 <span className={`flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-inset ${TON[ton]}`} aria-hidden="true"><Icon size={19} strokeWidth={1.8} /></span>
                 <span className="min-w-0">
@@ -197,7 +197,7 @@ export default function SettingsHome({ onSelect }: { onSelect: (id: SettingsSect
                     <span className="relative min-w-0 flex-1">
                         <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-moss-200">Kullanım kılavuzu</span>
                         <span className="mt-0.5 block truncate font-display text-lg leading-snug tracking-tight">Bahçeniz, sizin düzeniniz.</span>
-                        <span className="mt-0.5 block text-xs leading-relaxed text-moss-100/90">Başlangıçtan uzmana adım adım.</span>
+                        <span className="mt-0.5 block text-xs leading-relaxed text-moss-100/90">Okuyarak ya da yaparak öğrenin.</span>
                     </span>
                     <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-moss-100 transition-colors group-hover:bg-white/20">
                         <ChevronRight size={17} aria-hidden="true" />

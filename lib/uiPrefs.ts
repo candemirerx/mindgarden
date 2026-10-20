@@ -6,6 +6,7 @@
  * Düzenleme araçları bölümünden açar; kapalı bölüm editörde hiç görünmez.
  */
 import { bildir } from './degisim';
+import { dersTamamla } from './kilavuzIlerleme';
 
 export type Bolum = 'yapayzeka' | 'araclar' | 'bilgisayar';
 
@@ -32,6 +33,9 @@ export function bolumAcikliginiAyarla(bolum: Bolum, acik: boolean): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(ANAHTARLAR[bolum], acik ? '1' : '0');
     bildir('bolumler');
+    // Kılavuz: bölümü açan kullanıcı ilgili dersi uygulamış olur.
+    if (acik && bolum === 'araclar') dersTamamla('t-araclar');
+    if (acik && bolum === 'bilgisayar') dersTamamla('i-ac');
 }
 
 export type AracSekmesi = 'tools' | 'computer' | 'ai';
