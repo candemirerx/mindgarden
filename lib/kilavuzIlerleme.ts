@@ -179,3 +179,12 @@ export function gorevTamamlandi(id: string): void {
 
 /** Bir görev yürüyor mu? O sırada ders bildirimleri görev kartıyla çakışmasın. */
 export const gorevYuruyor = () => aktifGorev() !== null;
+
+export type KilavuzModu = 'teori' | 'uygulama';
+/** Kılavuzun son açık sekmesi (Teorik / Uygulamalı); kılavuz açılınca buradan okunur. */
+export const KILAVUZ_MOD_ANAHTARI = 'nb-kilavuz-mod-v1';
+
+/** Kılavuz bir sonraki açılışta bu sekmede açılır (ör. ayarlardaki "Uygulamalı" düğmesi). */
+export function kilavuzModunuSec(mod: KilavuzModu): void {
+    try { localStorage.setItem(KILAVUZ_MOD_ANAHTARI, JSON.stringify(mod)); } catch { /* kılavuz Teorik sekmede açılır */ }
+}

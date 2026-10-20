@@ -30,6 +30,8 @@ import {
  *   değişikliklerinde kaldığı adımdan sürer.
  * - Kullanıcı başka ekrana saparsa kart doğru ekrana dönüş yolunu gösterir.
  * - Bitince "Görev tamamlandı" kartı ve sıradaki görev önerisi çıkar.
+ * - Kart ekranın görünen kısmına (klavye açıksa onun üstüne) yerleşir; hedefin
+ *   üstünde ya da altında kartı sığdıracak yer yoksa tek satırlık şeride küçülür.
  */
 
 type Kutu = { x: number; y: number; w: number; h: number };
@@ -80,6 +82,17 @@ export default function GorevRehberi() {
     const [hedefYok, setHedefYok] = useState(false);
     const [hazir, setHazir] = useState(false);
     const hedefRef = useRef<Element | null>(null);
+    // Ekranın görünen kısmı: telefon klavyesi açılınca küçülür (visualViewport).
+    const [gorunen, setGorunen] = useState<{ ust: number; yukseklik: number } | null>(null);
+    useEffect(() => {
+        const vv = window.visualViewport;
+        if (!vv) return;
+        const olc = () => setGorunen((g) => (g && g.ust === vv.offsetTop && g.yukseklik === vv.height ? g : { ust: vv.offsetTop, yukseklik: vv.height }));
+        olc();
+        vv.addEventListener('resize', olc);
+        vv.addEventListener('scroll', olc);
+        return () => { vv.removeEventListener('resize', olc); vv.removeEventListener('scroll', olc); };
+    }, []);
 
     const gorev = aktif ? GOREVLER.find((g) => g.id === aktif.id) : undefined;
     const adim = gorev?.adimlar[aktif!.adim];
@@ -232,15 +245,31 @@ export default function GorevRehberi() {
     const toplam = gorev.adimlar.length;
     const sira = aktif!.adim;
     const pay = 6;
-    const vh = window.innerHeight;
     const KART = 230;
-    let kartStil: CSSProperties = { top: '50%', transform: 'translateY(-50%)' };
+    const SERIT = 56;
+    // Görünen alan: klavye açıksa ekranın yalnız klavye üstündeki kısmı.
+    const gorunenUst = gorunen?.ust ?? 0;
+    const gorunenAlt = gorunenUst + (gorunen?.yukseklik ?? window.innerHeight);
+    // Görünen alan sayfanın belirgin kısmından küçükse telefon klavyesi açıktır.
+    const klavyeAcik = gorunenAlt - gorunenUst < window.innerHeight * 0.8;
+    let kucuk = false;
+    let kartStil: CSSProperties = { top: (gorunenUst + gorunenAlt) / 2, transform: 'translateY(-50%)' };
     if (kutu) {
-        const ust = kutu.y - pay;
-        const alt = vh - (kutu.y + kutu.h + pay);
-        kartStil = alt >= KART || alt >= ust
-            ? { top: Math.min(kutu.y + kutu.h + pay + 10, Math.max(8, vh - KART)) }
-            : { bottom: Math.min(vh - kutu.y + pay + 10, Math.max(8, vh - KART)) };
+        const ustBosluk = kutu.y - pay - gorunenUst;
+        const altBosluk = gorunenAlt - (kutu.y + kutu.h + pay);
+        if (altBosluk >= KART + 10) kartStil = { top: kutu.y + kutu.h + pay + 10 };
+        else if (ustBosluk >= KART + 10) kartStil = { bottom: window.innerHeight - (kutu.y - pay - 10) };
+        else if (!klavyeAcik) {
+            // Hedef ekranın çoğunu kaplıyor (ör. editörün yazı alanı): kart görünen alanın altına biner.
+            kartStil = { bottom: window.innerHeight - gorunenAlt + 8 };
+        } else {
+            // Klavye açık ve kart sığmıyor (ör. ad penceresi): tek satırlık şerit.
+            kucuk = true;
+            kartStil = ustBosluk >= SERIT || ustBosluk >= altBosluk
+                ? { top: Math.max(gorunenUst + 8, kutu.y - pay - SERIT) }
+                : { top: kutu.y + kutu.h + pay + 8 };
+            if (ustBosluk < SERIT && altBosluk < SERIT) kartStil = { top: gorunenUst + 8 };
+        }
     }
     const metin = yon ? yon.metin : hedefYok && adim.yoksa ? adim.yoksa : adim.metin;
     const gecis = adim.gecis;
@@ -261,9 +290,17 @@ export default function GorevRehberi() {
                 aria-live="polite"
                 aria-label={`${gorev.baslik}, adım ${sira + 1} / ${toplam}`}
                 data-gorev-karti=""
-                className="pointer-events-auto absolute inset-x-3 mx-auto max-w-sm rounded-2xl bg-white p-4 shadow-lift"
+                data-gorev-kucuk={kucuk ? '' : undefined}
+                className={'pointer-events-auto absolute inset-x-3 mx-auto max-w-sm rounded-2xl bg-white shadow-lift ' + (kucuk ? 'py-2 pl-3.5 pr-1.5' : 'p-4')}
                 style={kartStil}
             >
+                {kucuk ? (
+                    <div className="flex items-center gap-2.5">
+                        <span className="shrink-0 rounded-full bg-moss-100 px-2 py-0.5 text-[11px] font-semibold text-moss-800"><span className="sr-only">Adım </span>{sira + 1}/{toplam}</span>
+                        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-sand-900">{yon ? 'Önce doğru ekrana geçin' : adim.baslik}</p>
+                        <button type="button" onClick={birak} aria-label="Görevi bırak" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-600 hover:bg-sand-100"><X size={17} aria-hidden="true" /></button>
+                    </div>
+                ) : (<>
                 <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1">
                         <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-moss-700">
@@ -306,6 +343,7 @@ export default function GorevRehberi() {
                         </>
                     )}
                 </div>
+                </>)}
             </div>
         </div>,
         document.body

@@ -16,6 +16,7 @@ import {
     ChevronRight,
     Cloud,
     Database,
+    Hand,
     Info,
     Keyboard,
     Loader2,
@@ -33,6 +34,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { APP_VERSION } from '@/lib/config';
+import { kilavuzModunuSec } from '@/lib/kilavuzIlerleme';
 import { ayarlaraDonSakla, denemeAgaciAdresi, type DenemeTuru } from '@/lib/denemeAgaci';
 
 export type SettingsSectionId =
@@ -182,27 +184,35 @@ export default function SettingsHome({ onSelect }: { onSelect: (id: SettingsSect
         <div className="space-y-6">
             {/* Hızlı kartlar: kılavuz ve deneme ağacı */}
             <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                    type="button"
-                    onClick={() => onSelect('usage')}
-                    className="group relative isolate flex w-full items-center gap-3 overflow-hidden rounded-2xl bg-moss-900 px-4 py-3.5 text-left text-white shadow-card transition-colors hover:bg-moss-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 focus-visible:ring-offset-2"
-                >
+                {/* Kartın tamamı kılavuzu açar; sağdaki düğme doğrudan uygulamalı öğrenime geçer. */}
+                <div className="group relative isolate flex w-full items-center gap-3 overflow-hidden rounded-2xl bg-moss-900 px-4 py-3.5 text-left text-white shadow-card transition-colors hover:bg-moss-800 focus-within:ring-2 focus-within:ring-moss-500 focus-within:ring-offset-2">
                     <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
                         <span className="absolute -right-16 -top-20 h-44 w-44 rounded-full border border-moss-200/10" />
                         <TreePine className="absolute -bottom-7 right-3 h-24 w-24 -rotate-12 text-moss-200/[0.07]" strokeWidth={1} />
                     </span>
-                    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-moss-200/15 text-moss-100 ring-1 ring-inset ring-moss-200/20">
-                        <BookOpen size={20} aria-hidden="true" />
+                    <span aria-hidden="true" className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-moss-200/15 text-moss-100 ring-1 ring-inset ring-moss-200/20">
+                        <BookOpen size={20} />
                     </span>
-                    <span className="relative min-w-0 flex-1">
+                    <button
+                        type="button"
+                        onClick={() => onSelect('usage')}
+                        className="min-w-0 flex-1 text-left outline-none after:absolute after:inset-0 after:content-['']"
+                    >
                         <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-moss-200">Kullanım kılavuzu</span>
                         <span className="mt-0.5 block truncate font-display text-lg leading-snug tracking-tight">Bahçeniz, sizin düzeniniz.</span>
                         <span className="mt-0.5 block text-xs leading-relaxed text-moss-100/90">Okuyarak ya da yaparak öğrenin.</span>
-                    </span>
-                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-moss-100 transition-colors group-hover:bg-white/20">
-                        <ChevronRight size={17} aria-hidden="true" />
-                    </span>
-                </button>
+                    </button>
+                    <button
+                        type="button"
+                        id="kilavuz-uygulamali"
+                        onClick={() => { kilavuzModunuSec('uygulama'); onSelect('usage'); }}
+                        aria-label="Uygulamalı öğrenime geç"
+                        className="relative z-10 flex min-h-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-moss-100 px-3 py-1.5 text-moss-900 shadow-soft transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    >
+                        <Hand size={18} aria-hidden="true" />
+                        <span className="text-[11px] font-semibold leading-none">Uygulamalı</span>
+                    </button>
+                </div>
                 <DenemeDugmesi />
             </div>
 

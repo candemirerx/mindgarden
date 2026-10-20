@@ -15,8 +15,6 @@ import {
     Settings,
     Sprout,
     TreePine,
-    Undo2,
-    Zap,
     type LucideIcon,
 } from 'lucide-react';
 import { cx } from '@/components/ui/settings';
@@ -54,26 +52,11 @@ export default function UygulamaliOgrenim({ onGorevBaslat, onTurBaslat }: Uygula
 
     return (
         <div className="space-y-4">
-            {/* Nasıl çalışır: üç kısa ilke */}
-            <section aria-labelledby={baseId + '-nasil'} className="rounded-2xl border border-clay-200 bg-clay-50 p-4">
-                <h3 id={baseId + '-nasil'} className="text-sm font-semibold text-sand-900">Gerçek ekranlarda, adım adım</h3>
-                <p className="mt-0.5 text-xs leading-relaxed text-sand-700">Okumak yerine yaparak öğrenin. Görevi başlatın, gerisini rehber gösterir.</p>
-                <ol className="mt-3 grid gap-2 sm:grid-cols-3">
-                    {[
-                        { Ikon: Hand, baslik: 'Dokunun', metin: 'Her adımda yapılacak yer parlar.' },
-                        { Ikon: Zap, baslik: 'Kendiliğinden ilerler', metin: 'Siz işi yaptıkça sonraki adıma geçer.' },
-                        { Ikon: Undo2, baslik: 'İstediğiniz an bırakın', metin: 'Kartın çarpısı görevi kapatır.' },
-                    ].map(({ Ikon, baslik, metin }) => (
-                        <li key={baslik} className="flex items-start gap-2.5 rounded-xl bg-white/80 px-3 py-2.5">
-                            <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-clay-100 text-clay-700"><Ikon size={15} /></span>
-                            <span className="min-w-0">
-                                <span className="block text-xs font-semibold text-sand-900">{baslik}</span>
-                                <span className="block text-xs leading-relaxed text-sand-600">{metin}</span>
-                            </span>
-                        </li>
-                    ))}
-                </ol>
-            </section>
+            {/* Nasıl çalışır: tek satır; asıl iş görevlerde. */}
+            <p className="flex items-center gap-2 rounded-xl bg-clay-50 px-3 py-2.5 text-xs leading-relaxed text-sand-700">
+                <Hand size={15} className="shrink-0 text-clay-700" aria-hidden="true" />
+                Görevi başlatın: parlayan yere dokundukça kendiliğinden ilerler.
+            </p>
 
             <div className="flex items-center gap-2 px-1">
                 <h3 className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-wider text-sand-600">Görevler</h3>

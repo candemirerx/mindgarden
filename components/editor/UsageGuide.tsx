@@ -45,7 +45,7 @@ import type { SettingsSectionId } from './SettingsHome';
 import KilavuzGorseli from './KilavuzGorseli';
 import UygulamaliOgrenim from './UygulamaliOgrenim';
 import { SEVIYELER, SOZLUK, SSS, TUM_DERSLER, YOLLAR, type KilavuzDersi, type KilavuzIkonu, type KilavuzSorusu } from '@/lib/kilavuzIcerik';
-import { ILERLEME_OLAYI, dersDurumu, ogrenilenler, type KilavuzGoster } from '@/lib/kilavuzIlerleme';
+import { ILERLEME_OLAYI, KILAVUZ_MOD_ANAHTARI as MOD_ANAHTARI, dersDurumu, type KilavuzModu, ogrenilenler, type KilavuzGoster } from '@/lib/kilavuzIlerleme';
 import { KILAVUZ_ACILDI_ANAHTARI } from '@/components/tour/KilavuzKatmani';
 import { GOREVLER, derseAitGorev, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
 
@@ -79,8 +79,7 @@ interface UsageGuideProps {
     onGorevBaslat?: (gorev: KilavuzGorevi) => void;
 }
 
-type Mod = 'teori' | 'uygulama';
-const MOD_ANAHTARI = 'nb-kilavuz-mod-v1';
+type Mod = KilavuzModu;
 
 type Ders = (typeof TUM_DERSLER)[number];
 type Gorunum = { tur: 'seviye' } | { tur: 'yol'; id: string };
