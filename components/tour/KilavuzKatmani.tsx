@@ -11,6 +11,7 @@ import {
     ILERLEME_OLAYI,
     bekleyenGoster,
     gorevYuruyor,
+    ogrenmeOturumuAcik,
     type IlerlemeOlayi,
     type KilavuzGoster,
 } from '@/lib/kilavuzIlerleme';
@@ -26,8 +27,10 @@ import {
  *    Uygulamalı görev (GorevRehberi) başlarsa vurgu kapanır.
  * 2. "Ders tamamlandı" bildirimi: kullanıcı bir işi uygulamada yaptığı için
  *    ders kendiliğinden tamamlandığında altta kısa bir bildirim belirir.
- *    Kılavuzu hiç açmamış kullanıcıyı rahatsız etmemek için yalnız kılavuzu
- *    en az bir kez açanlara gösterilir.
+ *    Gündelik kullanımda araya girmesin diye yalnız öğrenme oturumunda
+ *    (kılavuzu açtıktan sonraki birkaç dakika) ve yalnız kullanıcının kendi
+ *    dokunuşuyla olan işlerde çıkar; açılıştaki eşitleme ya da arka plandaki
+ *    bağlantı denetimi gibi kendiliğinden işler dersi sessizce tamamlar.
  */
 
 export const KILAVUZ_ACILDI_ANAHTARI = 'nb-kilavuz-acildi';
@@ -35,9 +38,8 @@ const HEDEF_BEKLEME_MS = 6000;
 
 type Kutu = { x: number; y: number; w: number; h: number };
 
-function kilavuzAcildiMi(): boolean {
-    try { return localStorage.getItem(KILAVUZ_ACILDI_ANAHTARI) === '1'; } catch { return false; }
-}
+/** Kullanıcının son dokunuşu ya da tuşu: bu süre içinde biten iş kullanıcının işidir. */
+const KULLANICI_ISI_MS = 4000;
 
 export default function KilavuzKatmani() {
     const pathname = usePathname();
@@ -134,10 +136,14 @@ export default function KilavuzKatmani() {
     // Kendiliğinden tamamlanan ders için kısa bildirim.
     useEffect(() => {
         let zaman: number | undefined;
+        let sonEtkilesim = 0;
+        const etkilesim = () => { sonEtkilesim = Date.now(); };
+        document.addEventListener('pointerdown', etkilesim, true);
+        document.addEventListener('keydown', etkilesim, true);
         const dinle = (e: Event) => {
             const { id, tamam, otomatik } = (e as CustomEvent<IlerlemeOlayi>).detail;
             // Görev yürürken bildirim görev kartıyla çakışmasın; görev zaten adım adım ilerliyor.
-            if (!tamam || !otomatik || !kilavuzAcildiMi() || gorevYuruyor()) return;
+            if (!tamam || !otomatik || gorevYuruyor() || !ogrenmeOturumuAcik() || Date.now() - sonEtkilesim > KULLANICI_ISI_MS) return;
             // Ders metinleri büyük; her sayfanın paketine girmesin diye yalnız gerektiğinde yüklenir.
             void import('@/lib/kilavuzIcerik').then(({ TUM_DERSLER }) => {
                 const ders = TUM_DERSLER.find((d) => d.id === id);
@@ -148,7 +154,12 @@ export default function KilavuzKatmani() {
             });
         };
         window.addEventListener(ILERLEME_OLAYI, dinle);
-        return () => { window.removeEventListener(ILERLEME_OLAYI, dinle); window.clearTimeout(zaman); };
+        return () => {
+            window.removeEventListener(ILERLEME_OLAYI, dinle);
+            document.removeEventListener('pointerdown', etkilesim, true);
+            document.removeEventListener('keydown', etkilesim, true);
+            window.clearTimeout(zaman);
+        };
     }, []);
 
     if (!hazir) return null;

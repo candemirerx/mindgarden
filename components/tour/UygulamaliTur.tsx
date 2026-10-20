@@ -11,6 +11,9 @@ import {
     TUR_BEKLIYOR_ANAHTARI,
 } from '@/lib/turAdimlari';
 import { dersTamamla } from '@/lib/kilavuzIlerleme';
+import { KILAVUZ_ACILDI_ANAHTARI } from './KilavuzKatmani';
+
+const TUR_ONERILDI_ANAHTARI = 'nb-tur-onerildi';
 
 /**
  * Başlangıç seviyesi için uygulamalı tur: hedefi vurgulayan karartma + açıklama kartı.
@@ -65,16 +68,32 @@ export default function UygulamaliTur() {
         return () => window.removeEventListener(TUR_BASLAT_OLAYI, olay);
     }, [baslat]);
 
-    // İlk kullanım: henüz bahçesi olmayan, turu hiç görmemiş kullanıcıya tek seferlik öneri.
+    // İlk kullanım: henüz bahçesi olmayan, turu ve kılavuzu hiç görmemiş kullanıcıya
+    // ömründe bir kez öneri. Gösterildiği an işaretlenir; yanıtsız kalsa da bir daha çıkmaz.
     useEffect(() => {
         let gorulmus = true;
-        try { gorulmus = !!localStorage.getItem(TUR_ANAHTARI) || !!localStorage.getItem(TUR_BEKLIYOR_ANAHTARI); } catch { /* sessiz */ }
+        try {
+            gorulmus = !!localStorage.getItem(TUR_ANAHTARI) || !!localStorage.getItem(TUR_BEKLIYOR_ANAHTARI)
+                || !!localStorage.getItem(TUR_ONERILDI_ANAHTARI) || !!localStorage.getItem(KILAVUZ_ACILDI_ANAHTARI);
+        } catch { /* sessiz */ }
         if (gorulmus) return;
-        const t = window.setTimeout(() => {
-            const hazir = document.querySelector('[data-tur="yeni-bahce"]') && !document.querySelector('[data-tur="bahce-karti"]');
-            if (hazir && !document.querySelector('[role="dialog"]')) setOneri(true);
-        }, 1800);
-        return () => window.clearTimeout(t);
+        // Uygulama giriş ekranıyla açılabilir: ana ekran ilk hazır olduğunda (Yeni Bahçe
+        // göründüğünde) kısa bir bekleyişle önerilir. Bahçesi olan ya da başka bir pencere
+        // açık olan kullanıcıya hiç önerilmez; birkaç dakikada uygun an gelmezse vazgeçilir.
+        const baslangic = Date.now();
+        let hazirSince = 0;
+        const t = window.setInterval(() => {
+            if (Date.now() - baslangic > 3 * 60 * 1000) { window.clearInterval(t); return; }
+            if (document.querySelector('[data-tur="bahce-karti"]')) { window.clearInterval(t); return; }
+            const hazir = !!document.querySelector('[data-tur="yeni-bahce"]') && !document.querySelector('[role="dialog"]');
+            if (!hazir) { hazirSince = 0; return; }
+            if (!hazirSince) { hazirSince = Date.now(); return; }
+            if (Date.now() - hazirSince < 1500) return;
+            window.clearInterval(t);
+            try { localStorage.setItem(TUR_ONERILDI_ANAHTARI, '1'); } catch { /* sessiz */ }
+            setOneri(true);
+        }, 300);
+        return () => window.clearInterval(t);
     }, []);
 
     // Hedefin konumunu izle.

@@ -103,6 +103,7 @@ export function bahceAdresi(ekran: 'liste' | 'tuval'): string | null {
 
 /** "Bana göster": hangi adrese gidileceğini döndürür ve vurgu isteğini bırakır. */
 export function gosterIstegi(goster: KilavuzGoster): string {
+    ogrenmeOturumuBaslat();
     let istek = goster;
     let adres = '/';
     if (goster.ekran !== 'ana') {
@@ -158,6 +159,7 @@ export function aktifGorevYaz(gorev: AktifGorev | null): void {
  * açılmış bahçe yoksa ana ekrana döner; rehber orada bahçe açmayı gösterir.
  */
 export function gorevBaslat(id: string, baslangic: 'ana' | 'liste' | 'tuval'): string {
+    ogrenmeOturumuBaslat();
     aktifGorevYaz({ id, adim: 0 });
     return (baslangic === 'ana' ? null : bahceAdresi(baslangic)) ?? '/';
 }
@@ -187,4 +189,20 @@ export const KILAVUZ_MOD_ANAHTARI = 'nb-kilavuz-mod-v1';
 /** Kılavuz bir sonraki açılışta bu sekmede açılır (ör. ayarlardaki "Uygulamalı" düğmesi). */
 export function kilavuzModunuSec(mod: KilavuzModu): void {
     try { localStorage.setItem(KILAVUZ_MOD_ANAHTARI, JSON.stringify(mod)); } catch { /* kılavuz Teorik sekmede açılır */ }
+}
+
+/**
+ * Öğrenme oturumu: kullanıcı kılavuzu açtı, "Bana göster"e ya da bir göreve
+ * dokundu. "Ders tamamlandı" bildirimi yalnız bu oturumda (10 dakika) çıkar;
+ * gündelik kullanımda dersler sessizce tamamlanır, ilerleme kılavuzda görünür.
+ */
+const OGRENME_OTURUMU_ANAHTARI = 'nb-kilavuz-oturum';
+const OGRENME_OTURUMU_MS = 10 * 60 * 1000;
+
+export function ogrenmeOturumuBaslat(): void {
+    try { sessionStorage.setItem(OGRENME_OTURUMU_ANAHTARI, String(Date.now())); } catch { /* bildirim çıkmaz */ }
+}
+
+export function ogrenmeOturumuAcik(): boolean {
+    try { return Date.now() - Number(sessionStorage.getItem(OGRENME_OTURUMU_ANAHTARI) || 0) < OGRENME_OTURUMU_MS; } catch { return false; }
 }
