@@ -392,7 +392,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                         className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-5 sm:px-8 sm:pt-8"
                     >
                         <div className={'mx-auto w-full pb-4 ' + (activeTab === 'home' ? 'max-w-4xl' : 'max-w-2xl')}>
-                            {activeTab === 'home' && <SettingsHome onSelect={setActiveTab} />}
+                            {activeTab === 'home' && <SettingsHome onSelect={setActiveTab} onGorevBaslat={(gorev) => { onClose(); router.push(gorevBaslat(gorev.id, gorev.baslangic)); }} />}
                             {activeTab === 'account' && <AccountSettings onDone={onClose} />}
                             {activeTab === 'usage' && (
                                 <>
