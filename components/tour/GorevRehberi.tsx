@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { Capacitor } from '@capacitor/core';
-import { ArrowLeft, ArrowRight, Check, Hand, Hourglass, PartyPopper, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronUp, Hand, Hourglass, Loader2, PartyPopper, X } from 'lucide-react';
 import { GOREVLER, type GorevAdimi, type GorevEkrani, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
 import {
     EYLEM_OLAYI,
@@ -20,6 +20,8 @@ import {
     gorevTamamlandi,
     type AktifGorev,
 } from '@/lib/kilavuzIlerleme';
+import { hapticTick } from '@/components/mobile/MobileShell';
+import { hedefiGoster, tamGorunur } from './hedefiGoster';
 
 /**
  * Uygulamalı öğrenim rehberi: kılavuzdaki görevi gerçek ekranlarda adım adım yürütür.
@@ -41,6 +43,13 @@ type Kutu = { x: number; y: number; w: number; h: number };
 const HEDEF_BEKLEME_MS = 2500;
 /** Ekran geçişi sürerken "yanlış ekran" kartı yanıp sönmesin. */
 const EKRAN_GECIS_PAYI_MS = 1200;
+/** Geri'de önce kapatılan geçici katmanlar: ad penceresi, açılır menü, kart düğmeleri, ayarlar. */
+const ACIK_KATMAN = '[role="dialog"]:not([data-gorev-karti]):not([data-gorev-bitti]), [role="menu"], [data-kart-aktif]';
+const GIZLI_ANAHTARI = 'nb-kilavuz-kart-gizli';
+/** Kartın hedefi gösteren okunun yarı boyu. */
+const OK = 7;
+/** Hedef bu sürede bulunamazsa kart, vurgusuz olarak "bekleniyor" durumunda görünür. */
+const ARAMA_GOSTER_MS = 450;
 const EKRAN_ADLARI: Record<GorevEkrani, string> = { ana: 'Ana ekran', liste: 'Liste', tuval: 'Tuval', editor: 'Editör' };
 
 function kalin(metin: string): ReactNode[] {
@@ -55,18 +64,20 @@ function ekrandaMi(r: DOMRect): boolean {
 
 /**
  * Sırayla denenen seçicilerden çizilmiş ilk öğe. Bir seçici birden çok öğeye uyuyorsa
- * (ör. tuvaldeki kartlar) ekranda görünen tercih edilir.
+ * (ör. tuvaldeki kartlar) tamamen görünen, yoksa kısmen görünen, yoksa ilki seçilir.
  */
 function hedefBul(secicler: string[]): Element | null {
     for (const secici of secicler) {
+        let kismen: Element | null = null;
         let yedek: Element | null = null;
         for (const el of Array.from(document.querySelectorAll(secici))) {
             const r = el.getBoundingClientRect();
             if (r.width === 0 && r.height === 0) continue;
-            if (ekrandaMi(r)) return el;
+            if (tamGorunur(el)) return el;
+            if (ekrandaMi(r)) kismen ??= el;
             yedek ??= el;
         }
-        if (yedek) return yedek;
+        if (kismen || yedek) return kismen ?? yedek;
     }
     return null;
 }
@@ -100,28 +111,50 @@ export default function GorevRehberi() {
     // Tam kartın ölçülen yüksekliği (metin uzunluğuna göre değişir); yerleşim bununla hesaplanır.
     const kartRef = useRef<HTMLDivElement | null>(null);
     const [kartYuk, setKartYuk] = useState(230);
+    // Son ilerlemenin zamanı: kartta kısa bir "tamam" işareti gösterilir.
+    const [tamamIsareti, setTamamIsareti] = useState(0);
+    const [araniyor, setAraniyor] = useState(false);
+    // Kullanıcı bilgi kartını gizleyebilir: kart, adım numarası ve başlığıyla tek satırlık
+    // şeride iner; tercih görev boyunca (sonraki adımlarda da) korunur.
+    const [gizli, setGizli] = useState(false);
+    const gizliYaz = useCallback((deger: boolean) => {
+        setGizli(deger);
+        try { if (deger) sessionStorage.setItem(GIZLI_ANAHTARI, '1'); else sessionStorage.removeItem(GIZLI_ANAHTARI); } catch { /* yalnız bu ekranda geçerli kalır */ }
+    }, []);
+    useEffect(() => { try { setGizli(sessionStorage.getItem(GIZLI_ANAHTARI) === '1'); } catch { /* varsayılan: açık */ } }, []);
     // Ekranın görünen kısmı: telefon klavyesi açılınca küçülür (visualViewport).
     // Android uygulaması adjustResize kullanır: klavye açılınca tüm sayfa (innerHeight) küçülür,
     // tarayıcıda ise yalnız visualViewport. Klavye, aynı genişlikte görülen en büyük yüksekliğe
     // göre belirgin küçülmeyle anlaşılır.
+    // Uç uca çizimde (Android 15) sayfa durum ve gezinme çubuklarının altına uzanır; kart
+    // güvenli alanın (safe-area-inset) içinde kalır, düğmeleri sistem çubuğunun altına girmez.
     const [gorunen, setGorunen] = useState<{ ust: number; yukseklik: number; klavye: boolean } | null>(null);
     useEffect(() => {
         const vv = window.visualViewport;
+        const olcu = document.createElement('div');
+        olcu.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)';
+        document.body.appendChild(olcu);
         let genislik = 0;
         let enBuyuk = 0;
         const olc = () => {
-            const ust = vv?.offsetTop ?? 0;
-            const yukseklik = vv?.height ?? window.innerHeight;
+            const stil = getComputedStyle(olcu);
+            const guvenliUst = parseFloat(stil.paddingTop) || 0;
+            const guvenliAlt = parseFloat(stil.paddingBottom) || 0;
+            const vvUst = vv?.offsetTop ?? 0;
+            const vvYuk = vv?.height ?? window.innerHeight;
             if (window.innerWidth !== genislik) { genislik = window.innerWidth; enBuyuk = 0; }
-            enBuyuk = Math.max(enBuyuk, window.innerHeight, yukseklik);
-            const klavye = yukseklik < enBuyuk * 0.8;
+            enBuyuk = Math.max(enBuyuk, window.innerHeight, vvYuk);
+            const klavye = vvYuk < enBuyuk * 0.8;
+            // Klavye açıkken alt sınır klavyenin üstüdür; kapalıyken gezinme çubuğunun üstü.
+            const ust = Math.max(vvUst, guvenliUst);
+            const yukseklik = vvUst + vvYuk - (klavye ? 0 : guvenliAlt) - ust;
             setGorunen((g) => (g && g.ust === ust && g.yukseklik === yukseklik && g.klavye === klavye ? g : { ust, yukseklik, klavye }));
         };
         olc();
         vv?.addEventListener('resize', olc);
         vv?.addEventListener('scroll', olc);
         window.addEventListener('resize', olc);
-        return () => { vv?.removeEventListener('resize', olc); vv?.removeEventListener('scroll', olc); window.removeEventListener('resize', olc); };
+        return () => { vv?.removeEventListener('resize', olc); vv?.removeEventListener('scroll', olc); window.removeEventListener('resize', olc); olcu.remove(); };
     }, []);
 
     const gorev = aktif ? GOREVLER.find((g) => g.id === aktif.id) : undefined;
@@ -135,7 +168,9 @@ export default function GorevRehberi() {
         setHazir(true);
         setAktif(aktifGorev());
         const dinle = (e: Event) => {
-            setAktif((e as CustomEvent<AktifGorev | null>).detail);
+            const yeni = (e as CustomEvent<AktifGorev | null>).detail;
+            if (!yeni || yeni.adim === 0) { setGizli(false); try { sessionStorage.removeItem(GIZLI_ANAHTARI); } catch { /* sessiz */ } }
+            setAktif(yeni);
             setBiten(null);
         };
         // "Bana göster" vurgusu açılırsa görev bırakılır; iki katman üst üste binmesin.
@@ -160,7 +195,9 @@ export default function GorevRehberi() {
         const simdiki = aktifGorev();
         const g = simdiki && GOREVLER.find((x) => x.id === simdiki.id);
         if (!simdiki || !g) return;
+        void hapticTick();
         if (simdiki.adim + 1 < g.adimlar.length) {
+            setTamamIsareti(Date.now());
             aktifGorevYaz({ id: g.id, adim: simdiki.adim + 1 });
             return;
         }
@@ -171,9 +208,28 @@ export default function GorevRehberi() {
 
     const birak = useCallback(() => aktifGorevYaz(null), []);
 
+    // Geri: önce açık pencere ya da menü kapanır (görevi bitirmeyen işaretli Escape), sonra
+    // yapılabilir ilk önceki adıma dönülür. Hedefi artık ekranda olmayan adımlar (kapanan
+    // menünün öğesi, ad penceresi) atlanır; kullanıcı o işi baştan, açan düğmeden yapar.
     const geri = useCallback(() => {
         const simdiki = aktifGorev();
-        if (simdiki && simdiki.adim > 0) aktifGorevYaz({ id: simdiki.id, adim: simdiki.adim - 1 });
+        const g = simdiki && GOREVLER.find((x) => x.id === simdiki.id);
+        if (!simdiki || !g || simdiki.adim === 0) return;
+        if (document.querySelector(ACIK_KATMAN)) {
+            const esc = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true });
+            (esc as KeyboardEvent & { nbGorevGeri?: boolean }).nbGorevGeri = true;
+            document.dispatchEvent(esc);
+        }
+        window.setTimeout(() => {
+            const ekr = ekranAdi();
+            let i = simdiki.adim - 1;
+            while (i > 0) {
+                const a = g.adimlar[i];
+                if (a.ekran !== ekr || !a.hedef || hedefBul(a.hedef)) break;
+                i--;
+            }
+            aktifGorevYaz({ id: g.id, adim: i });
+        }, 250);
     }, []);
 
     // Android geri tuşu ve Escape görevi bitirir; ekran değiştirmez, açık pencereyi kapatmaz.
@@ -183,7 +239,7 @@ export default function GorevRehberi() {
         if (!gorevAcik) return;
         const bitir = () => { aktifGorevYaz(null); setBiten(null); };
         const tus = (e: KeyboardEvent) => {
-            if (e.key !== 'Escape') return;
+            if (e.key !== 'Escape' || (e as KeyboardEvent & { nbGorevGeri?: boolean }).nbGorevGeri) return;
             e.stopImmediatePropagation();
             bitir();
         };
@@ -222,15 +278,15 @@ export default function GorevRehberi() {
             }
             setHedefYok(false);
             const r = el.getBoundingClientRect();
-            // İlk bulunuşta ve hedef bir saniyeden uzun ekran dışında kalırsa (ör. liste yeniden
-            // dizildi, klavye açıldı) görünür yere kaydır; kullanıcıyla inatlaşmamak için en çok 3 kez.
-            const disarida = !ekrandaMi(r);
+            // İlk bulunuşta ve hedef bir saniyeden uzun tam görünmezse (ör. liste yeniden dizildi,
+            // klavye açıldı, tuval yeni nota kaydı) görünür yere getir; kullanıcıyla inatlaşmamak için en çok 3 kez.
+            const disarida = !tamGorunur(el);
             if (!disarida) disaridaSince = 0;
             else if (!disaridaSince) disaridaSince = Date.now();
             if (kaydirma === 0 || (disarida && kaydirma < 3 && Date.now() - disaridaSince > 1000)) {
                 kaydirma++;
                 disaridaSince = 0;
-                el.scrollIntoView({ block: 'center', behavior: kaydirma === 1 ? 'smooth' : 'auto' });
+                hedefiGoster(el, kaydirma === 1);
             }
             setKutu((k) => (k && k.x === r.left && k.y === r.top && k.w === r.width && k.h === r.height ? k : { x: r.left, y: r.top, w: r.width, h: r.height }));
         };
@@ -252,17 +308,27 @@ export default function GorevRehberi() {
         if (!adim || yon) return;
         const gecis = adim.gecis;
         if (gecis === 'dokun') {
+            // Tıklama (parmak kaymadan kalktı) sayılır; kayan dokunuş adımı ilerletmez.
             // Hedef yeniden çizilmiş olabilir (eski öğe DOM'dan düşer): dokunulan öğe
             // seçicilerle de eşleştirilir.
-            const dokunus = (e: PointerEvent) => {
+            const dokunus = (e: MouseEvent) => {
                 if (!(e.target instanceof Element)) return;
                 const t = e.target;
                 const el = hedefRef.current;
                 const isabet = (el && el.isConnected && el.contains(t)) || (adim.hedef ?? []).some((s) => t.closest(s));
                 if (isabet) window.setTimeout(ilerle, 0);
             };
-            document.addEventListener('pointerdown', dokunus, true);
-            return () => document.removeEventListener('pointerdown', dokunus, true);
+            document.addEventListener('click', dokunus, true);
+            return () => document.removeEventListener('click', dokunus, true);
+        }
+        if (typeof gecis === 'object' && 'gorunce' in gecis) {
+            // Dokunuşun sonucu (menü, pencere, kart düğmeleri) iki ölçümde üst üste görününce ilerler.
+            let ardisik = 0;
+            const t = window.setInterval(() => {
+                ardisik = hedefBul([gecis.gorunce]) ? ardisik + 1 : 0;
+                if (ardisik >= 2) { window.clearInterval(t); ilerle(); }
+            }, 150);
+            return () => window.clearInterval(t);
         }
         if (typeof gecis === 'object') {
             const eylem = (e: Event) => { if ((e as CustomEvent<{ id: string }>).detail.id === gecis.eylem) ilerle(); };
@@ -279,6 +345,21 @@ export default function GorevRehberi() {
         const h = el.offsetHeight;
         if (Math.abs(h - kartYuk) > 4) setKartYuk(h);
     });
+
+    // Hedef birkaç yüz milisaniyede bulunamazsa (pencere açılıyor, ekran değişiyor) kart
+    // vurgusuz görünür; kullanıcı rehberin kaybolduğunu sanmaz.
+    const hedefBekleniyor = !!aktif && hedefler.length > 0 && !kutu && !hedefYok;
+    useEffect(() => {
+        if (!hedefBekleniyor) { setAraniyor(false); return; }
+        const t = window.setTimeout(() => setAraniyor(true), ARAMA_GOSTER_MS);
+        return () => window.clearTimeout(t);
+    }, [hedefBekleniyor, hedefAnahtari]);
+
+    useEffect(() => {
+        if (!tamamIsareti) return;
+        const t = window.setTimeout(() => setTamamIsareti(0), 1100);
+        return () => window.clearTimeout(t);
+    }, [tamamIsareti]);
 
     if (!hazir) return null;
 
@@ -322,8 +403,8 @@ export default function GorevRehberi() {
     if (!gorev || !adim) return null;
     // Ekran geçişi sürüyor: hedef yeni ekranda belirene kadar bekle.
     if (yanlisEkran && !ekranOturdu) return null;
-    // Hedef aranıyor (en çok birkaç saniye); bulunca ya da bulunamayınca kart çıkar.
-    if (hedefler.length > 0 && !kutu && !hedefYok) return null;
+    // Hedef aranıyor: kısa beklemede önceki görüntü kalır, uzarsa kart vurgusuz çıkar.
+    if (hedefBekleniyor && !araniyor) return null;
 
     const toplam = gorev.adimlar.length;
     const sira = aktif!.adim;
@@ -343,11 +424,21 @@ export default function GorevRehberi() {
         sag: Math.min(window.innerWidth - 2, kutu.x + kutu.w + pay),
         alt: Math.min(gorunenAlt - 2, kutu.y + kutu.h + pay),
     };
-    if (kutu && vurgu) {
+    // Kart hedefin hemen altında ya da üstündeyse bir okla hedefe bağlanır.
+    let ok: { y: number; yon: 'yukari' | 'asagi' } | null = null;
+    if (kutu && vurgu && gizli) {
+        // Gizlenmiş kart: hedefi örtmeyen tek satırlık şerit, sığan tarafta.
         const ustBosluk = kutu.y - pay - gorunenUst;
         const altBosluk = gorunenAlt - (kutu.y + kutu.h + pay);
-        if (altBosluk >= KART + 10) kartStil = { top: kutu.y + kutu.h + pay + 10 };
-        else if (ustBosluk >= KART + 10) kartStil = { bottom: window.innerHeight - (kutu.y - pay - 10) };
+        kucuk = true;
+        if (altBosluk >= SERIT + 14) { kartStil = { top: kutu.y + kutu.h + pay + 12 }; ok = { y: kutu.y + kutu.h + pay + 12, yon: 'yukari' }; }
+        else if (ustBosluk >= SERIT + 14) { kartStil = { top: kutu.y - pay - 12 - SERIT }; ok = { y: kutu.y - pay - 12, yon: 'asagi' }; }
+        else kartStil = { top: gorunenUst + 8 };
+    } else if (kutu && vurgu) {
+        const ustBosluk = kutu.y - pay - gorunenUst;
+        const altBosluk = gorunenAlt - (kutu.y + kutu.h + pay);
+        if (altBosluk >= KART + 14) { kartStil = { top: kutu.y + kutu.h + pay + 12 }; ok = { y: kutu.y + kutu.h + pay + 12, yon: 'yukari' }; }
+        else if (ustBosluk >= KART + 14) { kartStil = { bottom: window.innerHeight - (kutu.y - pay - 12) }; ok = { y: kutu.y - pay - 12, yon: 'asagi' }; }
         else if (!klavyeAcik && kutu.h > (gorunenAlt - gorunenUst) * 0.6) {
             // Hedef ekranın çoğunu kaplıyor (ör. editörün yazı alanı): kart görünen alanın
             // altına biner, vurgu kartın üstünde biter; dokunuş kartın altında kalmaz.
@@ -364,16 +455,38 @@ export default function GorevRehberi() {
     }
     const metin = yon ? yon.metin : hedefYok && adim.yoksa ? adim.yoksa : adim.metin;
     const gecis = adim.gecis;
+    // Hedefsiz eylem adımı (ör. tuvali kaydırın) ve hedef bekleme: ekran karartılmaz,
+    // kart alta yerleşir; kullanıcı ekranın tamamını kullanır.
+    const serbest = !vurgu && (araniyor || (!yon && hedefler.length === 0 && gecis !== 'ileri'));
+    if (serbest) { kartStil = { bottom: window.innerHeight - gorunenAlt + 12 }; kucuk = gizli; ok = null; }
+    // Gizli kart hedefsiz adımda da şerittir.
+    if (!vurgu && gizli && !kucuk) { kucuk = true; kartStil = { bottom: window.innerHeight - gorunenAlt + 12 }; }
+    // Ok, hedefin ortasını gösterir; kartın köşelerine taşmaz.
+    const kartGenislik = Math.min(window.innerWidth - 24, 384);
+    const kartSol = (window.innerWidth - kartGenislik) / 2;
+    const okX = kutu ? Math.min(kartSol + kartGenislik - 22, Math.max(kartSol + 22, kutu.x + kutu.w / 2)) : 0;
+    const dokunmaAdimi = gecis === 'dokun' || (typeof gecis === 'object' && 'gorunce' in gecis);
+    const ipucu = yon ? null
+        : araniyor ? { Ikon: Loader2, metin: 'Ekran hazırlanıyor…', don: true }
+            : gecis === 'ileri' ? null
+                : dokunmaAdimi && vurgu ? { Ikon: Hand, metin: 'Parlayan yere dokunun', don: false }
+                    : { Ikon: Hourglass, metin: 'Yaptığınızda kendiliğinden ilerler', don: false };
+    const tamamGoster = tamamIsareti > 0;
+    const adimAnahtari = `${aktif!.id}-${sira}-${yon ? 'yon' : 'adim'}`;
 
     return createPortal(
         <div className="pointer-events-none fixed inset-0 z-[450]">
             {vurgu ? (
                 <>
-                    <div aria-hidden="true" className="absolute rounded-2xl transition-all duration-200" style={{ left: vurgu.sol, top: vurgu.ust, width: vurgu.sag - vurgu.sol, height: Math.max(0, vurgu.alt - vurgu.ust), boxShadow: '0 0 0 9999px rgba(28,25,20,.5)' }} />
-                    <div aria-hidden="true" data-gorev-vurgu="" className="absolute rounded-2xl ring-[3px] ring-clay-400 transition-all duration-200 motion-safe:animate-pulse" style={{ left: vurgu.sol, top: vurgu.ust, width: vurgu.sag - vurgu.sol, height: Math.max(0, vurgu.alt - vurgu.ust) }} />
+                    <div aria-hidden="true" className="absolute rounded-2xl transition-all duration-300 ease-out" style={{ left: vurgu.sol, top: vurgu.ust, width: vurgu.sag - vurgu.sol, height: Math.max(0, vurgu.alt - vurgu.ust), boxShadow: '0 0 0 9999px rgba(28,25,20,.55)' }} />
+                    <div aria-hidden="true" data-gorev-vurgu="" className="gorev-vurgu absolute rounded-2xl transition-all duration-300 ease-out" style={{ left: vurgu.sol, top: vurgu.ust, width: vurgu.sag - vurgu.sol, height: Math.max(0, vurgu.alt - vurgu.ust) }} />
                 </>
-            ) : (
-                <div aria-hidden="true" className="absolute inset-0" style={{ background: 'rgba(28,25,20,.5)' }} />
+            ) : !serbest ? (
+                <div aria-hidden="true" className="absolute inset-0 transition-opacity" style={{ background: 'rgba(28,25,20,.55)' }} />
+            ) : null}
+            {ok && (
+                <span aria-hidden="true" data-gorev-ok="" className="absolute h-3.5 w-3.5 rotate-45 rounded-[3px] border border-sand-200/70 bg-white transition-all duration-300 ease-out"
+                    style={{ left: okX - OK, top: ok.y - OK }} />
             )}
             <div
                 role="dialog"
@@ -384,63 +497,72 @@ export default function GorevRehberi() {
                 data-gorev-karti=""
                 data-ust-katman=""
                 data-gorev-kucuk={kucuk ? '' : undefined}
-                className={'pointer-events-auto absolute inset-x-3 mx-auto max-w-sm rounded-2xl bg-white shadow-lift ' + (kucuk ? 'py-2 pl-3.5 pr-1.5' : 'p-4')}
+                className={'pointer-events-auto absolute inset-x-3 mx-auto max-w-sm overflow-hidden rounded-2xl border border-sand-200/70 bg-white shadow-lift ' + (kucuk ? 'py-2 pl-3.5 pr-1.5' : '')}
                 style={kartStil}
             >
                 {kucuk ? (
-                    <div className="flex items-center gap-2.5">
+                    <div key={adimAnahtari} className="gorev-adim-gir flex items-center gap-2.5">
                         {sira > 0 && (
                             <button type="button" onClick={geri} aria-label="Geri: önceki adım" className="-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-600 hover:bg-sand-100"><ArrowLeft size={17} aria-hidden="true" /></button>
                         )}
-                        <span className="shrink-0 rounded-full bg-moss-100 px-2 py-0.5 text-[11px] font-semibold text-moss-800"><span className="sr-only">Adım </span>{sira + 1}/{toplam}</span>
+                        <span className={'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ' + (tamamGoster ? 'bg-moss-600 text-white' : 'bg-moss-100 text-moss-800')}>
+                            {tamamGoster ? <Check size={12} className="inline" aria-hidden="true" /> : null}<span className="sr-only">Adım </span>{sira + 1}/{toplam}
+                        </span>
                         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-sand-900">{yon ? 'Önce doğru ekrana geçin' : adim.baslik}</p>
+                        {gizli && (
+                            <button type="button" onClick={() => gizliYaz(false)} aria-label="Bilgiyi göster" title="Bilgiyi göster" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-moss-700 hover:bg-moss-50"><ChevronUp size={18} aria-hidden="true" /></button>
+                        )}
                         <button type="button" onClick={birak} aria-label="Görevi bırak" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-600 hover:bg-sand-100"><X size={17} aria-hidden="true" /></button>
                     </div>
                 ) : (<>
-                <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                        <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-moss-700">
-                            {gorev.baslik} · Adım {sira + 1}/{toplam}
-                        </p>
-                        <div className="mt-1.5 flex gap-1" aria-hidden="true">
-                            {gorev.adimlar.map((_, i) => (
-                                <span key={i} className={'h-1 flex-1 rounded-full transition-colors ' + (i < sira ? 'bg-moss-600' : i === sira ? 'bg-clay-400' : 'bg-sand-200')} />
-                            ))}
-                        </div>
-                    </div>
-                    <button type="button" onClick={birak} aria-label="Görevi bırak" className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-600 hover:bg-sand-100"><X size={17} aria-hidden="true" /></button>
+                {/* İlerleme şeridi: biten adımlar yeşil, şimdiki adım dolarak ilerler */}
+                <div className="flex gap-1 px-4 pt-3.5" aria-hidden="true">
+                    {gorev.adimlar.map((_, i) => (
+                        <span key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-sand-200">
+                            <span className={'block h-full rounded-full transition-all duration-500 ease-out ' + (i < sira ? 'w-full bg-moss-600' : i === sira ? 'w-1/2 bg-clay-400' : 'w-0')} />
+                        </span>
+                    ))}
                 </div>
-                <p className="mt-2.5 font-semibold text-sand-900">{yon ? 'Önce doğru ekrana geçin' : adim.baslik}</p>
-                <p className="mt-1 text-sm leading-relaxed text-sand-700">{kalin(metin)}</p>
-                {!yon && hedefYok && !adim.yoksa && (
-                    <p className="mt-1.5 text-xs text-sand-600">Vurgulanacak öğe şu an ekranda yok. Ekranı kaydırmayı deneyin ya da bu adımı geçin.</p>
-                )}
+                <div className="flex items-center gap-2 px-4 pt-2.5">
+                    <span className={'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold transition-colors duration-300 ' + (tamamGoster ? 'bg-moss-600 text-white' : 'bg-moss-100 text-moss-800')}>
+                        {tamamGoster ? <><Check size={12} aria-hidden="true" />Tamam</> : <>Adım {sira + 1}/{toplam}</>}
+                    </span>
+                    <p className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wide text-sand-500">{gorev.baslik}</p>
+                    <button type="button" onClick={() => gizliYaz(true)} aria-label="Bilgiyi gizle" title="Bilgiyi gizle" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-500 hover:bg-sand-100 hover:text-sand-800"><ChevronDown size={18} aria-hidden="true" /></button>
+                    <button type="button" onClick={birak} aria-label="Görevi bırak" className="-mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-500 hover:bg-sand-100 hover:text-sand-800"><X size={17} aria-hidden="true" /></button>
+                </div>
+                <div key={adimAnahtari} className="gorev-adim-gir px-4">
+                    <p className="mt-1 text-[17px] font-semibold leading-snug text-sand-900">{yon ? 'Önce doğru ekrana geçin' : adim.baslik}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-sand-700">{kalin(metin)}</p>
+                    {!yon && hedefYok && !adim.yoksa && (
+                        <p className="mt-1.5 text-xs text-sand-600">Vurgulanacak öğe şu an ekranda yok. Geri ile bir önceki adıma dönün ya da bu adımı geçin.</p>
+                    )}
+                    {ipucu && (
+                        <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-clay-50 px-2.5 py-1 text-xs font-semibold text-clay-800 ring-1 ring-inset ring-clay-200/70">
+                            <ipucu.Ikon size={14} className={'shrink-0 ' + (ipucu.don ? 'animate-spin' : '')} aria-hidden="true" />
+                            {ipucu.metin}
+                        </p>
+                    )}
+                </div>
 
-                {!yon && gecis !== 'ileri' && (
-                    <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-clay-50 px-2.5 py-1 text-xs font-medium text-clay-800">
-                        {gecis === 'dokun' ? <Hand size={14} className="shrink-0" aria-hidden="true" /> : <Hourglass size={14} className="shrink-0" aria-hidden="true" />}
-                        {gecis === 'dokun' ? 'Vurgulanan yere dokunun' : 'Yaptığınızda kendiliğinden ilerler'}
-                    </p>
-                )}
-
-                <div className="mt-3 flex items-center gap-2">
-                    {sira > 0 && (
-                        <button type="button" onClick={geri} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl border border-sand-200 px-3 text-sm font-semibold text-sand-700 hover:bg-sand-50">
+                <div className="mt-3 flex items-center gap-2 border-t border-sand-100 bg-sand-50/60 px-3 py-2.5">
+                    {sira > 0 ? (
+                        <button type="button" onClick={geri} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl px-2.5 text-sm font-semibold text-sand-700 hover:bg-white hover:shadow-soft">
                             <ArrowLeft size={15} aria-hidden="true" />Geri
                         </button>
-                    )}
+                    ) : <span />}
                     {yon ? (
                         yon.git ? (
-                            <button type="button" onClick={() => router.push(yon.git!)} className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-moss-700 px-4 text-sm font-semibold text-white hover:bg-moss-800">
+                            <button type="button" onClick={() => router.push(yon.git!)} className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-moss-700 px-4 text-sm font-semibold text-white hover:bg-moss-800">
                                 {EKRAN_ADLARI[adim.ekran]} ekranına git <ArrowRight size={16} aria-hidden="true" />
                             </button>
                         ) : null
                     ) : gecis === 'ileri' ? (
-                        <button type="button" onClick={ilerle} className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-moss-700 px-4 text-sm font-semibold text-white hover:bg-moss-800">
+                        <button type="button" onClick={ilerle} className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-moss-700 px-4 text-sm font-semibold text-white hover:bg-moss-800">
                             {sira + 1 === toplam ? 'Bitir' : 'İleri'} {sira + 1 < toplam && <ArrowRight size={16} aria-hidden="true" />}
                         </button>
                     ) : (
-                        <button type="button" onClick={ilerle} className="ml-auto min-h-10 shrink-0 rounded-lg px-2 text-xs font-semibold text-sand-600 underline-offset-2 hover:text-sand-800 hover:underline">
+                        <button type="button" onClick={ilerle} className="ml-auto min-h-10 shrink-0 rounded-xl px-2.5 text-xs font-semibold text-sand-500 hover:bg-white hover:text-sand-800">
                             Adımı geç
                         </button>
                     )}

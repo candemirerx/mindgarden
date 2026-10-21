@@ -58,12 +58,15 @@ const tara = (klasor) => readdirSync(klasor).flatMap((ad) => {
     return statSync(yol).isDirectory() ? tara(yol) : /\.(ts|tsx)$/.test(ad) ? [yol] : [];
 });
 const cagrilar = new Set();
+/** Derse bağlı olmayan görev eylemleri (kilavuzEylemi). */
+const eylemler = new Set();
 let kaynak = '';
 for (const dosya of ['app', 'components', 'lib'].flatMap((k) => tara(join(process.cwd(), k)))) {
     const metin = readFileSync(dosya, 'utf8');
     // Görev ve ders verisi seçicileri kendisi içerir; işaret denetimine yalnız arayüz kodu girer.
     if (!/kilavuz(Gorevleri|Icerik)\.ts$/.test(dosya)) kaynak += metin;
     for (const m of metin.matchAll(/dersTamamla\('([a-z0-9-]+)'\)/g)) cagrilar.add(m[1]);
+    for (const m of metin.matchAll(/kilavuzEylemi\('([a-z0-9-]+)'\)/g)) eylemler.add(m[1]);
 }
 for (const id of cagrilar) assert.ok(kimlikler.includes(id), `dersTamamla('${id}'): böyle bir ders yok`);
 // "Kendiliğinden tamamlanır" diyen her dersin kodda gerçekten bir tetikleyicisi olmalı.
@@ -78,7 +81,7 @@ assert.equal(new Set(gorevKimlikleri).size, gorevKimlikleri.length, 'görev kiml
 const isaretDenetle = (secici) => {
     for (const [, ad, deger] of secici.matchAll(/\[(data-[a-z-]+)(?:="([^"]+)")?\]/g)) {
         // Değer ya düz yazılıdır ya da bir listeden üretilir (data-kart-eylem={id}, data-ayar={id}).
-        const izler = deger ? [`${ad}="${deger}"`, `${ad}={id}`] : [ad];
+        const izler = deger ? [`${ad}="${deger}"`, `${ad}={`] : [ad];
         assert.ok(izler.some((iz) => kaynak.includes(iz)), `${secici}: ${izler[0]} arayüz kodunda yok`);
     }
     for (const [, etiket] of secici.matchAll(/aria-label="([^"]+)"/g)) {
@@ -100,7 +103,8 @@ for (const g of GOREVLER) {
         assert.ok(a.baslik.trim() && a.metin.trim(), `${g.id}: adım metni yok`);
         assert.equal((a.metin.match(/\*\*/g) || []).length % 2, 0, `${g.id}: kapanmamış ** işareti`);
         if (a.gecis === 'dokun') assert.ok(a.hedef?.length, `${g.id}/${a.baslik}: dokunma adımının hedefi olmalı`);
-        else if (typeof a.gecis === 'object') assert.ok(cagrilar.has(a.gecis.eylem), `${g.id}/${a.baslik}: ${a.gecis.eylem} eylemi kodda hiç yayınlanmıyor`);
+        else if (typeof a.gecis === 'object' && 'gorunce' in a.gecis) isaretDenetle(a.gecis.gorunce);
+        else if (typeof a.gecis === 'object') assert.ok(cagrilar.has(a.gecis.eylem) || eylemler.has(a.gecis.eylem), `${g.id}/${a.baslik}: ${a.gecis.eylem} eylemi kodda hiç yayınlanmıyor`);
         else assert.equal(a.gecis, 'ileri', `${g.id}: bilinmeyen geçiş`);
         for (const s of a.hedef ?? []) isaretDenetle(s);
         // Ekran ancak bir dokunuşla değişir; önceki adım bunu beklemeli.

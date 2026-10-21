@@ -512,3 +512,27 @@
     background-color: rgb(var(--moss-600) / 0.12);
   }
 }
+
+/* ==========================================================================
+   UYGULAMALI ÖĞRENİM REHBERİ (components/tour/GorevRehberi)
+   ========================================================================== */
+
+/* Yeni adımın içeriği yumuşakça gelir: kullanıcı adımın değiştiğini fark eder. */
+@keyframes nb-gorev-gir {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.gorev-adim-gir { animation: nb-gorev-gir 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Vurgu çerçevesi "nefes alır": çerçeve (outline) hep görünür kalır, çevresindeki hale
+   (box-shadow) büyüyüp söner. Çerçeve ring ile çizilmez; ring de box-shadow olduğundan
+   animasyon onu silerdi. */
+@keyframes nb-gorev-hale {
+  0% { box-shadow: 0 0 0 0 rgb(var(--clay-400) / 0.55); }
+  70% { box-shadow: 0 0 0 12px rgb(var(--clay-400) / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(var(--clay-400) / 0); }
+}
+.gorev-vurgu {
+  outline: 3px solid rgb(var(--clay-400));
+  animation: nb-gorev-hale 1.6s ease-out infinite;
+}

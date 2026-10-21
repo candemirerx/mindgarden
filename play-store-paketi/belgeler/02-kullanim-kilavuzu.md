@@ -6,7 +6,7 @@ başlıklara bölersiniz. Telefonda, bilgisayarda ve web sitesinde çalışır; 
 Kılavuz iki bölümden oluşur:
 
 - **Teorik öğrenim:** beş seviyede **39 kısa ders** (toplam yaklaşık 103 dakika). Her ders aynı kalıbı izler: **hedef**, adımlar, **Şimdi deneyin**, **Akılda kalsın** (özet) ve çoğunda tek soruluk **Kendinizi sınayın**.
-- **Uygulamalı öğrenim:** **6 görev**. Uygulamada bir görevi başlattığınızda yapılacak yer ekranda parlar; siz işi yaptıkça görev kendiliğinden sonraki adıma geçer.
+- **Uygulamalı öğrenim:** **8 görev**. Uygulamada bir görevi başlattığınızda yapılacak yer ekranda parlar; siz işi yaptıkça görev kendiliğinden sonraki adıma geçer.
 
 Aynı kılavuz uygulamada **Ayarlar → Kullanım kılavuzu** bölümündedir; üstteki sekmelerle iki bölüm arasında geçersiniz.
 Kaldığınız yeri hatırlar; uygulamada yaptığınız işler ilgili dersleri kendiliğinden tamamlar.
@@ -169,10 +169,10 @@ Uygulamayı ilk kez açtıysanız buradan başlayın. Önce uygulamanın ne oldu
 1. **Liste** notlarınızı bir içindekiler tablosu gibi alt alta, iç içe gösterir. Okumak, aramak, adlandırmak ve hızlıca düzenlemek için uygundur.
 2. **Tuval** notlarınızı büyük bir yüzeyde **kartlar** olarak gösterir; her ağaç dallarıyla birlikte görünür. Büyük resmi görmek ve fikirleri yana, alta doğru büyütmek için uygundur.
 3. İki ekran **aynı notları** gösterir. Listede eklediğiniz not Tuval'de, Tuval'de eklediğiniz not Listede de vardır; ayrı kopya yoktur.
-4. Geçmek için: Listede sağ üstteki **Tuval** simgesine, Tuval'de sağ üstteki **Liste** simgesine dokunun. Sol üstteki geri ok ana ekrana döner.
+4. Geçmek için iki ekranın da üstünde aynı **Liste | Tuval** seçicisi vardır; beyaz olan, bulunduğunuz ekrandır. Ötekine dokununca aynı bahçe o ekranda açılır. Sol üstteki geri ok ana ekrana döner.
 5. Uygulama her bahçe için en son hangi ekranı kullandığınızı hatırlar. Hangisini seveceğinizden emin değilseniz ikisini de deneyin.
 
-> **Şimdi deneyin:** Deneme bahçenizi Liste'de açın, sonra sağ üstteki simgeyle Tuval'e geçip geri dönün.
+> **Şimdi deneyin:** Bahçenizi Liste'de açın, üstteki seçicide **Tuval**'e geçin, sonra **Liste**'ye geri dönün.
 
 **Akılda kalsın:** Liste okumak ve düzenlemek, Tuval büyük resmi görmek içindir; ikisi aynı notları gösterir.
 
@@ -217,14 +217,14 @@ Uygulamayı ilk kez açtıysanız buradan başlayın. Önce uygulamanın ne oldu
 **Bu dersin sonunda:** Tuvalde gezinir, karta dokunarak düğmelerini açar ve yanına ya da altına not eklersiniz.
 
 1. Bahçe kartında **Tuval**'e dokunun. Bahçe boşsa ortadaki **Düşünce ağacını başlatmak için tıkla** alanına dokunup ilk ağaca ad verin.
-2. Yüzeyde gezinmek için parmağınızla **sürükleyin**; yakınlaştırıp uzaklaştırmak için **iki parmak** kullanın.
-3. Her kart bir nottur. Karta **kısa dokunup bırakın**: kartın çevresinde düğmeler belirir.
+2. Yüzeyde gezinmek için kartların dışında **boş bir yerden** parmağınızla sürükleyin. Yakınlaştırmak için **iki parmağınızı** açın ya da alttaki **artı / eksi** düğmelerini kullanın; kaybolursanız **sığdır** düğmesi bütün notları ekrana getirir.
+3. Her kart bir nottur. Karta **kısa dokunup parmağınızı kaldırın**: kartın çevresinde düğmeler belirir. Parmağınız kayarsa tuval kayar, düğmeler açılmaz; bu durumda yeniden kısa dokunun.
 4. **Altına** düğmesi seçili notun altına yeni not ekler. **Yanına** düğmeleri aynı seviyeye, notun önüne ya da arkasına not ekler; ağacın en üstündeki kartta bu yeni bir ağaç demektir. **Düzenle** notu editörde açar.
 5. Düğmeleri kapatmak için boş bir alana dokunun.
 
 > **Şimdi deneyin:** Deneme bahçesini Tuval'de açın. "Alışveriş" kartına dokunup **Altına** ile "Ekmek" notunu ekleyin; sonra Listeye geçip notun orada da olduğunu görün.
 
-> **İpucu:** Kart düğmeleri, kart görünümü ve düzen sağ üstteki **Tuval ve ağaç ayarları** simgesinden değiştirilir; ayrıntılar Temel seviyesindedir.
+> **İpucu:** Liste'ye dönmek için üstteki **Liste | Tuval** seçicisini kullanın. Kart düğmeleri, kart görünümü ve düzen yanındaki **Tuval ve ağaç ayarları** simgesinden değiştirilir; ayrıntılar Temel seviyesindedir.
 
 **Akılda kalsın:** Karta kısa dokunun: Altına alt not, Yanına aynı seviyede not ekler, Düzenle editörü açar.
 
@@ -877,17 +877,30 @@ Uygulamada **Ayarlar → Kullanım kılavuzu → Uygulamalı öğrenim** sekmesi
 
 1. **Yeni Bahçe'ye dokunun** (Ana ekran): İş, okul, kitaplar… Her konu için ayrı bir bahçe açarsınız.
 2. **Bahçeye bir ad verin** (Ana ekran): Örneğin "Fikirlerim" yazın ve **Oluştur**'a dokunun.
-3. **Bahçenizi açın** (Ana ekran): Yeni bahçeniz en üstte. **Liste** notları alt alta, **Tuval** kart kart gösterir. Birine dokunun.
+3. **Bahçenizi açın** (Ana ekran): Yeni bahçeniz en üstte. **Liste** notları alt alta, **Tuval** kart kart gösterir. Birine dokunun; içeride üstteki **Liste | Tuval** seçicisiyle istediğiniz an ötekine geçersiniz.
 
-**Öğrendikleriniz:** Her konu için ayrı bir bahçe açılır. Bahçe, Liste ya da Tuval düğmesiyle açılır.
+**Öğrendikleriniz:** Her konu için ayrı bir bahçe açılır. Bahçe, Liste ya da Tuval düğmesiyle açılır. İçerideyken üstteki Liste | Tuval seçicisiyle iki ekran arasında geçersiniz.
 
-*İlgili dersler: 1.5 İlk bahçenizi kurun · 1.6 İki ekran: Liste ve Tuval*
+*İlgili dersler: 1.5 İlk bahçenizi kurun*
 
-### Görev 2: Ağaç dikin, dal ekleyin
+### Görev 2: Liste ile Tuval arasında geçin
+
+*Aynı bahçeyi iki ekranda görün, aralarında gidip gelin. · 4 adım · 1 dk*
+
+1. **Görünüm seçici** (Liste): Bahçenin iki ekranı vardır. Beyaz olan, şu an bulunduğunuz ekrandır: **Liste**.
+2. **Tuval'e geçin** (Liste): **Tuval**'e dokunun. Aynı notlar büyük bir yüzeyde kart kart açılır.
+3. **Liste'ye dönün** (Tuval): Aynı seçici burada da var. **Liste**'ye dokunarak geri dönün.
+4. **İki ekran, aynı notlar** (Liste): Birinde eklediğiniz not ötekinde de görünür. Okumak ve düzenlemek için Liste'yi, büyük resmi görmek için Tuval'i kullanın. Sol üstteki geri ok ana ekrana döner.
+
+**Öğrendikleriniz:** Liste ve Tuval aynı notları gösterir. Üstteki Liste | Tuval seçicisi iki ekran arasında geçirir. Seçili olan, şu an bulunduğunuz ekrandır.
+
+*İlgili dersler: 1.6 İki ekran: Liste ve Tuval*
+
+### Görev 3: Ağaç dikin, dal ekleyin
 
 *Listede bir ağaç açın ve altına ilk dalını ekleyin. · 6 adım · 2 dk*
 
-1. **Yeni ağaç ekleyin** (Liste): Ağaç, bahçedeki ana konudur. Üstteki artı düğmesine dokunun.
+1. **Yeni ağaç ekleyin** (Liste): Ağaç, bahçedeki ana konudur. Sağ üstteki **artı** düğmesine dokunun.
 2. **Ağaca ad verin** (Liste): Örneğin "Proje fikirleri" yazıp **Tamam**'a dokunun. Boş bırakırsanız ad kendiliğinden verilir.
 3. **Ağacın menüsünü açın** (Liste): Yeni ağacınız seçili. Satırın sonundaki **üç noktaya** dokunun.
 4. **Altına not ekleyin** (Liste): Menüde **Yeni yaprak ekle**'ye (ağacın zaten dalı varsa **Yeni dal ekle**'ye) dokunun.
@@ -898,7 +911,7 @@ Uygulamada **Ayarlar → Kullanım kılavuzu → Uygulamalı öğrenim** sekmesi
 
 *İlgili dersler: 1.2 Bahçe, ağaç, dal, yaprak · 1.7 Liste ekranında not ekleyin*
 
-### Görev 3: Renk verin ve budayın
+### Görev 4: Renk verin ve budayın
 
 *Bir dalı renklendirin, sonra silmeden kenara alın. · 5 adım · 2 dk*
 
@@ -912,25 +925,41 @@ Uygulamada **Ayarlar → Kullanım kılavuzu → Uygulamalı öğrenim** sekmesi
 
 *İlgili dersler: 2.1 Listede düzenleyin · 2.5 Budanan notları gösterin veya gizleyin*
 
-### Görev 4: Tuvalde dal ekleyin
+### Görev 5: Tuvalde gezinin
 
-*Kart düğmeleriyle dal ekleyin, Liste'de de görün. · 5 adım · 2 dk*
+*Tuvali kaydırın, yakınlaştırın, her şeyi ekrana sığdırın. · 4 adım · 1 dk*
 
-1. **Bir karta dokunun** (Tuval): Tuvalde her not bir karttır. Karta **bir kez** dokunun; çevresinde düğmeler açılır.
-2. **Altına dal ekleyin** (Tuval): Kartın altındaki **artı** düğmesine dokunun. Karta basılı tutup parmağınızı düğmeye kaydırarak da seçebilirsiniz.
-3. **Dala ad verin** (Tuval): Bir ad yazıp **Tamam**'a dokunun. Yeni kart, dalın ucunda belirir.
-4. **Liste'de de görün** (Tuval): Tuvalde eklediğiniz not Liste'de de vardır. Liste düğmesine dokunun.
-5. **İki ekran, aynı notlar** (Liste): Eklediğiniz dal burada da duruyor. Liste ve Tuval aynı bahçenin iki görünümüdür; hangisi işinize yararsa onu kullanın.
+1. **Tuvali kaydırın** (Tuval): Parmağınızı kartların dışında **boş bir yere** koyun ve sürükleyin. Tuval büyük bir masa gibidir; istediğiniz yere kaydırırsınız.
+2. **Yakınlaştırın** (Tuval): **İki parmağınızı** ekranda açın ya da alttaki **artı** düğmesine dokunun. Eksi uzaklaştırır.
+3. **Hepsini ekrana sığdırın** (Tuval): Kaybolursanız bu düğme bütün notları ekrana getirir. Şimdi dokunun.
+4. **Tuvalde rahatsınız** (Tuval): Kaydırma, yakınlaştırma ve sığdırma bu kadar. Sıradaki görevde kartlara not eklemeyi öğrenirsiniz.
 
-**Öğrendikleriniz:** Karta dokununca düğmeleri açılır. Altına düğmesi dal ya da yaprak ekler. Liste ve Tuval aynı notları gösterir.
+**Öğrendikleriniz:** Boş yerde parmakla sürüklemek tuvali kaydırır. İki parmak ya da artı ve eksi düğmeleri yakınlaştırır. Sığdır düğmesi kaybolduğunuzda tüm notları ekrana getirir.
 
-*İlgili dersler: 1.8 Tuval ekranında not ekleyin · 1.6 İki ekran: Liste ve Tuval*
+*İlgili dersler: 2.2 Tuvalde ustalaşın*
 
-### Görev 5: Notu editörde yazın
+### Görev 6: Tuvalde not ekleyin
+
+*Kart düğmeleriyle altına ve yanına not ekleyin. · 8 adım · 3 dk*
+
+1. **Bir karta dokunun** (Tuval): Her not bir karttır. Karta **kısa dokunup parmağınızı kaldırın**; çevresinde düğmeler açılır. Parmağınızı kaydırırsanız tuval kayar, düğmeler açılmaz.
+2. **Altına not ekleyin** (Tuval): Kartın altındaki **Altına** düğmesine dokunun. Yeni not bu kartın alt notu olur.
+3. **Nota ad verin** (Tuval): Örneğin "Ekmek" yazıp **Tamam**'a dokunun. Yeni kart, dalın ucunda belirir.
+4. **Bir dal kartına dokunun** (Tuval): Şimdi aynı seviyeye bir not ekleyelim. Vurgulanan karta **kısa dokunun**.
+5. **Yanına not ekleyin** (Tuval): **Yanına** düğmesine dokunun. Yeni not aynı seviyeye, bu kartın kardeşi olarak eklenir.
+6. **Ona da ad verin** (Tuval): Örneğin "Süt" yazıp **Tamam**'a dokunun.
+7. **Liste'de de görün** (Tuval): Tuvalde eklediğiniz notlar Liste'de de vardır. Üstteki seçicide **Liste**'ye dokunun.
+8. **İki ekran, aynı notlar** (Liste): Eklediğiniz notlar burada da duruyor: "Ekmek" ve "Süt" aynı dalın altında. Hangisi işinize yararsa o ekranı kullanın.
+
+**Öğrendikleriniz:** Karta kısa dokunup bırakınca düğmeleri açılır. Altına alt not, Yanına aynı seviyede not ekler. Liste ve Tuval aynı notları gösterir.
+
+*İlgili dersler: 1.8 Tuval ekranında not ekleyin*
+
+### Görev 7: Notu editörde yazın
 
 *Bir notu tam ekran editörde açın, yazın ve dönün. · 3 adım · 2 dk*
 
-1. **Editörü açın** (Liste): **Kalem** düğmesi notu tam ekran editörde açar.
+1. **Editörü açın** (Liste): Satırdaki **kalem** düğmesi notu tam ekran editörde açar.
 2. **Bir şeyler yazın** (Editör): Başlığın altındaki alana birkaç kelime yazın. Otomatik kaydetme açıksa kendiliğinden kaydedilir; kapalıysa üstteki **Kaydet**'e dokunun.
 3. **Bahçeye dönün** (Editör): İşiniz bitince **Geri** ile dönün. Yazdıklarınız notun içinde durur.
 
@@ -938,7 +967,7 @@ Uygulamada **Ayarlar → Kullanım kılavuzu → Uygulamalı öğrenim** sekmesi
 
 *İlgili dersler: 1.9 İlk notunuzu yazın*
 
-### Görev 6: Görünümü değiştirin
+### Görev 8: Görünümü değiştirin
 
 *Ayarları açın ve açık ya da koyu temayı seçin. · 4 adım · 1 dk*
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import { hedefiGoster } from './hedefiGoster';
 import { usePathname } from 'next/navigation';
 import { Check, Lightbulb, X } from 'lucide-react';
 import {
@@ -95,7 +96,7 @@ export default function KilavuzKatmani() {
             }
             if (!kaydirildi) {
                 kaydirildi = true;
-                el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                hedefiGoster(el);
                 gosterildigiYol.current = window.location.pathname;
             }
             setHedefYok(false);

@@ -4,7 +4,8 @@ import './garden.css';
 import { useEffect, Suspense, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Sprout, Settings2, List, TreePine, X } from 'lucide-react';
+import { ArrowLeft, Sprout, Settings2, TreePine, X } from 'lucide-react';
+import { GorunumSecici } from '@/components/bahce/GorunumSecici';
 import { useBudamaModu } from '@/components/ui/BudananlarDugmesi';
 import { budamaFiltresi } from '@/lib/uiPrefs';
 import { bahceEkraniAcildi, dersTamamla } from '@/lib/kilavuzIlerleme';
@@ -735,23 +736,14 @@ function GardenPageInner() {
                     </div>
                 </div>
 
-                {/* Görünüm ve ayarlar: tek düğme grubu (yeni ağaç kök kartındaki "Ağaç ekle" ile eklenir) */}
-                <div className="flex flex-shrink-0 items-center rounded-2xl border border-sand-200 bg-sand-50 p-1">
-                    <button
-                        onClick={() => router.push(`/projeler?id=${gardenId}`)}
-                        aria-label="Liste görünümüne geç"
-                        title="Liste görünümüne geç"
-                        className="inline-flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm font-semibold text-sand-700 transition-colors duration-200 hover:bg-white hover:text-sand-900 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40 touch-manipulation"
-                    >
-                        <List size={18} aria-hidden="true" />
-                        <span className="hidden sm:inline">Liste</span>
-                    </button>
-                    <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-sand-200" />
+                {/* Görünüm seçici (Liste | Tuval) ve tuval ayarları; yeni ağaç kök kartındaki "Ağaç ekle" ile eklenir */}
+                <div className="flex flex-shrink-0 items-center gap-1.5">
+                    <GorunumSecici gardenId={gardenId} aktif="tuval" />
                     <button
                         onClick={() => setIsSettingsOpen(true)}
                         aria-label="Tuval ve ağaç ayarları"
                         title="Tuval ve ağaç ayarları"
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-sand-700 transition-colors duration-200 hover:bg-white hover:text-sand-900 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40 touch-manipulation"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-sand-200 bg-sand-50 text-sand-700 transition-colors duration-200 hover:bg-white hover:text-sand-900 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40 touch-manipulation"
                     >
                         <Settings2 size={18} aria-hidden="true" />
                     </button>

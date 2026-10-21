@@ -69,6 +69,18 @@ export function dersTamamla(id: string): void {
     dersDurumu(id, true, true);
 }
 
+/**
+ * Derse bağlı olmayan bir işi uygulamalı göreve bildirir (ör. tuvali kaydırmak).
+ * İlerleme yazılmaz; yalnız yürüyen görevin adımı ilerleyebilir.
+ */
+export function kilavuzEylemi(id: string): void {
+    if (typeof window === 'undefined' || !gorevYuruyor()) return;
+    window.dispatchEvent(new CustomEvent<{ id: string }>(EYLEM_OLAYI, { detail: { id } }));
+}
+
+/** Rehber, ekran dışındaki bir kartı tuvalin ortasına getirmesini ister (detail: not kimliği). */
+export const TUVAL_ORTALA_OLAYI = 'nb-tuval-ortala';
+
 /** Şu anki ekran (yol adı); statik pakette `/projeler.html` gibi uzantılar da olabilir. */
 export function ekranAdi(): 'ana' | 'liste' | 'tuval' | 'editor' | 'diger' {
     if (typeof window === 'undefined') return 'diger';

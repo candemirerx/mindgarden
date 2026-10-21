@@ -220,10 +220,10 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     '**Liste** notlarınızı bir içindekiler tablosu gibi alt alta, iç içe gösterir. Okumak, aramak, adlandırmak ve hızlıca düzenlemek için uygundur.',
                     '**Tuval** notlarınızı büyük bir yüzeyde **kartlar** olarak gösterir; her ağaç dallarıyla birlikte görünür. Büyük resmi görmek ve fikirleri yana, alta doğru büyütmek için uygundur.',
                     'İki ekran **aynı notları** gösterir. Listede eklediğiniz not Tuval\'de, Tuval\'de eklediğiniz not Listede de vardır; ayrı kopya yoktur.',
-                    'Geçmek için: Listede sağ üstteki **Tuval** simgesine, Tuval\'de sağ üstteki **Liste** simgesine dokunun. Sol üstteki geri ok ana ekrana döner.',
+                    'Geçmek için iki ekranın da üstünde aynı **Liste | Tuval** seçicisi vardır; beyaz olan, bulunduğunuz ekrandır. Ötekine dokununca aynı bahçe o ekranda açılır. Sol üstteki geri ok ana ekrana döner.',
                     'Uygulama her bahçe için en son hangi ekranı kullandığınızı hatırlar. Hangisini seveceğinizden emin değilseniz ikisini de deneyin.',
                 ],
-                dene: 'Deneme bahçenizi Liste\'de açın, sonra sağ üstteki simgeyle Tuval\'e geçip geri dönün.',
+                dene: 'Bahçenizi Liste\'de açın, üstteki seçicide **Tuval**\'e geçin, sonra **Liste**\'ye geri dönün.',
                 hatirla: 'Liste okumak ve düzenlemek, Tuval büyük resmi görmek içindir; ikisi aynı notları gösterir.',
                 soru: {
                     soru: 'Tuval\'de yeni bir not eklediniz. Liste ekranına geçince ne görürsünüz?',
@@ -232,7 +232,7 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                     aciklama: 'Liste ve Tuval aynı notları farklı biçimde gösterir. Bir ekranda yaptığınız her değişiklik ötekinde de görünür.',
                 },
                 tamamlanma: 'Bir bahçeyi hem Liste\'de hem Tuval\'de açtığınızda kendiliğinden tamamlanır.',
-                goster: { ekran: 'ana', hedef: '[data-kilavuz="bahce-gorunumleri"]', baslik: 'Liste ve Tuval', metin: 'Bu iki düğme aynı bahçeyi iki farklı ekranda açar. Birini açın, sonra ekranın sağ üstündeki simgeyle ötekine geçin.' },
+                goster: { ekran: 'ana', hedef: '[data-kilavuz="bahce-gorunumleri"]', baslik: 'Liste ve Tuval', metin: 'Bu iki düğme aynı bahçeyi iki farklı ekranda açar. Birini açın; içeride üstteki Liste | Tuval seçicisiyle ötekine geçin.' },
             },
             {
                 id: 'b-liste',
@@ -271,13 +271,13 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 gorsel: 'kart',
                 adimlar: [
                     'Bahçe kartında **Tuval**\'e dokunun. Bahçe boşsa ortadaki **Düşünce ağacını başlatmak için tıkla** alanına dokunup ilk ağaca ad verin.',
-                    'Yüzeyde gezinmek için parmağınızla **sürükleyin**; yakınlaştırıp uzaklaştırmak için **iki parmak** kullanın.',
-                    'Her kart bir nottur. Karta **kısa dokunup bırakın**: kartın çevresinde düğmeler belirir.',
+                    'Yüzeyde gezinmek için kartların dışında **boş bir yerden** parmağınızla sürükleyin. Yakınlaştırmak için **iki parmağınızı** açın ya da alttaki **artı / eksi** düğmelerini kullanın; kaybolursanız **sığdır** düğmesi bütün notları ekrana getirir.',
+                    'Her kart bir nottur. Karta **kısa dokunup parmağınızı kaldırın**: kartın çevresinde düğmeler belirir. Parmağınız kayarsa tuval kayar, düğmeler açılmaz; bu durumda yeniden kısa dokunun.',
                     '**Altına** düğmesi seçili notun altına yeni not ekler. **Yanına** düğmeleri aynı seviyeye, notun önüne ya da arkasına not ekler; ağacın en üstündeki kartta bu yeni bir ağaç demektir. **Düzenle** notu editörde açar.',
                     'Düğmeleri kapatmak için boş bir alana dokunun.',
                 ],
                 dene: 'Deneme bahçesini Tuval\'de açın. "Alışveriş" kartına dokunup **Altına** ile "Ekmek" notunu ekleyin; sonra Listeye geçip notun orada da olduğunu görün.',
-                ipucu: 'Kart düğmeleri, kart görünümü ve düzen sağ üstteki **Tuval ve ağaç ayarları** simgesinden değiştirilir; ayrıntılar Temel seviyesindedir.',
+                ipucu: 'Liste\'ye dönmek için üstteki **Liste | Tuval** seçicisini kullanın. Kart düğmeleri, kart görünümü ve düzen yanındaki **Tuval ve ağaç ayarları** simgesinden değiştirilir; ayrıntılar Temel seviyesindedir.',
                 hatirla: 'Karta kısa dokunun: Altına alt not, Yanına aynı seviyede not ekler, Düzenle editörü açar.',
                 soru: {
                     soru: 'Tuvalde "Meyve" kartıyla aynı seviyeye "Sebze" notunu eklemek istiyorsunuz. Hangi düğme?',

@@ -16,6 +16,7 @@ import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
 import { sonrakiRenk } from '@/lib/branchColors';
 import { siraliAdEtkin, siraliAd } from '@/lib/tools';
 import { BudananlarDugmesi, useBudamaModu } from '@/components/ui/BudananlarDugmesi';
+import { GorunumSecici } from '@/components/bahce/GorunumSecici';
 import { budamaFiltresi } from '@/lib/uiPrefs';
 import { bahceEkraniAcildi } from '@/lib/kilavuzIlerleme';
 
@@ -788,31 +789,32 @@ function ProjectsPageInner() {
                 <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 py-3 lg:h-16 lg:flex-nowrap lg:py-0">
                         {/* Sol: Geri & Başlık */}
-                        <div className="flex min-w-0 items-center gap-2.5 lg:flex-shrink-0">
+                        <div className="flex w-full min-w-0 items-center gap-2.5 lg:w-auto lg:flex-shrink-0">
                             <button
                                 onClick={() => router.push('/')}
                                 aria-label="Ana sayfa"
                                 title="Ana Sayfa"
-                                className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
+                                className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-sand-600 transition-colors duration-200 hover:bg-sand-100 hover:text-sand-800"
                             >
                                 <ArrowLeft size={21} />
                             </button>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                                 <h1 className="truncate text-lg font-semibold text-sand-900">
                                     {currentGarden?.name || 'Bahçe'}
                                 </h1>
-                                <p className="text-xs text-sand-600">
+                                <p className="truncate text-xs text-sand-600">
                                     {trees.length} ağaç · {countAllNodes(trees)} düşünce
                                 </p>
                             </div>
+                            {gardenId && <GorunumSecici gardenId={gardenId} aktif="liste" />}
                         </div>
 
                         {/* Orta: Arama */}
-                        <div className="relative order-last w-full lg:order-none lg:w-auto lg:max-w-md lg:flex-1">
+                        <div className="relative min-w-0 flex-1 basis-36 lg:w-auto lg:max-w-md">
                             <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sand-600" />
                             <input
                                 type="text"
-                                placeholder="Düşüncelerde ara…"
+                                placeholder="Ara…"
                                 aria-label="Düşüncelerde ara"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -860,15 +862,6 @@ function ProjectsPageInner() {
                             </div>
 
                             <BudananlarDugmesi />
-                            <button
-                                onClick={() => router.push(`/bahce_view?id=${gardenId}`)}
-                                title="Tuval görünümü"
-                                aria-label="Tuval görünümü"
-                                className="btn btn-secondary h-11 px-4 text-sm"
-                            >
-                                <Layout size={16} />
-                                <span className="hidden sm:inline">Tuval</span>
-                            </button>
                             <button
                                 onClick={handleAddRoot}
                                 title="Yeni ağaç ekle"

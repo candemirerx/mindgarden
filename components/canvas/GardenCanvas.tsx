@@ -8,6 +8,7 @@ import { ZoomIn, ZoomOut, Scan } from 'lucide-react';
 import { TuvalGezinme } from './TuvalGezinme';
 import type { DunyaOlcusu } from './TuvalGezinme';
 import type { TuvalGezinme as GezinmeTuru } from '@/lib/tuvalTercihleri';
+import { TUVAL_ORTALA_OLAYI, kilavuzEylemi } from '@/lib/kilavuzIlerleme';
 
 /**
  * Eldeki kartın basılı tutma menüsüyle aynı eşik: parmak bu kadar oynadıysa
@@ -373,6 +374,9 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
 
     // Mouse/Touch bitiş
     const handlePointerUp = () => {
+        // Uygulamalı öğrenim: kullanıcı tuvali gerçekten kaydırdı ya da iki parmakla ölçekledi.
+        if (isPinching) kilavuzEylemi('tuval-olcek');
+        else if (isDragging) kilavuzEylemi('tuval-kaydir');
         dugumBaslangicRef.current = null;
         setIsDragging(false);
         setIsPinching(false);
@@ -415,6 +419,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                 scale: newScale,
                 offset: { x: newOffsetX, y: newOffsetY }
             });
+            kilavuzEylemi('tuval-olcek');
         };
 
         // passive: false ile ekliyoruz ki preventDefault çalışsın
@@ -437,8 +442,8 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
             } };
         });
     }, []);
-    const handleZoomIn = useCallback(() => zoomAtCenter(1.2), [zoomAtCenter]);
-    const handleZoomOut = useCallback(() => zoomAtCenter(1 / 1.2), [zoomAtCenter]);
+    const handleZoomIn = useCallback(() => { zoomAtCenter(1.2); kilavuzEylemi('tuval-olcek'); }, [zoomAtCenter]);
+    const handleZoomOut = useCallback(() => { zoomAtCenter(1 / 1.2); kilavuzEylemi('tuval-olcek'); }, [zoomAtCenter]);
 
     // Yeni kart DOM'a birkaç kare sonra girebilir; bulunana dek kısa süre beklenir.
     // Ad penceresinin klavyesi kapanınca tuval uzar; bu yüzden kısa süre sonra bir kez daha ortalanır.
@@ -466,6 +471,25 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
         istek = requestAnimationFrame(() => dene(true));
         return () => { cancelAnimationFrame(istek); clearTimeout(tekrar); };
     }, [ortalanacak]);
+
+    // Uygulamalı öğrenim rehberi ekran dışındaki bir kartı vurgulayacakken onu ortaya getirir.
+    useEffect(() => {
+        const ortala = (e: Event) => {
+            const id = (e as CustomEvent<string>).detail;
+            const container = containerRef.current;
+            const kart = contentRef.current?.querySelector<HTMLElement>(`.dugum-karti[data-node-id="${CSS.escape(id)}"]`);
+            if (!container || !kart) return;
+            const bounds = container.getBoundingClientRect();
+            const rect = kart.getBoundingClientRect();
+            const controls = container.querySelector('.garden-controls')?.getBoundingClientRect();
+            const altSinir = controls ? controls.top : bounds.bottom;
+            const dx = bounds.left + bounds.width / 2 - (rect.left + rect.width / 2);
+            const dy = bounds.top + (altSinir - bounds.top) / 2 - (rect.top + rect.height / 2);
+            setViewState(prev => ({ ...prev, offset: { x: prev.offset.x + dx, y: prev.offset.y + dy } }));
+        };
+        window.addEventListener(TUVAL_ORTALA_OLAYI, ortala);
+        return () => window.removeEventListener(TUVAL_ORTALA_OLAYI, ortala);
+    }, []);
 
     const handleResetView = useCallback(() => {
         const container = containerRef.current;
@@ -575,7 +599,7 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
                 </button>
                 <div className="h-5 w-px bg-sand-300 mx-0.5" />
                 <button
-                    onClick={handleResetView}
+                    onClick={() => { handleResetView(); kilavuzEylemi('tuval-sigdir'); }}
                     className="garden-fit"
                     title="Tüm notları ekrana sığdır (F)"
                     aria-label="Tüm notları ekrana sığdır"
