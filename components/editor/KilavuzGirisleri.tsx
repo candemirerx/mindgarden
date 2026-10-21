@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { BookOpen, Check, ChevronRight, GraduationCap, Play, RotateCcw } from 'lucide-react';
-import { GOREVLER, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
+import { siradakiGorev, yolGorevleri, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
 import { TUM_DERSLER } from '@/lib/kilavuzIcerik';
-import { GOREV_OLAYI, ILERLEME_OLAYI, bitenGorevler, ogrenilenler } from '@/lib/kilavuzIlerleme';
+import { GOREV_OLAYI, ILERLEME_OLAYI, YOL_OLAYI, bitenGorevler, ogrenilenler, ogrenmeYolu, type OgrenmeYolu } from '@/lib/kilavuzIlerleme';
 
 /**
  * Ayarlar ana sayfasının başındaki "Öğrenme alanı" paneli:
  * - Yaparak öğrenin (asıl eylem): liste açılmadan sıradaki görev hemen başlar;
  *   hepsi bittiyse görev listesi açılır.
  * - Kullanım kılavuzu kitapçığı: okunan dersler (Teorik öğrenim) açılır.
+ * Görevler kullanıcının öğrenme yolundan (Liste ya da Tuval) gelir.
  * Üstteki halka iki yolun toplam ilerlemesini gösterir; kullanıcı nerede kaldığını görür.
  */
 
@@ -34,26 +35,31 @@ export default function KilavuzGirisleri({ onKitapcik, onGorevBaslat, onGorevler
 }) {
     const [bitenDers, setBitenDers] = useState(0);
     const [biten, setBiten] = useState<string[]>([]);
+    const [yol, setYol] = useState<OgrenmeYolu>('liste');
 
     useEffect(() => {
         const guncelle = () => {
             setBitenDers(ogrenilenler().filter((id) => TUM_DERSLER.some((d) => d.id === id)).length);
             setBiten(bitenGorevler());
+            setYol(ogrenmeYolu());
         };
         guncelle();
         window.addEventListener(ILERLEME_OLAYI, guncelle);
         window.addEventListener(GOREV_OLAYI, guncelle);
+        window.addEventListener(YOL_OLAYI, guncelle);
         return () => {
             window.removeEventListener(ILERLEME_OLAYI, guncelle);
             window.removeEventListener(GOREV_OLAYI, guncelle);
+            window.removeEventListener(YOL_OLAYI, guncelle);
         };
     }, []);
 
-    const sonraki = GOREVLER.find((g) => !biten.includes(g.id));
-    const bitenGorev = GOREVLER.filter((g) => biten.includes(g.id)).length;
+    const gorevler = yolGorevleri(yol);
+    const sonraki = siradakiGorev(yol, biten);
+    const bitenGorev = gorevler.filter((g) => biten.includes(g.id)).length;
     const dersYuzde = Math.round((bitenDers / TUM_DERSLER.length) * 100);
     // Görevler ve dersler eşit ağırlıkta.
-    const genel = (bitenGorev / GOREVLER.length + bitenDers / TUM_DERSLER.length) / 2;
+    const genel = (bitenGorev / gorevler.length + bitenDers / TUM_DERSLER.length) / 2;
 
     return (
         <section aria-labelledby="ogrenme-alani-baslik" className="relative isolate overflow-hidden rounded-3xl bg-moss-900 p-3 text-white shadow-card">
@@ -88,15 +94,15 @@ export default function KilavuzGirisleri({ onKitapcik, onGorevBaslat, onGorevler
                 </span>
                 <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-clay-700">Yaparak öğrenin</span>
-                        <span className="rounded-full bg-clay-100 px-1.5 py-px text-[10.5px] font-semibold text-clay-800">{bitenGorev}/{GOREVLER.length}</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-clay-700">Yaparak öğrenin · {yol === 'tuval' ? 'Tuval' : 'Liste'}</span>
+                        <span className="rounded-full bg-clay-100 px-1.5 py-px text-[10.5px] font-semibold text-clay-800">{bitenGorev}/{gorevler.length}</span>
                     </span>
                     <span className="mt-0.5 block truncate text-[15px] font-semibold leading-snug">
                         {sonraki ? sonraki.baslik : 'Tüm görevler tamam'}
                     </span>
                     <span className="mt-1.5 flex items-center gap-2">
                         <span aria-hidden="true" className="flex flex-1 gap-1">
-                            {GOREVLER.map((g) => (
+                            {gorevler.map((g) => (
                                 <span key={g.id} className={'h-1.5 flex-1 rounded-full ' + (biten.includes(g.id) ? 'bg-clay-500' : g.id === sonraki?.id ? 'bg-clay-300' : 'bg-sand-200')} />
                             ))}
                         </span>

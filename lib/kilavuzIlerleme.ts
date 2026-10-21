@@ -93,8 +93,31 @@ export function ekranAdi(): 'ana' | 'liste' | 'tuval' | 'editor' | 'diger' {
 }
 
 /** Liste ya da Tuval açıldığında çağrılır: son bahçeyi hatırlar, iki ekranı da gören kullanıcının dersini tamamlar. */
+/**
+ * Öğrenme yolu: kullanıcı notlarını Liste'de mi Tuval'de mi tutuyor? Uygulamalı
+ * öğrenimin sıradaki görevi bu yoldan gelir. Henüz seçilmediyse ilk açılan bahçe
+ * ekranı belirler; ilk bahçe görevinde seçilen ekran ya da kılavuzdaki yol
+ * seçici onu değiştirir.
+ */
+export type OgrenmeYolu = 'liste' | 'tuval';
+const OGRENME_YOLU_ANAHTARI = 'nb-kilavuz-yol';
+export const YOL_OLAYI = 'nb-kilavuz-yol';
+
+export function ogrenmeYolu(): OgrenmeYolu {
+    try { return localStorage.getItem(OGRENME_YOLU_ANAHTARI) === 'tuval' ? 'tuval' : 'liste'; } catch { return 'liste'; }
+}
+
+export function ogrenmeYoluSec(yol: OgrenmeYolu): void {
+    try {
+        if (localStorage.getItem(OGRENME_YOLU_ANAHTARI) === yol) return;
+        localStorage.setItem(OGRENME_YOLU_ANAHTARI, yol);
+    } catch { return; }
+    window.dispatchEvent(new CustomEvent<OgrenmeYolu>(YOL_OLAYI, { detail: yol }));
+}
+
 export function bahceEkraniAcildi(ekran: 'liste' | 'tuval', bahceId: string): void {
     try {
+        if (!localStorage.getItem(OGRENME_YOLU_ANAHTARI)) ogrenmeYoluSec(ekran);
         localStorage.setItem(SON_BAHCE_ANAHTARI, bahceId);
         const gorulen = new Set<string>(JSON.parse(localStorage.getItem(GORULEN_EKRANLAR_ANAHTARI) || '[]'));
         gorulen.add(ekran);

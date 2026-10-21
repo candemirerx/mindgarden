@@ -789,6 +789,7 @@ function GardenPageInner() {
                         <div className="absolute inset-0 flex items-center justify-center p-6">
                             <button
                                 onClick={handleCreateRoot}
+                                data-kilavuz="tuval-ilk-agac"
                                 className="group flex flex-col items-center gap-4 rounded-3xl border-2 border-dashed border-sand-300 bg-white/60 p-9 backdrop-blur-sm transition-all duration-200 ease-smooth hover:border-moss-400 hover:bg-white hover:shadow-lift"
                             >
                                 <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-moss-100 text-moss-700 transition-transform duration-200 group-hover:scale-105">

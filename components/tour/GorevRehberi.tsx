@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronUp, Hand, Hourglass, ListTree, Loader2, PartyPopper, X } from 'lucide-react';
-import { GOREVLER, baslanabilirAdim, type GorevAdimi, type GorevEkrani, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
+import { GOREVLER, baslanabilirAdim, siradakiGorev, yolGorevleri, type GorevAdimi, type GorevEkrani, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
 import {
     EYLEM_OLAYI,
     GOREV_OLAYI,
@@ -16,6 +16,8 @@ import {
     bahceAdresi,
     bitenGorevler,
     ekranAdi,
+    ogrenmeYolu,
+    ogrenmeYoluSec,
     gorevBaslat,
     gorevTamamlandi,
     type AktifGorev,
@@ -398,11 +400,16 @@ export default function GorevRehberi() {
         return () => window.clearTimeout(t);
     }, [tamamIsareti]);
 
+    // İlk bahçe görevinde Liste'yi mi Tuval'i mi seçtiyse öğrenme yolu o olur;
+    // sıradaki görevler o ekranda sürer.
+    const secilenYol = biten?.id === 'g-bahce' && (ekran === 'liste' || ekran === 'tuval') ? ekran : null;
+    useEffect(() => { if (secilenYol) ogrenmeYoluSec(secilenYol); }, [secilenYol]);
+
     if (!hazir) return null;
 
     if (biten) {
         const bitenler = bitenGorevler();
-        const sonraki = GOREVLER.find((g) => !bitenler.includes(g.id));
+        const sonraki = siradakiGorev(secilenYol ?? ogrenmeYolu(), bitenler);
         return createPortal(
             <div role="dialog" aria-modal="false" aria-labelledby="gorev-bitti-baslik" data-gorev-bitti="" data-ust-katman="" className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] z-[460] mx-auto max-w-md rounded-3xl border border-moss-200 bg-white p-5 shadow-lift">
                 <div className="flex items-start gap-3">
@@ -570,7 +577,7 @@ export default function GorevRehberi() {
                             </ol>
                             <p className="px-2 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-sand-500">Diğer görevler</p>
                             <ul>
-                                {GOREVLER.filter((x) => x.id !== gorev.id).map((x) => {
+                                {[...yolGorevleri(ogrenmeYolu()), ...GOREVLER.filter((x) => !yolGorevleri(ogrenmeYolu()).includes(x))].filter((x) => x.id !== gorev.id).map((x) => {
                                     const bitti = bitenGorevler().includes(x.id);
                                     return (
                                         <li key={x.id}>

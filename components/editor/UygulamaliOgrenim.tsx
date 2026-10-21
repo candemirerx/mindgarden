@@ -21,12 +21,14 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { cx } from '@/components/ui/settings';
-import { GOREVLER, baslanabilirAdim, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
-import { GOREV_OLAYI, bitenGorevler, sonBahce } from '@/lib/kilavuzIlerleme';
+import { baslanabilirAdim, siradakiGorev, yolGorevleri, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
+import { GOREV_OLAYI, YOL_OLAYI, bitenGorevler, ogrenmeYolu, ogrenmeYoluSec, sonBahce, type OgrenmeYolu } from '@/lib/kilavuzIlerleme';
 
 /**
  * Kılavuzun "Uygulamalı öğrenim" sekmesi: gerçek ekranlarda adım adım görevler.
  * Görev başlayınca ayarlar kapanır; GorevRehberi her adımı ekranda yürütür.
+ * İki öğrenme yolu vardır: notlarını Liste'de tutan kullanıcı Liste yolunun,
+ * Tuval'de tutan Tuval yolunun görevlerini görür; ortak görevler ikisinde de var.
  */
 
 const IKONLAR: Partial<Record<KilavuzGorevi['ikon'], LucideIcon>> = { Layers, LayoutDashboard, MousePointer2, Palette, PenLine, Settings, Sprout, TreePine };
@@ -40,18 +42,28 @@ export default function UygulamaliOgrenim({ onGorevBaslat, onTurBaslat }: Uygula
     const [biten, setBiten] = useState<string[]>([]);
     const [bahceVar, setBahceVar] = useState(true);
     const [acik, setAcik] = useState<string | null>(null);
+    const [yol, setYol] = useState<OgrenmeYolu>('liste');
     const baseId = useId();
 
     useEffect(() => {
-        const guncelle = () => setBiten(bitenGorevler());
+        const guncelle = () => { setBiten(bitenGorevler()); setYol(ogrenmeYolu()); };
         guncelle();
         setBahceVar(!!sonBahce());
         window.addEventListener(GOREV_OLAYI, guncelle);
-        return () => window.removeEventListener(GOREV_OLAYI, guncelle);
+        window.addEventListener(YOL_OLAYI, guncelle);
+        return () => {
+            window.removeEventListener(GOREV_OLAYI, guncelle);
+            window.removeEventListener(YOL_OLAYI, guncelle);
+        };
     }, []);
 
-    const onerilen = GOREVLER.find((g) => !biten.includes(g.id));
-    const bitenSayi = GOREVLER.filter((g) => biten.includes(g.id)).length;
+    const gorevler = yolGorevleri(yol);
+    const onerilen = siradakiGorev(yol, biten);
+    const bitenSayi = gorevler.filter((g) => biten.includes(g.id)).length;
+    const yolIlerleme = (y: OgrenmeYolu) => {
+        const liste = yolGorevleri(y);
+        return liste.filter((g) => biten.includes(g.id)).length + '/' + liste.length;
+    };
 
     return (
         <div className="space-y-4">
@@ -61,12 +73,41 @@ export default function UygulamaliOgrenim({ onGorevBaslat, onTurBaslat }: Uygula
                 Görevi başlatın: parlayan yere dokundukça kendiliğinden ilerler.
             </p>
 
+            {/* Öğrenme yolu: notlarınızı hangi ekranda tutuyorsanız görevler o ekranda ilerler. */}
+            <div role="radiogroup" aria-label="Öğrenme yolu" className="grid grid-cols-2 gap-1.5 rounded-2xl border border-sand-200 bg-sand-100 p-1.5">
+                {([
+                    { id: 'liste' as const, ad: 'Liste yolu', alt: 'Notlar alt alta' },
+                    { id: 'tuval' as const, ad: 'Tuval yolu', alt: 'Kartlarla harita' },
+                ]).map((y) => {
+                    const secili = yol === y.id;
+                    return (
+                        <button
+                            key={y.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={secili}
+                            onClick={() => ogrenmeYoluSec(y.id)}
+                            className={cx(
+                                'flex min-h-[52px] flex-col justify-center rounded-xl px-3 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500',
+                                secili ? 'bg-white shadow-soft ring-1 ring-sand-200' : 'hover:bg-white/50'
+                            )}
+                        >
+                            <span className="flex items-center justify-between gap-2">
+                                <span className={cx('text-sm font-semibold', secili ? 'text-moss-800' : 'text-sand-700')}>{y.ad}</span>
+                                <span className="text-[11px] font-semibold text-sand-500">{yolIlerleme(y.id)}</span>
+                            </span>
+                            <span className="text-[11px] text-sand-600">{y.alt}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
             <div className="flex items-center gap-2 px-1">
-                <h3 className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-wider text-sand-600">Görevler</h3>
-                <span className="shrink-0 text-xs font-medium text-sand-600">{bitenSayi}/{GOREVLER.length} tamamlandı</span>
+                <h3 className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-wider text-sand-600">{yol === 'tuval' ? 'Tuval yolunun görevleri' : 'Liste yolunun görevleri'}</h3>
+                <span className="shrink-0 text-xs font-medium text-sand-600">{bitenSayi}/{gorevler.length} tamamlandı</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-sand-200" aria-hidden="true">
-                <div className="h-full rounded-full bg-moss-600 transition-all" style={{ width: (bitenSayi / GOREVLER.length) * 100 + '%' }} />
+                <div className="h-full rounded-full bg-moss-600 transition-all" style={{ width: (bitenSayi / gorevler.length) * 100 + '%' }} />
             </div>
 
             {onTurBaslat && (
@@ -85,7 +126,7 @@ export default function UygulamaliOgrenim({ onGorevBaslat, onTurBaslat }: Uygula
             )}
 
             <ol className="space-y-3">
-                {GOREVLER.map((g, i) => {
+                {gorevler.map((g, i) => {
                     const Ikon = IKONLAR[g.ikon] ?? Sprout;
                     const tamam = biten.includes(g.id);
                     const oneri = onerilen?.id === g.id;

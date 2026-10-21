@@ -46,7 +46,7 @@ import type { SettingsSectionId } from './SettingsHome';
 import KilavuzGorseli from './KilavuzGorseli';
 import UygulamaliOgrenim from './UygulamaliOgrenim';
 import { SEVIYELER, SOZLUK, SSS, TUM_DERSLER, YOLLAR, type KilavuzDersi, type KilavuzIkonu, type KilavuzSorusu } from '@/lib/kilavuzIcerik';
-import { ILERLEME_OLAYI, KILAVUZ_MOD_ANAHTARI as MOD_ANAHTARI, dersDurumu, ogrenmeOturumuBaslat, type KilavuzModu, ogrenilenler, type KilavuzGoster } from '@/lib/kilavuzIlerleme';
+import { ILERLEME_OLAYI, KILAVUZ_MOD_ANAHTARI as MOD_ANAHTARI, dersDurumu, ogrenmeOturumuBaslat, ogrenmeYolu, type KilavuzModu, ogrenilenler, type KilavuzGoster } from '@/lib/kilavuzIlerleme';
 import { KILAVUZ_ACILDI_ANAHTARI } from '@/components/tour/KilavuzKatmani';
 import { GOREVLER, derseAitGorev, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
 
@@ -534,7 +534,7 @@ export default function UsageGuide({ onNavigate, onTurBaslat, onGoster, onGorevB
                         goster={ders.goster && onGoster ? () => onGoster(ders.goster!) : undefined}
                         ayaraGit={ders.ayarId && onNavigate ? () => onNavigate(ders.ayarId as SettingsSectionId) : undefined}
                         uygula={(() => {
-                            const gorev = derseAitGorev(ders.id);
+                            const gorev = derseAitGorev(ders.id, ogrenmeYolu());
                             return gorev && onGorevBaslat ? { baslik: gorev.baslik, baslat: () => onGorevBaslat(gorev) } : undefined;
                         })()}
                     />

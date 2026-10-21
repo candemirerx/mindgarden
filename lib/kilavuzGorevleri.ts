@@ -38,6 +38,8 @@ export interface KilavuzGorevi {
     aciklama: string;
     sure: number;
     baslangic: 'ana' | 'liste' | 'tuval';
+    /** Öğrenme yolu: Liste ya da Tuval yolunun görevi; yoksa iki yolda da ortak. */
+    yol?: 'liste' | 'tuval';
     /** Görev bitince "Neler öğrendiniz" listesi. */
     kazanimlar: string[];
     /** Bu görevle uygulanan teorik dersler. */
@@ -50,7 +52,7 @@ const BAHCE_PENCERESI = '[aria-labelledby="create-garden-title"]';
 const LISTE_MENU = ['[data-kilavuz-secili] [aria-haspopup="menu"]', '[aria-haspopup="menu"][aria-label$=" seçenekleri"]'];
 const KART_DUGMELERI = '[data-kart-aktif] [data-kart-eylem]';
 const NOT_YOK = 'Bu bahçede henüz not yok. Önce "Ağaç dikin, dal ekleyin" görevini yapın.';
-const KART_YOK = 'Tuvalde henüz kart yok. Boş tuvalin ortasına dokunup ilk ağacı açın ya da önce "Ağaç dikin, dal ekleyin" görevini yapın.';
+const KART_YOK = 'Tuvalde henüz kart yok. Önce "Tuvalde ilk ağacı dikin" görevini yapın ya da boş tuvaldeki İlk tohumu ek\'e dokunun.';
 
 export const GOREVLER: KilavuzGorevi[] = [
     {
@@ -65,7 +67,7 @@ export const GOREVLER: KilavuzGorevi[] = [
         adimlar: [
             { ekran: 'ana', hedef: ['[data-tur="yeni-bahce"]'], gecis: { gorunce: BAHCE_PENCERESI }, baslik: 'Yeni Bahçe\'ye dokunun', metin: 'İş, okul, kitaplar… Her konu için ayrı bir bahçe açarsınız.' },
             { ekran: 'ana', hedef: [BAHCE_PENCERESI], gecis: { eylem: 'b-bahce' }, baslik: 'Bahçeye bir ad verin', metin: 'Örneğin "Fikirlerim" yazın ve **Oluştur**\'a dokunun.' },
-            { ekran: 'ana', hedef: ['[data-kilavuz="bahce-gorunumleri"]'], gecis: 'dokun', baslik: 'Bahçenizi açın', metin: 'Yeni bahçeniz en üstte. **Liste** notları alt alta, **Tuval** kart kart gösterir. Birine dokunun; içeride üstteki **Liste | Tuval** seçicisiyle istediğiniz an ötekine geçersiniz.' },
+            { ekran: 'ana', hedef: ['[data-kilavuz="bahce-gorunumleri"]'], gecis: 'dokun', baslik: 'Bahçenizi açın', metin: 'Yeni bahçeniz en üstte. **Liste** notları alt alta, **Tuval** kart kart gösterir. Hangisinde çalışmak istiyorsanız ona dokunun; sıradaki görevler o ekranda sürer. İçeride üstteki **Liste | Tuval** seçicisiyle istediğiniz an ötekine geçersiniz.' },
         ],
     },
     {
@@ -86,6 +88,7 @@ export const GOREVLER: KilavuzGorevi[] = [
     },
     {
         id: 'g-agac',
+        yol: 'liste',
         ikon: 'TreePine',
         baslik: 'Ağaç dikin, dal ekleyin',
         aciklama: 'Listede bir ağaç açın ve altına ilk dalını ekleyin.',
@@ -104,6 +107,7 @@ export const GOREVLER: KilavuzGorevi[] = [
     },
     {
         id: 'g-duzen',
+        yol: 'liste',
         ikon: 'Palette',
         baslik: 'Renk verin ve budayın',
         aciklama: 'Bir dalı renklendirin, sonra silmeden kenara alın.',
@@ -120,7 +124,24 @@ export const GOREVLER: KilavuzGorevi[] = [
         ],
     },
     {
+        id: 'g-tuval-agac',
+        yol: 'tuval',
+        ikon: 'Sprout',
+        baslik: 'Tuvalde ilk ağacı dikin',
+        aciklama: 'Boş tuvale ilk tohumu ekin, ağacın kökü olsun.',
+        sure: 1,
+        baslangic: 'tuval',
+        kazanimlar: ['Boş tuvalde İlk tohumu ek ilk ağacı açar.', 'Büyük kart ağacın köküdür; dallar onun altına eklenir.'],
+        dersler: ['b-tuval'],
+        adimlar: [
+            { ekran: 'tuval', hedef: ['[data-kilavuz="tuval-ilk-agac"]'], gecis: { gorunce: ISTEM }, baslik: 'İlk tohumu ekin', metin: 'Bahçeniz boş. Ortadaki **İlk tohumu ek**\'e dokunun; ağacın kökü olacak ilk not açılır.', yoksa: 'Bu bahçede zaten ağaç var; bu görevin işi yapılmış. **Adımı geç** ile ilerleyin.' },
+            { ekran: 'tuval', hedef: [ISTEM], gecis: { eylem: 'b-tuval' }, baslik: 'Ağaca ad verin', metin: 'Örneğin "Alışveriş" yazıp **Tamam**\'a dokunun.' },
+            { ekran: 'tuval', hedef: ['[data-yk-derinlik="0"]'], gecis: 'ileri', baslik: 'Ağacınız tuvalde', metin: 'Bu büyük kart ağacın **köküdür**. Dallar onun altına eklenir; sıradaki görevlerde tuvalde gezinmeyi ve kart düğmeleriyle dal eklemeyi öğrenirsiniz.' },
+        ],
+    },
+    {
         id: 'g-tuval-gezin',
+        yol: 'tuval',
         ikon: 'MousePointer2',
         baslik: 'Tuvalde gezinin',
         aciklama: 'Tuvali kaydırın, yakınlaştırın, her şeyi ekrana sığdırın.',
@@ -137,12 +158,13 @@ export const GOREVLER: KilavuzGorevi[] = [
     },
     {
         id: 'g-tuval',
+        yol: 'tuval',
         ikon: 'LayoutDashboard',
         baslik: 'Tuvalde not ekleyin',
         aciklama: 'Kart düğmeleriyle altına ve yanına not ekleyin.',
         sure: 3,
         baslangic: 'tuval',
-        kazanimlar: ['Karta kısa dokunup bırakınca düğmeleri açılır.', 'Altına alt not, Yanına aynı seviyede not ekler.', 'Liste ve Tuval aynı notları gösterir.'],
+        kazanimlar: ['Karta kısa dokunup bırakınca düğmeleri açılır.', 'Altına alt not, Yanına aynı seviyede not ekler.'],
         dersler: ['b-tuval'],
         adimlar: [
             { ekran: 'tuval', hedef: ['[data-yk-id]'], gecis: { gorunce: KART_DUGMELERI }, baslik: 'Bir karta dokunun', metin: 'Her not bir karttır. Karta **kısa dokunup parmağınızı kaldırın**; çevresinde düğmeler açılır. Parmağınızı kaydırırsanız tuval kayar, düğmeler açılmaz.', yoksa: KART_YOK },
@@ -151,12 +173,32 @@ export const GOREVLER: KilavuzGorevi[] = [
             { ekran: 'tuval', hedef: ['[data-yk-derinlik="1"]', '[data-yk-id]'], gecis: { gorunce: KART_DUGMELERI }, baslik: 'Bir dal kartına dokunun', metin: 'Şimdi aynı seviyeye bir not ekleyelim. Vurgulanan karta **kısa dokunun**.', yoksa: KART_YOK },
             { ekran: 'tuval', hedef: ['[data-kart-aktif] [data-kart-eylem="yan"]', '[data-kart-aktif] [data-kart-eylem="sol"]'], gecis: { gorunce: ISTEM }, baslik: 'Yanına not ekleyin', metin: '**Yanına** düğmesine dokunun. Yeni not aynı seviyeye, bu kartın kardeşi olarak eklenir.', yoksa: 'Kart düğmeleri kapandı. Geri ile bir önceki adıma dönüp karta yeniden dokunun.' },
             { ekran: 'tuval', hedef: [ISTEM], gecis: { eylem: 'b-tuval' }, baslik: 'Ona da ad verin', metin: 'Örneğin "Süt" yazıp **Tamam**\'a dokunun.' },
-            { ekran: 'tuval', hedef: ['[data-kilavuz="gorunum-liste"]'], gecis: 'dokun', baslik: 'Liste\'de de görün', metin: 'Tuvalde eklediğiniz notlar Liste\'de de vardır. Üstteki seçicide **Liste**\'ye dokunun.' },
-            { ekran: 'liste', gecis: 'ileri', baslik: 'İki ekran, aynı notlar', metin: 'Eklediğiniz notlar burada da duruyor: "Ekmek" ve "Süt" aynı dalın altında. Hangisi işinize yararsa o ekranı kullanın.' },
+            { ekran: 'tuval', gecis: 'ileri', baslik: 'Ağacınız büyüyor', metin: '"Ekmek" ve "Süt" aynı dalda, kardeş kartlar olarak duruyor. **Altına** derinleştirir, **Yanına** genişletir; büyük resmi tuvalde böyle kurarsınız.' },
+        ],
+    },
+    {
+        id: 'g-tuval-yaz',
+        yol: 'tuval',
+        ikon: 'PenLine',
+        baslik: 'Tuvalde budayın ve yazın',
+        aciklama: 'Kart düğmeleriyle bir notu budayın, sonra içine yazın.',
+        sure: 2,
+        baslangic: 'tuval',
+        kazanimlar: ['Buda notu silmez; kart soluk görünür, aynı düğme geri alır.', 'Düzenle notu tam ekran editörde açar.', 'Geri ile tuvale dönülür; yazdıklarınız kartta durur.'],
+        dersler: ['t-budama', 'b-not'],
+        adimlar: [
+            { ekran: 'tuval', hedef: ['[data-yk-derinlik="1"]', '[data-yk-id]'], gecis: { gorunce: KART_DUGMELERI }, baslik: 'Bir dal kartına dokunun', metin: 'Vurgulanan karta **kısa dokunun**; düğmeleri açılır.', yoksa: KART_YOK },
+            { ekran: 'tuval', hedef: ['[data-kart-aktif] [data-kart-eylem="buda"]'], gecis: { eylem: 't-budama' }, baslik: 'Kartı budayın', metin: 'Üstteki **Buda**\'ya dokunun. Not silinmez; kenara alınır.', yoksa: 'Kart düğmeleri kapandı. Geri ile bir önceki adıma dönüp karta yeniden dokunun.' },
+            { ekran: 'tuval', gecis: 'ileri', baslik: 'Budanan kart', metin: 'Budanan kart soluk görünür. Geri almak için karta dokunup aynı düğmeye (**Budamayı geri al**) dokunun.' },
+            { ekran: 'tuval', hedef: ['[data-yk-id]'], gecis: { gorunce: KART_DUGMELERI }, baslik: 'Yazmak için karta dokunun', metin: 'Şimdi bir notun içine yazalım. Vurgulanan karta **kısa dokunun**.', yoksa: KART_YOK },
+            { ekran: 'tuval', hedef: ['[data-kart-aktif] [data-kart-eylem="editor"]'], gecis: 'dokun', baslik: 'Düzenle\'ye dokunun', metin: 'Üstteki **Düzenle** notu tam ekran editörde açar.', yoksa: 'Kart düğmeleri kapandı. Geri ile bir önceki adıma dönüp karta yeniden dokunun.' },
+            { ekran: 'editor', hedef: ['[aria-label="Not içeriği"]'], gecis: { eylem: 'b-not' }, baslik: 'Bir şeyler yazın', metin: 'Başlığın altındaki alana birkaç kelime yazın; kendiliğinden kaydedilir.' },
+            { ekran: 'editor', hedef: ['[aria-label="Geri dön"]'], gecis: 'dokun', baslik: 'Tuvale dönün', metin: '**Geri** ile tuvale dönün. Yazdıklarınız kartın içinde durur.' },
         ],
     },
     {
         id: 'g-editor',
+        yol: 'liste',
         ikon: 'PenLine',
         baslik: 'Notu editörde yazın',
         aciklama: 'Bir notu tam ekran editörde açın, yazın ve dönün.',
@@ -188,8 +230,26 @@ export const GOREVLER: KilavuzGorevi[] = [
     },
 ];
 
-/** Teorik dersi uygulayan görev (varsa). */
-export const derseAitGorev = (dersId: string) => GOREVLER.find((g) => g.dersler.includes(dersId));
+/** Teorik dersi uygulayan görev (varsa); birden çoksa kullanıcının öğrenme yolundaki. */
+export const derseAitGorev = (dersId: string, yol?: 'liste' | 'tuval') => {
+    const adaylar = GOREVLER.filter((g) => g.dersler.includes(dersId));
+    return adaylar.find((g) => g.yol === yol) ?? adaylar.find((g) => !g.yol) ?? adaylar[0];
+};
+
+/**
+ * Yolun görev sırası: önce ortak başlangıç (bahçe kurma), sonra seçilen yolun
+ * görevleri, sonra ortak görevler (iki ekran arası geçiş, görünüm). Öteki yolun
+ * görevleri bu listede yer almaz.
+ */
+export function yolGorevleri(yol: 'liste' | 'tuval'): KilavuzGorevi[] {
+    const bas = GOREVLER.filter((g) => g.id === 'g-bahce');
+    const yolun = GOREVLER.filter((g) => g.yol === yol);
+    const son = GOREVLER.filter((g) => !g.yol && g.id !== 'g-bahce');
+    return [...bas, ...yolun, ...son];
+}
+
+/** Yolda henüz bitmemiş ilk görev. */
+export const siradakiGorev = (yol: 'liste' | 'tuval', biten: string[]) => yolGorevleri(yol).find((g) => !biten.includes(g.id));
 
 /**
  * Bir adıma doğrudan geçilecekken (bölüm seçimi) başlanabilecek adım. Önceki adımın
