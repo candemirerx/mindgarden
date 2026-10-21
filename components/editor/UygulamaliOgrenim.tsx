@@ -10,6 +10,9 @@ import {
     LayoutDashboard,
     Palette,
     PenLine,
+    Layers,
+    MousePointer2,
+    Play,
     PlayCircle,
     RotateCcw,
     Settings,
@@ -18,7 +21,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { cx } from '@/components/ui/settings';
-import { GOREVLER, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
+import { GOREVLER, baslanabilirAdim, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
 import { GOREV_OLAYI, bitenGorevler, sonBahce } from '@/lib/kilavuzIlerleme';
 
 /**
@@ -26,10 +29,10 @@ import { GOREV_OLAYI, bitenGorevler, sonBahce } from '@/lib/kilavuzIlerleme';
  * Görev başlayınca ayarlar kapanır; GorevRehberi her adımı ekranda yürütür.
  */
 
-const IKONLAR: Partial<Record<KilavuzGorevi['ikon'], LucideIcon>> = { LayoutDashboard, Palette, PenLine, Settings, Sprout, TreePine };
+const IKONLAR: Partial<Record<KilavuzGorevi['ikon'], LucideIcon>> = { Layers, LayoutDashboard, MousePointer2, Palette, PenLine, Settings, Sprout, TreePine };
 
 interface UygulamaliOgrenimProps {
-    onGorevBaslat?: (gorev: KilavuzGorevi) => void;
+    onGorevBaslat?: (gorev: KilavuzGorevi, adim?: number) => void;
     onTurBaslat?: () => void;
 }
 
@@ -137,11 +140,21 @@ export default function UygulamaliOgrenim({ onGorevBaslat, onTurBaslat }: Uygula
                                 )}
                             </div>
                             {adimlarAcik && (
-                                <ol id={panelId} className="space-y-2 border-t border-sand-100 px-4 py-3">
+                                <ol id={panelId} className="space-y-0.5 border-t border-sand-100 px-2 py-2">
+                                    {/* Her adım bir bölüm: dokununca görev o adımdan başlar (bağımlı adımda onu açan adımdan). */}
                                     {g.adimlar.map((a, n) => (
-                                        <li key={a.baslik + n} className="flex gap-2.5 text-sm text-sand-700">
-                                            <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sand-100 text-[11px] font-semibold text-sand-600">{n + 1}</span>
-                                            {a.baslik}
+                                        <li key={a.baslik + n}>
+                                            <button
+                                                type="button"
+                                                disabled={!onGorevBaslat}
+                                                onClick={() => onGorevBaslat?.(g, baslanabilirAdim(g, n))}
+                                                aria-label={`Adım ${n + 1}'den başla: ${a.baslik}`}
+                                                className="group flex min-h-11 w-full items-center gap-2.5 rounded-xl px-2 text-left text-sm text-sand-700 transition-colors hover:bg-moss-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 disabled:hover:bg-transparent"
+                                            >
+                                                <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sand-100 text-[11px] font-semibold text-sand-600 group-hover:bg-moss-600 group-hover:text-white">{n + 1}</span>
+                                                <span className="min-w-0 flex-1">{a.baslik}</span>
+                                                {onGorevBaslat && <Play size={13} aria-hidden="true" className="shrink-0 text-moss-600 opacity-60 group-hover:opacity-100" />}
+                                            </button>
                                         </li>
                                     ))}
                                 </ol>

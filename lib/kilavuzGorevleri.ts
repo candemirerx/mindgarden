@@ -190,3 +190,19 @@ export const GOREVLER: KilavuzGorevi[] = [
 
 /** Teorik dersi uygulayan görev (varsa). */
 export const derseAitGorev = (dersId: string) => GOREVLER.find((g) => g.dersler.includes(dersId));
+
+/**
+ * Bir adıma doğrudan geçilecekken (bölüm seçimi) başlanabilecek adım. Önceki adımın
+ * açtığı pencereye ya da menüye bağlı adımlar (ad verme, menü öğesi) ve editör
+ * adımları kendi başına başlatılamaz; o işi açan adıma dönülür.
+ */
+export function baslanabilirAdim(gorev: KilavuzGorevi, adim: number): number {
+    let n = Math.max(0, Math.min(adim, gorev.adimlar.length - 1));
+    while (n > 0) {
+        const once = gorev.adimlar[n - 1].gecis;
+        const bagli = typeof once === 'object' && 'gorunce' in once;
+        if (!bagli && gorev.adimlar[n].ekran !== 'editor') break;
+        n--;
+    }
+    return n;
+}

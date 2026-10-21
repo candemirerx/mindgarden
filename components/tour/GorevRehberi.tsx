@@ -5,8 +5,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { Capacitor } from '@capacitor/core';
-import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronUp, Hand, Hourglass, Loader2, PartyPopper, X } from 'lucide-react';
-import { GOREVLER, type GorevAdimi, type GorevEkrani, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronUp, Hand, Hourglass, ListTree, Loader2, PartyPopper, X } from 'lucide-react';
+import { GOREVLER, baslanabilirAdim, type GorevAdimi, type GorevEkrani, type KilavuzGorevi } from '@/lib/kilavuzGorevleri';
 import {
     EYLEM_OLAYI,
     GOREV_OLAYI,
@@ -80,6 +80,15 @@ function hedefBul(secicler: string[]): Element | null {
         if (kismen || yedek) return kismen ?? yedek;
     }
     return null;
+}
+
+/** Açık ad penceresini, menüyü ya da kart düğmelerini görevi bitirmeden kapatır (işaretli Escape). */
+function katmanlariKapat(): boolean {
+    if (!document.querySelector(ACIK_KATMAN)) return false;
+    const esc = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true });
+    (esc as KeyboardEvent & { nbGorevGeri?: boolean }).nbGorevGeri = true;
+    document.dispatchEvent(esc);
+    return true;
 }
 
 /** Adımın ekranında değilken gösterilen yönlendirme: nereye dokunulacağı ya da hangi düğmeyle gidileceği. */
@@ -208,6 +217,31 @@ export default function GorevRehberi() {
 
     const birak = useCallback(() => aktifGorevYaz(null), []);
 
+    // Bölümler paneli: görevin adımları ve diğer görevler; kullanıcı istediği bölüme geçer.
+    const [bolumler, setBolumler] = useState(false);
+    // Geri ya da bölüm seçimiyle bir adıma dönüldü: o adımın sonucu (ör. kapanma animasyonundaki
+    // menü) hâlâ ekranda olabilir; adım, sonuç önce kaybolup yeniden görününce ilerler.
+    const geriDonuldu = useRef(false);
+    useEffect(() => { setBolumler(false); }, [aktif?.id, aktif?.adim]);
+
+    // Seçilen adıma geçiş: hedefi şu an ekrandaysa doğrudan; değilse (ör. kapanmış menünün
+    // öğesi) açık katmanlar kapanır ve o işi açan, kendi başına yapılabilen adımdan başlanır.
+    const adimaGit = useCallback((i: number) => {
+        const simdiki = aktifGorev();
+        const g = simdiki && GOREVLER.find((x) => x.id === simdiki.id);
+        if (!simdiki || !g) return;
+        setBolumler(false);
+        const a = g.adimlar[i];
+        if (a.ekran === ekranAdi() && (!a.hedef || hedefBul(a.hedef))) { geriDonuldu.current = true; aktifGorevYaz({ id: g.id, adim: i }); return; }
+        const kapandi = katmanlariKapat();
+        window.setTimeout(() => { geriDonuldu.current = true; aktifGorevYaz({ id: g.id, adim: baslanabilirAdim(g, i) }); }, kapandi ? 250 : 0);
+    }, []);
+
+    const gorevDegistir = useCallback((g: KilavuzGorevi) => {
+        katmanlariKapat();
+        router.push(gorevBaslat(g.id, g.baslangic));
+    }, [router]);
+
     // Geri: önce açık pencere ya da menü kapanır (görevi bitirmeyen işaretli Escape), sonra
     // yapılabilir ilk önceki adıma dönülür. Hedefi artık ekranda olmayan adımlar (kapanan
     // menünün öğesi, ad penceresi) atlanır; kullanıcı o işi baştan, açan düğmeden yapar.
@@ -215,11 +249,7 @@ export default function GorevRehberi() {
         const simdiki = aktifGorev();
         const g = simdiki && GOREVLER.find((x) => x.id === simdiki.id);
         if (!simdiki || !g || simdiki.adim === 0) return;
-        if (document.querySelector(ACIK_KATMAN)) {
-            const esc = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true });
-            (esc as KeyboardEvent & { nbGorevGeri?: boolean }).nbGorevGeri = true;
-            document.dispatchEvent(esc);
-        }
+        katmanlariKapat();
         window.setTimeout(() => {
             const ekr = ekranAdi();
             let i = simdiki.adim - 1;
@@ -228,6 +258,7 @@ export default function GorevRehberi() {
                 if (a.ekran !== ekr || !a.hedef || hedefBul(a.hedef)) break;
                 i--;
             }
+            geriDonuldu.current = true;
             aktifGorevYaz({ id: g.id, adim: i });
         }, 250);
     }, []);
@@ -307,6 +338,9 @@ export default function GorevRehberi() {
     useEffect(() => {
         if (!adim || yon) return;
         const gecis = adim.gecis;
+        // Geri dönüş işareti yalnız dönülen adım için geçerlidir.
+        const geridenGeldi = geriDonuldu.current;
+        geriDonuldu.current = false;
         if (gecis === 'dokun') {
             // Tıklama (parmak kaymadan kalktı) sayılır; kayan dokunuş adımı ilerletmez.
             // Hedef yeniden çizilmiş olabilir (eski öğe DOM'dan düşer): dokunulan öğe
@@ -324,8 +358,11 @@ export default function GorevRehberi() {
         if (typeof gecis === 'object' && 'gorunce' in gecis) {
             // Dokunuşun sonucu (menü, pencere, kart düğmeleri) iki ölçümde üst üste görününce ilerler.
             let ardisik = 0;
+            let onceKaybolsun = geridenGeldi;
             const t = window.setInterval(() => {
-                ardisik = hedefBul([gecis.gorunce]) ? ardisik + 1 : 0;
+                const gorunuyor = !!hedefBul([gecis.gorunce]);
+                if (onceKaybolsun) { if (!gorunuyor) onceKaybolsun = false; return; }
+                ardisik = gorunuyor ? ardisik + 1 : 0;
                 if (ardisik >= 2) { window.clearInterval(t); ilerle(); }
             }, 150);
             return () => window.clearInterval(t);
@@ -341,7 +378,7 @@ export default function GorevRehberi() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useLayoutEffect(() => {
         const el = kartRef.current;
-        if (!el || el.hasAttribute('data-gorev-kucuk')) return;
+        if (!el || el.hasAttribute('data-gorev-kucuk') || el.hasAttribute('data-gorev-bolumler')) return;
         const h = el.offsetHeight;
         if (Math.abs(h - kartYuk) > 4) setKartYuk(h);
     });
@@ -471,6 +508,13 @@ export default function GorevRehberi() {
             : gecis === 'ileri' ? null
                 : dokunmaAdimi && vurgu ? { Ikon: Hand, metin: 'Parlayan yere dokunun', don: false }
                     : { Ikon: Hourglass, metin: 'Yaptığınızda kendiliğinden ilerler', don: false };
+    if (bolumler) {
+        // Panel okunurken vurgu ve ok kalkar; kart görünen alanın üstünden başlar, uzarsa kayar.
+        vurgu = null;
+        ok = null;
+        kucuk = false;
+        kartStil = { top: gorunenUst + 12, maxHeight: gorunenAlt - gorunenUst - 24 };
+    }
     const tamamGoster = tamamIsareti > 0;
     const adimAnahtari = `${aktif!.id}-${sira}-${yon ? 'yon' : 'adim'}`;
 
@@ -481,7 +525,7 @@ export default function GorevRehberi() {
                     <div aria-hidden="true" className="absolute rounded-2xl transition-all duration-300 ease-out" style={{ left: vurgu.sol, top: vurgu.ust, width: vurgu.sag - vurgu.sol, height: Math.max(0, vurgu.alt - vurgu.ust), boxShadow: '0 0 0 9999px rgba(28,25,20,.55)' }} />
                     <div aria-hidden="true" data-gorev-vurgu="" className="gorev-vurgu absolute rounded-2xl transition-all duration-300 ease-out" style={{ left: vurgu.sol, top: vurgu.ust, width: vurgu.sag - vurgu.sol, height: Math.max(0, vurgu.alt - vurgu.ust) }} />
                 </>
-            ) : !serbest ? (
+            ) : !serbest || bolumler ? (
                 <div aria-hidden="true" className="absolute inset-0 transition-opacity" style={{ background: 'rgba(28,25,20,.55)' }} />
             ) : null}
             {ok && (
@@ -497,10 +541,57 @@ export default function GorevRehberi() {
                 data-gorev-karti=""
                 data-ust-katman=""
                 data-gorev-kucuk={kucuk ? '' : undefined}
-                className={'pointer-events-auto absolute inset-x-3 mx-auto max-w-sm overflow-hidden rounded-2xl border border-sand-200/70 bg-white shadow-lift ' + (kucuk ? 'py-2 pl-3.5 pr-1.5' : '')}
+                data-gorev-bolumler={bolumler ? '' : undefined}
+                className={'pointer-events-auto absolute inset-x-3 mx-auto flex max-w-sm flex-col overflow-hidden rounded-2xl border border-sand-200/70 bg-white shadow-lift ' + (kucuk ? 'py-2 pl-3.5 pr-1.5' : '')}
                 style={kartStil}
             >
-                {kucuk ? (
+                {bolumler ? (
+                    <div className="gorev-adim-gir flex min-h-0 flex-1 flex-col">
+                        <div className="flex items-center gap-2.5 border-b border-sand-100 px-4 py-3">
+                            <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-xl bg-moss-100 text-moss-700"><ListTree size={16} /></span>
+                            <p className="min-w-0 flex-1 font-semibold text-sand-900">Bölümler</p>
+                            <button type="button" onClick={() => setBolumler(false)} aria-label="Bölümleri kapat" className="-mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-500 hover:bg-sand-100 hover:text-sand-800"><X size={17} aria-hidden="true" /></button>
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+                            <p className="truncate px-2 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-sand-500">Bu görev · {gorev.baslik}</p>
+                            <ol>
+                                {gorev.adimlar.map((a, i) => (
+                                    <li key={a.baslik + i}>
+                                        <button type="button" onClick={() => adimaGit(i)} aria-current={i === sira ? 'step' : undefined}
+                                            className={'flex min-h-11 w-full items-center gap-2.5 rounded-xl px-2 text-left text-sm transition-colors ' + (i === sira ? 'bg-clay-50 font-semibold text-sand-900' : 'text-sand-700 hover:bg-sand-50')}>
+                                            <span aria-hidden="true" className={'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ' + (i < sira ? 'bg-moss-600 text-white' : i === sira ? 'bg-clay-400 text-white' : 'bg-sand-100 text-sand-600')}>
+                                                {i < sira ? <Check size={12} /> : i + 1}
+                                            </span>
+                                            <span className="min-w-0 flex-1">{a.baslik}</span>
+                                            {i === sira && <span className="shrink-0 rounded-full bg-clay-100 px-1.5 text-[10.5px] font-semibold text-clay-800">Şu an</span>}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ol>
+                            <p className="px-2 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-sand-500">Diğer görevler</p>
+                            <ul>
+                                {GOREVLER.filter((x) => x.id !== gorev.id).map((x) => {
+                                    const bitti = bitenGorevler().includes(x.id);
+                                    return (
+                                        <li key={x.id}>
+                                            <button type="button" onClick={() => gorevDegistir(x)} aria-label={'Göreve geç: ' + x.baslik}
+                                                className="group flex min-h-12 w-full items-center gap-2.5 rounded-xl px-2 text-left transition-colors hover:bg-moss-50">
+                                                <span aria-hidden="true" className={'flex h-6 w-6 shrink-0 items-center justify-center rounded-full ' + (bitti ? 'bg-moss-600 text-white' : 'border-2 border-sand-300')}>
+                                                    {bitti && <Check size={12} />}
+                                                </span>
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="block text-sm font-semibold leading-tight text-sand-900">{x.baslik}</span>
+                                                    <span className="block text-[11px] text-sand-500">{x.adimlar.length} adım · {x.sure} dk{bitti ? ' · tamamlandı' : ''}</span>
+                                                </span>
+                                                <ArrowRight size={15} aria-hidden="true" className="shrink-0 text-sand-400 transition-transform group-hover:translate-x-0.5 group-hover:text-moss-700" />
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    </div>
+                ) : kucuk ? (
                     <div key={adimAnahtari} className="gorev-adim-gir flex items-center gap-2.5">
                         {sira > 0 && (
                             <button type="button" onClick={geri} aria-label="Geri: önceki adım" className="-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-600 hover:bg-sand-100"><ArrowLeft size={17} aria-hidden="true" /></button>
@@ -528,6 +619,7 @@ export default function GorevRehberi() {
                         {tamamGoster ? <><Check size={12} aria-hidden="true" />Tamam</> : <>Adım {sira + 1}/{toplam}</>}
                     </span>
                     <p className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wide text-sand-500">{gorev.baslik}</p>
+                    <button type="button" onClick={() => setBolumler(true)} aria-label="Bölümler" title="Bölümler: adım ya da görev seçin" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-500 hover:bg-sand-100 hover:text-sand-800"><ListTree size={17} aria-hidden="true" /></button>
                     <button type="button" onClick={() => gizliYaz(true)} aria-label="Bilgiyi gizle" title="Bilgiyi gizle" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-500 hover:bg-sand-100 hover:text-sand-800"><ChevronDown size={18} aria-hidden="true" /></button>
                     <button type="button" onClick={birak} aria-label="Görevi bırak" className="-mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sand-500 hover:bg-sand-100 hover:text-sand-800"><X size={17} aria-hidden="true" /></button>
                 </div>

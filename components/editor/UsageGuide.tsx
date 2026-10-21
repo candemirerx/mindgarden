@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
+    ArrowLeft,
     ArrowRight,
     Award,
     BookA,
@@ -76,7 +77,8 @@ interface UsageGuideProps {
     /** "Bana göster": ayarlar kapanır, dersin ekranı açılır ve öğe vurgulanır. */
     onGoster?: (goster: KilavuzGoster) => void;
     /** Uygulamalı görev: ayarlar kapanır, görev ilk ekranında adım adım başlar. */
-    onGorevBaslat?: (gorev: KilavuzGorevi) => void;
+    /** Görevi başlatır; adım verilirse o adımdan (bölüm seçimi). */
+    onGorevBaslat?: (gorev: KilavuzGorevi, adim?: number) => void;
 }
 
 type Mod = KilavuzModu;
@@ -211,9 +213,11 @@ interface DersKartiProps {
     baslikId: string;
     panelId: string;
     sonraki?: Ders;
+    onceki?: Ders;
     onAcKapat: () => void;
     onIsaretle: (deger: boolean) => void;
     onSonraki: () => void;
+    onOnceki: () => void;
     /** Dersin ekranını açıp ilgili öğeyi vurgular. */
     goster?: () => void;
     /** Ders ayarlarda öğreniliyorsa ilgili bölümü açar. */
@@ -222,7 +226,7 @@ interface DersKartiProps {
     uygula?: { baslik: string; baslat: () => void };
 }
 
-function DersKarti({ ders, sira, acik, ogrenildi, seviyeGoster, baslikId, panelId, sonraki, onAcKapat, onIsaretle, onSonraki, goster, ayaraGit, uygula }: DersKartiProps) {
+function DersKarti({ ders, sira, acik, ogrenildi, seviyeGoster, baslikId, panelId, sonraki, onceki, onAcKapat, onIsaretle, onSonraki, onOnceki, goster, ayaraGit, uygula }: DersKartiProps) {
     const Ikon = IKONLAR[ders.ikon];
     return (
         <div className={cx('overflow-hidden rounded-2xl border bg-white shadow-soft transition-colors', acik ? 'border-moss-300' : 'border-sand-200')}>
@@ -366,20 +370,39 @@ function DersKarti({ ders, sira, acik, ogrenildi, seviyeGoster, baslikId, panelI
                         )
                     )}
 
-                    {sonraki && (
-                        <button
-                            type="button"
-                            onClick={onSonraki}
-                            className="flex w-full min-h-12 items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 px-3.5 py-2.5 text-left transition-colors hover:border-moss-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500"
-                        >
-                            <span className="min-w-0 flex-1">
-                                <span className="block text-xs font-semibold uppercase tracking-wide text-sand-600">
-                                    Sonraki ders{sonraki.seviyeId !== ders.seviyeId ? ' · ' + sonraki.seviyeAd : ''}
-                                </span>
-                                <span className="block truncate text-sm font-semibold text-sand-900">{sonraki.title}</span>
-                            </span>
-                            <ArrowRight size={17} className="shrink-0 text-moss-700" aria-hidden="true" />
-                        </button>
+                    {(onceki || sonraki) && (
+                        // Dersler arasında gezinme: önceki ders solda, sonraki ders sağda.
+                        <nav aria-label="Dersler arasında gezinme" className="flex gap-2">
+                            {onceki && (
+                                <button
+                                    type="button"
+                                    onClick={onOnceki}
+                                    aria-label={'Önceki ders: ' + onceki.title}
+                                    className={cx('flex min-h-12 items-center gap-2 rounded-xl border border-sand-200 bg-white px-3 py-2.5 text-left transition-colors hover:border-moss-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500', sonraki ? 'shrink-0' : 'flex-1')}
+                                >
+                                    <ArrowLeft size={17} className="shrink-0 text-sand-600" aria-hidden="true" />
+                                    <span className={cx('min-w-0', sonraki && 'sr-only sm:not-sr-only')}>
+                                        <span className="block text-xs font-semibold uppercase tracking-wide text-sand-600">Önceki</span>
+                                        <span className="block max-w-[10rem] truncate text-sm font-semibold text-sand-900">{onceki.title}</span>
+                                    </span>
+                                </button>
+                            )}
+                            {sonraki && (
+                                <button
+                                    type="button"
+                                    onClick={onSonraki}
+                                    className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 px-3.5 py-2.5 text-left transition-colors hover:border-moss-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500"
+                                >
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-xs font-semibold uppercase tracking-wide text-sand-600">
+                                            Sonraki ders{sonraki.seviyeId !== ders.seviyeId ? ' · ' + sonraki.seviyeAd : ''}
+                                        </span>
+                                        <span className="block truncate text-sm font-semibold text-sand-900">{sonraki.title}</span>
+                                    </span>
+                                    <ArrowRight size={17} className="shrink-0 text-moss-700" aria-hidden="true" />
+                                </button>
+                            )}
+                        </nav>
                     )}
                 </div>
             )}
@@ -474,6 +497,14 @@ export default function UsageGuide({ onNavigate, onTurBaslat, onGoster, onGorevB
         if (!aramaVar && !yol && sonrakiSeviye) return { ders: TUM_DERSLER.find((d) => d.seviyeId === sonrakiSeviye.id)!, seviyeDegisir: true };
         return undefined;
     };
+    /** Görünen listede önceki ders; seviyenin ilk dersinden önceki seviyenin son dersine döner. */
+    const oncekiDers = (ders: Ders): { ders: Ders; seviyeDegisir: boolean } | undefined => {
+        const i = gorunenDersler.findIndex((d) => d.id === ders.id);
+        if (i > 0) return { ders: gorunenDersler[i - 1], seviyeDegisir: false };
+        const oncekiSeviye = SEVIYELER[seviyeSira - 1];
+        if (!aramaVar && !yol && oncekiSeviye) return { ders: TUM_DERSLER.filter((d) => d.seviyeId === oncekiSeviye.id).at(-1)!, seviyeDegisir: true };
+        return undefined;
+    };
 
     const seviyeBiten = seviye.dersler.filter((d) => bitti(d.id)).length;
     const seviyeBitti = seviyeBiten === seviye.dersler.length;
@@ -483,6 +514,7 @@ export default function UsageGuide({ onNavigate, onTurBaslat, onGoster, onGorevB
         <div className="space-y-3">
             {gorunenDersler.map((ders, i) => {
                 const sonraki = sonrakiDers(ders);
+                const onceki = oncekiDers(ders);
                 return (
                     <DersKarti
                         key={ders.id}
@@ -497,6 +529,8 @@ export default function UsageGuide({ onNavigate, onTurBaslat, onGoster, onGorevB
                         onAcKapat={() => setAcikDers(acikDers === ders.id ? null : ders.id)}
                         onIsaretle={(deger) => isaretle(ders.id, deger)}
                         onSonraki={() => sonraki && dersiAc(sonraki.ders, sonraki.seviyeDegisir)}
+                        onceki={onceki?.ders}
+                        onOnceki={() => onceki && dersiAc(onceki.ders, onceki.seviyeDegisir)}
                         goster={ders.goster && onGoster ? () => onGoster(ders.goster!) : undefined}
                         ayaraGit={ders.ayarId && onNavigate ? () => onNavigate(ders.ayarId as SettingsSectionId) : undefined}
                         uygula={(() => {

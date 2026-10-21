@@ -167,13 +167,14 @@ export function aktifGorevYaz(gorev: AktifGorev | null): void {
 }
 
 /**
- * Görevi başlatır ve gidilecek adresi döndürür. Liste/Tuval görevinde henüz
+ * Görevi (istenirse belirli bir adımından) başlatır ve gidilecek adresi döndürür. Liste/Tuval görevinde henüz
  * açılmış bahçe yoksa ana ekrana döner; rehber orada bahçe açmayı gösterir.
  */
-export function gorevBaslat(id: string, baslangic: 'ana' | 'liste' | 'tuval'): string {
+export function gorevBaslat(id: string, baslangic: 'ana' | 'liste' | 'tuval', adim = 0, ekran: 'ana' | 'liste' | 'tuval' | 'editor' = baslangic): string {
     ogrenmeOturumuBaslat();
-    aktifGorevYaz({ id, adim: 0 });
-    return (baslangic === 'ana' ? null : bahceAdresi(baslangic)) ?? '/';
+    aktifGorevYaz({ id, adim });
+    const hedef = ekran === 'editor' ? baslangic : ekran;
+    return (hedef === 'ana' ? null : bahceAdresi(hedef)) ?? '/';
 }
 
 export function bitenGorevler(): string[] {
