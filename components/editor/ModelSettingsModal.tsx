@@ -400,7 +400,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                         icon={BookOpen}
                                         tone="clay"
                                         title="Kullanım kılavuzu"
-                                        description="İki yoldan öğrenin: Teorik öğrenimde kısa dersleri okuyun, Uygulamalı öğrenimde görevleri gerçek ekranlarda adım adım yapın."
+                                        description="Okuyarak ya da gerçek ekranlarda yaparak öğrenin."
                                     />
                                     <UsageGuide
                                         onNavigate={setActiveTab}

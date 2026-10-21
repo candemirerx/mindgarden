@@ -510,8 +510,8 @@ export default function UsageGuide({ onNavigate, onTurBaslat, onGoster, onGorevB
     );
 
     const sekmeler: Array<{ id: Mod; Ikon: LucideIcon; baslik: string; alt: string }> = [
-        { id: 'teori', Ikon: BookOpen, baslik: 'Teorik öğrenim', alt: TUM_DERSLER.length + ' ders · okuyun' },
-        { id: 'uygulama', Ikon: Hand, baslik: 'Uygulamalı öğrenim', alt: GOREVLER.length + ' görev · yapın' },
+        { id: 'teori', Ikon: BookOpen, baslik: 'Teorik öğrenim', alt: TUM_DERSLER.length + ' ders' },
+        { id: 'uygulama', Ikon: Hand, baslik: 'Uygulamalı öğrenim', alt: GOREVLER.length + ' görev' },
     ];
 
     return (

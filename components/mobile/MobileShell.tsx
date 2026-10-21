@@ -30,6 +30,8 @@ export function useMobileShell(): boolean {
                     // Tam ekran ayarlar kendi bölüm → liste → kapat sırasını yönetir.
                     // Kendi geri sırasını yöneten tam sayfa ekranlar (ör. mini galeri) de.
                     if (document.querySelector('[data-settings-screen], [data-geri-yonetir]')) return;
+                    // Uygulamalı öğrenim görevi açıksa geri tuşu yalnızca görevi bitirir (GorevRehberi).
+                    if (document.querySelector('[data-gorev-karti], [data-gorev-bitti]')) return;
                     // Editör tam ekrandaysa geri tuşu yalnızca tam ekrandan çıkar.
                     if (document.querySelector('[data-tam-ekran]')) return;
                     // Kart menüsü ya da açık bir pencere varsa geri tuşu önce onu kapatır.
