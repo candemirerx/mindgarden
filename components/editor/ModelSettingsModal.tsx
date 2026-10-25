@@ -26,7 +26,7 @@ import { readTools, saveTools, DEFAULT_TOOLS } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
 import { bolumAcik, bolumAcikliginiAyarla } from '@/lib/uiPrefs';
 import type { Bolum } from '@/lib/uiPrefs';
-import { GIZLILIK_ADRESI, VERI_SILME_ADRESI, disAdresMi } from '@/lib/yasalBaglantilar';
+import { GIZLILIK_ADRESI, VERI_SILME_ADRESI, disAdresMi, yasalAdresiAc } from '@/lib/yasalBaglantilar';
 import DataSection from './DataSection';
 import RemoteSettings from './RemoteSettings';
 import RemoteMacroTools from './RemoteMacroTools';
@@ -857,6 +857,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                             <a
                                                 href={GIZLILIK_ADRESI}
                                                 {...(disAdresMi(GIZLILIK_ADRESI) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                                onClick={(olay) => { void yasalAdresiAc(olay, GIZLILIK_ADRESI); }}
                                                 className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm"
                                             >
                                                 <ShieldCheck size={16} /> Gizlilik politikasını aç <ExternalLink size={14} />
@@ -864,6 +865,7 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                             <a
                                                 href={VERI_SILME_ADRESI}
                                                 {...(disAdresMi(VERI_SILME_ADRESI) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                                onClick={(olay) => { void yasalAdresiAc(olay, VERI_SILME_ADRESI); }}
                                                 className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm"
                                             >
                                                 <Trash2 size={16} /> Veri silme talebi <ExternalLink size={14} />
