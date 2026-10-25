@@ -26,6 +26,7 @@ import { readTools, saveTools, DEFAULT_TOOLS } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
 import { bolumAcik, bolumAcikliginiAyarla } from '@/lib/uiPrefs';
 import type { Bolum } from '@/lib/uiPrefs';
+import { GIZLILIK_ADRESI, VERI_SILME_ADRESI, disAdresMi } from '@/lib/yasalBaglantilar';
 import DataSection from './DataSection';
 import RemoteSettings from './RemoteSettings';
 import RemoteMacroTools from './RemoteMacroTools';
@@ -853,10 +854,18 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                                 iletilir.
                                             </p>
                                             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                            <a href="/gizlilik" className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm">
+                                            <a
+                                                href={GIZLILIK_ADRESI}
+                                                {...(disAdresMi(GIZLILIK_ADRESI) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                                className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm"
+                                            >
                                                 <ShieldCheck size={16} /> Gizlilik politikasını aç <ExternalLink size={14} />
                                             </a>
-                                            <a href="/veri-silme" className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm">
+                                            <a
+                                                href={VERI_SILME_ADRESI}
+                                                {...(disAdresMi(VERI_SILME_ADRESI) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                                className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm"
+                                            >
                                                 <Trash2 size={16} /> Veri silme talebi <ExternalLink size={14} />
                                             </a>
                                             </div>

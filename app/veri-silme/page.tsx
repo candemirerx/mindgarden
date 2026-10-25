@@ -1,27 +1,27 @@
-import Link from 'next/link';
 import { ArrowLeft, Mail, ShieldCheck, Trash2 } from 'lucide-react';
-import { APP_VERSION } from '@/lib/config';
+import Link from 'next/link';
+import { GIZLILIK_ADRESI } from '@/lib/yasalBaglantilar';
 
 export const metadata = {
     title: 'Veri Silme Talebi - Not Bahçesi',
-    description: 'Not Bahçesi verilerinizi nasıl silersiniz: uygulama içi silme, cihazdan kaldırma ve e-posta ile silme talebi.',
+    description: 'Not Bahçesi verilerinizi nasıl silersiniz: uygulama içi silme, cihazdan kaldırma, Drive yedeği ve e-posta ile silme talebi.',
 };
 
 const SILME_ADIMLARI: { baslik: string; aciklama: string }[] = [
     {
-        baslik: 'Notları cihazdan silin',
+        baslik: 'Tek tek silme',
         aciklama:
-            'Uygulamayı açın, silmek istediğiniz bahçeyi kartındaki üç nokta menüsünden "Bahçeyi sil" ile kaldırın. Tek tek not silmek için Liste görünümündeki üç nokta menüsünü kullanın. Notun metni cihazdan hemen kaldırılır; cihazlar arası eşitlemenin silmeyi doğru uygulayabilmesi için yalnızca kaydın kimliği ve silinme zamanı saklanır. Google Drive senkronizasyonu açıksa silme işlemi bir sonraki eşitlemede yedekten de uygulanır.',
+            'Bir bahçeyi kartındaki üç nokta menüsünden "Bahçeyi sil" ile, tek bir notu Liste görünümündeki üç nokta menüsünden silebilirsin. Not metni cihazdan hemen silinir. Cihazlar arası eşitleme silme işlemini doğru uygulayabilsin diye yalnızca kaydın kimliği ve silinme zamanı tutulur. Drive yedeklemesi açıksa silme bir sonraki eşitlemede yedeğe de yansır.',
     },
     {
-        baslik: 'Tüm verileri tek adımda silin',
+        baslik: 'Cihazdaki her şeyi silme',
         aciklama:
-            'Uygulamayı telefondan kaldırmak, cihazda saklanan tüm notları, ayarları ve yerel oturum bilgisini siler. Android otomatik bulut yedeklemesi kapalı olduğu için notlar sistem yedeğinde tutulmaz; kaldırmadan sonra uygulamayı yeniden kurarsanız boş bir bahçe ile başlarsınız.',
+            "Uygulamayı kaldırdığında ya da Android Ayarlar > Uygulamalar > Not Bahçesi > Depolama > Verileri temizle yaptığında cihazdaki tüm notlar, ayarlar, API anahtarı, galeri görselleri ve yerel oturum bilgisi silinir. Android'in otomatik bulut yedeklemesi kapalı olduğu için bunların kopyası sistem yedeğinde kalmaz.",
     },
     {
-        baslik: 'Google Drive yedeğini silin',
+        baslik: 'Google Drive yedeğini silme',
         aciklama:
-            'Google ile giriş yaptıysanız notlarınız kendi Drive hesabınızın uygulamaya özel gizli klasöründe (appDataFolder) durur. Bunu Drive ayarlarından "Uygulama verilerini yönet" bölümünde Not Bahçesi kaydını kaldırarak silebilirsiniz. Uygulamayı kaldırmak bu yedeği silmez.',
+            'Bilgisayarda drive.google.com > Ayarlar (dişli simgesi) > Uygulamaları yönet > Not Bahçesi > Seçenekler > "Gizli uygulama verilerini sil" adımlarını izle. Uygulamanın Google hesabına erişimini de https://myaccount.google.com/permissions adresinden kaldırabilirsin. Uygulamayı kaldırmak Drive yedeğini kendiliğinden silmez.',
     },
 ];
 
@@ -46,17 +46,19 @@ export default function DataDeletionPage() {
 
                 <div className="space-y-8 rounded-3xl border border-sand-200 bg-white p-8 text-sm leading-relaxed text-sand-700 shadow-card">
                     <p>
-                        <strong>Son güncelleme:</strong> 28 Eylül 2026
+                        <strong>Yürürlük:</strong> 25 Ekim 2026 · <strong>İletişim:</strong> candemirerx@gmail.com ·{' '}
+                        <strong>Paket:</strong> com.notbahcesi.app
                     </p>
 
                     <p>
-                        Not Bahçesi notlarınızı kendi cihazınızda tutar. Aşağıdaki üç adımdan
-                        herhangi biriyle verilerinizi kendiniz silebilirsiniz; ek bir talep
-                        göndermeniz gerekmez.
+                        Not Bahçesi&apos;nin kendi sunucusunda senin adına tutulan bir hesap ya da not yoktur. Verilerin
+                        yalnızca iki yerde durur: cihazında ve Google ile giriş yaptıysan kendi Google Drive hesabındaki
+                        gizli uygulama klasöründe. İkisini de kendin silebilirsin; istersen e-postayla da talep
+                        gönderebilirsin.
                     </p>
 
                     <section className="space-y-4">
-                        <h2 className="text-lg font-semibold text-sand-900">1. Verilerinizi nasıl silersiniz</h2>
+                        <h2 className="text-lg font-semibold text-sand-900">A) Kendin silmek için</h2>
                         <ol className="space-y-3">
                             {SILME_ADIMLARI.map((adim, index) => (
                                 <li key={adim.baslik} className="rounded-2xl border border-sand-200 bg-sand-50 p-4">
@@ -70,57 +72,60 @@ export default function DataDeletionPage() {
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-lg font-semibold text-sand-900">2. Silinen veriler</h2>
-                        <ul className="list-disc space-y-1 pl-5">
-                            <li>Cihaza kaydedilmiş tüm bahçeler, ağaçlar ve not metinleri</li>
-                            <li>Uygulama ayarları, yapay zekâ sağlayıcı tercihleri ve API anahtarı</li>
-                            <li>Bilgisayar araçları erişim anahtarı ve bağlantı adresleri</li>
-                            <li>Yerel oturum bilgisi (Google hesabıyla geldiyse e-posta, ad, profil fotoğrafı)</li>
-                            <li>Kendi Drive hesabınızdaki uygulamaya özel yedek (yukarıdaki 3. adım)</li>
-                        </ul>
-                    </section>
-
-                    <section className="space-y-3">
-                        <h2 className="text-lg font-semibold text-sand-900">3. E-posta ile silme talebi</h2>
-                        <p>
-                            Yukarıdaki adımları uygulayamıyorsanız silme talebinizi e-posta ile
-                            gönderebilirsiniz. Talebinizi aldıktan sonra en geç <strong>30 gün içinde</strong>
-                            verileriniz silinir ve size bilgi verilir.
-                        </p>
+                        <h2 className="text-lg font-semibold text-sand-900">B) E-postayla talep göndermek için</h2>
                         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-sand-200 bg-sand-50 p-4">
                             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-moss-100 text-moss-700">
                                 <Mail size={18} />
                             </span>
                             <div className="text-sand-700">
                                 <p className="font-semibold text-sand-900">candemirerx@gmail.com</p>
-                                <p>Konu: <strong>Veri Silme Talebi</strong> — uygulamada kullandığınız hesabın e-posta adresini yazın.</p>
+                                <p>
+                                    Konu: <strong>Veri silme talebi – Not Bahçesi</strong>. Uygulamada kullandığın Google
+                                    hesabının e-posta adresini yaz.
+                                </p>
                             </div>
                         </div>
+                        <p>
+                            Talebin en geç <strong>30 gün içinde</strong> yanıtlanır. Not Bahçesi&apos;nin sunucusunda senin
+                            notların tutulmadığı için cihazındaki ve Drive&apos;ındaki verileri bizim uzaktan silmemiz
+                            teknik olarak mümkün değildir. E-postanla gelen talepte, kendi tarafımızda (örneğin bu e-posta
+                            yazışmasında) bulunan bilgilerin silinir ve yukarıdaki adımlarda sana yardımcı olunur.
+                        </p>
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-lg font-semibold text-sand-900">4. Silmenin kapsamadığı durumlar</h2>
+                        <h2 className="text-lg font-semibold text-sand-900">Silinenler</h2>
+                        <ul className="list-disc space-y-1 pl-5">
+                            <li>Cihazındaki bahçeler, ağaçlar ve not metinleri</li>
+                            <li>Ayarlar, yapay zekâ tercihlerin ve API anahtarın</li>
+                            <li>Bilgisayar araçlarının bağlantı adresleri ve erişim anahtarı</li>
+                            <li>Mini galeri görselleri ve dosyaları</li>
+                            <li>Yerel oturum bilgisi (e-posta, ad, profil fotoğrafı bağlantısı)</li>
+                            <li>Drive&apos;ındaki gizli uygulama klasöründe duran not yedeği (notbahcesi-backup.json) ve galeri dosyaları</li>
+                        </ul>
+                    </section>
+
+                    <section className="space-y-3">
+                        <h2 className="text-lg font-semibold text-sand-900">Saklananlar</h2>
                         <p>
-                            Yapay zekâ özelliğini kullandıysanız işlenen metin, seçtiğiniz sağlayıcının
-                            (Google, OpenAI, Anthropic veya kendi belirttiğiniz servis) sistemlerinde o
-                            sağlayıcının saklama politikasına göre tutulabilir. Bu kayıtlar uygulamanın
-                            denetiminde değildir; silme talebi için ilgili sağlayıcıya başvurmanız gerekir.
+                            Not Bahçesi&apos;nin kendi tarafında saklanan bir kayıt kalmaz. Yapay zekâ özelliğini bulut
+                            sağlayıcıyla kullandıysan işlenen metin, o sağlayıcının (Google, OpenAI, Anthropic veya kendi
+                            seçtiğin servis) kendi saklama kurallarına göre tutulabilir; bunun için doğrudan ilgili
+                            sağlayıcıya başvurman gerekir. Vercel&apos;in kısa süreli teknik erişim kayıtları Vercel&apos;in
+                            kendi saklama süresine göre kendiliğinden silinir.
                         </p>
                         <p className="flex items-start gap-2 rounded-2xl border border-moss-200 bg-moss-50 p-4 text-moss-800">
                             <ShieldCheck size={18} className="mt-0.5 shrink-0" />
-                            <span>
-                                Not Bahçesi hiçbir veriyi kendi sunucusuna kaydetmez, veri satmaz ve
-                                reklam amacıyla kullanmaz.
-                            </span>
+                            <span>Not Bahçesi notlarını kendi sunucusuna kaydetmez, veri satmaz ve reklam amacıyla kullanmaz.</span>
                         </p>
                     </section>
 
                     <p className="border-t border-sand-200 pt-6 text-xs text-sand-600">
-                        Bu sayfa Not Bahçesi sürüm {APP_VERSION} için geçerlidir. Ayrıntılar için{' '}
-                        <Link href="/gizlilik" className="font-semibold text-clay-800 underline decoration-clay-400 underline-offset-2">
+                        Ayrıntılar için{' '}
+                        <a href={GIZLILIK_ADRESI} className="font-semibold text-clay-800 underline decoration-clay-400 underline-offset-2">
                             gizlilik politikasına
-                        </Link>{' '}
-                        bakabilirsiniz.
+                        </a>{' '}
+                        bakabilirsin.
                     </p>
                 </div>
             </main>

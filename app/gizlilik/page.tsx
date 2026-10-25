@@ -1,11 +1,85 @@
 import Link from 'next/link';
 import { ArrowLeft, Sprout } from 'lucide-react';
-import { APP_VERSION } from '@/lib/config';
+import { VERI_SILME_ADRESI } from '@/lib/yasalBaglantilar';
 
 export const metadata = {
     title: 'Gizlilik Politikası - Not Bahçesi',
     description: 'Not Bahçesi gizlilik politikası: verileriniz nerede saklanır, kimlerle paylaşılır.',
 };
+
+const BOLUMLER: { baslik: string; paragraflar: string[] }[] = [
+    {
+        baslik: '1. Cihazında tutulanlar',
+        paragraflar: [
+            "Bahçelerin, düşünce ağaçların, not metinlerin, ayarların, yapay zekâ sağlayıcı tercihlerin ve API anahtarın, bilgisayar araçlarının bağlantı adresleri ve erişim anahtarı ile mini galeriye eklediğin görseller ve dosyalar yalnızca cihazındaki uygulama deposunda saklanır. Android'in otomatik bulut yedeklemesi kapalıdır; uygulamayı kaldırdığında bu veriler de silinir. Notlarını JSON, HTML veya PDF olarak dışa aktarabilirsin.",
+        ],
+    },
+    {
+        baslik: '2. Google ile giriş',
+        paragraflar: [
+            "Google ile giriş yaptığında Google hesabının e-posta adresi, adı ve profil fotoğrafı bağlantısı yalnızca cihazında yerel oturum bilgisi olarak tutulur. Bu bilgiler Not Bahçesi'nin sunucusuna gönderilmez. Giriş işlemini Google yönetir.",
+        ],
+    },
+    {
+        baslik: '3. Google Drive yedeklemesi',
+        paragraflar: [
+            "Google ile giriş yaptığında not yedeklemesi ve mini galeri eşitlemesi varsayılan olarak açılır; ikisi de Ayarlar'dan kapatılabilir. Notlarının yedeği (notbahcesi-backup.json) ve mini galeriye eklediğin görseller ve dosyalar, kendi Google Drive hesabındaki uygulamaya özel gizli klasöre (appDataFolder) yazılır ve normal Drive dosya listende görünmez. Uygulama yalnızca \"drive.appdata\" iznini ister; Drive'daki diğer dosyalarını göremez, okuyamaz ve değiştiremez. Bu veriler cihazından doğrudan Google'a gönderilir, Not Bahçesi'nin sunucusundan geçmez.",
+            "Not Bahçesi'nin Google API'lerinden aldığı bilgileri kullanması ve başka uygulamalara aktarması, Sınırlı Kullanım (Limited Use) koşulları dahil olmak üzere Google API Hizmetleri Kullanıcı Verileri Politikası'na (https://developers.google.com/terms/api-services-user-data-policy) uygundur. Google hesap verilerin yalnızca senin yedeğini almak ve geri yüklemek için kullanılır; reklam için kullanılmaz, satılmaz, insanlar tarafından okunmaz ve yapay zekâ modellerini eğitmek için kullanılmaz.",
+            'Uygulamanın Google hesabına erişimini istediğin zaman https://myaccount.google.com/permissions adresinden kaldırabilirsin.',
+        ],
+    },
+    {
+        baslik: '4. Yapay zekâ özellikleri (isteğe bağlı)',
+        paragraflar: [
+            "\"İmla Düzelt\" gibi bir yapay zekâ özelliğini bulut sağlayıcıyla kullandığında, işlenecek metin, API anahtarın, sağlayıcı seçimin ve varsa özel sağlayıcı adresin şifreli bağlantıyla (HTTPS) önce Not Bahçesi'nin Vercel üzerindeki sunucu rotasına, oradan da seçtiğin sağlayıcıya (Google Gemini, OpenAI, Anthropic veya kendi belirttiğin servis) iletilir. Not Bahçesi bu metni ve anahtarı kendi tarafında saklamaz. Seçtiğin sağlayıcı metni kendi gizlilik ve saklama koşullarına göre işler.",
+            "Android'de yerel yapay zekâyı seçersen metin cihazında işlenir; metin veya anahtar hiçbir sunucuya gönderilmez. Modelin ilk indirmesi Hugging Face (https://huggingface.co/privacy) üzerinden yapılır. Tarayıcıdaki yerel mod, isteği yalnızca senin ayarladığın Ollama sunucusuna gönderir.",
+        ],
+    },
+    {
+        baslik: '5. Bilgisayar araçları, Bluetooth ve Tailscale (isteğe bağlı)',
+        paragraflar: [
+            '"Bilgisayara yaz" ve "PC panosuna gönder" yalnızca sen düğmeye bastığında çalışır ve seçtiğin metni, görseli veya dosyayı yerel ağ ya da Bluetooth üzerinden kendi Kablosuz Bellek kartına veya kendi bilgisayarındaki pano yardımcısına iletir. Bu bağlantı düz HTTP kullanıyorsa ağda şifrelenmez; yalnızca güvendiğin ağlarda kullan. Tailscale yolunu seçersen trafik kendi Tailscale ağından geçer (https://tailscale.com/privacy-policy). Bağlantı kurmak tek başına not içeriğini göndermez.',
+        ],
+    },
+    {
+        baslik: '6. İzinler',
+        paragraflar: [
+            "Kamera yalnızca sen açtığında mini galeriye fotoğraf eklemek için kullanılır. Mikrofon yalnızca dikteyi başlattığında Android'in konuşma tanıma hizmeti için kullanılır; uygulama ses kaydı saklamaz, sesin işlenmesi cihazındaki konuşma hizmetinin ayarlarına bağlıdır. Yakındaki Cihazlar izni (eski Android sürümlerinde konum izni) yalnızca Bluetooth kartını bulmak için istenir; konum bilgisi kaydedilmez ve gönderilmez.",
+        ],
+    },
+    {
+        baslik: '7. Sunucu ve barındırma',
+        paragraflar: [
+            'Web sürümü ve yapay zekâ sunucu rotası Vercel (https://vercel.com/legal/privacy-policy) üzerinde çalışır. Vercel, hizmeti çalıştırmak ve güvenliği sağlamak için IP adresi, tarayıcı/cihaz bilgisi ve istek zamanı gibi standart teknik kayıtları kısa süre tutabilir. Not Bahçesi bu kayıtları profil oluşturmak veya takip için kullanmaz.',
+        ],
+    },
+    {
+        baslik: '8. Reklam, analiz ve satış yok',
+        paragraflar: [
+            'Uygulamada reklam, analiz/izleme aracı veya izleme çerezi yoktur; gerçek parayla satın alma da yoktur. Verilerin satılmaz ve reklam için kullanılmaz.',
+        ],
+    },
+    {
+        baslik: '9. Çocuklar',
+        paragraflar: ['Uygulama 13 yaş altındaki çocuklara yönelik değildir; 13 yaş altındaki çocuklardan bilerek veri toplanmaz.'],
+    },
+    {
+        baslik: '10. Güvenlik ve saklama',
+        paragraflar: [
+            "Google ve yapay zekâ sağlayıcılarına giden veriler şifreli bağlantıyla (HTTPS) iletilir. Cihazdaki veriler sen silene veya uygulamayı kaldırana kadar, Drive yedeği ise sen silene kadar saklanır. Not Bahçesi'nin kendi sunucusunda notların için bir saklama süresi yoktur, çünkü notların orada tutulmaz.",
+        ],
+    },
+    {
+        baslik: '11. Hakların (KVKK / GDPR)',
+        paragraflar: [
+            'Verilerinle ilgili bilgi alma, düzeltme, silme ve itiraz haklarını kullanmak için candemirerx@gmail.com adresine yazabilirsin. Talebin en geç 30 gün içinde yanıtlanır.',
+        ],
+    },
+    {
+        baslik: '12. Değişiklikler',
+        paragraflar: ['Bu politika değişirse güncel hâli bu sayfada yayımlanır ve yukarıdaki yürürlük tarihi güncellenir.'],
+    },
+];
 
 export default function PrivacyPage() {
     return (
@@ -28,123 +102,35 @@ export default function PrivacyPage() {
 
                 <div className="space-y-6 rounded-3xl border border-sand-200 bg-white p-8 text-sm leading-relaxed text-sand-700 shadow-card">
                     <p>
-                        <strong>Son güncelleme:</strong> 30 Eylül 2026
+                        <strong>Yürürlük:</strong> 25 Ekim 2026 · <strong>İletişim:</strong> candemirerx@gmail.com ·{' '}
+                        <strong>Paket:</strong> com.notbahcesi.app
                     </p>
 
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">1. Topladığımız Veriler</h2>
-                        <p>
-                            Yerel modda Not Bahçesi, notlarınızı (bahçe ve düşünce ağaçlarınızı) <strong>cihazınızda</strong> saklar.
-                            Uygulama kodu not defterinizin kalıcı bir kopyasını kendi sunucusunda oluşturmaz; ancak yapay zekâ
-                            bulut sağlayıcısını kullandığınızda işlenecek metin aşağıda açıklandığı şekilde Vercel sunucu rotasından geçer.
-                        </p>
-                        <p>
-                            Google ile giriş yaptığınızda hesabınızın <strong>e-posta adresi, adı ve profil fotoğrafı</strong>
-                            yerel oturum bilgisi olarak cihazınızda saklanır.
-                        </p>
-                        <p>
-                            Android uygulamasında <strong>otomatik bulut yedeklemesi kapalıdır</strong>: işletim sistemi
-                            notlarınızı Google hesabınıza yedeklemez. Bu nedenle uygulamayı cihazdan kaldırdığınızda
-                            yerel notlar da silinir; saklamak istediğiniz notları JSON olarak dışa aktarabilir veya
-                            Google Drive senkronizasyonunu kullanabilirsiniz.
-                        </p>
-                    </section>
+                    <p className="rounded-2xl border border-moss-200 bg-moss-50 p-4 text-moss-800">
+                        <strong>Kısaca:</strong> Not Bahçesi&apos;nin kendi sunucusunda bir hesap veritabanı ya da not deposu
+                        yoktur. Notların cihazında saklanır. Google ile giriş yaparsan yedeğin yalnızca senin Google Drive
+                        hesabındaki gizli uygulama klasörüne yazılır. Reklam, analiz ya da izleme aracı kullanılmaz ve veri
+                        satılmaz. Cihazından veri çıkan durumlar aşağıda tek tek yazıyor.
+                    </p>
 
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">2. Google Drive Yedeklemesi</h2>
-                        <p>
-                            Otomatik senkronizasyonu etkinleştirdiğinizde notlarınız, <strong>kendi Google Drive hesabınızdaki
-                            uygulamaya özel klasöre</strong> (appDataFolder) yedeklenir ve normal Drive dosya listenizde görünmez.
-                            Erişim Google hesabınızın yetkilendirmesi ile Google'ın hizmet ve gizlilik koşulları kapsamında yönetilir.
-                        </p>
-                        <p>
-                            Bu veriler Drive hesabınızdan kaldırılarak her an silinebilir. Uygulama silindiğinde Drive
-                            klasörü otomatik silinmez; isterseniz Google Drive ayarlarınızdan temizleyebilirsiniz.
-                        </p>
-                    </section>
-
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">3. Yapay Zeka Özellikleri</h2>
-                        <p>
-                            Bulut sağlayıcısıyla "İmla Düzelt" gibi yapay zekâ özelliklerini kullandığınızda API anahtarınız cihazınızın yerel
-                            deposundan okunur. İşlenecek metin, API anahtarı, sağlayıcı seçimi ve varsa özel sağlayıcı adresi
-                            önce Not Bahçesi'nin Vercel üzerindeki sunucu rotasına, ardından seçtiğiniz yapay zekâ sağlayıcısına
-                            iletilir. Bu işlem Vercel'in ve seçilen sağlayıcının geçerli gizlilik ve veri işleme koşullarına tabidir.
-                        </p>
-                        <p>
-                            Android uygulamasında yerel yapay zekâyı seçtiğinizde model ve işlenecek metin cihazınızda
-                            işlenir; bu çıkarım için metin veya API anahtarı Vercel'e ya da bir bulut yapay zekâ sağlayıcısına
-                            gönderilmez. Modelin ilk indirmesi Hugging Face üzerinden, bu hizmetin hesap, lisans ve gizlilik
-                            koşullarıyla yapılır. Seçtiğiniz model dosyası uygulamanın özel deposuna kopyalanır.
-                            Tarayıcıdaki yerel mod, isteği yapılandırdığınız Ollama sunucusuna gönderir.
-                        </p>
-                    </section>
-
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">4. Veri Paylaşımı</h2>
-                        <p>
-                            Notlarınızı satmayız veya reklam amacıyla kullanmayız. Yalnızca sizin başlattığınız Drive
-                            senkronizasyonu, bilgisayar araçları ve yapay zekâ işlemleri kapsamında gerekli veriler, bu politikada açıklanan
-                            hizmet sağlayıcılara iletilir. Uygulama içinde izleme veya reklam çerezi kullanılmaz.
-                        </p>
-                    </section>
-
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">5. Bilgisayar Araçları ve Dikte</h2>
-                        <p>
-                            Bilgisayara yazma ve PC panosuna gönderme yalnız sizin düğmeye basmanızla editör metnini seçtiğiniz
-                            Kablosuz Bellek kartına veya kendi bilgisayarınızda çalıştırdığınız pano yardımcısına yerel ağ/Bluetooth
-                            üzerinden iletir. Bağlantı adresleri ve yardımcı program anahtarı bu cihazın yerel deposunda tutulur;
-                            bu iletişim açık HTTP kullanıyorsa ağ üzerinde şifrelenmez. Yalnız güvenilen yerel ağ kullanın.
-                        </p>
-                        <p>
-                            Tailscale yolunu seçtiğinizde telefon ve bilgisayar arasındaki bağlantı kendi Tailscale ağınızdan
-                            geçer; iki cihazda da Tailscale açık olmalıdır. Tailscale'in hizmet ve gizlilik koşulları ayrıca geçerlidir.
-                            "Açılışta otomatik bağlan" açıksa uygulama açıldığında veya yeniden ön plana geldiğinde
-                            önceden kurduğunuz bağlantıyı yeniden dener. Kart Bluetooth bağlantısında kayıtlı kart bulunamazsa
-                            tanınan kart adlarını tarayabilir. Bu seçenek bağlantı ayarlarından kapatılabilir;
-                            bağlantı kurmak tek başına not metninizi veya galeri görsellerinizi göndermez.
-                        </p>
-                        <p>
-                            Mini galeriye kameradan veya telefonunuzun seçicisinden eklediğiniz görseller ve dosyalar uygulamanın
-                            cihazdaki özel deposunda saklanır. Kamera yalnız siz açtığınızda kullanılır. Seçtiğiniz
-                            görselleri veya dosyaları bilgisayara ya da PC panosuna gönderdiğinizde içerikleri kendi bilgisayarınızdaki
-                            yardımcıya iletilir. Uygulama bunları kendiliğinden bulut yapay zekâya göndermez.
-                            Görselleri galeriden silebilirsiniz; uygulamayı kaldırmak cihazdaki uygulama verilerini kaldırır.
-                        </p>
-                        <p>
-                            BLE tarama için Yakındaki Cihazlar izni (eski Android sürümlerinde konum izni) gerekir; konum bilgisi
-                            uygulama tarafından kaydedilmez. Dikte başlatıldığında mikrofon/sistem konuşma tanıma hizmeti açılır.
-                            Sesin işlenmesi seçili Android konuşma hizmetinin çevrim içi veya çevrim dışı ayarlarına bağlıdır;
-                            uygulama ham ses kaydı saklamaz. Tanınan metin seçtiğiniz hedefe göre notunuza,
-                            bilgisayarınıza veya ikisine birden yazılır.
-                        </p>
-                    </section>
-
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">6. Çocukların Gizliliği</h2>
-                        <p>
-                            Uygulama 13 yaş altı çocuklardan bilinçli olarak veri toplamaz.
-                        </p>
-                    </section>
-
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold text-sand-900">7. İletişim</h2>
-                        <p>
-                            Gizlilik ile ilgili sorularınız için: <strong>candemirerx@gmail.com</strong>
-                        </p>
-                    </section>
+                    {BOLUMLER.map((bolum) => (
+                        <section key={bolum.baslik} className="space-y-2">
+                            <h2 className="text-lg font-semibold text-sand-900">{bolum.baslik}</h2>
+                            {bolum.paragraflar.map((paragraf) => (
+                                <p key={paragraf.slice(0, 40)}>{paragraf}</p>
+                            ))}
+                        </section>
+                    ))}
 
                     <p className="border-t border-sand-200 pt-6 text-xs text-sand-600">
-                        Bu politika Not Bahçesi sürüm {APP_VERSION} için geçerlidir. Verilerinizi
-                        silmek için{' '}
-                        <Link
-                            href="/veri-silme"
+                        Verilerini silmek için{' '}
+                        <a
+                            href={VERI_SILME_ADRESI}
                             className="font-semibold text-clay-800 underline decoration-clay-400 underline-offset-2"
                         >
                             veri silme talebi
-                        </Link>{' '}
-                        sayfasına bakabilirsiniz.
+                        </a>{' '}
+                        sayfasına bakabilirsin.
                     </p>
                 </div>
             </main>

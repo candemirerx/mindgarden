@@ -15,6 +15,7 @@ import {
 } from '@/lib/localLlm';
 import DenemeAgaciDugmesi from './DenemeAgaciDugmesi';
 import { SettingsField, SettingsNote, SettingsPageHeader, SettingsRow, SettingsSection, SettingsSwitch, settingsFieldClass } from '@/components/ui/settings';
+import { GIZLILIK_ADRESI, disAdresMi } from '@/lib/yasalBaglantilar';
 
 type CloudProvider = Exclude<ProviderType, 'local'>;
 const providers: { id: CloudProvider; name: string; detail: string }[] = [
@@ -263,7 +264,7 @@ export default function AiSettings() {
                         </div>
                     </SettingsSection>
                     <div className="px-1 text-xs leading-relaxed text-sand-600">
-                        Ayarlar anında kaydedilir. Bulut araçlarında anahtar ve işlenecek metin uygulamanın sunucusu üzerinden sağlayıcıya iletilir. <a href="/gizlilik" className="font-medium text-moss-700 underline underline-offset-2">Gizlilik politikası</a>
+                        Ayarlar anında kaydedilir. Bulut araçlarında anahtar ve işlenecek metin uygulamanın sunucusu üzerinden sağlayıcıya iletilir. <a href={GIZLILIK_ADRESI} {...(disAdresMi(GIZLILIK_ADRESI) ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className="font-medium text-moss-700 underline underline-offset-2">Gizlilik politikası</a>
                     </div>
                 </div>
             ) : (
