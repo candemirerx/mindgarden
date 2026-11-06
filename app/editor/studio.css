@@ -13,6 +13,41 @@
 .studio-workspace { background-image: radial-gradient(ellipse at 50% 0%, rgb(var(--moss-100) / .4), transparent 65%); }
 .studio-paper { overflow: hidden; border: 1px solid rgb(var(--sand-200)); border-radius: 20px; min-height: 65dvh; box-shadow: 0 12px 40px rgb(var(--sand-900) / .045), 0 2px 5px rgb(var(--sand-900) / .025); }
 .studio-paper-label { display: none; }
+.studio-bilge-transfer { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; border: 1px solid rgb(var(--moss-200)); border-radius: 16px; background: rgb(var(--moss-50)); padding: 12px 14px; color: rgb(var(--moss-900)); }
+/* Biçim çubuğu: kâğıdın üstünde ince bir şerit. Yazı alanından çalınan
+   yükseklik en aza iner, açık düğmeler renkle belli olur. */
+.studio-format-toolbar { display: flex; align-items: center; gap: 1px; width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 10px; padding: 2px; border: 1px solid rgb(var(--sand-200)); border-radius: 999px; background: rgb(var(--sand-50)); scrollbar-width: none; }
+.studio-format-toolbar::-webkit-scrollbar { display: none; }
+.studio-format-toolbar button { display: inline-flex; flex: 0 0 36px; height: 36px; align-items: center; justify-content: center; border-radius: 999px; color: rgb(var(--sand-700)); transition: background-color .15s, color .15s; }
+.studio-format-toolbar button:hover { background: rgb(var(--moss-100)); color: rgb(var(--moss-800)); }
+.studio-format-toolbar button[aria-pressed="true"] { background: rgb(var(--moss-600)); color: #fff; }
+.studio-format-toolbar button:disabled { opacity: .3; }
+.studio-format-toolbar button:disabled:hover { background: transparent; color: rgb(var(--sand-700)); }
+/* Kaynak görünümü: Markdown tek aralıklı yazıyla okunur. */
+.studio-source-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 11px; color: rgb(var(--sand-600)); }
+.studio-source-text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; }
+.studio-rich-text { outline: none; overflow-wrap: anywhere; white-space: pre-wrap; scroll-margin-bottom: 100px; }
+.studio-rich-text p { margin: 0 0 .8em; }
+.studio-rich-text strong { font-weight: 700; }
+.studio-rich-text em { font-style: italic; }
+@font-face { font-family: 'CaveatLocal'; src: url('/fonts/Caveat.ttf') format('truetype'); font-weight: 400 700; font-style: normal; font-display: swap; }
+.studio-handwriting .studio-rich-text { font-family: 'CaveatLocal', cursive; font-size: 25px; line-height: 1.65; }
+/* Not görselleri yazının içinde küçük, dokunulabilir bir kart olarak durur;
+   dokununca büyük önizleme açılır. Yazıyı itip ekranı kaplamaz. */
+.studio-rich-text .studio-inline-image { display: inline-block; width: 72px; height: 60px; margin: 2px 4px; vertical-align: middle; object-fit: cover; border: 1px solid rgb(var(--sand-300)); border-radius: 12px; background: #fff; cursor: zoom-in; box-shadow: 0 1px 4px rgb(var(--sand-900) / .1); }
+.studio-inline-image.ProseMirror-selectednode { outline: 2px solid rgb(var(--moss-500)); outline-offset: 2px; }
+.studio-rich-text s { text-decoration: line-through; }
+.studio-rich-text h1, .studio-rich-text h2, .studio-rich-text h3 { margin: 1em 0 .5em; font-weight: 700; line-height: 1.4; }
+.studio-rich-text h1 { font-size: 1.5em; }
+.studio-rich-text h2 { font-size: 1.3em; }
+.studio-rich-text h3 { font-size: 1.15em; }
+.studio-rich-text ul { list-style: disc; padding-left: 1.5em; }
+.studio-rich-text ol { list-style: decimal; padding-left: 1.5em; }
+.studio-rich-text blockquote { border-left: 3px solid rgb(var(--moss-300)); padding-left: 1em; }
+.studio-rich-text pre { white-space: pre-wrap; background: rgb(var(--sand-100)); padding: 12px; border-radius: 10px; }
+.studio-rich-text a { color: rgb(var(--moss-700)); text-decoration: underline; }
+.studio-rich-text table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.studio-rich-text td, .studio-rich-text th { border: 1px solid rgb(var(--sand-300)); padding: 6px; min-width: 30px; }
 /* Kısayol panosu: makro ızgarası not alanı gibi ekranı doldurmaz,
    yalnızca içeriği kadar yer kaplar. */
 .pano-karti { border: 1px solid rgb(var(--sand-200)); border-radius: 20px; background: rgb(var(--surface)); box-shadow: 0 12px 40px rgb(var(--sand-900) / .045), 0 2px 5px rgb(var(--sand-900) / .025); }
@@ -36,6 +71,9 @@
 .studio-tab:hover { background: rgb(var(--sand-100)); }
 .studio-tab--active { background: rgb(var(--moss-50)); color: rgb(var(--moss-700)); }
 .studio-tab--active::after { content: ''; position: absolute; bottom: 3px; width: 14px; height: 2px; border-radius: 2px; background: currentColor; }
+/* Şerit katlıyken çizgi kısalır: sekme seçili ama araçlar gizli. */
+.studio-tab--collapsed { background: transparent; }
+.studio-tab--collapsed::after { width: 5px; opacity: .6; }
 .studio-tab:disabled { opacity: .4; cursor: not-allowed; }
 .studio-menu-focus { display: none; }
 @media (max-width: 639px) {
@@ -48,6 +86,8 @@
   .studio-tool-label { width: 20px; }
   .studio-tool-label span { display: none; }
   .studio-paper { border-radius: 16px; min-height: 0; }
+  .studio-format-toolbar { gap: 0; margin-bottom: 8px; }
+  .studio-format-toolbar button { flex: 0 0 34px; height: 34px; }
   .studio-text { min-height: max(240px, calc(100dvh - 250px)); line-height: 1.7; }
   .studio-paper-label { padding: 12px 20px; }
   .studio-footer > div { flex-wrap: nowrap; gap: 0 8px; font-size: 10px; }
@@ -84,6 +124,11 @@
 .writing-studio--screen .studio-header, .writing-studio--screen .studio-footer { flex-shrink: 0; }
 .writing-studio--screen > main { overflow: hidden; }
 .writing-studio--screen #ekran-duzeni { overflow-y: auto; }
+/* Yazı modu: kutu kalan yüksekliği doldurur; yazarken alt çubuk gizlenir ki düğmeler klavyenin hemen üstünde kalsın. */
+.writing-studio--yazi { height: 100dvh; min-height: 0; overflow: hidden; }
+.writing-studio--yazi .studio-header { flex-shrink: 0; }
+.writing-studio--yazi > main { overflow: hidden; }
+.writing-studio--yazi:has(#yazi-modu-kutu:focus) .studio-footer { display: none; }
 .writing-studio--screen #ekran-duzeni textarea { min-width: 0; }
 .writing-studio--screen #ekran-duzeni .btn { padding-block: 4px; }
 

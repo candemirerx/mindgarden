@@ -42,7 +42,7 @@ export type TuvalKart = 'bahce' | 'sade' | 'renkli' | 'hap';
 export const KART_ISLEVLERI = {
     yok: 'Düğme yok', editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: 'Buda / geri al',
     sol: 'Sol yanına ekle', yan: 'Sağ yanına ekle', alt: 'Altına ekle',
-    tasi: 'Ağacı taşı', ayarlar: 'Ağaç ayarları', makro: 'Makro çalıştır',
+    tasi: 'Ağacı taşı', ayarlar: 'Ağaç ayarları', tuvalAyarlari: 'Tuval ayarlarını aç', makro: 'Makro çalıştır',
     pcYaz: 'Bilgisayara yaz', pcEnter: 'Bilgisayarda Enter', pcPano: 'Bilgisayar panosu', pcDikte: 'Dikte', pcKopru: 'Köprü dikte', pcKlavye: 'Telefon klavyesiyle yaz', pcTelPano: 'Telefon panosunu gönder', aiMakro: 'Yapay zekâ makrosu'
 } as const;
 export type KartIslevi = keyof typeof KART_ISLEVLERI;
@@ -60,6 +60,10 @@ export const VARSAYILAN_KART_DUGMELERI: KartDugmeleri = {
     ustSol: 'kopya', ustOrta: 'editor', ustSag: 'buda',
     sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok'
 };
+/**
+ * Boş ad kuralı lib/agacAyarlari.ts'e taşındı: ad vermeden eklenen notların
+ * adı artık ağaca özel belirlenir (Ağaç Yönetimi → Ağaçlar → kalem düğmesi).
+ */
 export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri; kartMakrolari: KartMakrolari; kartAiMakrolari: KartAiMakrolari; boyut: DugmeBoyutlari };
 
 const ANAHTAR = 'nb-tuval-v1';
@@ -95,43 +99,73 @@ function boyutOku(v: unknown): DugmeBoyutlari {
     return cikti;
 }
 
-export function tuvalTercihleri(): TuvalTercihleri {
+function tercihiDogrula(k: Partial<TuvalTercihleri>): TuvalTercihleri {
+    return {
+        gosterim: k.gosterim === 'yatay' || k.gosterim === 'organik' ? k.gosterim : 'klasik',
+        gezinme: k.gezinme === 'cubuk' || k.gezinme === 'yok' ? k.gezinme : 'sekme',
+        onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
+        eylem: k.eylem === 'panel' || k.eylem === 'yumusak' ? k.eylem : 'hap',
+        kart: kartOku(k.kart), kartKoyu: kartOku(k.kartKoyu),
+        dugmeler: dugmeleriOku(k.dugmeler), kartMakrolari: makrolariOku(k.kartMakrolari),
+        kartAiMakrolari: kartAiMakrolariOku(k.kartAiMakrolari), boyut: boyutOku(k.boyut)
+    };
+}
+
+const bahceAnahtari = (id: string) => 'nb-tuval-bahce-v1:' + encodeURIComponent(id);
+function bahceTercihleri(id: string): Partial<TuvalTercihleri> {
+    try {
+        const kayit = JSON.parse(localStorage.getItem(bahceAnahtari(id)) || '{}');
+        return kayit && typeof kayit === 'object' && !Array.isArray(kayit) ? kayit : {};
+    } catch { return {}; }
+}
+
+/** Kimlik yoksa genel varsayılan; kimlik varsa yalnız değiştirilen alanlar bahçeye özeldir. */
+export function tuvalTercihleri(bahceId?: string | null): TuvalTercihleri {
     if (typeof window === 'undefined') return VARSAYILAN_TUVAL;
     try {
         const k = JSON.parse(localStorage.getItem(ANAHTAR) || '{}') as Partial<TuvalTercihleri>;
-        return {
-            gosterim: k.gosterim === 'yatay' || k.gosterim === 'organik' ? k.gosterim : 'klasik',
-            gezinme: k.gezinme === 'cubuk' || k.gezinme === 'yok' ? k.gezinme : 'sekme',
-            onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
-            eylem: k.eylem === 'panel' || k.eylem === 'yumusak' ? k.eylem : 'hap',
-            kart: kartOku(k.kart),
-            kartKoyu: kartOku(k.kartKoyu),
-            dugmeler: dugmeleriOku(k.dugmeler),
-            kartMakrolari: makrolariOku(k.kartMakrolari),
-            kartAiMakrolari: kartAiMakrolariOku(k.kartAiMakrolari),
-            boyut: boyutOku(k.boyut)
-        };
+        const genel = tercihiDogrula(k);
+        return bahceId ? tercihiDogrula({ ...genel, ...bahceTercihleri(bahceId) }) : genel;
     } catch { return VARSAYILAN_TUVAL; }
 }
 
-export function tuvalTercihleriniKaydet(t: TuvalTercihleri): void {
+export function tuvalTercihleriniKaydet(t: TuvalTercihleri, bahceId?: string | null): void {
     if (typeof window === 'undefined') return;
     // Kılavuz: görünümü ya da kart düğmelerini değiştiren kullanıcı ilgili dersi uygulamış olur.
-    const onceki = tuvalTercihleri();
+    const onceki = tuvalTercihleri(bahceId);
     if (onceki.gosterim !== t.gosterim || onceki.kart !== t.kart || onceki.kartKoyu !== t.kartKoyu || onceki.eylem !== t.eylem || onceki.onizleme !== t.onizleme || onceki.gezinme !== t.gezinme) dersTamamla('t-kart-gorunum');
     if (JSON.stringify(onceki.dugmeler) !== JSON.stringify(t.dugmeler)) dersTamamla('t-kart-menu');
-    try { localStorage.setItem(ANAHTAR, JSON.stringify(t)); } catch { /* depolama kapalı */ }
+    try {
+        if (bahceId) {
+            const ozel = bahceTercihleri(bahceId);
+            // Tüm formu kopyalamak yerine yalnız bu işlemde değişen alanları sabitle.
+            for (const alan of Object.keys(VARSAYILAN_TUVAL) as (keyof TuvalTercihleri)[]) {
+                if (JSON.stringify(onceki[alan]) !== JSON.stringify(t[alan])) Object.assign(ozel, { [alan]: t[alan] });
+            }
+            localStorage.setItem(bahceAnahtari(bahceId), JSON.stringify(ozel));
+        } else localStorage.setItem(ANAHTAR, JSON.stringify(t));
+    } catch { /* depolama kapalı */ }
     bildir('tuval');
 }
 
 /** Tercihleri okur ve ayarlardan değişince günceller. */
-export function useTuvalTercihleri(): TuvalTercihleri {
+export function bahceTuvaliniSifirla(bahceId: string): void {
+    try { localStorage.removeItem(bahceAnahtari(bahceId)); localStorage.removeItem('nb-show-pruned:' + encodeURIComponent(bahceId)); } catch { /* depolama kapalı */ }
+    bildir('tuval');
+    bildir('budananlar');
+}
+export function bahceTuvaliOzelMi(bahceId: string): boolean {
+    if (typeof window === 'undefined') return false;
+    try { return Object.keys(bahceTercihleri(bahceId)).length > 0 || localStorage.getItem('nb-show-pruned:' + encodeURIComponent(bahceId)) !== null; } catch { return false; }
+}
+
+export function useTuvalTercihleri(bahceId?: string | null): TuvalTercihleri {
     const [t, setT] = useState<TuvalTercihleri>(VARSAYILAN_TUVAL);
     useEffect(() => {
-        const oku = () => setT(tuvalTercihleri());
+        const oku = () => setT(tuvalTercihleri(bahceId));
         oku();
         return dinle('tuval', oku);
-    }, []);
+    }, [bahceId]);
     return t;
 }
 

@@ -15,6 +15,19 @@ import org.junit.runner.RunWith;
 /** Opt-in card test: status queries only; no typing, clicks or saved preferences. */
 @RunWith(AndroidJUnit4.class)
 public class CardBleDeviceTest {
+    /** Opt-in recovery probe: only demo draft keys and the phone's plain-text clipboard. */
+    @Test public void demoRecoveryProbe() throws Exception {
+        org.junit.Assume.assumeNotNull(InstrumentationRegistry.getArguments().getString("demoRecovery"));
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            System.out.println("DEMO_DRAFTS=" + js("JSON.stringify(Object.keys(localStorage).filter(k=>k.startsWith('nb-taslak-deneme')||k.startsWith('nb-deneme-notu')).map(k=>({key:k,value:localStorage.getItem(k)})))"));
+            JSONObject clipboard = call("readClipboard", new JSONObject());
+            JSONObject value = clipboard.optJSONObject("value");
+            String text = value == null ? "" : value.optString("text", "");
+            System.out.println("DEMO_CLIPBOARD_TEXT=" + JSONObject.quote(text));
+        }
+    }
     private ActivityScenario<MainActivity> scenario;
     private String js(String script) throws Exception {
         AtomicReference<String> result = new AtomicReference<>();
@@ -68,6 +81,57 @@ public class CardBleDeviceTest {
         while (SystemClock.elapsedRealtime() < deadline) {
             try { if ("true".equals(js("!!window.Capacitor?.nativePromise"))) return; } catch (Exception ignored) { }
             SystemClock.sleep(200);
+        }
+    }
+
+    /** Shared card link: do not stop other apps, type, or change saved settings. */
+    @Test public void sharedCardDiscoveryAndReconnect() throws Exception {
+        String suffix = InstrumentationRegistry.getArguments().getString("sharedCardSuffix");
+        org.junit.Assume.assumeNotNull(suffix);
+        try (ActivityScenario<MainActivity> activity = ActivityScenario.launch(MainActivity.class)) {
+            scenario = activity;
+            hazirBekle();
+            JSONObject scanned = call("scan", new JSONObject());
+            assertFalse(scanned.toString(), scanned.has("error"));
+            org.json.JSONArray devices = scanned.getJSONObject("value").getJSONArray("devices");
+            String address = null;
+            StringBuilder summary = new StringBuilder();
+            for (int i = 0; i < devices.length(); i++) {
+                JSONObject device = devices.getJSONObject(i);
+                String mac = device.getString("address");
+                summary.append(device.optString("name")).append(" connected=").append(device.optBoolean("connected")).append(" suffix=").append(mac.substring(Math.max(0, mac.length() - 5))).append("; ");
+                if (mac.toUpperCase(java.util.Locale.ROOT).endsWith(suffix.toUpperCase(java.util.Locale.ROOT))) {
+                    address = device.getString("address"); break;
+                }
+            }
+            assertNotNull("Shared card must appear in Notbahce scan: " + summary, address);
+            for (int round = 0; round < 3; round++) {
+                JSONObject connected = call("connect", new JSONObject().put("address", address));
+                assertFalse(connected.toString(), connected.has("error"));
+                assertTrue(connected.getJSONObject("value").getBoolean("connected"));
+                JSONObject status = call("bleStatus", new JSONObject());
+                assertTrue(status.toString(), status.getJSONObject("value").getBoolean("connected"));
+                assertFalse(call("disconnect", new JSONObject()).has("error"));
+                SystemClock.sleep(700);
+            }
+            // Leave the native connection ready for the user; no preference changes.
+            assertFalse(call("connect", new JSONObject().put("address", address)).has("error"));
+            if ("1".equals(InstrumentationRegistry.getArguments().getString("activateCardBluetooth"))) {
+                long deadline = SystemClock.elapsedRealtime() + 30000;
+                while (!"true".equals(js("!!window.__nbUzak")) && SystemClock.elapsedRealtime() < deadline) SystemClock.sleep(250);
+                assertEquals("Application connection API must be ready", "true", js("!!window.__nbUzak"));
+                // Opt-in repair: keep every other setting and pairing, select this working card.
+                js("localStorage.setItem('nb-ble-card'," + JSONObject.quote(address) + ");window.__nbUzak.ayarla({...window.__nbUzak.prefs(),connection:'bluetooth',agTuru:undefined,autoBaglan:true})");
+                JSONObject checked = jsCall("window.__nbUzak.yokla()", 20000);
+                assertFalse(checked.toString(), checked.has("error"));
+                assertEquals(checked.toString(), "ok", checked.getJSONObject("value").getString("tur"));
+                assertEquals("true", js("window.__nbUzak.prefs().connection === 'bluetooth' && window.__nbUzak.prefs().autoBaglan === true"));
+                // Instrumentation kills its host process at the end. Allow Chromium's
+                // asynchronous localStorage disk commit before checking a fresh launch.
+                SystemClock.sleep(6500);
+                System.out.println("SHARED_CARD_APPLICATION_STATUS_OK");
+            }
+            System.out.println("SHARED_CARD_DISCOVERY_RECONNECT_OK rounds=3");
         }
     }
 

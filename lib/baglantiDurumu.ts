@@ -164,7 +164,7 @@ if (typeof window !== 'undefined') {
         telefonPanoOku: telefonPanosunuOku,
         telefonPanoGonder: () => telefonPanosunuBilgisayaraGonder(remotePrefs()),
         bul: () => bilgisayarlariBul(),
-        eslestirWifi: (url: string, kod: string) => bilgisayarlaEslestirWifi(url, kod),
+        eslestirWifi: (url: string, kod = '') => bilgisayarlaEslestirWifi(url, kod),
         eslestirBluetooth: (adres: string, kod: string) => bilgisayarlaEslestirBluetooth(adres, kod),
         btKlavye: (adres: string) => bluetoothKlavyeBagla(adres),
         btKlavyeDurumu: () => bluetoothKlavyeDurumu(),

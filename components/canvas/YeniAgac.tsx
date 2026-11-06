@@ -26,11 +26,8 @@ import { useKartDikte } from './useKartDikte';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { makroCalisiyor, makroyuBaslat, makroyuDurdur } from '@/lib/makroCalistirici';
 import { readEnabledMacros } from '@/lib/aiMacro';
-import { readActiveProvider, readCustomUrl, readProviderKey, readProviderModel, providerHazir } from '@/lib/aiProvider';
-import { runCustomProviderDirect } from '@/lib/customProvider';
-import { runLocalInference } from '@/lib/localLlm';
-import { splitIntoChunks } from '@/lib/aiChunks';
-import { Capacitor } from '@capacitor/core';
+import { kartAiCalistir } from '@/lib/kartAiCalistir';
+import AiResultDialog from '@/components/ai/AiResultDialog';
 import { basHarf } from './KartAracEkle';
 import type { KartAiMakrolari, KartMakrolari } from '@/lib/tuvalTercihleri';
 import type { KartDugmeleri, KartIslevi, TuvalEylem, TuvalKart, TuvalOnizleme, TuvalGosterim } from '@/lib/tuvalTercihleri';
@@ -211,6 +208,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
     const [kopyalandi, setKopyalandi] = useState(false);
     const [pcKlavyeAcik, setPcKlavyeAcik] = useState(false);
+    const aiBusy = useRef(false);
+    const [aiPending, setAiPending] = useState(false);
+    const [aiResult, setAiResult] = useState<{ title: string; original: string; result: string; snapshot: string } | null>(null);
     const prefs = useRemotePrefs();
     const icerikRef = useRef(node.content); icerikRef.current = node.content;
     const dikte = useKartDikte(prefs, () => icerikRef.current, metin => useStore.getState().updateNode(node.id, metin), mesaj => alert(mesaj));
@@ -329,6 +329,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const dugme = (id: string, ana = false) => `${ARAC} ${ana ? 'kart-eylem--ana' : ''} ${hareket.hedef === id ? 'kart-eylem--hedef' : ''}`;
     const tasi = () => hareket.kap.current?.dispatchEvent(new CustomEvent('nb-agac-tasi', { bubbles: true }));
     const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları', makro: 'Makro seçilmedi', pcYaz: 'Bilgisayara yaz', pcPano: 'Bilgisayar panosuna gönder', pcEnter: 'Bilgisayarda Enter', pcDikte: 'Dikte', pcKopru: 'Köprü dikte', pcKlavye: 'Telefon klavyesiyle yaz', pcTelPano: 'Telefon panosunu gönder' };
+    etiketler.tuvalAyarlari = 'Tuval ayarlarını aç';
     const makrolar = prefs.macros.filter(makroHazir);
     const makro = (yer: keyof KartDugmeleri) => dugmeler[yer] === 'makro' ? makrolar.find(m => m.id === (kartMakrolari ?? {})[yer]) ?? null : null;
     const makroBilgisi = (yer: keyof KartDugmeleri) => {
@@ -350,29 +351,16 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     };
     /** Editördeki AI çağrısıyla aynı yol: sunucu uç noktası, özel sunucuda cihazdan doğrudan istek, yerel model. */
     const aiMakroCalistir = async (gorev: { id: string; title: string; instruction: string }) => {
+        if (aiBusy.current || aiResult) return;
         const metin = notGovdesi();
         if (!metin.trim()) throw new Error('Not içeriği boş.');
-        const provider = readActiveProvider();
-        if (!providerHazir(provider)) throw new Error('Yapay zekâ ayarlanmadı: editör → Yapay zekâ bölümünden sağlayıcı ve anahtar ekleyin.');
-        const calistirParca = async (parca: string): Promise<string> => {
-            if (provider === 'local') {
-                const yanit = await runLocalInference(gorev.instruction + '\n\nİNCELENECEK METİN:\n' + parca + '\n\nYANIT (Yalnızca işlenmiş nihai metni ver):');
-                return typeof yanit.text === 'string' && yanit.text.trim() ? yanit.text.trim() : parca;
-            }
-            if (provider === 'custom' && Capacitor.isNativePlatform()) {
-                return runCustomProviderDirect({ baseUrl: readCustomUrl(), apiKey: readProviderKey(provider), model: readProviderModel(provider), instruction: gorev.instruction, text: parca });
-            }
-            const adres = Capacitor.isNativePlatform() ? 'https://mindgarden-neon.vercel.app/api/spellcheck' : '/api/spellcheck';
-            const yanit = await fetch(adres, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: parca, clientApiKey: readProviderKey(provider), provider, customUrl: readCustomUrl(), customModel: readProviderModel(provider), macro: gorev.instruction }) });
-            if (!yanit.ok) { const h = await yanit.json().catch(() => null); throw new Error(h?.error || 'Yapay zekâ isteği başarısız oldu.'); }
-            const veri = await yanit.json();
-            return typeof veri.correctedText === 'string' ? veri.correctedText : parca;
-        };
-        const parcalar = splitIntoChunks(metin);
-        let sonuc = '';
-        for (const parca of parcalar) sonuc += (await calistirParca(parca.text)).trim() + parca.after;
-        if (parcalar.length === 1 && sonuc.trim() === metin.trim()) throw new Error('Model bir değişiklik döndürmedi.');
-        await useStore.getState().updateNode(node.id, sonuc.trimEnd());
+        const snapshot = node.content;
+        aiBusy.current = true; setAiPending(true);
+        try {
+            const sonuc = await kartAiCalistir(metin, gorev.instruction);
+            if (sonuc.trim() === metin.trim()) throw new Error('Model bir değişiklik döndürmedi.');
+            setAiResult({ title: gorev.title, original: metin, result: sonuc.trimEnd(), snapshot });
+        } finally { aiBusy.current = false; setAiPending(false); }
     };
     const pcAktar = (islem: () => Promise<void>) => {
         void islem().catch(hata => {
@@ -386,7 +374,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         else if (id === 'kopya') void kopyala();
         else if (id === 'buda') void setNodePruned(node.id, !budandi);
         else if (id === 'tasi') tasi();
-        else if (id === 'ayarlar') onSettings?.();
+        else if (id === 'ayarlar' || id === 'tuvalAyarlari') onSettings?.();
         else if (id === 'alt') onAddChild(node.id, 'right');
         else if (id === 'sol' || id === 'yan') {
             if (tur === 'kok') onAddTree?.(node.id, id === 'sol' ? 'left' : 'right');
@@ -407,7 +395,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         if (id === 'kopya') return kopyalandi ? <Check size={17} /> : <Copy size={17} />;
         if (id === 'buda') return <Scissors size={17} />;
         if (id === 'tasi') return <Move size={17} />;
-        if (id === 'ayarlar') return <SlidersHorizontal size={16} />;
+        if (id === 'ayarlar' || id === 'tuvalAyarlari') return <SlidersHorizontal size={16} />;
         if (id === 'pcYaz') return <Keyboard size={17} />;
         if (id === 'pcPano') return <ClipboardList size={17} />;
         if (id === 'pcEnter') return <CornerDownLeft size={17} />;
@@ -425,7 +413,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         const ust = yer.startsWith('ust');
         const bilgi = makroBilgisi(yer);
         const aiBilgi = aiGorevBilgisi(yer);
-        const yazi = id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'pcEnter' ? 'Enter' : id === 'pcDikte' ? 'Dikte' : id === 'pcKopru' ? 'Köprü' : id === 'pcKlavye' ? 'PC klavye' : id === 'pcTelPano' ? 'Telefon pano' : id === 'aiMakro' ? 'Yapay zekâ' : 'Düzenle';
+        const yazi = id === 'tuvalAyarlari' ? 'Tuval' : id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'pcEnter' ? 'Enter' : id === 'pcDikte' ? 'Dikte' : id === 'pcKopru' ? 'Köprü' : id === 'pcKlavye' ? 'PC klavye' : id === 'pcTelPano' ? 'Telefon pano' : id === 'aiMakro' ? 'Yapay zekâ' : 'Düzenle';
         return <button key={yer} data-kart-yer={yer} data-kart-eylem={id} type="button"
             onClick={e => {
                 e.stopPropagation();
@@ -472,6 +460,16 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
                 onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); dikte.degistir(dikte.durum === 'kopru' ? 'kopru' : 'dikte'); }}
                 className="absolute -top-3 left-1 z-40 flex min-h-8 items-center gap-1.5 rounded-full bg-berry-600 px-3 text-[11px] font-semibold text-white shadow-soft touch-manipulation active:scale-95"><Mic size={13} className="animate-pulse" />{dikte.durum === 'bitiyor' ? 'Bitiriyor…' : 'Yazıyor · durdur'}</button>}
             {pcKlavyeAcik && <PcHizliYaz prefs={prefs} onKapat={() => setPcKlavyeAcik(false)} />}
+            {aiPending && <span role="status" className="absolute -bottom-7 left-0 rounded-full bg-moss-100 px-3 py-1 text-xs text-moss-900">AI çalışıyor…</span>}
+            {aiResult && <AiResultDialog title={aiResult.title} original={aiResult.original} result={aiResult.result} onClose={() => setAiResult(null)} onApply={async () => {
+                const current = useStore.getState().nodes.find(n => n.id === node.id);
+                if (!current || current.deleted_at || current.content !== aiResult.snapshot) throw new Error('Not beklerken değişti veya silindi. Sonucu kopyalayabilirsiniz; güncel notun üzerine yazılmadı.');
+                // Başlık satırını koru; makro yalnız gövdeyi işlemişti.
+                const heading = current.content.includes('\n') ? current.content.split('\n')[0] : node.title;
+                const next = heading + '\n' + aiResult.result;
+                await useStore.getState().updateNode(node.id, next);
+                if (useStore.getState().nodes.find(n => n.id === node.id)?.content !== next) throw new Error('Not kaydedilemedi. Sonucu kopyalayıp tekrar deneyin.');
+            }} />}
             {cocukSayisi > 0 && !araclar && (
                 <button type="button" onClick={acKapa} aria-expanded={acik} title={acik ? 'Dalları kapat' : 'Dalları aç'} aria-label={acik ? 'Dalları kapat' : 'Dalları aç'}
                     className="absolute bottom-0 right-0 z-30 flex h-10 w-10 translate-x-1/3 translate-y-1/3 items-center justify-center touch-manipulation">

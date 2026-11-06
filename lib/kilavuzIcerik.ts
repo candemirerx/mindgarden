@@ -348,11 +348,11 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 sure: 2,
                 adimlar: [
                     'Ana ayarlardaki **Deneme ağacı** düğmesine dokunun; örnek içerikle editör açılır.',
-                    'Yazmayı, yerel araçları ve görünür araçları bu geçici notta deneyin. Önceki editör notunuz geçişten önce kaydedilir.',
-                    'Deneme notu bahçelerinize, dışa aktarıma veya Drive yedeğine eklenmez; çıkınca kaldırılır.',
+                    'Yazmayı, yerel araçları ve görünür araçları bu deneme notunda deneyin. Önceki editör notunuz geçişten önce kaydedilir.',
+                    'Son deneme metni bu cihazda korunur. Normal bahçelerinize veya Drive yedeğine eklenmez.',
                     'Bilgisayar araçları için bağlantı, yapay zekâ için etkin bir model gerekir; deneme ağacı bu işlemleri gerçek ayarlarınızla çalıştırır.',
                 ],
-                hatirla: 'Deneme ağacı geçicidir: istediğinizi deneyin, çıkınca kaybolur ve notlarınıza karışmaz.',
+                hatirla: 'Son deneme metni bu cihazda kalır. Normal bahçelerinize karışmaz.',
                 soru: {
                     soru: 'Deneme ağacında yazdığınız metin Drive yedeğine girer mi?',
                     secenekler: ['Evet, otomatik yedeklenir', 'Hayır; deneme notu yedeğe ve bahçelere eklenmez'],
@@ -627,14 +627,15 @@ export const SEVIYELER: KilavuzSeviyesi[] = [
                 hedef: 'Bir yapay zekâ sağlayıcısı bağlar ve notunuzu tek dokunuşla işletirsiniz.',
                 sure: 4,
                 adimlar: [
-                    '**Ayarlar → Yapay zekâ → Bulut** sekmesinde bir sağlayıcı seçip kendi API anahtarınızı girin ve etkinleştirin.',
+                    '**Ayarlar → Yapay zekâ → Hazır AI** ile anahtar girmeden sınırlı erken erişimi kullanın. Bilge Ağaç sohbeti ve makrolar aynı kullanım hakkını paylaşır; sunucu erişiminin açılmış olması gerekir.',
+                    'İsterseniz **Kendi anahtarım / yerel modelim → Bulut** bölümünde sağlayıcınızı seçip kişisel API anahtarınızı etkinleştirin. Bu kullanımın ücretlendirmesi sağlayıcınıza aittir.',
                     '**Ayarlar → AI makroları** bölümünde **Yapay zekâ bölümünü editörde göster** anahtarını açın.',
                     'Editörde **AI** satırındaki bir makro kutusuna dokunun (ör. **Özetle**, **İmla Düzelt**).',
                     'Metnin bir bölümünü seçtiyseniz yalnız o bölüm işlenir.',
                     'Gelen sonucu **Onayla** ile kalıcı yapın ya da **Geri Al** ile vazgeçin.',
                 ],
                 ipucu: 'Yapay zekâ isteğe bağlıdır; kullanmazsanız uygulamanın geri kalanı aynen çalışır. Metin yalnız siz bir yapay zekâ işlemi başlattığınızda, seçtiğiniz sağlayıcıya gönderilir.',
-                hatirla: 'Kendi anahtarınızla bir sağlayıcı bağlayın; sonucu Onayla ile kalıcı yapın, beğenmezseniz Geri Al.',
+                hatirla: 'Hazır AI, kendi anahtarınız veya yerel modelle çalışın; sonucu Onayla ile kalıcı yapın, beğenmezseniz Geri Al.',
                 soru: {
                     soru: 'Yapay zekânın önerdiği metni beğenmediniz. Ne yaparsınız?',
                     secenekler: ['Geri Al\'a dokunurum', 'Notu silerim', 'Uygulamayı kapatırım'],

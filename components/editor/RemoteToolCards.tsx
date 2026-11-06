@@ -8,15 +8,18 @@
  * listeleri aynı satır görünümünü paylaşır.
  */
 import { useState } from 'react';
-import { AudioLines, Clipboard, ClipboardCopy, ClipboardPaste, CornerDownLeft, MonitorUp, Keyboard, LayoutDashboard, Mic, MousePointer2, Settings2, Wand2 } from 'lucide-react';
+import { AudioLines, Clipboard, ClipboardCopy, ClipboardPaste, CornerDownLeft, MonitorUp, Keyboard, LayoutDashboard, Mic, MousePointer2, PenLine, Settings2, Wand2 } from 'lucide-react';
 import { REMOTE_TOOL_IDS, saveRemotePrefs } from '@/lib/remoteTools';
 import type { RemoteToolId } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { SettingsRow, SettingsSwitch, cx } from '@/components/ui/settings';
 import DikteAracAyarlari from './DikteAracAyarlari';
+import YaziDugmeleriAyari from './YaziDugmeleriAyari';
+import { FareAyarlari } from './FareAraci';
 
 const items = {
-    mouse: { title: 'Fare', subtitle: 'Dokunarak sol tık, sürükleyerek fare hareketi ve kaydırma.', Icon: MousePointer2 },
+    yaziModu: { title: 'Yazı modu', subtitle: 'Cep Köprü’deki gibi: tam boy yazı kutusu ve klavyenin hemen üstünde Enter, fare, canlı yazma, pano gibi düğmeler. Düğmeler dişliden düzenlenir.', Icon: PenLine },
+    mouse: { title: 'Fare', subtitle: 'Dokunmatik yüzey; özelleştirilebilir köşe ve alt tuşları, makrolar ve hız düğmeleri.', Icon: MousePointer2 },
     dictation: { title: 'Dikte', subtitle: 'Sesi nota, bilgisayara ya da ikisine birden yaz; hedefi dişliden seç.', Icon: Mic },
     bridgeDictation: { title: 'Köprü Dikte', subtitle: 'Belirlenen süre konuş; söz nota, bilgisayara ya da ikisine birden yazılır. Süre ve hedef dişlide.', Icon: AudioLines },
     computerWrite: { title: 'Bilgisayara Yaz', subtitle: 'Notu bilgisayardaki odaklı alana yazar: düğmeye basınca bir kerede ya da yazdıkça canlı. Biçim ve hedef dişlide.', Icon: Keyboard },
@@ -30,7 +33,7 @@ const items = {
 } satisfies Record<RemoteToolId, { title: string; subtitle: string; Icon: typeof MousePointer2 }>;
 
 /** Kendi ayarı olan araçlar: satırdaki dişli, ayar panelini açar. */
-const AYARLI = ['dictation', 'bridgeDictation', 'computerWrite'] as const;
+const AYARLI = ['yaziModu', 'mouse', 'dictation', 'bridgeDictation', 'computerWrite'] as const;
 type AyarliArac = typeof AYARLI[number];
 const ayarli = (id: RemoteToolId): id is AyarliArac => (AYARLI as readonly string[]).includes(id);
 
@@ -62,7 +65,7 @@ export default function RemoteToolCards() {
                             label={title + ' aracını ' + (enabled ? 'kapat' : 'aç')}
                         />
                     </SettingsRow>
-                    {ayarli(id) && dugmeAcik && <DikteAracAyarlari arac={id} prefs={prefs} />}
+                    {ayarli(id) && dugmeAcik && (id === 'mouse' ? <FareAyarlari prefs={prefs} /> : id === 'yaziModu' ? <YaziDugmeleriAyari prefs={prefs} /> : <DikteAracAyarlari arac={id} prefs={prefs} />)}
                 </div>
             );
         })}

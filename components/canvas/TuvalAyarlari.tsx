@@ -13,7 +13,7 @@ import { SettingsSection, cx } from '@/components/ui/settings';
 import KartAracEkle, { SIMGE, islevAdi } from '@/components/canvas/KartAracEkle';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { ChevronRight, Plus } from 'lucide-react';
-import { DUGME_BOYUTLARI, KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
+import { DUGME_BOYUTLARI, KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, bahceTuvaliOzelMi, bahceTuvaliniSifirla, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import type { DugmeBoyutlari, KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
 import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
@@ -205,16 +205,22 @@ function BoyutOnizleme({ b, yumusak, dugmeler }: { b: DugmeBoyutlari; yumusak: b
     </div>;
 }
 
-export function TuvalAyarlari() {
-    const t = useTuvalTercihleri();
+export function TuvalAyarlari({ bahceId }: { bahceId?: string }) {
+    const t = useTuvalTercihleri(bahceId);
+    const kaydet = (yeni: typeof t) => tuvalTercihleriniKaydet(yeni, bahceId);
     const koyu = useKoyuTema();
     const uzakTercihler = useRemotePrefs();
     const [aracYeri, setAracYeri] = useState<string | null>(null);
     return (
         <div id="tuval-ayarlari" className="space-y-4">
+            <div className="rounded-2xl border border-moss-200 bg-moss-50 px-4 py-3 text-sm text-moss-900">
+                <p className="font-semibold">{bahceId ? 'Yalnız bu bahçe' : 'Tüm bahçeler için varsayılan'}</p>
+                <p className="mt-1 text-xs leading-relaxed text-moss-800">{bahceId ? 'Burada değiştirdiğiniz özellikler yalnız bu bahçeye uygulanır. Diğer özellikler genel varsayılanları izler.' : 'Bir bahçede özel olarak değiştirilmemiş özellikler bu ayarları kullanır. Bahçelerinize özel seçimler korunur.'}</p>
+                {bahceId && bahceTuvaliOzelMi(bahceId) && <button type="button" onClick={() => bahceTuvaliniSifirla(bahceId)} className="mt-2 min-h-11 rounded-xl border border-moss-300 bg-white px-3 text-xs font-semibold text-moss-800">Bu bahçeyi genel varsayılanlara döndür</button>}
+            </div>
             <SettingsSection icon={GitFork} title="Düzen" description="Ağaçların ve dalların tuvalde nasıl dizileceği, dalların nasıl ilerleyeceği. Kartların görünümünden bağımsızdır; notlarınız değişmez.">
                 <div role="radiogroup" aria-label="Düzen" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {GOSTERIMLER.map(g => <SecenekKarti key={g.id} secik={t.gosterim === g.id} onSec={() => tuvalTercihleriniKaydet({ ...t, gosterim: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
+                    {GOSTERIMLER.map(g => <SecenekKarti key={g.id} secik={t.gosterim === g.id} onSec={() => kaydet({ ...t, gosterim: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
             </SettingsSection>
 
@@ -223,14 +229,14 @@ export function TuvalAyarlari() {
                 <div role="radiogroup" aria-label="Kart tasarımı"
                     className="grid grid-cols-2 gap-2 rounded-2xl bg-sand-100 p-1.5 sm:grid-cols-4">
                     {KARTLAR.map(g => <SecenekKarti key={g.id} id={'tuval-kart-' + g.id} secik={(koyu ? t.kartKoyu : t.kart) === g.id}
-                        onSec={() => tuvalTercihleriniKaydet(koyu ? { ...t, kartKoyu: g.id } : { ...t, kart: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
+                        onSec={() => kaydet(koyu ? { ...t, kartKoyu: g.id } : { ...t, kart: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
             </SettingsSection>
 
             <SettingsSection icon={MousePointerClick} tone="sand" title="Not düğmeleri"
                 description="Düğmelerin görünümünü seçin.">
                 <div role="radiogroup" aria-label="Not düğmelerinin görünümü" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {EYLEMLER.map(g => <SecenekKarti key={g.id} id={'tuval-eylem-' + g.id} secik={t.eylem === g.id} onSec={() => tuvalTercihleriniKaydet({ ...t, eylem: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
+                    {EYLEMLER.map(g => <SecenekKarti key={g.id} id={'tuval-eylem-' + g.id} secik={t.eylem === g.id} onSec={() => kaydet({ ...t, eylem: g.id })} ad={g.ad} aciklama={g.aciklama} resim={g.resim} />)}
                 </div>
             </SettingsSection>
 
@@ -243,33 +249,33 @@ export function TuvalAyarlari() {
                         return <label key={anahtar} className="flex flex-col gap-1.5 text-sm text-sand-800">
                             <span className="flex items-center justify-between"><span>{sinir.ad}</span><span className="tabular-nums text-xs font-semibold text-moss-700">{sinir.otomatik && deger <= sinir.min ? 'Otomatik' : deger + ' px'}</span></span>
                             <input type="range" id={'tuval-boyut-' + anahtar} min={sinir.min} max={sinir.max} step={2} value={deger} aria-label={sinir.ad}
-                                onChange={e => { const v = Number(e.target.value); const boyut = { ...t.boyut }; if (v === sinir.varsayilan) delete boyut[anahtar]; else boyut[anahtar] = v; tuvalTercihleriniKaydet({ ...t, boyut }); }}
+                                onChange={e => { const v = Number(e.target.value); const boyut = { ...t.boyut }; if (v === sinir.varsayilan) delete boyut[anahtar]; else boyut[anahtar] = v; kaydet({ ...t, boyut }); }}
                                 className="h-8 w-full accent-moss-600" />
                         </label>;
                     })}
                 </div>
                 <button type="button" className="mt-2 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
-                    onClick={() => tuvalTercihleriniKaydet({ ...t, boyut: {} })}>Boyutları varsayılana döndür</button>
+                    onClick={() => kaydet({ ...t, boyut: {} })}>Boyutları varsayılana döndür</button>
             </SettingsSection>}
 
             {t.eylem !== 'panel' && <SettingsSection icon={MousePointerClick} title="Kart menüsü"
                 description="Düğmelerin kartın çevresindeki yerleri. Bir düğmeye dokunun: işlevini değiştirin ya da Yok seçerek kaldırın.">
                 <KartMenuHaritasi t={t} macros={uzakTercihler.macros} sec={setAracYeri} />
                 <button type="button" className="mt-3 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
-                    onClick={() => tuvalTercihleriniKaydet({ ...t, dugmeler: { ...VARSAYILAN_KART_DUGMELERI }, kartMakrolari: {} })}>Düğmeleri varsayılana döndür</button>
+                    onClick={() => kaydet({ ...t, dugmeler: { ...VARSAYILAN_KART_DUGMELERI }, kartMakrolari: {}, kartAiMakrolari: {} })}>Düğmeleri varsayılana döndür</button>
             </SettingsSection>}
-            {aracYeri && <KartAracEkle yerKey={aracYeri} onKapat={() => setAracYeri(null)} />}
+            {aracYeri && <KartAracEkle yerKey={aracYeri} bahceId={bahceId} onKapat={() => setAracYeri(null)} />}
 
             <SettingsSection icon={SlidersHorizontal} tone="moss" title="Ayrıntılar" flush>
                 <div className="divide-y divide-sand-100">
                     <AyrintiSatiri baslik="Kart önizlemesi" aciklama="Kartta başlığın altında içeriğin kaç satırı görünsün.">
-                        <Parcali etiket="Kart önizlemesi" secenekler={ONIZLEMELER} secili={t.onizleme} sec={v => tuvalTercihleriniKaydet({ ...t, onizleme: v })} className="sm:w-[264px]" />
+                        <Parcali etiket="Kart önizlemesi" secenekler={ONIZLEMELER} secili={t.onizleme} sec={v => kaydet({ ...t, onizleme: v })} className="sm:w-[264px]" />
                     </AyrintiSatiri>
                     <AyrintiSatiri baslik="Ağaçlar arası gezinme" aciklama="Çok ağaçta hızlı geçiş: kaydırma çubukları ya da üstte ağaç sekmeleri.">
-                        <Parcali etiket="Ağaçlar arası gezinme" secenekler={GEZINMELER} secili={t.gezinme} sec={v => tuvalTercihleriniKaydet({ ...t, gezinme: v })} className="sm:w-[264px]" />
+                        <Parcali etiket="Ağaçlar arası gezinme" secenekler={GEZINMELER} secili={t.gezinme} sec={v => kaydet({ ...t, gezinme: v })} className="sm:w-[264px]" />
                     </AyrintiSatiri>
                     <AyrintiSatiri baslik="Budanan notlar" aciklama="Tuvalde ve listede nasıl görünsünler.">
-                        <BudananlarDugmesi etiketli className="self-start sm:self-auto" />
+                        <BudananlarDugmesi bahceId={bahceId} etiketli className="self-start sm:self-auto" />
                     </AyrintiSatiri>
                 </div>
             </SettingsSection>

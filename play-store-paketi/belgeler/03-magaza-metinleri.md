@@ -2,6 +2,12 @@
 
 Play Console'a kopyala-yapıştır yapılacak metinler.
 
+## Kapalı test — 1.0.13 (97) sürüm notları
+
+Bilge Ağaç'ta fotoğraf analizi, kompakt görsel önizlemeleri, seslendirme ve yanıt kısayolları. Metin işlemcisinde biçimlendirme, çizim, el yazısı görünümü ve imlece görsel ekleme araçları. Markdown kaynak görünümü ve sağlayıcı uyumluluğu iyileştirildi. Web'deki PC yardımcısı ortak USB 2.7.0 ile güncellendi.
+
+Yayın öncesi: Fotoğraflar veri güvenliği beyanı güncellenmeli; taslak yükleme testçilere dağıtım anlamına gelmez.
+
 ---
 
 ## Uygulama adı (30 karakter sınırı)

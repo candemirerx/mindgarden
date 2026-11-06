@@ -18,7 +18,9 @@ export type DegisimKonusu =
     /** Bilgisayar bağlantısının canlı durumu yeniden yoklandı. */
     | 'baglanti-durumu'
     /** Tuval görünüm tercihleri (gösterim, gezinme, önizleme) değişti. */
-    | 'tuval';
+    | 'tuval'
+    /** Ağaca özel ayarlar (ad vermeden eklenen dal/yaprak kuralı) değişti. */
+    | 'agac-ayarlari';
 
 const dinleyiciler = new Map<DegisimKonusu, Set<(ayrinti?: unknown) => void>>();
 

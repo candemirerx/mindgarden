@@ -192,7 +192,7 @@ export const GOREVLER: KilavuzGorevi[] = [
             { ekran: 'tuval', gecis: 'ileri', baslik: 'Budanan kart', metin: 'Budanan kart soluk görünür. Geri almak için karta dokunup aynı düğmeye (**Budamayı geri al**) dokunun.' },
             { ekran: 'tuval', hedef: ['[data-yk-id]'], gecis: { gorunce: KART_DUGMELERI }, baslik: 'Yazmak için karta dokunun', metin: 'Şimdi bir notun içine yazalım. Vurgulanan karta **kısa dokunun**.', yoksa: KART_YOK },
             { ekran: 'tuval', hedef: ['[data-kart-aktif] [data-kart-eylem="editor"]'], gecis: 'dokun', baslik: 'Düzenle\'ye dokunun', metin: 'Üstteki **Düzenle** notu tam ekran editörde açar.', yoksa: 'Kart düğmeleri kapandı. Geri ile bir önceki adıma dönüp karta yeniden dokunun.' },
-            { ekran: 'editor', hedef: ['[aria-label="Not içeriği"]'], gecis: { eylem: 'b-not' }, baslik: 'Bir şeyler yazın', metin: 'Başlığın altındaki alana birkaç kelime yazın; kendiliğinden kaydedilir.' },
+            { ekran: 'editor', hedef: ['[aria-label="Biçimli not içeriği"]', '[aria-label^="Not içeriği"]'], gecis: { eylem: 'b-not' }, baslik: 'Bir şeyler yazın', metin: 'Başlığın altındaki alana birkaç kelime yazın; kendiliğinden kaydedilir.' },
             { ekran: 'editor', hedef: ['[aria-label="Geri dön"]'], gecis: 'dokun', baslik: 'Tuvale dönün', metin: '**Geri** ile tuvale dönün. Yazdıklarınız kartın içinde durur.' },
         ],
     },
@@ -208,7 +208,7 @@ export const GOREVLER: KilavuzGorevi[] = [
         dersler: ['b-not'],
         adimlar: [
             { ekran: 'liste', hedef: ['[data-kilavuz-secili] [aria-label="Notu editörde aç"]', '[aria-label="Notu editörde aç"]'], gecis: 'dokun', baslik: 'Editörü açın', metin: 'Satırdaki **kalem** düğmesi notu tam ekran editörde açar.', yoksa: NOT_YOK },
-            { ekran: 'editor', hedef: ['[aria-label="Not içeriği"]'], gecis: { eylem: 'b-not' }, baslik: 'Bir şeyler yazın', metin: 'Başlığın altındaki alana birkaç kelime yazın. Otomatik kaydetme açıksa kendiliğinden kaydedilir; kapalıysa üstteki **Kaydet**\'e dokunun.' },
+            { ekran: 'editor', hedef: ['[aria-label="Biçimli not içeriği"]', '[aria-label^="Not içeriği"]'], gecis: { eylem: 'b-not' }, baslik: 'Bir şeyler yazın', metin: 'Başlığın altındaki alana birkaç kelime yazın. Otomatik kaydetme açıksa kendiliğinden kaydedilir; kapalıysa üstteki **Kaydet**\'e dokunun.' },
             { ekran: 'editor', hedef: ['[aria-label="Geri dön"]'], gecis: 'dokun', baslik: 'Bahçeye dönün', metin: 'İşiniz bitince **Geri** ile dönün. Yazdıklarınız notun içinde durur.' },
         ],
     },

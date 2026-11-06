@@ -28,7 +28,6 @@ import android.content.Context;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.media.AudioManager;
-import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -69,7 +68,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @CapacitorPlugin(name = "RemoteBridge", permissions = {
     @Permission(alias = "nearby", strings = {Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADVERTISE}),
     @Permission(alias = "location", strings = {Manifest.permission.ACCESS_FINE_LOCATION}),
-    @Permission(alias = "microphone", strings = {Manifest.permission.RECORD_AUDIO})
+    @Permission(alias = "microphone", strings = {Manifest.permission.RECORD_AUDIO}),
+    @Permission(alias = "depolama", strings = {Manifest.permission.WRITE_EXTERNAL_STORAGE})
 })
 public class RemoteBridgePlugin extends Plugin {
     private static final UUID NUS = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
@@ -194,6 +194,8 @@ public class RemoteBridgePlugin extends Plugin {
                 item.put("address", result.getDevice().getAddress());
                 item.put("name", name);
                 item.put("rssi", result.getRssi());
+                JSObject previous = found.get(result.getDevice().getAddress());
+                if (previous != null && previous.optBoolean("connected")) item.put("connected", true);
                 found.put(result.getDevice().getAddress(), item);
                 JSObject event = new JSObject();
                 event.put("scanId", scanId);
@@ -401,13 +403,24 @@ public class RemoteBridgePlugin extends Plugin {
             closeGatt();
             connecting = call;
             BluetoothGattCallback callback = new BluetoothGattCallback() {
+                private final BleDiscoveryGate services = new BleDiscoveryGate(() -> {
+                    BluetoothGatt current = gatt;
+                    if (current == null || connecting != call) return;
+                    try {
+                        if (!current.discoverServices()) { failConnect("Servisler keşfedilemedi."); closeGatt(); }
+                    } catch (SecurityException error) { failConnect("Bluetooth izni gerekli."); closeGatt(); }
+                });
                 @Override public void onConnectionStateChange(BluetoothGatt remote, int status, int state) {
                     if (remote != gatt) return;
                     if (status == BluetoothGatt.GATT_SUCCESS && state == BluetoothProfile.STATE_CONNECTED) {
                         // Varsayılan 23 baytlık MTU'da 20 bayttan uzun komutlar uzun yazmaya
                         // düşüyor ve bazı kartlarda zaman aşımına uğruyordu.
                         try { remote.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH); } catch (SecurityException ignored) { }
-                        if (!remote.requestMtu(185) && !remote.discoverServices()) failConnect("Servisler keşfedilemedi.");
+                        // Android 14+ shares the link MTU across apps. A later client's
+                        // request may be ignored without onMtuChanged; MTU is optional,
+                        // so never make service discovery depend on that callback.
+                        handler.postDelayed(services, 1500);
+                        if (!remote.requestMtu(185)) handler.post(services);
                     } else if (state == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
                         failConnect("BLE bağlantısı kesildi (" + status + ").");
                         if (writing != null) { writing.reject("BLE bağlantısı kesildi."); writing = null; }
@@ -417,7 +430,7 @@ public class RemoteBridgePlugin extends Plugin {
                 }
                 @Override public void onMtuChanged(BluetoothGatt remote, int mtu, int status) {
                     if (remote != gatt) return;
-                    if (!remote.discoverServices()) failConnect("Servisler keşfedilemedi.");
+                    handler.post(services);
                 }
                 @Override public void onServicesDiscovered(BluetoothGatt remote, int status) {
                     if (remote != gatt) return;
@@ -486,7 +499,8 @@ public class RemoteBridgePlugin extends Plugin {
         String token = call.getString("token", "");
         boolean cardLocal = false;
         try { cardLocal = new URL(address).getHost().startsWith("192.168.4."); } catch (Exception ignored) { }
-        (cardLocal ? cardHttpWorker : httpWorkers).execute(() -> {
+        final boolean kartIstegi = cardLocal || call.getBoolean("cardLocal", false);
+        (kartIstegi ? cardHttpWorker : httpWorkers).execute(() -> {
             HttpURLConnection connection = null;
             try {
                 URL url = new URL(address);
@@ -495,7 +509,7 @@ public class RemoteBridgePlugin extends Plugin {
                 // TCP bağlantısı düşebiliyor. Henüz hiçbir veri gitmediği için yalnız
                 // bağlantı kurma adımı bir kez daha denenir; komut asla iki kez gitmez.
                 for (int deneme = 1; ; deneme++) {
-                    connection = (HttpURLConnection) agdanBaglan(url);
+                    connection = (HttpURLConnection) agdanBaglan(url, kartIstegi);
                     connection.setConnectTimeout(deneme == 1 ? 4000 : 6500); connection.setReadTimeout(25000);
                     connection.setUseCaches(false);
                     connection.setRequestProperty("Connection", "close");
@@ -535,10 +549,10 @@ public class RemoteBridgePlugin extends Plugin {
     }
     @PluginMethod public void discover(PluginCall call) {
         new Thread(() -> {
-            WifiManager wifi = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-            int ip = wifi == null || wifi.getConnectionInfo() == null ? 0 : wifi.getConnectionInfo().getIpAddress();
-            if (ip == 0) { call.reject("Önce telefonun Wi‑Fi ağına bağlanın."); return; }
-            int first = ip & 255, second = (ip >> 8) & 255, third = (ip >> 16) & 255;
+            String ip = telefonWifiIpv4();
+            if (ip.isEmpty()) { call.reject("Önce telefonun Wi‑Fi ağına bağlanın."); return; }
+            String[] parcalar = ip.split("\\.");
+            int first = Integer.parseInt(parcalar[0]), second = Integer.parseInt(parcalar[1]), third = Integer.parseInt(parcalar[2]);
             boolean privateSubnet = first == 10 || (first == 172 && second >= 16 && second <= 31) || (first == 192 && second == 168);
             if (!privateSubnet) { call.reject("Güvenlik için yalnız özel yerel ağlar taranır. Kart IP'sini elle girebilirsiniz."); return; }
             String prefix = first + "." + second + "." + third + ".";
@@ -557,13 +571,28 @@ public class RemoteBridgePlugin extends Plugin {
                 pool.submit(() -> {
                     HttpURLConnection conn = null;
                     try {
-                        conn = (HttpURLConnection) new URL(address + path).openConnection();
+                        conn = (HttpURLConnection) agdanBaglan(new URL(address + path), path.equals("/api/status"));
+                        conn.setInstanceFollowRedirects(false);
                         conn.setConnectTimeout(1500); conn.setReadTimeout(2000);
                         if (conn.getResponseCode() == 200) {
                             ByteArrayOutputStream data = new ByteArrayOutputStream();
-                            try (InputStream input = conn.getInputStream()) { byte[] buffer = new byte[1024]; int n = input.read(buffer); if (n > 0) data.write(buffer, 0, n); }
+                            try (InputStream input = conn.getInputStream()) {
+                                byte[] buffer = new byte[1024]; int n;
+                                while ((n = input.read(buffer)) != -1) {
+                                    if (data.size() + n > 16384) return;
+                                    data.write(buffer, 0, n);
+                                }
+                            }
                             String body = data.toString("UTF-8");
-                            if (body.contains(marker)) { found.add(address); bodies.add(body); }
+                            boolean valid;
+                            if (path.equals("/api/status")) {
+                                JSONObject status = new JSONObject(body);
+                                valid = status.optBoolean("ok") && status.has("fw") && (status.has("sd") || status.has("diskOn") && status.has("ble"));
+                            } else if (path.equals("/hello")) {
+                                String app = new JSONObject(body).optString("app");
+                                valid = app.equals("not-bahcesi-clipboard") || app.equals("cep-kopru-pc");
+                            } else valid = body.contains(marker);
+                            if (valid) { synchronized (found) { found.add(address); bodies.add(body); } }
                         }
                     } catch (Exception ignored) { }
                     finally { if (conn != null) conn.disconnect(); }
@@ -571,8 +600,12 @@ public class RemoteBridgePlugin extends Plugin {
             }
             pool.shutdown();
             try { pool.awaitTermination(25, TimeUnit.SECONDS); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
-            JSArray cards = new JSArray(); for (String item : found) cards.put(item);
-            JSArray details = new JSArray(); for (String item : bodies) details.put(item);
+            pool.shutdownNow();
+            JSArray cards = new JSArray(), details = new JSArray();
+            synchronized (found) {
+                for (String item : found) cards.put(item);
+                for (String item : bodies) details.put(item);
+            }
             JSObject result = new JSObject(); result.put("cards", cards); result.put("bodies", details); call.resolve(result);
         }).start();
     }
@@ -770,13 +803,11 @@ public class RemoteBridgePlugin extends Plugin {
     // Fare hareketi her seferinde TCP/HTTP bağlantısı kurmasın diye küçük UDP
     // paketleri gönderilir; yanıt beklenmez (kayıp paket yalnız küçük bir adımdır).
     private java.net.DatagramSocket udpSoket;
-    private boolean udpKartAginda;
+    private android.net.Network udpAgi;
 
     /**
-     * Kartın kendi Wi‑Fi ağı (192.168.4.x) internetsizdir; Android bu ağda
-     * uygulama trafiğini mobil veriye yönlendirebilir ve karta ulaşılamaz.
-     * Kart adresine giden bağlantı bu yüzden doğrudan o Wi‑Fi ağından çıkarılır.
-     * Diğer tüm trafik (yapay zekâ, Drive, ev ağı) etkilenmez.
+     * Wi‑Fi bağlantısını varsayılan ağdan bağımsız bulur. İnternetsiz kart AP'si
+     * ve ortak ağ aynı yolu kullanır. Uygulama genelinde ağ sabitlenmez.
      */
     private android.net.Network kartWifiAgi() {
         try {
@@ -785,20 +816,40 @@ public class RemoteBridgePlugin extends Plugin {
             for (android.net.Network ag : cm.getAllNetworks()) {
                 android.net.NetworkCapabilities yetenek = cm.getNetworkCapabilities(ag);
                 if (yetenek == null || !yetenek.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) continue;
+                if (!yetenek.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN)) continue;
                 android.net.LinkProperties ozellik = cm.getLinkProperties(ag);
                 if (ozellik == null) continue;
                 for (android.net.LinkAddress adres : ozellik.getLinkAddresses()) {
                     java.net.InetAddress ip = adres.getAddress();
-                    if (ip instanceof java.net.Inet4Address && ip.getHostAddress().startsWith("192.168.4.")) return ag;
+                    if (ip instanceof java.net.Inet4Address) return ag;
                 }
             }
         } catch (Exception ignored) { }
         return null;
     }
-    private java.net.URLConnection agdanBaglan(URL url) throws IOException {
+    private String telefonWifiIpv4() {
+        android.net.Network ag = kartWifiAgi();
+        android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        android.net.LinkProperties ozellik = cm == null || ag == null ? null : cm.getLinkProperties(ag);
+        if (ozellik != null) for (android.net.LinkAddress adres : ozellik.getLinkAddresses()) {
+            if (adres.getAddress() instanceof java.net.Inet4Address) return adres.getAddress().getHostAddress();
+        }
+        return "";
+    }
+    private android.net.Network kartYonlendirmeAgi() {
+        android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return null;
+        // VPN açıkken alttaki Wi‑Fi'a bağlanmak EPERM verebilir; VPN'i atlama.
+        for (android.net.Network ag : cm.getAllNetworks()) {
+            android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(ag);
+            if (caps != null && caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)) return null;
+        }
+        return kartWifiAgi();
+    }
+    private java.net.URLConnection agdanBaglan(URL url, boolean kartIstegi) throws IOException {
         if (url.getHost().equals("127.0.0.1")) return url.openConnection(java.net.Proxy.NO_PROXY);
-        if (url.getHost().startsWith("192.168.4.")) {
-            android.net.Network ag = kartWifiAgi();
+        if (kartIstegi || url.getHost().startsWith("192.168.4.")) {
+            android.net.Network ag = kartYonlendirmeAgi();
             // The AP proxy carries Internet traffic via USB, not card-local HTTP.
             if (ag != null) return ag.openConnection(url, java.net.Proxy.NO_PROXY);
             return url.openConnection(java.net.Proxy.NO_PROXY);
@@ -815,12 +866,13 @@ public class RemoteBridgePlugin extends Plugin {
             try {
                 byte[] bayt = new byte[veri.length()];
                 for (int i = 0; i < bayt.length; i++) bayt[i] = (byte) veri.getInt(i);
-                boolean kartAginda = host.startsWith("192.168.4.");
-                if (udpSoket == null || udpSoket.isClosed() || udpKartAginda != kartAginda) {
+                android.net.Network ag = kartYonlendirmeAgi();
+                if (udpSoket == null || udpSoket.isClosed() || !java.util.Objects.equals(udpAgi, ag)) {
                     if (udpSoket != null) udpSoket.close();
                     udpSoket = new java.net.DatagramSocket();
-                    udpKartAginda = kartAginda;
-                    if (kartAginda) { android.net.Network ag = kartWifiAgi(); if (ag != null) ag.bindSocket(udpSoket); }
+                    try { if (ag != null) ag.bindSocket(udpSoket); }
+                    catch (IOException | RuntimeException e) { udpSoket.close(); throw e; }
+                    udpAgi = ag;
                 }
                 udpSoket.send(new java.net.DatagramPacket(bayt, bayt.length, java.net.InetAddress.getByName(host), port));
                 call.resolve();
@@ -838,10 +890,8 @@ public class RemoteBridgePlugin extends Plugin {
     }
     /** Telefonun Wi‑Fi IPv4 adresi; kartın kendi ağında (192.168.4.x) olup olmadığını anlamak için. */
     @PluginMethod public void wifiAddress(PluginCall call) {
-        WifiManager wifi = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        int ip = wifi == null || wifi.getConnectionInfo() == null ? 0 : wifi.getConnectionInfo().getIpAddress();
         JSObject result = new JSObject();
-        result.put("address", ip == 0 ? "" : (ip & 255) + "." + ((ip >> 8) & 255) + "." + ((ip >> 16) & 255) + "." + ((ip >> 24) & 255));
+        result.put("address", telefonWifiIpv4());
         call.resolve(result);
     }
     /** Eşleştirme için Android'in Bluetooth ayarlarını açar. */
@@ -1317,6 +1367,85 @@ public class RemoteBridgePlugin extends Plugin {
      * klasörüne yazılıp FileProvider adresiyle panoya konur; klavye ve uygulamalar
      * (WhatsApp, Gboard) yapıştırırken bu adresi okur.
      */
+    /**
+     * Mini galeriden cihaza kaydetme. Sayfa dosyayı önce önbelleğe yazar
+     * (Capacitor Filesystem), burada ortak klasöre kopyalanır:
+     * hedef "galeri" → Resimler/Not Bahçesi (telefon galerisinde görünür),
+     * hedef "dosyalar" → İndirilenler/Not Bahçesi (Dosyalar uygulamasında).
+     * Android 10+ MediaStore izin istemez; 9 ve altında depolama izni sorulur.
+     */
+    @PluginMethod public void saveToDevice(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 29 && getPermissionState("depolama") != com.getcapacitor.PermissionState.GRANTED) {
+            requestPermissionForAlias("depolama", call, "depolamaReady"); return;
+        }
+        Activity activity = getActivity();
+        String yol = call.getString("path");
+        String ad = call.getString("name", "not-bahcesi");
+        String mime = call.getString("mime", "application/octet-stream");
+        boolean galeri = "galeri".equals(call.getString("target"));
+        if (activity == null || yol == null) { call.reject("Kaydedilecek dosya bulunamadı."); return; }
+        new Thread(() -> {
+            java.io.File kaynak = new java.io.File(yol.startsWith("file://") ? Uri.parse(yol).getPath() : yol);
+            try (InputStream giris = new java.io.FileInputStream(kaynak)) {
+                String klasor = galeri ? android.os.Environment.DIRECTORY_PICTURES : android.os.Environment.DIRECTORY_DOWNLOADS;
+                String sonAd = ad;
+                if (Build.VERSION.SDK_INT >= 29) {
+                    android.content.ContentResolver cr = activity.getContentResolver();
+                    android.content.ContentValues d = new android.content.ContentValues();
+                    d.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, ad);
+                    d.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, mime);
+                    d.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, klasor + "/Not Bahçesi");
+                    d.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1);
+                    Uri koleksiyon = galeri
+                        ? (mime.startsWith("video/") ? android.provider.MediaStore.Video.Media.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                            : android.provider.MediaStore.Images.Media.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY))
+                        : android.provider.MediaStore.Downloads.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY);
+                    Uri hedef = cr.insert(koleksiyon, d);
+                    if (hedef == null) throw new IOException("Ortak klasörde dosya oluşturulamadı.");
+                    try (OutputStream cikis = cr.openOutputStream(hedef)) {
+                        if (cikis == null) throw new IOException("Dosya yazılamadı.");
+                        kopyala(giris, cikis);
+                    } catch (IOException e) { cr.delete(hedef, null, null); throw e; }
+                    d.clear();
+                    d.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0);
+                    cr.update(hedef, d, null, null);
+                    // Aynı ad varsa sistem "(1)" ekler: gerçek adı geri bildir.
+                    try (android.database.Cursor c = cr.query(hedef, new String[]{android.provider.MediaStore.MediaColumns.DISPLAY_NAME}, null, null, null)) {
+                        if (c != null && c.moveToFirst()) sonAd = c.getString(0);
+                    }
+                } else {
+                    java.io.File dizin = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(klasor), "Not Bahçesi");
+                    if (!dizin.exists() && !dizin.mkdirs()) throw new IOException("Klasör oluşturulamadı.");
+                    java.io.File hedef = new java.io.File(dizin, ad);
+                    int sira = 1;
+                    int nokta = ad.lastIndexOf('.');
+                    while (hedef.exists()) {
+                        hedef = new java.io.File(dizin, nokta > 0 ? ad.substring(0, nokta) + " (" + sira + ")" + ad.substring(nokta) : ad + " (" + sira + ")");
+                        sira++;
+                    }
+                    try (OutputStream cikis = new java.io.FileOutputStream(hedef)) { kopyala(giris, cikis); }
+                    android.media.MediaScannerConnection.scanFile(activity, new String[]{hedef.getAbsolutePath()}, new String[]{mime}, null);
+                    sonAd = hedef.getName();
+                }
+                JSObject sonuc = new JSObject();
+                sonuc.put("name", sonAd);
+                sonuc.put("folder", (galeri ? "Resimler" : "İndirilenler") + "/Not Bahçesi");
+                call.resolve(sonuc);
+            } catch (Exception e) {
+                call.reject("Cihaza kaydedilemedi: " + e.getMessage());
+            }
+        }).start();
+    }
+    private static void kopyala(InputStream giris, OutputStream cikis) throws IOException {
+        byte[] tampon = new byte[64 * 1024];
+        int n;
+        while ((n = giris.read(tampon)) > 0) cikis.write(tampon, 0, n);
+    }
+    @PermissionCallback private void depolamaReady(PluginCall call) {
+        if (call == null) return;
+        if (getPermissionState("depolama") == com.getcapacitor.PermissionState.GRANTED) saveToDevice(call);
+        else call.reject("Depolama izni verilmedi. Telefon ayarlarından Not Bahçesi'ne dosya izni verebilir ya da Paylaş düğmesini kullanabilirsiniz.");
+    }
     @PluginMethod public void writeClipboard(PluginCall call) {
         Activity activity = getActivity();
         if (activity == null) { call.reject("Pano yazılamadı."); return; }

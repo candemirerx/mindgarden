@@ -6,7 +6,8 @@
  * Ana Ayarlar ekranıyla aynı görsel dil: tam ekran, başlık ve iki sekme.
  * "Görünüm" tuvalin dizilişini, kart tasarımını ve ayrıntılarını; "Ağaçlar"
  * ağaçları ve düğümleri (tip, renk, başlığı kopyalama, budama, silme)
- * yönetir. Ağacın kendisi de buradan yeniden adlandırılır veya silinir.
+ * yönetir. Ağacın kalem düğmesi ağaca özel ayarlar penceresini açar:
+ * yeniden adlandırma ve yeni notların numaralı adı.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { TuvalAyarlari } from './TuvalAyarlari';
+import { AgacAyarlariPopup } from './AgacAyarlariPopup';
 import { MindNode } from '@/lib/types';
 import { BRANCH_COLORS } from '@/lib/branchColors';
 
@@ -44,6 +46,7 @@ function duzlestir(node: MindNode, derinlik = 0): DugumSatiri[] {
 }
 
 interface TreeManagementModalProps {
+    bahceId?: string;
     isOpen: boolean;
     onClose: () => void;
     trees: MindNode[];
@@ -60,6 +63,7 @@ interface TreeManagementModalProps {
 }
 
 export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
+    bahceId,
     isOpen,
     onClose,
     trees,
@@ -71,19 +75,20 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
     onDeleteNode,
     bahceAdi
 }) => {
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editingName, setEditingName] = useState('');
     const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string; dugumMu: boolean } | null>(null);
     const [acikAgaclar, setAcikAgaclar] = useState<Set<string>>(new Set());
     const [kopyalanan, setKopyalanan] = useState<string | null>(null);
     /** Renk kaydedilemezse kullanıcı sessiz kalmaz. */
     const [renkHatasi, setRenkHatasi] = useState('');
     const [sekme, setSekme] = useState<'gorunum' | 'agaclar'>('gorunum');
+    /** Ayarları açık ağacın kimliği; ağaç listesinden taze nesnesi bulunur. */
+    const [ayarAgacId, setAyarAgacId] = useState<string | null>(null);
+    const ayarAgaci = ayarAgacId ? trees.find(t => t.id === ayarAgacId) ?? null : null;
 
     const geriRef = useRef<() => void>(() => {});
     geriRef.current = () => {
         if (pendingDelete) setPendingDelete(null);
-        else if (editingId) { setEditingId(null); setEditingName(''); }
+        else if (ayarAgaci) setAyarAgacId(null);
         else onClose();
     };
 
@@ -121,19 +126,6 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
             else yeni.add(id);
             return yeni;
         });
-    };
-
-    const handleStartEdit = (tree: MindNode) => {
-        setEditingId(tree.id);
-        setEditingName(tree.title);
-    };
-
-    const handleSaveEdit = (treeId: string) => {
-        if (editingName.trim()) {
-            onRenameTree(treeId, editingName.trim());
-        }
-        setEditingId(null);
-        setEditingName('');
     };
 
     const handleCopyTitle = (dugum: DugumSatiri) => {
@@ -187,7 +179,7 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                 {/* İçerik */}
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-5 sm:px-8 sm:pt-6">
                     <div role="tabpanel" aria-labelledby={'agac-sekme-' + sekme} className="mx-auto w-full max-w-3xl pb-4">
-                    {sekme === 'gorunum' ? <TuvalAyarlari /> : trees.length === 0 ? (
+                    {sekme === 'gorunum' ? <TuvalAyarlari bahceId={bahceId} /> : trees.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-center">
                             <div className="w-20 h-20 rounded-full bg-sand-100 flex items-center justify-center mb-4">
                                 <Settings className="text-sand-400" size={40} />
@@ -208,24 +200,9 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                     >
                                         <div className="flex items-center justify-between px-4 py-3">
                                             <div className="min-w-0 flex-1">
-                                                {editingId === tree.id ? (
-                                                    <input
-                                                        type="text"
-                                                        value={editingName}
-                                                        onChange={(e) => setEditingName(e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') handleSaveEdit(tree.id);
-                                                            if (e.key === 'Escape') setEditingId(null);
-                                                        }}
-                                                        onBlur={() => handleSaveEdit(tree.id)}
-                                                        className="w-full rounded-lg border-2 border-clay-300 bg-clay-50 px-3 py-2 text-lg font-semibold text-sand-800 outline-none focus:ring-2 focus:ring-clay-400"
-                                                        autoFocus
-                                                    />
-                                                ) : (
-                                                    <h3 className="break-words text-[15px] font-semibold leading-snug text-sand-900">
-                                                        {tree.title || 'Başlıksız'}
-                                                    </h3>
-                                                )}
+                                                <h3 className="break-words text-[15px] font-semibold leading-snug text-sand-900">
+                                                    {tree.title || 'Başlıksız'}
+                                                </h3>
                                                 <p className="mt-0.5 text-xs text-sand-600">
                                                     {dugumler.length} düğüm
                                                 </p>
@@ -241,10 +218,10 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                     <span className="hidden sm:inline">Düğümler</span>
                                                 </button>
                                                 <button
-                                                    onClick={() => handleStartEdit(tree)}
+                                                    onClick={() => setAyarAgacId(tree.id)}
                                                     className="flex h-10 w-10 items-center justify-center rounded-xl text-clay-600 transition-colors hover:bg-clay-50"
-                                                    title="Ağacı yeniden adlandır"
-                                                    aria-label="Ağacı yeniden adlandır"
+                                                    title="Ağaç ayarları"
+                                                    aria-label="Ağaç ayarları"
                                                 >
                                                     <Pencil size={18} />
                                                 </button>
@@ -411,6 +388,14 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                     </div>
                 </div>
             </div>
+
+            {ayarAgaci && (
+                <AgacAyarlariPopup
+                    agac={ayarAgaci}
+                    onKapat={() => setAyarAgacId(null)}
+                    onYenidenAdlandir={onRenameTree}
+                />
+            )}
 
             <ConfirmModal
                 isOpen={pendingDelete !== null}

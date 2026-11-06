@@ -9,7 +9,7 @@ import { ayarlaraDonOku } from '@/lib/denemeAgaci';
 import { OfflineOverlay, useMobileShell } from '@/components/mobile/MobileShell';
 
 /** Ağaç düğmesi uygulama tercihlerini doğrudan tam ekran açar. */
-export default function Sidebar({ initialSection = 'home' }: { initialSection?: 'home' | 'account' }) {
+export default function Sidebar({ initialSection = 'home' }: { initialSection?: 'home' | SettingsSectionId }) {
     const { isSidebarOpen, setSidebarOpen } = useStore();
     const isOffline = useMobileShell();
 

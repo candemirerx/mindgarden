@@ -82,6 +82,7 @@ const bilgi = [
 ].join('\n');
 await writeFile(join(PAKET, 'SURUM-BILGILERI.txt'), bilgi, 'utf8');
 console.log('Yazildi: play-store-paketi/SURUM-BILGILERI.txt');
+if (process.argv.includes('--metadata-only')) process.exit(0);
 
 const yardimciOkU = [
     'NOT BAHCESI - PC YARDIMCISI',

@@ -1,0 +1,37 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+const source = ts.transpileModule(fs.readFileSync('lib/denemeAgaci.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+const storage = new Map([['nb-taslak-gercek-not', 'REAL NOTE SENTINEL']]);
+let fail = false;
+function load() {
+    const api = {};
+    vm.runInNewContext(source, { exports: api, window: {}, localStorage: { getItem: k => storage.get(k) ?? null, setItem: (k, v) => { if (fail) throw new Error('QuotaExceededError'); storage.set(k, v); } }, require: () => ({}) });
+    return api;
+}
+let api = load();
+assert.equal(api.denemeNotuOku().baslik, 'Deneme ağacı');
+api.denemeNotuYaz('hepsi', 'Başlık', 'Son yazdığım metin\n çğıöşü  ');
+api = load();
+assert.equal(api.denemeNotuOku().metin, 'Son yazdığım metin\n çğıöşü  ', 'Restart must preserve exact whitespace');
+api.denemeNotuYaz('hepsi', 'Başlık', 'Yeni metin');
+assert.equal(load().denemeNotuOku().metin, 'Yeni metin');
+api.denemeNotuYaz('hepsi', '', '');
+api = load();
+assert.equal(api.denemeNotuOku().metin, '', 'Intentional blank must not resurrect sample text');
+api.denemeNotuYaz('baglanti', 'Bağlantı', 'Başka deneme');
+assert.equal(api.denemeNotuOku().metin, '', 'Types must stay isolated');
+assert.equal([...storage.keys()].some(k => k.startsWith('nb-deneme-gecmis')), false, 'Do not create a history feature');
+fail = true;
+api.denemeNotuYaz('hepsi', 'Kota', 'Bellekte korunur');
+assert.equal(api.denemeNotuOku().metin, 'Bellekte korunur');
+assert(api.denemeKayitHatasi('hepsi').includes('yalnızca bellekte'));
+fail = false;
+api.denemeNotuYaz('hepsi', 'Kota', 'Bellekte korunur');
+assert.equal(api.denemeKayitHatasi('hepsi'), '');
+assert.equal(storage.get('nb-taslak-gercek-not'), 'REAL NOTE SENTINEL');
+storage.set('nb-deneme-notu-v1:yapayzeka', '{broken');
+api = load();
+assert.equal(api.denemeNotuOku('yapayzeka').baslik, 'Yapay zekâ deneme');
+console.log('PASS: latest text only, restart, whitespace, blank, no history, type isolation, quota retry, real-note isolation');

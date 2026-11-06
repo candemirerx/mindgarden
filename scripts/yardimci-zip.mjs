@@ -8,13 +8,16 @@
  *   node scripts/yardimci-zip.mjs
  */
 import { execFileSync } from 'node:child_process';
-import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 
 const KOK = resolve(import.meta.dirname, '..');
 const HEDEF_KLASOR = join(KOK, 'public', 'indir');
 const HEDEF = join(HEDEF_KLASOR, 'not-bahcesi-pc-yardimcisi.zip');
+// Both apps use the same reviewed USB bridge; do not fork its protocol or tokens.
+const ORTAK_SURUM = '2.7.0';
+const ORTAK_KOK = resolve(KOK, '..', 'kablosuzbellek', 'tools', 'cep-kopru-paket-' + ORTAK_SURUM, 'CepKopru-Yardimcisi', 'Ortak');
 const DOSYALAR = [
     'pc_yardimcisi_baslat.cmd',
     'pc_yardimcisi_baslat.ps1',
@@ -32,6 +35,17 @@ const DOSYALAR = [
 ];
 const OKUBENI = [
     'NOT BAHCESI - PC YARDIMCISI',
+    '',
+    'TELEFON USB BAGLANTISI - ORTAK YARDIMCI ' + ORTAK_SURUM,
+    '  1) ZIP\'in tamamini cikarin. TELEFON-USB-OTOMATIK-KUR.cmd acin.',
+    '     Yonetici istemez; kullanicinin Windows baslangicina USB koprusu ekler.',
+    '  2) Telefonda USB hata ayiklamayi acin, guvendiginiz bilgisayari onaylayin.',
+    '  3) Not Bahcesi > Ayarlar > Bilgisayar baglantisi > Bilgisayar - USB:',
+    '     Baglanti istegi gonder; bilgisayarda Izin ver secin.',
+    '  Wi-Fi ve Tailscale gerekmez. Cep Kopru de ayni USB koprusunu kullanir.',
+    '  USB icin BASLAT.cmd veya WIFI.cmd acmaniz gerekmez.',
+    '  Ortak-USB klasorunu silmeyin; erisim anahtarlari pakete dahil degildir.',
+    '  Kurum USB/hata ayiklama kullanimini engelliyorsa kisitlari asmayin.',
     '',
     'NE ZAMAN GEREKIR?',
     '  - Bilgisayar - Wi-Fi baglantisinda: yazma, fare, kisayol ve pano icin.',
@@ -93,9 +107,15 @@ for (const dosya of DOSYALAR) {
     await copyFile(join(KOK, 'scripts', dosya), join(stage, hedef, dosya));
 }
 for (const dosya of ['BASLAT.cmd', 'WIFI.cmd']) await copyFile(join(KOK, 'scripts', 'yardimci-paket', dosya), join(stage, dosya));
+await copyFile(join(KOK, 'scripts', 'yardimci-paket', 'TELEFON-USB-OTOMATIK-KUR.cmd'), join(stage, 'TELEFON-USB-OTOMATIK-KUR.cmd'));
+await cp(ORTAK_KOK, join(stage, 'Ortak-USB'), {
+    recursive: true,
+    filter: source => !basename(source).startsWith('.') && !/^(logs|tip-onbellek)$/i.test(basename(source)),
+});
 await writeFile(join(stage, 'OKUBENI.txt'), OKUBENI, 'utf8');
 await mkdir(HEDEF_KLASOR, { recursive: true });
 execFileSync('powershell.exe', ['-NoProfile', '-Command',
     'Compress-Archive -Path "' + join(stage, '*') + '" -DestinationPath "' + HEDEF + '" -CompressionLevel Optimal -Force'], { stdio: 'inherit' });
+if (!stage.startsWith(join(tmpdir(), 'nb-yardimci-zip-'))) throw new Error('Geçici paket yolu güvenli değil.');
 await rm(stage, { recursive: true, force: true });
 console.log('Hazir: ' + HEDEF);

@@ -8,13 +8,13 @@ import type { BudamaModu } from '@/lib/uiPrefs';
 import { dinle } from '@/lib/degisim';
 
 /** Budanmış notların gösterim modunu okur ve değişiklikleri izler. */
-export function useBudamaModu(): BudamaModu {
+export function useBudamaModu(bahceId?: string | null): BudamaModu {
     const [mod, setMod] = useState<BudamaModu>('dahil');
     useEffect(() => {
-        const oku = () => setMod(budamaModu());
+        const oku = () => setMod(budamaModu(bahceId));
         oku();
         return dinle('budananlar', oku);
-    }, []);
+    }, [bahceId]);
     return mod;
 }
 
@@ -25,8 +25,8 @@ const SEKMELER: { mod: BudamaModu; ad: string; aciklama: string; Icon: LucideIco
 ];
 
 /** Üst çubukta budanmış notlar için üç sekme: tümü, budananları gizle, sadece budananlar. */
-export function BudananlarDugmesi({ className = '', etiketli = false }: { className?: string; etiketli?: boolean }) {
-    const secili = useBudamaModu();
+export function BudananlarDugmesi({ className = '', etiketli = false, bahceId }: { className?: string; etiketli?: boolean; bahceId?: string }) {
+    const secili = useBudamaModu(bahceId);
     return (
         <div role="tablist" aria-label="Budanan notlar" className={`inline-flex flex-shrink-0 items-center gap-0.5 rounded-xl bg-sand-100 p-0.5 ${className}`}>
             {SEKMELER.map(({ mod, ad, aciklama, Icon }) => {
@@ -39,7 +39,7 @@ export function BudananlarDugmesi({ className = '', etiketli = false }: { classN
                         aria-selected={aktif}
                         aria-label={aciklama}
                         title={aciklama}
-                        onClick={() => budamaModuAyarla(mod)}
+                        onClick={() => budamaModuAyarla(mod, bahceId)}
                         className={`inline-flex h-10 min-w-[40px] items-center justify-center gap-1 rounded-[10px] px-2 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/40 ${
                             aktif ? 'bg-white text-sand-900 shadow-soft' : 'text-sand-600 hover:text-sand-900'
                         }`}

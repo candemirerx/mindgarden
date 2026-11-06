@@ -2,10 +2,11 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { Plugin } from '@capacitor/core';
 import { bildir } from './degisim';
 import { dersTamamla } from './kilavuzIlerleme';
+import { fareDugmeleriniDuzelt, fareHiziniDuzelt, varsayilanFareDugmeleri, type FareDugmesi } from './fareDuzeni';
 import { fareHareketRaporlari, fareTekerRaporlari, fareTikRaporlari, hidYazamadiklari, kisayolRaporlari, metinRaporlari } from './hidKodlari';
 import type { HidRapor } from './hidKodlari';
 
-export type RemoteMode = 'write' | 'mouse' | 'dictation' | 'shortcuts' | 'screen';
+export type RemoteMode = 'write' | 'mouse' | 'dictation' | 'shortcuts' | 'screen' | 'yazi';
 /** Dikte sonucunun gideceği yer: not metni, bilgisayar ya da ikisi birden. */
 export type DikteHedefi = 'editor' | 'computer' | 'both';
 export const DIKTE_HEDEFLERI: DikteHedefi[] = ['editor', 'computer', 'both'];
@@ -58,8 +59,8 @@ export type BaglantiTuru = ConnectionMode | 'kart-ap' | 'tailscale' | 'usb';
 export const USB_YARDIMCI_URL = 'http://127.0.0.1:18775';
 export const KART_AP_ADRESI = 'http://192.168.4.1';
 export const KART_AP_AGI = 'can bellek s3';
-export type RemoteToolId = 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'enter' | 'clipboard' | 'imageToComputer' | 'imageToClipboard' | 'phoneClipboard' | 'shortcuts' | 'screen';
-export const REMOTE_TOOL_IDS: RemoteToolId[] = ['mouse', 'dictation', 'bridgeDictation', 'computerWrite', 'enter', 'clipboard', 'imageToComputer', 'imageToClipboard', 'phoneClipboard', 'shortcuts', 'screen'];
+export type RemoteToolId = 'yaziModu' | 'mouse' | 'dictation' | 'bridgeDictation' | 'computerWrite' | 'enter' | 'clipboard' | 'imageToComputer' | 'imageToClipboard' | 'phoneClipboard' | 'shortcuts' | 'screen';
+export const REMOTE_TOOL_IDS: RemoteToolId[] = ['yaziModu', 'mouse', 'dictation', 'bridgeDictation', 'computerWrite', 'enter', 'clipboard', 'imageToComputer', 'imageToClipboard', 'phoneClipboard', 'shortcuts', 'screen'];
 /**
  * Sıralı makronun tek adımı. 'macro' adımı başka bir makroyu kimliğiyle
  * (value) çağırır; 'wait' adımı value milisaniye bekler; diğer türler tekil
@@ -244,6 +245,43 @@ export function konumYuzdesi(deger: number): number {
     const sinirli = Math.max(0, Math.min(KONUM_MAX, Math.round(deger) || 0));
     return Math.round((sinirli / KONUM_MAX) * 1000) / 10;
 }
+/**
+ * Yazı modu (Cep Köprü'deki gibi): klavyenin hemen üstündeki düğme şeridi.
+ * builtin düğmeler uygulamanın kendi işleridir; diğerleri bilgisayara metin
+ * yazar, kısayol gönderir, kayıtlı bir makroyu ya da yapay zekâ makrosunu çalıştırır.
+ */
+export type YaziDugmesiTuru = 'builtin' | 'text' | 'shortcut' | 'macro' | 'ai';
+export type YaziDugmesi = { id: string; title: string; kind: YaziDugmesiTuru; value: string };
+export type YaziAraci = 'enter' | 'mouse' | 'macros' | 'live' | 'send' | 'dictation' | 'pano' | 'copy' | 'paste' | 'clear' | 'ai_correct' | 'computer_clipboard';
+export const YAZI_ARACLARI: Record<YaziAraci, string> = {
+    enter: 'Enter', mouse: 'Fare', macros: 'Makrolar', live: 'Canlı yazma', send: 'Gönder', dictation: 'Dikte',
+    pano: 'Pano', copy: 'Kopyala', paste: 'Yapıştır', clear: 'Temizle', ai_correct: 'İmla düzelt', computer_clipboard: 'Bilgisayar panosu'
+};
+export const YAZI_DUGMESI_SINIRI = 30;
+export const VARSAYILAN_YAZI_DUGMELERI: YaziDugmesi[] = (['enter', 'mouse', 'macros', 'live', 'send', 'dictation', 'pano', 'copy', 'paste', 'clear', 'ai_correct'] as YaziAraci[])
+    .map(id => ({ id, title: YAZI_ARACLARI[id], kind: 'builtin', value: '' }));
+
+export function yaziDugmeleriniDuzelt(v: unknown): YaziDugmesi[] {
+    if (!Array.isArray(v)) return VARSAYILAN_YAZI_DUGMELERI.map(d => ({ ...d }));
+    const gorulen = new Set<string>();
+    const sonuc: YaziDugmesi[] = [];
+    for (const ham of v) {
+        if (!ham || typeof ham !== 'object') continue;
+        const d = ham as Partial<YaziDugmesi>;
+        const kind = d.kind;
+        if (kind !== 'builtin' && kind !== 'text' && kind !== 'shortcut' && kind !== 'macro' && kind !== 'ai') continue;
+        const id = typeof d.id === 'string' ? d.id : '';
+        if (!id || gorulen.has(id) || (kind === 'builtin' && !(id in YAZI_ARACLARI))) continue;
+        const value = typeof d.value === 'string' ? d.value : '';
+        if (kind !== 'builtin' && !value.trim()) continue;
+        gorulen.add(id);
+        const title = typeof d.title === 'string' && d.title.trim() ? d.title.slice(0, 40) : kind === 'builtin' ? YAZI_ARACLARI[id as YaziAraci] : 'Düğme';
+        sonuc.push({ id, title, kind, value });
+        if (sonuc.length >= YAZI_DUGMESI_SINIRI) break;
+    }
+    return sonuc;
+}
+
 export type RemotePrefs = {
     connection: ConnectionMode;
     /** Seçili yolun adlandırılmış türü: kartın kendi ağı ya da Tailscale (yoksa standart). */
@@ -261,6 +299,7 @@ export type RemotePrefs = {
     /** Eşleştirilen bilgisayarın adı (yardımcının bildirdiği); yalnız gösterim için. */
     helperName?: string;
     mouseSensitivity: number;
+    fareDugmeleri: FareDugmesi[];
     dictationLanguage: string;
     bridgeDictationSeconds: number;
     bridgeDictationUnlimited: boolean;
@@ -294,13 +333,16 @@ export type RemotePrefs = {
     profiles: RemoteProfile[];
     shortcutButtons: RemoteShortcutButton[];
     screenLayouts: RemoteScreenLayout[];
+    /** Yazı modunda klavyenin üstündeki düğmeler, görünen sırayla. */
+    yaziDugmeleri: YaziDugmesi[];
 };
 
 const key = 'nb-remote-prefs-v1';
 const defaults: RemotePrefs = {
+    fareDugmeleri: varsayilanFareDugmeleri(),
     connection: 'wifi', cardUrl: 'http://192.168.4.1', helperUrl: '', helperToken: '', helperBluetoothAddress: '', autoBaglan: true,
     mouseSensitivity: 1, dictationLanguage: 'tr-TR', bridgeDictationSeconds: 30, bridgeDictationUnlimited: false, bridgeDictationLive: true, dictationEngine: 'auto', dictationCloud: 'gemini', dictationKeys: { ...VARSAYILAN_DIKTE_TUSLARI }, appendDictation: true, dictationTarget: 'editor', bridgeDictationTarget: 'computer', writeMode: 'dugme', writeTarget: 'both',
-    enabledTools: { mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, enter: true, clipboard: true, imageToComputer: true, imageToClipboard: true, phoneClipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: []
+    enabledTools: { yaziModu: true, mouse: true, dictation: true, bridgeDictation: true, computerWrite: true, enter: true, clipboard: true, imageToComputer: true, imageToClipboard: true, phoneClipboard: true, shortcuts: true, screen: true }, macros: [], profiles: [], shortcutButtons: [], screenLayouts: [], yaziDugmeleri: VARSAYILAN_YAZI_DUGMELERI.map(d => ({ ...d }))
 };
 
 /**
@@ -318,7 +360,9 @@ export function remotePrefs(): RemotePrefs {
     if (typeof window === 'undefined') return defaults;
     try {
         const data = JSON.parse(localStorage.getItem(key) || '{}');
-        return { ...defaults, ...data, dictationKeys: dikteTuslariniDuzelt(data.dictationKeys), dictationTarget: dikteHedefiGecerli(data.dictationTarget, defaults.dictationTarget), bridgeDictationTarget: dikteHedefiGecerli(data.bridgeDictationTarget, defaults.bridgeDictationTarget), writeMode: data.writeMode === 'canli' ? 'canli' : 'dugme', writeTarget: dikteHedefiGecerli(data.writeTarget, defaults.writeTarget), enabledTools: araclariBirlestir(data.enabledTools), macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts.map(normalizeScreenLayout) : [] };
+        data.mouseSensitivity = fareHiziniDuzelt(data.mouseSensitivity);
+        data.fareDugmeleri = fareDugmeleriniDuzelt(data.fareDugmeleri);
+        return { ...defaults, ...data, dictationKeys: dikteTuslariniDuzelt(data.dictationKeys), dictationTarget: dikteHedefiGecerli(data.dictationTarget, defaults.dictationTarget), bridgeDictationTarget: dikteHedefiGecerli(data.bridgeDictationTarget, defaults.bridgeDictationTarget), writeMode: data.writeMode === 'canli' ? 'canli' : 'dugme', writeTarget: dikteHedefiGecerli(data.writeTarget, defaults.writeTarget), enabledTools: araclariBirlestir(data.enabledTools), macros: Array.isArray(data.macros) ? data.macros : [], profiles: Array.isArray(data.profiles) ? data.profiles : [], shortcutButtons: Array.isArray(data.shortcutButtons) ? data.shortcutButtons : [], screenLayouts: Array.isArray(data.screenLayouts) ? data.screenLayouts.map(normalizeScreenLayout) : [], yaziDugmeleri: yaziDugmeleriniDuzelt(data.yaziDugmeleri) };
     } catch { return defaults; }
 }
 /** Tercihlerden seçili bağlantı türü. */
@@ -428,7 +472,7 @@ type NativeRemote = {
     send(options: { command: string; fast?: boolean }): Promise<void>;
     clickAbsolute(options: { x: number; y: number }): Promise<void>;
     moveAbsolute(options: { x: number; y: number }): Promise<void>;
-    request(options: { url: string; method: string; body?: string; token?: string }): Promise<{ status: number; body: string }>;
+    request(options: { url: string; method: string; body?: string; token?: string; cardLocal?: boolean }): Promise<{ status: number; body: string }>;
     dictate(options: { language: string }): Promise<{ text: string }>;
     startBridgeDictation(options: { language: string; seconds: number; engine?: string }): Promise<{ text: string }>;
     getDictationEngines(): Promise<{ onDevice: boolean; system: boolean; google?: boolean }>;
@@ -438,6 +482,7 @@ type NativeRemote = {
     readClipboard(): Promise<{ text?: string; mime?: string; data?: string; turler?: string[]; ogeSayisi?: number }>;
     setImagePaste(options: { enabled: boolean }): Promise<void>;
     writeClipboard(options: { text?: string; images?: { mime: string; data: string }[] }): Promise<void>;
+    saveToDevice(options: { path: string; name: string; mime: string; target: 'galeri' | 'dosyalar' }): Promise<{ name: string; folder: string }>;
 };
 const native = registerPlugin<NativeRemote & Plugin>('RemoteBridge');
 const isNative = () => Capacitor.isNativePlatform();
@@ -496,7 +541,7 @@ export async function bluetoothAyarlariniAc(): Promise<void> {
 }
 /**
  * Yerel ağdaki PC yardımcılarını bulur (anahtarsız /hello ucu). Yardımcı
- * eşleştirme kodunu gösterdiği sürece listede bilgisayarın adı görünür.
+ * açık olduğu sürece listede bilgisayarın adı görünür; iki yardımcı da desteklenir.
  */
 export async function bilgisayarlariBul(): Promise<BulunanBilgisayar[]> {
     if (!isNative()) throw new Error('Ağda bilgisayar arama Android uygulamasında çalışır; adresi elle girebilirsiniz.');
@@ -514,8 +559,8 @@ export async function bilgisayarAdresiniSina(adres: string): Promise<BulunanBilg
     const url = adresUrl.port ? adresUrl.origin : adresUrl.origin + ':' + YARDIMCI_PORTU;
     let govde: { app?: string; name?: string };
     try { govde = JSON.parse(await request(endpoint(url, '/hello'))); }
-    catch { throw new Error(url + ' adresinde yardımcıya ulaşılamadı. Yardımcı açık mı, telefon ve bilgisayar aynı Wi‑Fi ağında mı, güvenlik duvarı izni verildi mi?'); }
-    if (govde.app !== 'not-bahcesi-clipboard') throw new Error('Bu adreste Not Bahçesi yardımcısı yok.');
+    catch { throw new Error(url + ' adresinde yardımcıya ulaşılamadı. Yardımcı açık mı? Yerel bağlantıda cihazlar aynı ağda olmalı; Tailscale bağlantısında iki cihazda da Tailscale açık ve aynı hesapta olmalı. Güvenlik duvarı erişimi engelliyor olabilir.'); }
+    if (govde.app !== 'not-bahcesi-clipboard' && govde.app !== 'cep-kopru-pc') throw new Error('Bu adreste uyumlu bir PC yardımcısı yok.');
     return { url, name: govde.name || 'Bilgisayar' };
 }
 /** Hata gövdesindeki {"error": ...} iletisini okunur hâle getirir. */
@@ -524,8 +569,14 @@ function yardimciHatasi(hata: unknown, yedek: string): Error {
     const m = /\{.*"error"\s*:\s*"([^"]+)"/.exec(metin);
     return new Error(m ? m[1] : metin || yedek);
 }
-/** Wi‑Fi ile eşleştirme: 6 haneli kod doğruysa yardımcı erişim anahtarını verir. */
-export async function bilgisayarlaEslestirWifi(url: string, kod: string): Promise<{ helperUrl: string; helperToken: string; helperName: string }> {
+/** Wi‑Fi/Tailscale: varsayılan bilgisayardan onay, yalnız açıkça kod verilirse eski yöntem. */
+export async function bilgisayarlaEslestirWifi(url: string, kod = ''): Promise<{ helperUrl: string; helperToken: string; helperName: string }> {
+    if (!kod.trim()) {
+        const hello = JSON.parse(await request(endpoint(url, '/hello')));
+        if (hello.app !== 'not-bahcesi-clipboard' && hello.app !== 'cep-kopru-pc') throw new Error('Bu adreste uyumlu bir PC yardımcısı yok.');
+        if (!hello.pairApproval) throw new Error('Bu yardımcı bilgisayardan onayı desteklemiyor. Güncel CepKöprü yardımcısını açın veya gelişmiş bölümde kodla eşleştirin.');
+        return bilgisayarOnayiylaEslestir(url, 'Not Bahçesi · Wi-Fi / Tailscale');
+    }
     const pin = kod.replace(/\D/g, '');
     if (pin.length !== 6) throw new Error('Bilgisayardaki 6 haneli eşleştirme kodunu yazın.');
     let govde: { ok?: boolean; token?: string; name?: string; error?: string };
@@ -536,14 +587,20 @@ export async function bilgisayarlaEslestirWifi(url: string, kod: string): Promis
 }
 /** Yerel bilgisayar ekranında açık onay; USB de kimlik doğrulamayı atlamaz. */
 export async function bilgisayarlaEslestirUsb(): Promise<{ helperUrl: string; helperToken: string; helperName: string }> {
-    const start = JSON.parse(await request(endpoint(USB_YARDIMCI_URL, '/pair-request'), 'POST', JSON.stringify({ device: 'Not Bahçesi · USB' })));
+    return bilgisayarOnayiylaEslestir(USB_YARDIMCI_URL, 'Not Bahçesi · USB');
+}
+async function bilgisayarOnayiylaEslestir(url: string, device: string): Promise<{ helperUrl: string; helperToken: string; helperName: string }> {
+    const start = JSON.parse(await request(endpoint(url, '/pair-request'), 'POST', JSON.stringify({ device })));
     if (!start.ok || !start.requestId) throw new Error(start.error || 'Bağlantı isteği gönderilemedi.');
     const deadline = Date.now() + 65000;
     while (Date.now() < deadline) {
         await new Promise(resolve => setTimeout(resolve, 1000));
-        const status = JSON.parse(await request(endpoint(USB_YARDIMCI_URL, '/pair-status'), 'POST', JSON.stringify({ requestId: start.requestId })));
-        if (status.state === 'approved' && status.token) return { helperUrl: USB_YARDIMCI_URL, helperToken: status.token, helperName: status.name || 'Bilgisayar' };
-        if (status.state !== 'pending') throw new Error('Bilgisayar onayı verilmedi; yeniden deneyin.');
+        const status = JSON.parse(await request(endpoint(url, '/pair-status'), 'POST', JSON.stringify({ requestId: start.requestId })));
+        if (!status.ok) throw new Error(status.error || 'Bilgisayar onayı sorgulanamadı.');
+        if (status.state === 'approved' && typeof status.token === 'string' && status.token.trim()) return { helperUrl: url, helperToken: status.token, helperName: status.name || 'Bilgisayar' };
+        if (status.state === 'denied') throw new Error('Bilgisayarda bağlantı isteğine izin verilmedi.');
+        if (status.state === 'expired') throw new Error('Bağlantı isteğinin süresi doldu; yeniden gönderin.');
+        if (status.state !== 'pending') throw new Error('Yardımcı geçersiz bir onay yanıtı verdi.');
     }
     throw new Error('Bilgisayar onayı zaman aşımına uğradı.');
 }
@@ -574,9 +631,16 @@ export async function bilgisayarlaEslestirBluetooth(address: string, kod = ''): 
  * Kartı Wi‑Fi'da bulur: telefon kartın kendi ağındaysa (192.168.4.x) adres
  * 192.168.4.1'dir; değilse yerel ağ taranır.
  */
-export async function kartiWifidaBul(): Promise<{ urls: string[]; kartAgi: boolean }> {
+export async function kartiWifidaBul(prefs: RemotePrefs = remotePrefs()): Promise<{ urls: string[]; kartAgi: boolean }> {
     const adres = await telefonWifiAdresi();
-    if (adres && kartAginda(adres)) return { urls: ['http://192.168.4.1'], kartAgi: true };
+    const kartAgi = !!adres && kartAginda(adres);
+    const adaylar = kartAgi ? [KART_AP_ADRESI] : [prefs.cardUrlEv, prefs.cardUrl];
+    for (const url of [...new Set(adaylar.filter((v): v is string => !!v?.trim()))]) {
+        try {
+            await testCard({ ...prefs, cardUrl: url });
+            return { urls: [url], kartAgi };
+        } catch { /* Kayıtlı adres artık geçerli değilse gerçek ağı tara. */ }
+    }
     return { urls: await discoverCards(), kartAgi: false };
 }
 
@@ -635,9 +699,9 @@ function bleYaz(yaz: () => Promise<void>): Promise<void> {
     return is;
 }
 
-async function request(url: string, method = 'GET', body = '', token = '') {
+async function request(url: string, method = 'GET', body = '', token = '', cardLocal = false) {
     if (isNative()) {
-        const response = await native.request({ url, method, body, token });
+        const response = await native.request({ url, method, body, token, cardLocal });
         if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}: ${response.body.slice(0, 180)}`);
         return response.body;
     }
@@ -706,7 +770,7 @@ function cardResponse(raw: string) {
  */
 async function kartIstegi(prefs: RemotePrefs, yol: string, method: string, body = ''): Promise<string> {
     try {
-        return await request(endpoint(prefs.cardUrl, yol), method, body);
+        return await request(endpoint(prefs.cardUrl, yol), method, body, '', true);
     } catch (hata) {
         const ileti = hata instanceof Error ? hata.message : '';
         if (/^HTTP \d+/.test(ileti)) throw hata;
@@ -715,7 +779,7 @@ async function kartIstegi(prefs: RemotePrefs, yol: string, method: string, body 
 }
 export async function testCard(prefs: RemotePrefs) {
     const result = JSON.parse(await kartIstegi(prefs, '/api/status', 'GET'));
-    if (!result || typeof result !== 'object' || !('sd' in result || 'mode' in result || 'mod' in result)) {
+    if (!result || typeof result !== 'object' || result.ok !== true || typeof result.fw !== 'string' || !('sd' in result || ('diskOn' in result && 'ble' in result))) {
         throw new Error('Bu adreste Kablosuz Bellek kartı bulunamadı.');
     }
     kartUdp.set(kartHost(prefs), typeof result.udp === 'number' ? result.udp : 0);
@@ -1514,4 +1578,97 @@ export async function dinleDikteTusu(geriCagri: (eylem: 'start' | 'stop' | 'togg
         const e = (veri as { action?: unknown } | null)?.action;
         if (e === 'start' || e === 'stop' || e === 'toggle') geriCagri(e);
     });
+}
+
+/* ------------------------------------------------------------------ */
+/* Mini galeriden cihaza kaydetme ve paylaşma (bilgisayar gerekmez).   */
+/* ------------------------------------------------------------------ */
+
+/** Dosya adında ortak klasörlerin kabul etmediği karakterleri ayıklar. */
+const guvenliAd = (ad: string) => ad.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').trim() || 'not-bahcesi';
+
+/**
+ * Blob'u uygulamanın önbelleğine parça parça yazar (100 MB'lık dosya tek
+ * base64 dizgesi olarak köprüden geçmesin) ve dosyanın file:// adresini döndürür.
+ */
+async function onbellegeYaz(veri: Blob, ad: string, klasor: string): Promise<string> {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const yol = klasor + '/' + Date.now().toString(36) + '-' + guvenliAd(ad);
+    const PARCA = 3 * 1024 * 1024; // 3'ün katı: base64 parçaları dolgusuz birleşir
+    if (!veri.size) await Filesystem.writeFile({ path: yol, data: '', directory: Directory.Cache, recursive: true });
+    for (let bas = 0; bas < veri.size; bas += PARCA) {
+        const data = await blobBase64(veri.slice(bas, bas + PARCA));
+        if (bas === 0) await Filesystem.writeFile({ path: yol, data, directory: Directory.Cache, recursive: true });
+        else await Filesystem.appendFile({ path: yol, data, directory: Directory.Cache });
+    }
+    return (await Filesystem.getUri({ path: yol, directory: Directory.Cache })).uri;
+}
+async function onbellekKlasorunuTemizle(klasor: string) {
+    try {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        await Filesystem.rmdir({ path: klasor, directory: Directory.Cache, recursive: true });
+    } catch { /* klasör yok */ }
+}
+const mimeTuru = (d: GonderilecekDosya) => d.veri.type || (d.ad.toLowerCase().endsWith('.txt') ? 'text/plain' : 'application/octet-stream');
+
+/** Tarayıcıda (bilgisayar ya da telefon tarayıcısı) dosyayı İndirilenler'e indirir. */
+function tarayicidaIndir(d: GonderilecekDosya) {
+    const adres = URL.createObjectURL(d.veri);
+    const a = document.createElement('a');
+    a.href = adres; a.download = guvenliAd(d.ad); a.rel = 'noopener'; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(adres), 60000);
+}
+
+export type CihazaKayitSonucu = { sayi: number; klasorler: string[]; tarayici: boolean };
+
+/**
+ * Öğeleri telefonun kendisine kaydeder. Android uygulamasında:
+ * hedef "galeri" → Resimler/Not Bahçesi (Galeri/Fotoğraflar'da görünür),
+ * hedef "dosyalar" → İndirilenler/Not Bahçesi (Dosyalar uygulamasında).
+ * Tarayıcıda (bilgisayar dahil) dosyalar normal indirme ile kaydedilir.
+ */
+export async function cihazaKaydet(dosyalar: GonderilecekDosya[], hedef: 'galeri' | 'dosyalar', ilerleme?: (oran: number) => void): Promise<CihazaKayitSonucu> {
+    if (!dosyalar.length) throw new Error('Önce kaydedilecek öğeleri seçin.');
+    if (!isNative()) {
+        for (const d of dosyalar) { tarayicidaIndir(d); await new Promise(r => setTimeout(r, 250)); }
+        return { sayi: dosyalar.length, klasorler: ['İndirilenler'], tarayici: true };
+    }
+    const klasor = 'galeri-kayit';
+    const klasorler = new Set<string>();
+    try {
+        for (let i = 0; i < dosyalar.length; i++) {
+            const d = dosyalar[i];
+            const mime = mimeTuru(d);
+            // Galeri yalnız görsel ve video alır; ötekiler İndirilenler'e gider.
+            const yer = hedef === 'galeri' && (mime.startsWith('image/') || mime.startsWith('video/')) ? 'galeri' : 'dosyalar';
+            const path = await onbellegeYaz(d.veri, d.ad, klasor);
+            const sonuc = await native.saveToDevice({ path, name: guvenliAd(d.ad), mime, target: yer });
+            klasorler.add(sonuc.folder);
+            ilerleme?.((i + 1) / dosyalar.length);
+        }
+    } finally { await onbellekKlasorunuTemizle(klasor); }
+    return { sayi: dosyalar.length, klasorler: [...klasorler], tarayici: false };
+}
+
+/**
+ * Sistem paylaşım menüsünü açar: Quick Share / Yakındaki Paylaşım ile başka
+ * bir telefona, WhatsApp'a, Drive'a ya da Dosyalar'a kopyalanabilir.
+ */
+export async function cihazdanPaylas(dosyalar: GonderilecekDosya[]): Promise<void> {
+    if (!dosyalar.length) throw new Error('Önce paylaşılacak öğeleri seçin.');
+    if (isNative()) {
+        const klasor = 'galeri-paylas';
+        await onbellekKlasorunuTemizle(klasor); // önceki paylaşımın kopyaları
+        const files: string[] = [];
+        for (const d of dosyalar) files.push(await onbellegeYaz(d.veri, d.ad, klasor));
+        const { Share } = await import('@capacitor/share');
+        try { await Share.share({ files, dialogTitle: 'Paylaş veya başka cihaza kopyala' }); }
+        catch (e) { if (!/cancel/i.test(e instanceof Error ? e.message : String(e))) throw e; }
+        return;
+    }
+    const files = dosyalar.map(d => new File([d.veri], guvenliAd(d.ad), { type: mimeTuru(d) }));
+    if (!navigator.canShare?.({ files })) throw new Error('Bu tarayıcı dosya paylaşmayı desteklemiyor; Dosyalara kaydet düğmesiyle indirebilirsiniz.');
+    try { await navigator.share({ files }); }
+    catch (e) { if ((e as Error)?.name !== 'AbortError') throw e; }
 }

@@ -5,13 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { supabase, isLocalBackend } from '@/lib/supabaseClient';
 import { signInAsGuest } from '@/lib/localClient';
-import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Layout, Trash2, Clock, Pencil, Settings } from 'lucide-react';
+import { Plus, MoreHorizontal, TreePine, Sparkles, LogIn, FolderTree, Workflow, Trash2, Clock, Pencil, Settings } from 'lucide-react';
 import CreateGardenModal from '@/components/bahce/CreateGardenModal';
 import GardenMark from '@/components/ui/GardenMark';
+import DenemeAgaciKisayolu from '@/components/bahce/DenemeAgaciKisayolu';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
 import type { User } from '@supabase/supabase-js';
 import type { Garden } from '@/lib/types';
+import BilgeAgac from '@/components/ai/BilgeAgac';
+import type { SettingsSectionId } from '@/components/editor/SettingsHome';
 
 // Sidebar'ı lazy load et - ilk yüklemede ağırlık yaratmasın
 import UygulamaliTur from '@/components/tour/UygulamaliTur';
@@ -194,7 +197,7 @@ const GardenCard = memo(function GardenCard({
                         onClick={onOpenCanvas}
                         className="btn btn-secondary min-h-[44px] flex-1 px-3 py-2.5 text-sm"
                     >
-                        <Layout size={16} className="text-moss-700" aria-hidden />
+                        <Workflow size={16} className="text-moss-700" aria-hidden />
                         <span>Tuval</span>
                     </button>
                 </div>
@@ -206,7 +209,7 @@ const GardenCard = memo(function GardenCard({
 export default function HomePage() {
     const router = useRouter();
     const { gardens, gardenTreeCounts, fetchGardens, deleteGarden, updateGardenName, setSidebarOpen } = useStore();
-    const [settingsEntry, setSettingsEntry] = useState<'home' | 'account'>('home');
+    const [settingsEntry, setSettingsEntry] = useState<'home' | SettingsSectionId>('home');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
@@ -320,7 +323,8 @@ export default function HomePage() {
             <div className="mx-auto max-w-[1500px] px-4 py-6 md:px-8 md:py-10">
                 {/* Başlık */}
                 <header className="mb-8 flex flex-col gap-5 md:mb-10 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-3.5">
+                    <div className="flex items-center justify-between gap-2 md:flex-1 md:gap-3.5">
+                        <div className="flex min-w-0 items-center gap-2.5 md:gap-3.5">
                         <button
                             onClick={() => { setSettingsEntry('home'); setSidebarOpen(true); }}
                             data-tur="ayarlar"
@@ -329,7 +333,7 @@ export default function HomePage() {
                             aria-haspopup="dialog"
                             className="group relative flex-shrink-0 rounded-2xl transition-transform duration-200 active:scale-95"
                         >
-                            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-moss-700 to-moss-900 shadow-lift md:h-16 md:w-16">
+                            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-moss-700 to-moss-900 shadow-lift sm:h-14 sm:w-14 md:h-16 md:w-16">
                                 <GardenMark className="text-moss-50" size={38} />
                             </span>
                             <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-sand-100 bg-clay-500">
@@ -337,30 +341,33 @@ export default function HomePage() {
                             </span>
                         </button>
                         <div>
-                            <h1 className="text-3xl text-sand-900 md:text-4xl">Not Bahçesi</h1>
-                            <p className="mt-0.5 text-sm text-sand-600 md:text-base">
+                            <h1 className="text-lg text-sand-900 sm:text-3xl md:text-4xl">Not Bahçesi</h1>
+                            <p className="mt-0.5 hidden text-sm text-sand-600 sm:block md:text-base">
                                 Fikirlerinizi toprağa ekin, ağaca dönüşsün.
                             </p>
                         </div>
+                        </div>
+                        <DenemeAgaciKisayolu onAyarlar={() => { setSettingsEntry('tuval'); setSidebarOpen(true); }} />
                     </div>
 
-                    {user && (
-                        <div className="flex items-center gap-3">
-                            {gardenCount > 0 && (
+                    <div className="flex items-center gap-2.5 md:gap-3">
+                        {user && gardenCount > 0 && (
                                 <span className="chip-moss hidden sm:inline-flex">
                                     {gardenCount} bahçe
                                 </span>
-                            )}
+                        )}
+                        {user && (
                             <button
                                 onClick={() => setIsModalOpen(true)}
                                 data-tur="yeni-bahce"
-                                className="btn btn-primary w-full px-5 py-3 md:w-auto md:px-6"
+                                className="btn btn-primary min-w-0 flex-1 px-5 py-3 md:flex-none md:px-6"
                             >
                                 <Plus size={19} />
                                 <span>Yeni Bahçe</span>
                             </button>
-                        </div>
-                    )}
+                        )}
+                        <BilgeAgac onSettings={section => { setSettingsEntry(section); setSidebarOpen(true); }} />
+                    </div>
                 </header>
 
                 {/* İçerik */}

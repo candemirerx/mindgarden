@@ -54,22 +54,40 @@ export function aracSekmesiniKaydet(sekme: AracSekmesi): void {
     localStorage.setItem(SEKME_ANAHTARI, sekme);
 }
 
+const SERIT_ANAHTARI = 'nb-editor-tool-strip-collapsed';
+
+/**
+ * Araç şeridi katlı mı. Telefonda üstteki iki satır yazı alanından ciddi yer
+ * aldığı için kullanıcı seçili sekmeye tekrar dokunarak şeridi gizleyebilir;
+ * tercih not değiştirince de korunur.
+ */
+export function aracSeridiKapali(): boolean {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(SERIT_ANAHTARI) === '1';
+}
+
+export function aracSeridiniKaydet(kapali: boolean): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(SERIT_ANAHTARI, kapali ? '1' : '0');
+}
+
 const BUDANANLAR_ANAHTARI = 'nb-show-pruned';
 
 /** Tuvalde ve proje listesinde budanmış notların nasıl gösterileceği. */
 export type BudamaModu = 'dahil' | 'gizle' | 'sadece';
 
 /** Kayıt yoksa budananlar dahil gösterilir; eski '1'/'0' kayıtları dahil/gizle olarak okunur. */
-export function budamaModu(): BudamaModu {
+export function budamaModu(bahceId?: string | null): BudamaModu {
     if (typeof window === 'undefined') return 'dahil';
-    const kayit = localStorage.getItem(BUDANANLAR_ANAHTARI);
+    const kayit = (bahceId ? localStorage.getItem(BUDANANLAR_ANAHTARI + ':' + encodeURIComponent(bahceId)) : null) ?? localStorage.getItem(BUDANANLAR_ANAHTARI);
     return kayit === '0' ? 'gizle' : kayit === 'sadece' ? 'sadece' : 'dahil';
 }
 
-export function budamaModuAyarla(mod: BudamaModu): void {
+export function budamaModuAyarla(mod: BudamaModu, bahceId?: string | null): void {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(BUDANANLAR_ANAHTARI, mod === 'gizle' ? '0' : mod === 'sadece' ? 'sadece' : '1');
+    localStorage.setItem(BUDANANLAR_ANAHTARI + (bahceId ? ':' + encodeURIComponent(bahceId) : ''), mod === 'gizle' ? '0' : mod === 'sadece' ? 'sadece' : '1');
     bildir('budananlar');
+    bildir('tuval');
 }
 
 /** Budanmış notları, alt dallarıyla birlikte ağaçtan çıkarır; veriye dokunmaz. */

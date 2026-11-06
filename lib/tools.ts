@@ -11,7 +11,8 @@ export type ToolKind =
     | 'icerikten-baslik'
     | 'sirali-ad'
     | 'numaralandir'
-    | 'bosluk-sadelestir';
+    | 'bosluk-sadelestir'
+    | 'bicim-gecisi' | 'bicim-cubugu' | 'cizim' | 'el-yazisi' | 'gorsel-ekle';
 
 export interface AppTool {
     id: string;
@@ -27,11 +28,16 @@ export interface AppTool {
 
 export const TOOLS_KEY = 'nb-tools';
 /** Araç listesinde değişiklik olduğunda artar; eski kayıtlara yeni araçlar eklenir. */
-export const TOOLS_VERSION = 3;
+export const TOOLS_VERSION = 5;
 const TOOLS_VERSION_KEY = 'nb-tools-version';
 
 /** Kayıtlı aracı geri getirmek için kullanılan varsayılan liste. */
 export const DEFAULT_TOOLS: AppTool[] = [
+    { id: 'bicim-cubugu', kind: 'bicim-cubugu', title: 'Biçim çubuğu', subtitle: 'Kalın, italik, başlık, liste, geri al ve yinele düğmelerini açar veya gizler.', enabled: true },
+    { id: 'bicim-gecisi', kind: 'bicim-gecisi', title: 'Biçim işaretleri', subtitle: 'Biçimin arkasındaki işaretleri (**kalın**, # başlık) düz yazı olarak gösterir; tekrar dokununca normal görünüme döner. Normal yazım için bunu açmanız gerekmez.', enabled: true },
+    { id: 'cizim', kind: 'cizim', title: 'Çiz ve yaz', subtitle: 'Parmağın veya kaleminle çiz; çizimini imlece küçük bir görsel olarak ekle.', enabled: true },
+    { id: 'el-yazisi', kind: 'el-yazisi', title: 'El yazısı', subtitle: 'Düzenlenebilir metni el yazısı görünümünde gösterir; tekrar dokununca kapatır.', enabled: true },
+    { id: 'gorsel-ekle', kind: 'gorsel-ekle', title: 'Görsel ekle', subtitle: 'İmlecin bulunduğu yere küçük, dokunulabilir görsel ekler.', enabled: true },
     {
         id: 'icerikten-baslik',
         title: 'İçerikten Başlık',
@@ -77,7 +83,7 @@ export const TOOL_GROUPS: Array<{ baslik: string; aciklama: string; turler: Tool
     {
         baslik: 'Metin düzenleme araçları',
         aciklama: 'Notun metnini yapay zekâ olmadan düzenler.',
-        turler: ['numaralandir', 'bosluk-sadelestir']
+        turler: ['numaralandir', 'bosluk-sadelestir', 'bicim-cubugu', 'bicim-gecisi', 'cizim', 'el-yazisi', 'gorsel-ekle']
     }
 ];
 
@@ -96,7 +102,7 @@ export function readTools(): AppTool[] {
             'icerikten-baslik',
             'sirali-ad',
             'numaralandir',
-            'bosluk-sadelestir'
+            'bosluk-sadelestir', 'bicim-gecisi', 'bicim-cubugu', 'cizim', 'el-yazisi', 'gorsel-ekle'
         ];
         const valid = parsed.filter(
             (item): item is AppTool =>
@@ -106,7 +112,7 @@ export function readTools(): AppTool[] {
                 gecerliTurler.includes(item.kind)
         );
 
-        let liste = valid.map((item) => ({
+        let liste = valid.map((item) => item.kind === 'bicim-gecisi' && ['Yazı biçimi', 'Kod görünümü'].includes(item.title) ? { ...item, title: 'Biçim işaretleri', subtitle: DEFAULT_TOOLS[1].subtitle } : item).map((item) => ({
             ...item,
             subtitle: typeof item.subtitle === 'string' ? item.subtitle : '',
             enabled: item.enabled !== false
@@ -118,9 +124,11 @@ export function readTools(): AppTool[] {
         const kayitliSurum = Number(localStorage.getItem(TOOLS_VERSION_KEY) ?? '1');
         if (kayitliSurum < TOOLS_VERSION) {
             const olanlar = new Set(liste.map((item) => item.id));
-            const eksikler = DEFAULT_TOOLS.filter((item) => !olanlar.has(item.id));
+            const yeniTurler = kayitliSurum < 4 ? ['bicim-gecisi', 'bicim-cubugu', 'cizim', 'el-yazisi', 'gorsel-ekle'] : ['bicim-cubugu'];
+            const eksikler = DEFAULT_TOOLS.filter((item) => !olanlar.has(item.id) && (kayitliSurum < 3 || yeniTurler.includes(item.kind)));
             if (eksikler.length > 0) {
-                liste = [...liste, ...eksikler];
+                // Biçim çubuğu düğmesi, eski sabit çubuğun yerine geçtiği için başa gelir.
+                liste = [...eksikler.filter((item) => item.kind === 'bicim-cubugu'), ...liste, ...eksikler.filter((item) => item.kind !== 'bicim-cubugu')];
                 localStorage.setItem(TOOLS_KEY, JSON.stringify(liste));
             }
             localStorage.setItem(TOOLS_VERSION_KEY, String(TOOLS_VERSION));
@@ -136,6 +144,7 @@ export function readTools(): AppTool[] {
 export function saveTools(tools: AppTool[]): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(TOOLS_KEY, JSON.stringify(tools));
+    localStorage.setItem(TOOLS_VERSION_KEY, String(TOOLS_VERSION));
     // Editör açıkken değişiklik anında görünsün.
     bildir('araclar');
 }

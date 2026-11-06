@@ -1,17 +1,23 @@
 # Veri Güvenliği Formu Cevapları
 
 Play Console → **Politikalar → Uygulama içeriği → Veri güvenliği**.
-Bu bölüm en çok reddedilen yerdir; aşağıdaki cevapları birebir gir.
+28 Ekim 2026 güncellemesi. Bu belge beyan taslağıdır; Console'daki mevcut seçimler,
+Google'ın güncel veri tanımları ve tüm etkin SDK'larla karşılaştırılmalıdır.
+Bir API yüklemesi, Veri güvenliği beyanının güncellendiği anlamına gelmez.
 
 ---
 
 ## Genel bakış
 
-Uygulama **hiçbir veriyi kendi sunucusunda saklamaz**. Notlar kullanıcının cihazında
-tutulur. Bulut yapay zekâ özelliği kullanıldığında metin ve kullanıcının API anahtarı
-önce Not Bahçesi'nin Vercel üzerindeki sunucu rotasına, oradan kullanıcının seçtiği
-sağlayıcıya iletilir; Vercel rotası isteği yalnızca aktarır, kaydetmez. Yedekleme
-kullanıcının kendi Google Drive hesabına yapılır.
+Notlar ve sohbet geçmişi cihazda tutulur. İsteğe bağlı bulut AI sohbet mesajı,
+gerekli geçmiş ve makro metnini Vercel üzerinden sağlayıcıya iletir. Hazır AI'da
+anahtar yalnız sunucudadır; kişisel sağlayıcıda kullanıcı anahtarı kullanılır.
+Kota için IP'nin gizli anahtarlı özeti Upstash'te en fazla 48 saat tutulur.
+Kullanıcı ayrıca onaylayarak yanıt bildirirse seçilen AI yanıtının ilk 4.000
+karakteri, neden, açıklama ve zaman geliştirici incelemesi için en fazla 30 gün
+Upstash'te saklanır. Diğer sohbetler/notlar otomatik eklenmez. Seçilen yanıtta
+kişisel veri bulunabilir. Bulut sağlayıcılarının kendi saklama koşulları geçerlidir.
+Drive yedeği kullanıcının kendi Google hesabına yapılır.
 
 ---
 
@@ -24,18 +30,32 @@ kullanıcının kendi Google Drive hesabına yapılır.
 
 ## 2. Toplanan / paylaşılan veri türleri
 
-Aşağıdaki tabloyu birebir gir. "Toplanıyor" = uygulamadan dışarı çıkıyor,
-"Paylaşılıyor" = üçüncü tarafla paylaşılıyor.
+### 30 Ekim — 1.0.13 (95) yayın öncesi beyan kontrolü
+
+Bilge Ağaç görsel analizi eklenmiştir. Bu sürüm dağıtılmadan önce Console'da
+**Fotoğraflar ve videolar → Fotoğraflar** beyanı güncellenmelidir: isteğe bağlı,
+uygulama işlevselliği, bulut sağlayıcıda işleme; sağlayıcı saklaması doğrulanmadığı
+için kısa süreli işleme iddiası yoktur. Görsel göndermede ayrı onay vardır.
+Fotoğraflar cihazda küçültülür, EXIF taşınmaz, uygulama geçmişine kalıcı yazılmaz.
+Çevrimiçi TTS seçeneği okunacak metni ses motoru sağlayıcısına gönderebilir;
+ayrı onay ve gizlilik açıklaması eklenmiştir. Önceden gönderilen 1.0.8 Alpha
+paketi bu yeni özellikleri içermez; bu not mevcut Play beyanını değiştirmez.
+
+Seçimleri veri akışına göre doğrulayın. Hizmet sağlayıcı ve kullanıcının açıkça
+başlattığı aktarım istisnaları Google'ın tanımlarına göre değerlendirilmelidir;
+üçüncü bir hizmete aktarım her durumda otomatik olarak “paylaşım” sayılmaz.
 
 | Veri türü | Toplanıyor | Paylaşılıyor | Zorunlu mu | Amaç | Not |
 |---|---|---|---|---|---|
 | **Kişisel bilgiler → E-posta adresi** | Evet | Hayır | Hayır (isteğe bağlı) | Uygulama işlevselliği, Hesap yönetimi | Google ile giriş yapılırsa alınır |
 | **Kişisel bilgiler → Ad** | Evet | Hayır | Hayır (isteğe bağlı) | Uygulama işlevselliği | Google profili ile gelir |
-| **Uygulama etkinliği → Diğer kullanıcı içeriği** | Evet | Evet | Hayır (isteğe bağlı) | Uygulama işlevselliği | Not metinleri cihazda tutulur; kullanıcı bulut yapay zekâ veya aktarım seçtiğinde dışarı gönderilir |
+| **Uygulama etkinliği → Diğer kullanıcı içeriği** | Evet | Sağlayıcı istisnasını doğrulayın | Hayır (isteğe bağlı) | Uygulama işlevselliği, güvenlik | AI girdileri/sohbet; onaylanan yanıt bildirimi 30 gün saklanır, geçici işleme değildir |
+| **Mesajlar → Diğer uygulama içi mesajlar** | Evet (ihtiyatlı beyan) | Sağlayıcı istisnasını doğrulayın | Hayır (isteğe bağlı) | Uygulama işlevselliği | Bilge Ağaç'a gönderilen mesaj ve gerekli sohbet geçmişi; kullanıcı içeriklerine ek olarak Console tanımını doğrulayın |
 | **Ses → Ses kayıtları** | Evet | Evet | Hayır (isteğe bağlı) | Uygulama işlevselliği | Yalnızca Dikte kullanıldığında. Tanımayı Android'in konuşma tanıma servisi yapar; uygulama ayrıca ses kaydı saklamaz |
-| **Cihaz veya diğer kimlikler** | Hayır | Hayır | — | — | Uygulama reklam kimliği veya cihaz kimliği toplamaz |
+| **Fotoğraflar ve videolar → Fotoğraflar** | Evet | Evet (sağlayıcı istisnası doğrulanana kadar ihtiyatlı beyan) | Hayır (isteğe bağlı) | Uygulama işlevselliği | Kullanıcının AI analizi için seçtiği görsel sağlayıcıya gönderilir; kısa süreli işleme iddiası yoktur. Not içindeki yerel görseller kendiliğinden AI'ya gönderilmez |
+| **Cihaz veya diğer kimlikler** | Evet (ihtiyatlı beyan) | Hizmet sağlayıcı istisnasını doğrulayın | AI kullanılırsa | Güvenlik, sahtekârlık önleme | IP'den HMAC ağ özeti, kota sayaçları 48 saat; reklam/cihaz kimliği yok |
 
-Diğer kategoriler (konum, kişiler, takvim, sağlık, mesajlar,
+Diğer kategoriler (konum, kişiler, takvim, sağlık,
 ödeme bilgileri, uygulama içi arama geçmişi) için: **Hayır**.
 
 **Fotoğraflar ve dosyalar:** Mini galeriye eklenen görseller ve dosyalar cihazın uygulamaya özel
@@ -71,9 +91,12 @@ uygulamanın bir sunucusuna gönderilmez:
 ## 3. Veri güvenliği ayrıntıları
 
 **Soru:** Veriler aktarım sırasında şifreleniyor mu?
-**Cevap:** **Evet**
+**Cevap:** **Hayır (mevcut özel sağlayıcı HTTP desteği nedeniyle)**
 
-Buluta giden tüm trafik (yapay zekâ sağlayıcısı, Google Drive) HTTPS ile şifrelenir.
+Hazır AI, Google Drive ve uygulamanın bulut aktarma rotaları HTTPS kullanır.
+Android özel sağlayıcısı ve kullanıcı ayarlı Ollama HTTP kabul eder; bu yolda
+metin ve varsa kişisel API anahtarı şifrelenmeden iletilebilir. Bu nedenle
+mevcut özellikler korunurken “toplanan tüm veriler aktarımda şifreli” denemez.
 Bilgisayar araçlarındaki yerel ağ trafiği (telefon ile kullanıcının kendi bilgisayarı
 arasında) şifrelenmez; bu özellik yalnızca güvenilen yerel ağlarda kullanılmalıdır.
 
@@ -85,6 +108,7 @@ Silme yolları:
 - Uygulamayı kaldırmak cihazdaki tüm verileri siler
 - Drive yedeği kullanıcının kendi Drive'ında olduğu için kullanıcı oradan da silebilir
 - Ayrıntılı silme sayfası: `https://mindgarden-neon.vercel.app/veri-silme`
+- AI yanıt bildirimleri bildirim UUID'siyle geliştiriciye e-posta gönderilerek erken silinebilir; uygulamayı kaldırmak bunları silmez. Normal TTL 30 gündür.
 
 Play Console'da **veri silme URL'i** olarak yukarıdaki `/veri-silme` adresini ver.
 Bu sayfada adım adım silme, silinen veri listesi ve e-posta ile talep yolu anlatılır.
@@ -95,13 +119,12 @@ Bu sayfada adım adım silme, silinen veri listesi ve e-posta ile talep yolu anl
 
 Veri güvenliği formunda yapay zekâ için şu açıklamayı ekle:
 
-> Uygulamadaki yapay zekâ özelliği isteğe bağlıdır. Kullanıcı kendi API anahtarını
-> girer ve bir makro çalıştırdığında seçili notun metni ve anahtar, Not Bahçesi'nin
-> Vercel üzerindeki sunucu rotası aracılığıyla kullanıcının kendi seçtiği yapay zekâ
-> sağlayıcısına (Google, OpenAI, Anthropic veya kullanıcının belirttiği OpenAI uyumlu
-> bir servis) iletilir. Metin ve anahtar bu sunucuda saklanmaz; yalnızca isteği
-> iletmek için kullanılır. Android'de yerel model seçilirse metin cihazdan çıkmaz. Kullanıcı bu
-> özelliği hiç kullanmayabilir; uygulamanın diğer tüm işlevleri anahtar olmadan çalışır.
+> AI isteğe bağlıdır. Sınırlı ücretsiz Hazır AI, kişisel anahtar ve cihaz içi model
+> seçenekleri vardır. Bulut kullanımı paylaşım onayı ister. Hazır AI B.ai'ye Vercel
+> üzerinden gider; anahtar istemciye verilmez. Kullanım güvenliği için ağ özeti
+> ve sayaçlar Upstash'te 48 saat, ayrıca onaylanan AI yanıt bildirimleri 30 gün
+> saklanır. Ham IP, anahtar veya diğer notlar bildirim deposuna yazılmaz.
+> Android yerel modelinde metin cihazdan çıkmaz. Uygulama AI olmadan kullanılabilir.
 
 ---
 
@@ -153,7 +176,7 @@ ve dikte işlemleri kullanıcı tarafından başlatılır.
 
 | Soru | Cevap |
 |---|---|
-| Veriler aktarımda şifreleniyor mu? | Evet |
+| Veriler aktarımda şifreleniyor mu? | Hayır (özel sağlayıcı HTTP desteği; bölüm 3) |
 | Kullanıcı silme talebinde bulunabilir mi? | Evet |
 | Bağımsız güvenlik incelemesinden geçti mi? | Hayır |
 | Çocuklara yönelik mi? | Hayır |

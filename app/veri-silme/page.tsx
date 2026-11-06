@@ -9,6 +9,10 @@ export const metadata = {
 
 const SILME_ADIMLARI: { baslik: string; aciklama: string }[] = [
     {
+        baslik: 'AI sohbetleri ve yanıt bildirimleri',
+        aciklama: 'Bilge Ağaç sohbet geçmişinden konuşmaları tek tek silebilirsin. Geliştiriciye gönderdiğin yanıt bildirimleri ayrı olarak en fazla 30 gün tutulur; erken silmek için bildirim numaranı candemirerx@gmail.com adresine ilet. Bildirimi gönderdikten sonra uygulamayı kaldırmak sunucudaki bildirimi silmez. Kötüye kullanım sayaçları en fazla 48 saat sonra kendiliğinden silinir.',
+    },
+    {
         baslik: 'Tek tek silme',
         aciklama:
             'Bir bahçeyi kartındaki üç nokta menüsünden "Bahçeyi sil" ile, tek bir notu Liste görünümündeki üç nokta menüsünden silebilirsin. Not metni cihazdan hemen silinir. Cihazlar arası eşitleme silme işlemini doğru uygulayabilsin diye yalnızca kaydın kimliği ve silinme zamanı tutulur. Drive yedeklemesi açıksa silme bir sonraki eşitlemede yedeğe de yansır.',
@@ -46,14 +50,14 @@ export default function DataDeletionPage() {
 
                 <div className="space-y-8 rounded-3xl border border-sand-200 bg-white p-8 text-sm leading-relaxed text-sand-700 shadow-card">
                     <p>
-                        <strong>Yürürlük:</strong> 25 Ekim 2026 · <strong>İletişim:</strong> candemirerx@gmail.com ·{' '}
+                        <strong>Yürürlük:</strong> 27 Ekim 2026 · <strong>İletişim:</strong> candemirerx@gmail.com ·{' '}
                         <strong>Paket:</strong> com.notbahcesi.app
                     </p>
 
                     <p>
                         Not Bahçesi&apos;nin kendi sunucusunda senin adına tutulan bir hesap ya da not yoktur. Verilerin
-                        yalnızca iki yerde durur: cihazında ve Google ile giriş yaptıysan kendi Google Drive hesabındaki
-                        gizli uygulama klasöründe. İkisini de kendin silebilirsin; istersen e-postayla da talep
+                        cihazında ve Google ile giriş yaptıysan kendi Google Drive hesabındaki
+                        gizli uygulama klasöründe durur. İsteğe bağlı AI bildirimleri ve kullanım sayaçları aşağıda açıklanmıştır. E-postayla da talep
                         gönderebilirsin.
                     </p>
 
@@ -108,7 +112,7 @@ export default function DataDeletionPage() {
                     <section className="space-y-3">
                         <h2 className="text-lg font-semibold text-sand-900">Saklananlar</h2>
                         <p>
-                            Not Bahçesi&apos;nin kendi tarafında saklanan bir kayıt kalmaz. Yapay zekâ özelliğini bulut
+                            Gönderdiğin AI yanıt bildirimleri en fazla 30 gün, ağ özetiyle tutulan kötüye kullanım sayaçları en fazla 48 saat saklanır. Yapay zekâ özelliğini bulut
                             sağlayıcıyla kullandıysan işlenen metin, o sağlayıcının (Google, OpenAI, Anthropic veya kendi
                             seçtiğin servis) kendi saklama kurallarına göre tutulabilir; bunun için doğrudan ilgili
                             sağlayıcıya başvurman gerekir. Vercel&apos;in kısa süreli teknik erişim kayıtları Vercel&apos;in

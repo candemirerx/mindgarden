@@ -3,12 +3,12 @@
 import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AudioLines, Check, Clipboard, ClipboardCopy, ClipboardPaste, CornerDownLeft, MonitorUp, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, Send, Wand2 } from 'lucide-react';
+import { AudioLines, Check, Clipboard, ClipboardCopy, ClipboardPaste, CornerDownLeft, MonitorUp, FolderKanban, LayoutDashboard, Loader2, Keyboard, Mic, MousePointer2, PenLine, Send, Wand2 } from 'lucide-react';
 import { BULUT_SAGLAYICILAR, SesKaydedici, sesiYaziyaCevir } from '@/lib/bulutDikte';
 import { dosyalariBilgisayaraGonder, telefonPanosunuBilgisayaraGonder, hedefBilgisayara, hedefNota, sendKey, bridgeDictate, dictate, dikteTuslariniUygula, dinleDikteTusu, dinleKopruDikte, metinFarkiAktar, sendCommand, sendToComputerClipboard, stopBridgeDictation, typeOnComputer, VARSAYILAN_DIKTE_TUSLARI } from '@/lib/remoteTools';
 import type { RemoteMode } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
-import FareYuzeyi from './FareYuzeyi';
+import FareAraci from './FareAraci';
 
 export default function RemoteEditorTools({ content, onContentChange, mode, onModeChange, placement, profilId = null, onProfilChange, aktif = true, onBaglantiAyarlari }: {
     content: string; onContentChange: (text: string) => void;
@@ -97,9 +97,10 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
             (mode === 'mouse' && !prefs.enabledTools.mouse) ||
             (mode === 'dictation' && !prefs.enabledTools.dictation) ||
             (mode === 'shortcuts' && !prefs.enabledTools.shortcuts) ||
-            (mode === 'screen' && !prefs.enabledTools.screen)
+            (mode === 'screen' && !prefs.enabledTools.screen) ||
+            (mode === 'yazi' && !prefs.enabledTools.yaziModu)
         ) onModeChange('write');
-    }, [mode, onModeChange, prefs.enabledTools.mouse, prefs.enabledTools.dictation, prefs.enabledTools.shortcuts, prefs.enabledTools.screen]);
+    }, [mode, onModeChange, prefs.enabledTools.mouse, prefs.enabledTools.dictation, prefs.enabledTools.shortcuts, prefs.enabledTools.screen, prefs.enabledTools.yaziModu]);
     useEffect(() => () => { if (panoZamanlayici.current) clearTimeout(panoZamanlayici.current); }, []);
     /**
      * Kısa süreli bildirimle gönderim: sürerken "gönderiliyor", bitince başarı ya
@@ -306,6 +307,10 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
     }, [content, kopruYaz]);
 
     if (placement === 'toolbar') return <>
+            {prefs.enabledTools.yaziModu && <button id="studio-yazi-modu" type="button" aria-pressed={mode === 'yazi'} onClick={() => onModeChange(mode === 'yazi' ? 'write' : 'yazi')}
+                title={mode === 'yazi' ? 'Nota dön' : 'Yazı modu: klavye üstü düğmelerle bilgisayara yaz'}
+                className={`btn min-h-11 min-w-[44px] shrink-0 gap-1.5 px-3 text-sm ${mode === 'yazi' ? 'border border-moss-700 bg-moss-100 text-moss-800 hover:bg-moss-200' : 'btn-primary'}`}>
+                {mode === 'yazi' ? <Keyboard size={16} /> : <PenLine size={16} />}<span className="sr-only sm:not-sr-only">{mode === 'yazi' ? ' Nota dön' : ' Yazı modu'}</span></button>}
             {prefs.enabledTools.shortcuts && (() => {
                 const tumuAcik = mode === 'shortcuts' && !profilId;
                 return <button id="studio-kisayollar" type="button" aria-pressed={tumuAcik} onClick={() => { onProfilChange?.(null); onModeChange(tumuAcik ? 'write' : 'shortcuts'); }}
@@ -408,17 +413,7 @@ export default function RemoteEditorTools({ content, onContentChange, mode, onMo
         </>;
     if (mode !== 'mouse' || !prefs.enabledTools.mouse) return null;
     return <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-4 sm:px-6">
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-            <FareYuzeyi prefs={prefs} onHata={setNotice} className="flex min-h-[46dvh] flex-1 touch-none select-none items-center justify-center rounded-2xl border border-moss-200 bg-gradient-to-br from-moss-50 to-sand-50 p-6 text-center text-sm text-sand-600">
-                Sürükle: imleci hareket ettir · Bir kez dokun: sol tık
-            </FareYuzeyi>
-            <div className="grid shrink-0 grid-cols-3 gap-2">
-                <button className="btn btn-secondary min-h-11 py-2.5 text-sm" onClick={() => void act(() => sendCommand('mc:1', prefs), 'Sol tık gönderildi.')}>Sol tık</button>
-                <button className="btn btn-secondary min-h-11 py-2.5 text-sm" onClick={() => void act(() => sendCommand('ms:3', prefs), 'Yukarı kaydırıldı.')}>↑ Kaydır</button>
-                <button className="btn btn-secondary min-h-11 py-2.5 text-sm" onClick={() => void act(() => sendCommand('mc:2', prefs), 'Sağ tık gönderildi.')}>Sağ tık</button>
-                <button className="btn btn-secondary col-start-2 min-h-11 py-2.5 text-sm" onClick={() => void act(() => sendCommand('ms:-3', prefs), 'Aşağı kaydırıldı.')}>↓ Kaydır</button>
-            </div>
-        </div>
+        <FareAraci prefs={prefs} onHata={setNotice} />
         {notice && <p role="status" className="shrink-0 text-xs text-sand-700">{notice}</p>}
     </div>;
 }

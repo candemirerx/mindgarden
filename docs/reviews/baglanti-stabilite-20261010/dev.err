@@ -1,0 +1,471 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\projelerim\notbahcesi\.next-dev\cache\webpack\client-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\projelerim\notbahcesi\.next-dev\cache\webpack\server-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
+ ⨯ Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\vendor-chunks\next.js'
+    at <unknown> (C:\projelerim\notbahcesi\.next-dev\server\app\_not-found\page.js:304:47)
+    at Object.<anonymous> (C:\projelerim\notbahcesi\.next-dev\server\app\_not-found\page.js:307:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\vendor-chunks\\next.js'
+}
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\_ssr_components_layout_Sidebar_tsx.js'
+    at eval (app\page.tsx:17:28)
+  15 |
+  16 | // Sidebar'ı lazy load et - ilk yüklemede ağırlık yaratmasın
+> 17 | const Sidebar = lazy(() => import('@/components/layout/Sidebar'));
+     |                            ^
+  18 |
+  19 | // Garden kartını ayrı component olarak memoize et
+  20 | const GardenCard = memo(function GardenCard({ {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\_ssr_components_layout_Sidebar_tsx.js',
+  digest: '83351295'
+}
+ ⨯ Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\_ssr_components_layout_Sidebar_tsx.js'
+    at eval (app\page.tsx:17:28)
+  15 |
+  16 | // Sidebar'ı lazy load et - ilk yüklemede ağırlık yaratmasın
+> 17 | const Sidebar = lazy(() => import('@/components/layout/Sidebar'));
+     |                            ^
+  18 |
+  19 | // Garden kartını ayrı component olarak memoize et
+  20 | const GardenCard = memo(function GardenCard({ {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\_ssr_components_layout_Sidebar_tsx.js',
+  digest: '83351295'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\projelerim\notbahcesi\.next-dev\cache\webpack\server-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
+ ⨯ Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\vendor-chunks\next.js'
+    at <unknown> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1193:47)
+    at Object.<anonymous> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1196:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\vendor-chunks\\next.js',
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\vendor-chunks\next.js'
+    at <unknown> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1193:47)
+    at Object.<anonymous> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1196:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\vendor-chunks\\next.js',
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\app\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\app\\page.js',
+  page: '/'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+[Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\app\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\app\\page.js',
+  page: '/'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.]
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+[Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\projelerim\notbahcesi\.next-dev\cache\webpack\server-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\projelerim\notbahcesi\.next-dev\cache\webpack\client-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
+ ⨯ Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\vendor-chunks\next.js'
+    at <unknown> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1204:47)
+    at Object.<anonymous> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1207:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\vendor-chunks\\next.js',
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\vendor-chunks\next.js'
+    at <unknown> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1204:47)
+    at Object.<anonymous> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1207:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\vendor-chunks\\next.js',
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\vendor-chunks\next.js'
+    at <unknown> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1204:47)
+    at Object.<anonymous> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1207:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\vendor-chunks\\next.js',
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\vendor-chunks\next.js'
+    at <unknown> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1204:47)
+    at Object.<anonymous> (C:\projelerim\notbahcesi\.next-dev\server\app\bahce_view\page.js:1207:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\vendor-chunks\\next.js',
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\app\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\app\\page.js',
+  page: '/'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+[Error: ENOENT: no such file or directory, open 'C:\projelerim\notbahcesi\.next-dev\server\app\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\projelerim\\notbahcesi\\.next-dev\\server\\app\\page.js',
+  page: '/'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.]
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+[Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.]
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+[Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/bahce_view'
+}
+ ⨯ [Error: Cannot find module 'C:\projelerim\notbahcesi\.next-dev\server\pages\_document.js'
+Require stack:
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\require.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\load-components.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\utils.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\options.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\swc\index.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\parse-module.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\router-server.js
+- C:\projelerim\notbahcesi\node_modules\next\dist\server\lib\start-server.js] {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+ ⨯ TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)
+TypeError: Cannot read properties of undefined (reading '/_app')
+    at new Promise (<anonymous>)

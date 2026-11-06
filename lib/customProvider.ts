@@ -8,6 +8,8 @@
  * internet üzerinden yapılan aktarma için geçerlidir.
  */
 import { CapacitorHttp } from '@capacitor/core';
+import { openAiImageContent } from './bilgeVision';
+import { EN_FAZLA_UYARLAMA, govdeyiUyarla, type Govde } from './openAiGovde';
 
 export class CustomProviderError extends Error {
     retryable: boolean;
@@ -78,28 +80,35 @@ export interface CustomRequest {
     model: string;
     instruction: string;
     text: string;
+    image?: string;
 }
 
 export async function runCustomProviderDirect(req: CustomRequest): Promise<string> {
     const endpoint = customEndpoint(req.baseUrl);
     if (!req.model.trim()) throw new CustomProviderError('Özel sağlayıcı model adı belirtilmedi.');
 
-    const baseBody = {
+    const prompt = `${req.instruction}\n\nMetin:\n${req.text}`;
+    let govde: Govde = {
         model: req.model.trim(),
-        messages: [{ role: 'user', content: `${req.instruction}\n\nMetin:\n${req.text}` }],
+        messages: [{ role: 'user', content: openAiImageContent(prompt, req.image) }],
         temperature: 0.1,
-        max_tokens: Math.min(8192, Math.max(2048, req.text.length * 2))
+        max_tokens: Math.min(8192, Math.max(2048, req.text.length * 2)),
+        // "Düşünen" modelleri hızlandırmak için düşünmeyi kapatmayı deneriz;
+        // alanları tanımayan sağlayıcı 400 verirse bunlar ilk elenenlerdir.
+        ...(req.image ? {} : { enable_thinking: false, reasoning_effort: 'none', chat_template_kwargs: { enable_thinking: false } })
     };
 
-    // "Düşünen" modelleri hızlandırmak için düşünmeyi kapatmayı deneriz;
-    // alanları tanımayan sağlayıcı 400 verirse istek alanlar olmadan tekrarlanır.
-    let response = await post(endpoint, req.apiKey, {
-        ...baseBody,
-        enable_thinking: false,
-        reasoning_effort: 'none',
-        chat_template_kwargs: { enable_thinking: false }
-    });
-    if (response.status === 400) response = await post(endpoint, req.apiKey, baseBody);
+    // 400 gelirse sağlayıcının gerekçesindeki alan çıkarılıp tekrar denenir:
+    // model, mesajlar ve fotoğraf hiç değişmez. Metne sessizce düşülmez.
+    let response = await post(endpoint, req.apiKey, govde);
+    let sadeDenendi = false;
+    for (let deneme = 0; deneme < EN_FAZLA_UYARLAMA && response.status === 400; deneme++) {
+        const sonraki = govdeyiUyarla(govde, responseText(response.data), sadeDenendi);
+        if (!sonraki) break;
+        sadeDenendi = sadeDenendi || Object.keys(sonraki).length === 2;
+        govde = sonraki;
+        response = await post(endpoint, req.apiKey, govde);
+    }
 
     if (response.status === 401 || response.status === 403) {
         throw new CustomProviderError(
@@ -110,6 +119,9 @@ export async function runCustomProviderDirect(req: CustomRequest): Promise<strin
     }
     if (response.status < 200 || response.status >= 300) {
         const detail = maskKey(responseText(response.data).replace(/\s+/g, ' ').trim(), req.apiKey).slice(0, 300);
+        // Fotoğraflı istek de sağlayıcının kendi hatasını gösterir; yoksa
+        // "model görseli desteklemiyor" ile "model adı yanlış" ayırt edilemiyor.
+        if (req.image) throw new CustomProviderError(`Fotoğraflı istek reddedildi (HTTP ${response.status}). Seçili modelin görsel desteğini, model adını ve sağlayıcı kotasını kontrol edin. Fotoğraf kaldırılarak tekrar gönderilmedi. ${detail}`.trim());
         throw new CustomProviderError(
             `Sağlayıcı isteği reddetti (HTTP ${response.status}). ${detail}`,
             response.status >= 500

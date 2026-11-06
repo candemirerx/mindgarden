@@ -23,7 +23,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { hapticTick } from '@/components/mobile/MobileShell';
 import { agacSuruklemesiBasladi, agacSuruklemesiBitti } from '@/lib/canvasGesture';
 import { sonrakiRenk } from '@/lib/branchColors';
-import { siraliAdEtkin, siraliAd } from '@/lib/tools';
+import { bosAdPlani } from '@/lib/bosAd';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -245,9 +245,9 @@ function GardenPageInner() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     // Kılavuz: tuval ve ağaç ayarlarını açan kullanıcı "Tuvalde ustalaşın" dersini uygulamış olur.
     useEffect(() => { if (isSettingsOpen) dersTamamla('t-tuval'); }, [isSettingsOpen]);
-    const budamaModu = useBudamaModu();
+    const budamaModu = useBudamaModu(gardenId);
     const gorunenAgaclar = budamaFiltresi(mindRoots, budamaModu);
-    const tuval = useTuvalTercihleri();
+    const tuval = useTuvalTercihleri(gardenId);
     const koyuTema = useKoyuTema();
     // Kullanıcının düğme boyutları CSS değişkeni olarak uygulanır; boş olanlar varsayılanı korur.
     useEffect(() => {
@@ -330,18 +330,16 @@ function GardenPageInner() {
     const handleCreateRoot = () => {
         // Ad her zaman boş bırakılabilir; sıra numarası aracı kapalıysa
         // anlaşılır bir varsayılan ad verilir.
-        const adIzinli = siraliAdEtkin();
         const varsayilan = 'Yeni Ağaç';
+        const plan = bosAdPlani('agac', varsayilan);
         setPromptConfig({
             isOpen: true,
             title: 'Yeni Ağaç Ekle',
-            placeholder: adIzinli
-                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
-                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            placeholder: plan.ipucu,
             allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || (adIzinli ? siraliAd(null, nodes) : varsayilan);
+                const ad = title || plan.uret(null, nodes);
                 const yeni = await addNode(gardenId, ad, null, { x: 0, y: 0 });
                 if (yeni) setOrtalanacak(o => ({ id: yeni.id, sayac: (o?.sayac ?? 0) + 1 }));
             }
@@ -400,18 +398,16 @@ function GardenPageInner() {
 
     // Bir ağacın hemen yanına yeni ağaç ekle (kök düğümün "Ağaç Ekle" düğmesi)
     const handleAddTreeBeside = (rootId: string, direction: 'left' | 'right' = 'right') => {
-        const adIzinli = siraliAdEtkin();
         const varsayilan = 'Yeni Ağaç';
+        const plan = bosAdPlani('agac', varsayilan);
         setPromptConfig({
             isOpen: true,
             title: 'Ağaç Ekle',
-            placeholder: adIzinli
-                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
-                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            placeholder: plan.ipucu,
             allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || (adIzinli ? siraliAd(null, nodes) : varsayilan);
+                const ad = title || plan.uret(null, nodes);
                 // Ağaçlar oluşturulma sırasıyla yan yana dizilir: yeni ağaç, bu ağaçla
                 // sonraki ağacın arasına düşecek bir oluşturma zamanı alır.
                 const kokler = nodes.filter(n => n.parent_id === null)
@@ -455,21 +451,21 @@ function GardenPageInner() {
     const handleAddChild = (parentId: string, direction: 'left' | 'right' = 'right', sonrasina?: string) => {
         if (mindRoots.length === 0) return;
 
-        const adIzinli = siraliAdEtkin();
         // Kökün altına dal, dalın ve yaprağın altına yaprak eklenir.
         const yaprak = derinlikBul(parentId) >= 1;
         const varsayilan = yaprak ? 'Yeni Yaprak' : 'Yeni Dal';
+        // Boş ad kuralı bu ağacın kendi ayarından gelir (kalem düğmesi).
+        const agacId = findNodeInTrees(parentId)?.tree.id ?? null;
+        const plan = bosAdPlani(yaprak ? 'yaprak' : 'dal', varsayilan, agacId);
         setPromptConfig({
             isOpen: true,
             title: yaprak ? 'Yaprak Ekle' : 'Dal Ekle',
-            placeholder: adIzinli
-                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
-                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            placeholder: plan.ipucu,
             allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                // Sıralı ad aracı açıkken boş ad, seviyedeki sıra numarasına dönüşür.
-                const ad = title || (adIzinli ? siraliAd(parentId, nodes) : varsayilan);
+                // Boş ad: Tuval ayarlarındaki kural, Sıralı Ad aracı ya da varsayılan ad.
+                const ad = title || plan.uret(parentId, nodes);
                 // Yan not: bu kardeşle sonraki kardeşin arasına düşecek oluşturma zamanı
                 let createdAt: string | undefined;
                 if (sonrasina) {
@@ -838,6 +834,7 @@ function GardenPageInner() {
 
             {/* Tree Management Modal */}
             <TreeManagementModal
+                bahceId={gardenId}
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 bahceAdi={currentGarden?.name}

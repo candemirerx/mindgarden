@@ -510,6 +510,26 @@ export const GardenCanvas: React.FC<GardenCanvasProps> = ({ children, gardenId, 
         } });
     }, [viewState]);
 
+    // Kayıtlı görünüm (ör. başka ekran boyutunda ya da klavye açıkken kaydedilmiş) hiçbir
+    // kartı göstermiyorsa tuval boş sanılmasın: açılışta bir kez her şey ekrana sığdırılır.
+    const sigdirRef = useRef(handleResetView);
+    sigdirRef.current = handleResetView;
+    const acilisDenetlendi = useRef(false);
+    useEffect(() => { acilisDenetlendi.current = false; }, [gardenId]);
+    useEffect(() => {
+        if (acilisDenetlendi.current || !dunya) return;
+        acilisDenetlendi.current = true;
+        const container = containerRef.current;
+        const kartlar = contentRef.current?.querySelectorAll<HTMLElement>('.dugum-karti');
+        if (!container || !kartlar?.length) return;
+        const b = container.getBoundingClientRect();
+        const gorunur = Array.from(kartlar).some(k => {
+            const r = k.getBoundingClientRect();
+            return r.right > b.left && r.left < b.right && r.bottom > b.top && r.top < b.bottom;
+        });
+        if (!gorunur) sigdirRef.current();
+    }, [dunya]);
+
     return (
         <div
             ref={containerRef}

@@ -1,0 +1,44 @@
+/* Gerçek TypeScript tercih kodunu izole depolamayla doğrular. */
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+const kayitlar = new Map();
+const localStorage = { getItem: k => kayitlar.get(k) ?? null, setItem: (k, v) => kayitlar.set(k, v), removeItem: k => kayitlar.delete(k) };
+function yukle(path, extra = {}) {
+    const exports = {};
+    const js = ts.transpileModule(fs.readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+    vm.runInNewContext(js, { exports, localStorage, window: {}, console, require: ad => extra[ad] || { bildir() {}, dinle() {}, dersTamamla() {} } }, { filename: path });
+    return exports;
+}
+const t = yukle('lib/tuvalTercihleri.ts');
+const u = yukle('lib/uiPrefs.ts');
+const d = yukle('lib/denemeTercihleri.ts', { './tuvalTercihleri': t });
+const oku = id => t.tuvalTercihleri(id);
+const yaz = (id, delta) => t.tuvalTercihleriniKaydet({ ...oku(id), ...delta }, id);
+assert.equal(oku('a').kart, 'bahce');
+yaz(undefined, { kart: 'sade', gezinme: 'cubuk' });
+assert.equal(oku('a').kart, 'sade'); assert.equal(oku('b').gezinme, 'cubuk');
+console.log('PASS mevcut/genel tercihler tüm bahçelerin varsayılanı');
+yaz('a', { kart: 'renkli' });
+assert.equal(oku('a').kart, 'renkli'); assert.equal(oku('b').kart, 'sade'); assert.equal(oku().kart, 'sade');
+console.log('PASS bahçe değişikliği genel ayarı ve diğer bahçeyi etkilemez');
+yaz(undefined, { kart: 'hap', gezinme: 'yok' });
+assert.equal(oku('a').kart, 'renkli'); assert.equal(oku('a').gezinme, 'yok'); assert.equal(oku('b').kart, 'hap');
+console.log('PASS özel özellik korunur, dokunulmayan özellik yeni varsayılanı izler');
+const buttons = { ...oku('a').dugmeler, ustSol: 'tuvalAyarlari' };
+yaz('a', { dugmeler: buttons });
+assert.equal(oku('a').dugmeler.ustSol, 'tuvalAyarlari'); assert.equal(oku('b').dugmeler.ustSol, 'kopya');
+u.budamaModuAyarla('gizle', 'a');
+assert.equal(u.budamaModu('a'), 'gizle'); assert.equal(u.budamaModu('b'), 'dahil');
+console.log('PASS kart araçları ve budanan görünümü bahçeye özel');
+t.bahceTuvaliniSifirla('a');
+assert.equal(oku('a').kart, 'hap'); assert.equal(u.budamaModu('a'), 'dahil'); assert.equal(t.bahceTuvaliOzelMi('a'), false);
+console.log('PASS sıfırlama tüm bahçe tercihlerini genel ayara döndürür');
+d.denemeTercihleriniKaydet({ kart: 'renkli', sol: { islev: 'pcKopru' } });
+assert.equal(d.denemeTercihleri().sol.islev, 'pcKopru'); assert.equal(oku().kart, 'hap'); assert.equal(oku('b').kart, 'hap');
+console.log('PASS deneme görünümü/sol aracı genel ve bahçe tercihlerinden bağımsız');
+kayitlar.set('nb-deneme-gorunum-v1', '{"kart":"xxx","sol":{"islev":"buda"}}');
+assert.equal(d.denemeTercihleri().kart, 'varsayilan'); assert.equal(d.denemeTercihleri().sol.islev, 'pcKlavye');
+kayitlar.set('nb-tuval-bahce-v1:b', 'bozuk'); assert.equal(oku('b').kart, 'hap');
+console.log('PASS bozuk kayıt ve denemeye uygun olmayan araç güvenle elenir');

@@ -16,6 +16,8 @@ import {
 import DenemeAgaciDugmesi from './DenemeAgaciDugmesi';
 import { SettingsField, SettingsNote, SettingsPageHeader, SettingsRow, SettingsSection, SettingsSwitch, settingsFieldClass } from '@/components/ui/settings';
 import { GIZLILIK_ADRESI, disAdresMi, yasalAdresiAc } from '@/lib/yasalBaglantilar';
+import { readAiMode, saveAiMode, type AiMode } from '@/lib/aiMode';
+import { hostedAiStatus, type HostedAiStatus } from '@/lib/hostedAiClient';
 
 type CloudProvider = Exclude<ProviderType, 'local'>;
 const providers: { id: CloudProvider; name: string; detail: string }[] = [
@@ -79,6 +81,8 @@ function OllamaRehberi({ acik }: { acik: boolean }) {
 }
 
 export default function AiSettings() {
+    const [mode, setMode] = useState<AiMode>('hosted');
+    const [hostedStatus, setHostedStatus] = useState<HostedAiStatus | null>(null);
     const [tab, setTab] = useState<'cloud' | 'local'>('cloud');
     const [active, setActive] = useState<ProviderType>('gemini');
     const [provider, setProvider] = useState<CloudProvider>('gemini');
@@ -116,6 +120,9 @@ export default function AiSettings() {
         setSelectedPath(getSavedLocalModelPath());
     };
     useEffect(() => {
+        setMode(readAiMode());
+        const abort = new AbortController();
+        void hostedAiStatus(abort.signal).then(setHostedStatus).catch(() => undefined);
         const current = readActiveProvider();
         setActive(current);
         setTab(current === 'local' ? 'local' : 'cloud');
@@ -130,6 +137,7 @@ export default function AiSettings() {
         if (Capacitor.getPlatform() === 'android') {
             void refreshFiles().catch(error => setMessage({ error: true, text: errorText(error) }));
         }
+        return () => abort.abort();
     }, []);
 
     const perform = async (label: string, action: () => Promise<void>) => {
@@ -142,7 +150,7 @@ export default function AiSettings() {
         catch (error) { setMessage({ error: true, text: errorText(error) }); }
         finally { operation.current = false; setBusy(null); }
     };
-    const activate = (id: ProviderType) => { saveActiveProvider(id); setActive(id); };
+    const activate = (id: ProviderType) => { saveActiveProvider(id); setActive(id); saveAiMode('personal'); setMode('personal'); };
     const load = (path: string) => perform('Model hazırlanıyor…', async () => {
         try { await loadLocalModel(path); }
         finally { await refreshFiles(); }
@@ -176,6 +184,22 @@ export default function AiSettings() {
     return (
         <div className="space-y-4">
             <SettingsPageHeader icon={Sparkles} title="Yapay zekâ" description="İnternetten güç alın ya da notlarınızı cihazınızda işleyin." />
+            <SettingsSection icon={Sparkles} title="Nasıl kullanmak istersiniz?" description="Bilge Ağaç ve AI makroları aynı tercihle çalışır.">
+                <div className="space-y-3">
+                    <button type="button" aria-pressed={mode === 'hosted'} onClick={() => { saveAiMode('hosted'); setMode('hosted'); }} className={'w-full rounded-2xl border p-4 text-left focus-visible:ring-2 focus-visible:ring-moss-500 ' + (mode === 'hosted' ? 'border-moss-400 bg-moss-50' : 'border-sand-200 bg-white')}>
+                        <span className="flex items-center justify-between gap-2 text-sm font-semibold text-moss-900"><span>🌳 Hazır AI · anahtar gerekmez</span>{mode === 'hosted' && <Check size={18} />}</span>
+                        <span className="mt-2 block text-xs leading-relaxed text-sand-600">Erken erişimde sınırlı ücretsiz. Sohbet ve makrolar aynı hakkı paylaşır. Gelişmiş özellikler ileride ücretli olabilir.</span>
+                    </button>
+                    {mode === 'hosted' && <SettingsNote>{hostedStatus ? hostedStatus.notice : 'Hazır AI durumu kontrol ediliyor. Sunucuya ulaşılamıyorsa kendi anahtarınızı veya yerel modeli kullanabilirsiniz.'}</SettingsNote>}
+                    {mode === 'hosted' && hostedStatus?.available && <p className="px-1 text-xs text-moss-800">Günlük ağ kotası: en fazla {hostedStatus.dailyRequests} istek ve {hostedStatus.dailyUnits.toLocaleString('tr-TR')} kullanım birimi. Uzun metinler daha fazla hak tüketir. Tek makroda en fazla {hostedStatus.maxTextLength.toLocaleString('tr-TR')} karakter.</p>}
+                    {mode === 'hosted' && hostedStatus?.available && <p className="px-1 text-xs leading-relaxed text-sand-600">Başlatılan işlemler için hak ayrılır; sağlayıcı hatasında veya iptalde iade edilmez. Bu sınırlar erken erişim kapasitesini korur.</p>}
+                    <button type="button" aria-pressed={mode === 'personal'} onClick={() => { saveAiMode('personal'); setMode('personal'); }} className={'w-full rounded-2xl border p-4 text-left focus-visible:ring-2 focus-visible:ring-moss-500 ' + (mode === 'personal' ? 'border-moss-400 bg-moss-50' : 'border-sand-200 bg-white')}>
+                        <span className="flex items-center justify-between text-sm font-semibold text-sand-900"><span>Kendi anahtarım / yerel modelim</span>{mode === 'personal' && <Check size={18} />}</span>
+                        <span className="mt-2 block text-xs leading-relaxed text-sand-600">Gelişmiş ayarlar. Hazır AI kotasından düşmez; bulut kullanım bedeli sağlayıcınıza aittir. Kayıtlı anahtarlarınız korunur.</span>
+                    </button>
+                </div>
+            </SettingsSection>
+            <div className={mode === 'personal' ? 'space-y-4' : 'hidden'}>
 
             <div className="flex items-center gap-3 rounded-2xl border border-moss-500/25 bg-moss-50 px-4 py-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-moss-100 text-moss-700">
@@ -212,18 +236,19 @@ export default function AiSettings() {
 
             {tab === 'cloud' ? (
                 <div role="tabpanel" id="ai-panel-cloud" aria-labelledby="ai-tab-cloud" className="space-y-4">
-                    <SettingsSection title="Sağlayıcı" description="Anahtarlar ve modeller her sağlayıcı için ayrı saklanır.">
+                    <div className="flex flex-wrap items-center gap-2 px-1 text-xs text-sand-500" aria-label="Kurulum adımları"><span className="rounded-full bg-moss-100 px-3 py-1.5 text-moss-800">1 · Sağlayıcı seç</span><span aria-hidden>→</span><span>2 · Bağlantıyı ayarla</span><span aria-hidden>→</span><span>3 · Etkinleştir ve dene</span></div>
+                    <SettingsSection title="Sağlayıcı seçimi" description="Seçmek ayarlarını açar; kullandığınız sağlayıcı ancak Etkinleştir ile değişir. Anahtar ve model her sağlayıcı için ayrı saklanır.">
                         <div className="grid grid-cols-2 gap-2">
                             {providers.map(item => (
                                 <button type="button" key={item.id} aria-pressed={provider === item.id} onClick={() => { readCloud(item.id); setMessage(null); }}
                                     className={'flex min-h-14 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500 ' + (provider === item.id ? 'border-moss-400 bg-moss-50 text-moss-800' : 'border-sand-200 text-sand-800 hover:bg-sand-50')}>
-                                    <span><span className="block text-sm font-semibold">{item.name}</span><span className="block text-[11px] text-sand-600">{item.detail}</span></span>
+                                    <span className="min-w-0"><span className="block text-sm font-semibold">{item.name}</span><span className="block text-xs text-sand-600">{item.detail}</span>{active === item.id && <span className="mt-1 block text-[11px] font-medium text-moss-700">Etkin sağlayıcı</span>}</span>
                                     {provider === item.id && <Check size={16} className="shrink-0" />}
                                 </button>
                             ))}
                         </div>
                     </SettingsSection>
-                    <SettingsSection icon={Key} title="Bağlantı">
+                    <SettingsSection icon={Key} title={providers.find(item => item.id === provider)?.name + ' bağlantısı'} description="Değişiklikler bu cihazda kaydedilir. Sağlayıcı hesabınızın model erişimini ve bakiyesini kontrol edin.">
                         <div className="space-y-4">
                             {provider === 'custom' && <SettingsField label="Sunucu adresi" htmlFor="ai-custom-url" hint={native ? 'OpenAI uyumlu /v1 veya /chat/completions adresi. Telefonda http:// ve yerel ağ adresleri (örn. http://192.168.1.20:1234/v1) kullanılabilir.' : 'OpenAI uyumlu /v1 veya /chat/completions adresi. Web sürümünde adres HTTPS ve herkese açık olmalıdır; yerel sunucular için Android uygulamasını kullanın.'}>
                                 <input id="ai-custom-url" type="url" value={customUrl} onChange={event => { setCustomUrl(event.target.value); saveCustomUrl(event.target.value); }} placeholder="https://api.example.com/v1" className={settingsFieldClass} />
@@ -259,7 +284,7 @@ export default function AiSettings() {
                                 </div>
                             </details>
                             <button type="button" disabled={(provider !== 'custom' && !apiKey.trim()) || !(model || DEFAULT_MODELS[provider]).trim() || (provider === 'custom' && !customUrl.trim())} onClick={() => activate(provider)} className={primaryClass + ' w-full'}>
-                                {active === provider ? <><Check size={16} /> Bu sağlayıcı kullanılıyor</> : <><Cloud size={16} /> {providers.find(item => item.id === provider)?.name} kullan</>}
+                                {active === provider ? <><Check size={16} /> Etkin · {providers.find(item => item.id === provider)?.name}</> : <><Cloud size={16} /> {providers.find(item => item.id === provider)?.name} etkinleştir</>}
                             </button>
                         </div>
                     </SettingsSection>
@@ -321,6 +346,7 @@ export default function AiSettings() {
                     </SettingsSection>}
                 </div>
             )}
+            </div>
         </div>
     );
 }

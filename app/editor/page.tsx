@@ -4,33 +4,44 @@ import './studio.css';
 import { useEffect, Suspense, useState, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, MonitorSmartphone, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, PenLine, Loader2, X, Download, Wrench, MonitorSmartphone, Hash, ListOrdered, Eraser, Type, Settings, AlertTriangle, Maximize2, Minimize2, BookOpen, Sparkles, Code2, Brush, ImagePlus, Bold } from 'lucide-react';
 import RemoteEditorTools from '@/components/editor/RemoteEditorTools';
 import GaleriDugmeleri from '@/components/editor/GaleriDugmeleri';
 import KisayolPanosu, { KisayolSecici } from '@/components/editor/KisayolPanosu';
 import EkranDuzeni, { EkranSecici } from '@/components/editor/EkranDuzeni';
+import YaziModu from '@/components/editor/YaziModu';
 import ModelSettingsModal from '@/components/editor/ModelSettingsModal';
 import type { SettingsSectionId } from '@/components/editor/SettingsHome';
-import { remotePrefs, sistemCubuklariniGizle } from '@/lib/remoteTools';
+import { remotePrefs, sistemCubuklariniGizle, telefonPanosunaYaz } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { useBaglantiDurumu } from '@/lib/baglantiDurumu';
 import type { RemoteMode } from '@/lib/remoteTools';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { initDriveAutoSync } from '@/lib/driveSync';
-import { readEnabledMacros } from '@/lib/aiMacro';
+import { readAiMacros, readEnabledMacros, spellcheckMacro } from '@/lib/aiMacro';
 import type { AiMacro } from '@/lib/aiMacro';
 import { readEnabledTools, aracMetniniUygula, siraliAd, iceriktenBaslik } from '@/lib/tools';
 import type { AppTool } from '@/lib/tools';
-import { aracSekmesiniKaydet, bolumAcik, sonAracSekmesi } from '@/lib/uiPrefs';
+import { aracSekmesiniKaydet, aracSeridiKapali, aracSeridiniKaydet, bolumAcik, sonAracSekmesi } from '@/lib/uiPrefs';
 import { dinle } from '@/lib/degisim';
 import { splitIntoChunks } from '@/lib/aiChunks';
-import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl, providerHazir } from '@/lib/aiProvider';
+import { readActiveProvider, readProviderKey, readProviderModel, readCustomUrl } from '@/lib/aiProvider';
+import { aiHazir, aiPaylasimOnayi, readAiMode } from '@/lib/aiMode';
+import { hostedAiRequest } from '@/lib/hostedAiClient';
+import { AI_SAFETY_INSTRUCTION } from '@/lib/aiSafety';
+import AiReportButton from '@/components/ai/AiReportButton';
 import { runCustomProviderDirect, CustomProviderError } from '@/lib/customProvider';
 import { runLocalInference, isOfflineFallbackEnabled } from '@/lib/localLlm';
 import { Capacitor } from '@capacitor/core';
 import { imleciGorunurTut } from '@/lib/imlecGorunur';
-import { DENEME_AGACLARI, ayarlaraDonOku, denemeTuru } from '@/lib/denemeAgaci';
+import { denemeNotuOku, denemeNotuYaz, denemeKayitHatasi, ayarlaraDonOku, denemeTuru } from '@/lib/denemeAgaci';
 import { dersTamamla } from '@/lib/kilavuzIlerleme';
+import { exportBilgeTree } from '@/lib/bilgeExport';
+import RichTextEditor, { type RichTextHandle } from '@/components/editor/RichTextEditor';
+import DrawingPad from '@/components/editor/DrawingPad';
+import { prepareBilgeImage } from '@/lib/bilgeMedia';
+import { safeNoteImage, noteTextOnly } from '@/lib/richText';
+import { gorselleriKisalt, gorselleriAc, kaynaktanIcerige } from '@/lib/notGorselleri';
 
 /**
  * Yerel taslak: uygulama kapanırken veya arka plana atılırken kayıt yetişmese
@@ -75,7 +86,7 @@ function taslakOku(nodeId: string): { title: string; content: string } | null {
 function EditorPageInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    // Deneme modu (/editor?deneme=baglanti): ayarlardan açılan, hiçbir bahçeye yazılmayan bellek içi not.
+    // Deneme modu: normal bahçelerden ayrı, bu cihazda korunan deneme notu.
     const deneme = denemeTuru(searchParams.get('deneme'));
     const gardenId = deneme ? '' : searchParams.get('id') || '';
     const nodeId = deneme ? 'deneme-' + deneme : searchParams.get('nodeId') || '';
@@ -94,14 +105,31 @@ function EditorPageInner() {
     // Kılavuz: deneme ağacını açan kullanıcı ilgili dersi uygulamış olur.
     useEffect(() => { if (deneme) dersTamamla('b-deneme'); }, [deneme]);
     const [toolTab, setToolTab] = useState<'tools' | 'computer' | 'ai'>('tools');
-    useEffect(() => { setToolTab(sonAracSekmesi()); }, []);
+    // Seçili sekmeye tekrar dokunmak araç şeridini katlar; yazı alanı büyür.
+    const [seritKapali, setSeritKapali] = useState(false);
+    useEffect(() => { setToolTab(sonAracSekmesi()); setSeritKapali(aracSeridiKapali()); }, []);
     /** Ayar penceresi kapanınca odak bu düğmeye döner. */
     const ayarDugmesiRef = useRef<HTMLButtonElement>(null);
     const [title, setTitle] = useState('');
+    const [bilgeExporting, setBilgeExporting] = useState(false);
+    const bilgeExportLock = useRef(false);
+    const [richMode, setRichMode] = useState(true);
+    const [formatToolbar, setFormatToolbar] = useState(false);
+    useEffect(() => { setFormatToolbar(false); }, [nodeId]);
+    const richRef = useRef<RichTextHandle>(null);
+    const [drawing, setDrawing] = useState(false);
+    const [imagePreparing, setImagePreparing] = useState(false);
+    const [toolError, setToolError] = useState('');
+    const [handwriting, setHandwriting] = useState(false);
+    const noteImageInput = useRef<HTMLInputElement>(null);
+    const insertImage = useRef<((src: string) => boolean) | null>(null);
+    useEffect(() => { try { setHandwriting(localStorage.getItem('nb-handwriting:' + nodeId) === '1'); } catch { setHandwriting(false); } setDrawing(false); insertImage.current = null; }, [nodeId]);
+    useEffect(() => { bilgeExportLock.current = false; setBilgeExporting(false); }, [nodeId]);
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const [showCopied, setShowCopied] = useState(false);
     const [isSpellChecking, setIsSpellChecking] = useState(false);
+    const [aiReportText, setAiReportText] = useState('');
     const [pendingSpellCheck, setPendingSpellCheck] = useState<{
         original: string;
         corrected: string;
@@ -137,6 +165,20 @@ function EditorPageInner() {
     const [aiCakisma, setAiCakisma] = useState<{ corrected: string } | null>(null);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    // Kaynak görünümünde base64 görseller kısa yer tutuculara indirgenir;
+    // `content` her zaman gerçek Markdown olarak kalır.
+    // Yalnız kaynak kutusu için; Yazı modu ve biçimli görünüm gerçek metni kullanır.
+    const kaynakKutusu = !richMode && remoteMode !== 'yazi';
+    const kaynak = useMemo(() => kaynakKutusu ? gorselleriKisalt(content) : { metin: content, gorseller: [], araliklar: [] }, [content, kaynakKutusu]);
+    const kaynakRef = useRef(kaynak);
+    kaynakRef.current = kaynak;
+    /** Kutudaki seçimi gerçek içerik konumlarına çevirir. */
+    const kutuSecimi = (varsayilan: number) => {
+        const kutu = textareaRef.current;
+        const { araliklar } = kaynakRef.current;
+        if (!kutu) return { start: varsayilan, end: varsayilan };
+        return { start: kaynaktanIcerige(kutu.selectionStart, araliklar), end: kaynaktanIcerige(kutu.selectionEnd, araliklar) };
+    };
     const footerRef = useRef<HTMLElement>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -155,7 +197,7 @@ function EditorPageInner() {
     });
     const saveRef = useRef<() => Promise<boolean>>(async () => true);
 
-    const sanalDugum = useMemo(() => deneme ? { id: 'deneme-' + deneme, content: DENEME_AGACLARI[deneme].baslik + '\n' + DENEME_AGACLARI[deneme].metin } : null, [deneme]);
+    const sanalDugum = useMemo(() => deneme ? { id: 'deneme-' + deneme, content: denemeNotuOku(deneme).baslik + '\n' + denemeNotuOku(deneme).metin } : null, [deneme]);
     const currentNode = sanalDugum ?? nodes.find(n => n.id === nodeId);
     const resultPending = pendingSpellCheck !== null || aiCakisma !== null;
     const visibleToolTabs = [
@@ -184,7 +226,8 @@ function EditorPageInner() {
     // Uzun notlarda ve ekran döndürüldüğünde tek kaydırma yüzeyi korunur.
     useEffect(() => {
         const field = textareaRef.current;
-        if (!field) return;
+        // Yazı modunda kutu ekranı esnek olarak doldurur; yüksekliği elle ayarlanmaz.
+        if (!field || remoteMode === 'yazi') return;
         const resize = () => {
             // 'auto' anlık olarak alanı küçültür; belge kısalınca tarayıcı
             // kaydırmayı kırpar ve sayfa zıplar. Konum geri yüklenir.
@@ -203,7 +246,7 @@ function EditorPageInner() {
             window.removeEventListener('resize', resize);
             window.visualViewport?.removeEventListener('resize', resize);
         };
-    }, [content, remoteMode, focusMode]);
+    }, [content, remoteMode, focusMode, richMode]);
 
     // Tam ekran: Android sistem çubukları gizlenir, geri tuşu ve Esc tam ekrandan çıkar.
     useEffect(() => {
@@ -298,6 +341,10 @@ function EditorPageInner() {
         setContent(kayitliIcerik);
     }, [currentNode]);
 
+    useEffect(() => {
+        if (deneme && hasChanges && !resultPending && loadedContentNodeRef.current === nodeId) denemeNotuYaz(deneme, title, content);
+    }, [deneme, title, content, hasChanges, resultPending, nodeId]);
+
     /**
      * Notu kaydeder ve gerçekten kaydedilip kaydedilmediğini döner.
      *
@@ -305,15 +352,18 @@ function EditorPageInner() {
      * sayılmaz; başarısız kayıtta ise belge kirli kalır ve taslak yazılır.
      */
     const saveContent = useCallback(async (): Promise<boolean> => {
+        // AI/yerel araç önizlemesi onaylanmadan otomatik, manuel veya
+        // sayfadan çıkış kaydı üzerinden kalıcı nota yazılmamalı.
+        if (resultPending) return false;
         if (!hasChanges) return true;
         const rev = revizyonRef.current;
         const baslik = title;
         const icerik = content;
         setIsSaving(true);
         try {
-            // Deneme notu hiçbir yere kaydedilmez; kayıt her zaman başarılı sayılır.
-            const sonuc = await (deneme ? Promise.resolve(null) : updateNode(nodeId, `${baslik}\n${icerik}`) as Promise<unknown>);
-            const hata = (sonuc as { error?: string } | null | undefined)?.error;
+            // Deneme metni yalnızca kendi cihaz kaydına yazılır, normal notlara değil.
+            const sonuc = await (deneme ? Promise.resolve(denemeNotuYaz(deneme, baslik, icerik)) : updateNode(nodeId, `${baslik}\n${icerik}`) as Promise<unknown>);
+            const hata = deneme ? denemeKayitHatasi(deneme) : (sonuc as { error?: string } | null | undefined)?.error;
             if (hata) {
                 setKayitHatasi(String(hata));
                 taslakYaz(nodeId, baslik, icerik);
@@ -335,7 +385,7 @@ function EditorPageInner() {
         } finally {
             setIsSaving(false);
         }
-    }, [title, content, nodeId, updateNode, hasChanges, deneme]);
+    }, [title, content, nodeId, updateNode, hasChanges, deneme, resultPending]);
 
     // Otomatik kaydetme
     useEffect(() => {
@@ -412,24 +462,33 @@ function EditorPageInner() {
         await saveContent();
     };
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(content);
-        setShowCopied(true);
-        setTimeout(() => setShowCopied(false), 2000);
+    const handleCopy = async () => {
+        const rich = richMode && (remoteMode === 'write' || remoteMode === 'dictation') ? richRef.current : null;
+        const text = rich?.plainText() ?? content;
+        try {
+            if (rich && !Capacitor.isNativePlatform() && navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+                try { await navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([text], { type: 'text/plain' }), 'text/html': new Blob([rich.html()], { type: 'text/html' }) })]); }
+                catch { await telefonPanosunaYaz({ metin: text }); }
+            } else await telefonPanosunaYaz({ metin: text });
+            setShowCopied(true);
+            setTimeout(() => setShowCopied(false), 2000);
+        } catch { alert('Panoya kopyalanamadı. Metni seçip telefonun Kopyala komutunu kullanabilirsiniz.'); }
     };
 
     /** Metin değişimini tek yerden işler: revizyon sayacı ve kirli durumu birlikte güncellenir. */
     const icerikDegistir = useCallback((yeni: string) => {
+        if (deneme) denemeNotuYaz(deneme, title, yeni);
         revizyonRef.current += 1;
         setContent(yeni);
         setHasChanges(true);
-    }, []);
+    }, [deneme, title]);
 
     const baslikDegistir = useCallback((yeni: string) => {
+        if (deneme) denemeNotuYaz(deneme, yeni, content);
         revizyonRef.current += 1;
         setTitle(yeni);
         setHasChanges(true);
-    }, []);
+    }, [deneme, content]);
 
     /** Onaylı çıkış: bekleyen kayıt tamamlanır, başarısız olsa da taslak korunur. */
     const cikisiTamamla = async () => {
@@ -472,7 +531,7 @@ function EditorPageInner() {
     };
 
     const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        icerikDegistir(e.target.value);
+        icerikDegistir(gorselleriAc(e.target.value, kaynakRef.current.gorseller));
     };
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -487,14 +546,14 @@ function EditorPageInner() {
             setMacros(readEnabledMacros());
             setAraclar(readEnabledTools());
             // "Tüm araçlar" deneme notunda bütün bölümler açık görünür (ayarlar değişmez).
-            const hepsi = deneme === 'hepsi';
+            const hepsi = deneme === 'hepsi' || deneme === 'bilge';
             setYapayZekaAcik(hepsi || bolumAcik('yapayzeka'));
             setAraclarAcik(hepsi || bolumAcik('araclar'));
             setBilgisayarAcik(hepsi || bolumAcik('bilgisayar'));
             setRemoteToolPrefs(remotePrefs());
             // Anahtar/sağlayıcı durumu da tazelenir; ayarlarda anahtar eklenince
             // makro düğmeleri sayfa yeniden açılmadan etkinleşir.
-            setAnahtarVar(providerHazir(readActiveProvider()));
+            setAnahtarVar(aiHazir());
         };
         tazele();
 
@@ -528,7 +587,9 @@ function EditorPageInner() {
            (araç sekmesi değişir) nota dönülür; tam ekranda açık ekran korunur. */
         if (remoteMode === 'shortcuts' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.shortcuts || (!focusMode && activeToolTab !== 'computer'))) setRemoteMode('write');
         if (remoteMode === 'screen' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.screen || (!focusMode && activeToolTab !== 'computer'))) setRemoteMode('write');
-    }, [remoteMode, bilgisayarAcik, remoteToolPrefs.enabledTools.mouse, remoteToolPrefs.enabledTools.shortcuts, remoteToolPrefs.enabledTools.screen, focusMode, activeToolTab]);
+        /* Yazı modundan yapay zekâ çalıştırılınca sonuç sekmesi açılır; o sırada yazı modu korunur. */
+        if (remoteMode === 'yazi' && (!bilgisayarAcik || !remoteToolPrefs.enabledTools.yaziModu || (!focusMode && !resultPending && activeToolTab !== 'computer'))) setRemoteMode('write');
+    }, [remoteMode, bilgisayarAcik, remoteToolPrefs.enabledTools.mouse, remoteToolPrefs.enabledTools.shortcuts, remoteToolPrefs.enabledTools.screen, remoteToolPrefs.enabledTools.yaziModu, focusMode, activeToolTab, resultPending]);
 
     /**
      * Yerel araçları çalıştırır.
@@ -539,8 +600,31 @@ function EditorPageInner() {
      * olarak uygulanır: kullanıcı onaylamadan kaydedilmez.
      */
     const runTool = async (tool: AppTool) => {
+        if (bilgeExporting || imagePreparing || drawing || isSpellChecking || resultPending) return;
+        if (tool.kind === 'bicim-gecisi') { setRichMode(v => !v); return; }
+        if (tool.kind === 'bicim-cubugu') { setFormatToolbar(v => !v); setRichMode(true); return; }
+        if (tool.kind === 'el-yazisi') {
+            const next = !handwriting;
+            try { localStorage.setItem('nb-handwriting:' + nodeId, next ? '1' : '0'); setHandwriting(next); setRichMode(true); }
+            catch { setToolError('El yazısı tercihi kaydedilemedi. Cihaz depolamasını kontrol edin.'); }
+            return;
+        }
+        if (tool.kind === 'cizim' || tool.kind === 'gorsel-ekle') {
+            setToolError('');
+            const before = content;
+            const richInsert = richMode ? richRef.current?.imageInsertion() : null;
+            const { start, end } = textareaRef.current ? kutuSecimi(before.length) : { start: before.length, end: before.length };
+            insertImage.current = src => {
+                if (!safeNoteImage(src) || before.length + src.length > 2000000) { setToolError('Bu notun görselleri çok büyük. Daha küçük görsel veya ayrı not kullanın (not sınırı 2 MB).'); return false; }
+                if (canliRef.current.content !== before || canliRef.current.nodeId !== nodeId) { setToolError('Not bu sırada değişti. Görseli eklemek için konumu yeniden seçin.'); return false; }
+                if (richInsert) return richInsert(src);
+                icerikDegistir(before.slice(0, start) + `![Not görseli](${src})` + before.slice(end)); setRichMode(true); return true;
+            };
+            if (tool.kind === 'cizim') setDrawing(true); else noteImageInput.current?.click();
+            return;
+        }
         if (tool.kind === 'icerikten-baslik') {
-            const aday = iceriktenBaslik(content);
+            const aday = iceriktenBaslik(richRef.current?.plainText() ?? content.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, ''));
             if (!aday) {
                 alert('İçerikte başlık olacak anlamlı bir kelime bulunamadı.');
                 return;
@@ -591,21 +675,24 @@ function EditorPageInner() {
     // Makro çalıştırma
     const runMacro = async (macro: AiMacro) => {
         const textarea = textareaRef.current;
-        if (!textarea) return;
+        const richSelection = richMode && (remoteMode === 'write' || remoteMode === 'dictation') ? richRef.current?.selection() : null;
+        if (!textarea && !richRef.current) return;
 
-        const selectionStart = textarea.selectionStart;
-        const selectionEnd = textarea.selectionEnd;
-        const hasSelection = selectionStart !== selectionEnd;
+        const { start: selectionStart, end: selectionEnd } = textarea ? kutuSecimi(0) : { start: 0, end: 0 };
+        const hasSelection = !!richSelection || selectionStart !== selectionEnd;
+        if (!hasSelection && /!\[[^\]]*\]\(data:image\//.test(content)) { alert('Not görsellerin otomatik olarak AI ile paylaşılmaz. Makro için yalnız metin bölümünü seçin.'); return; }
 
-        const textToCheck = hasSelection
+        const textToCheck = richSelection ? richSelection.text : hasSelection
             ? content.substring(selectionStart, selectionEnd)
             : content;
+        if (/!\[[^\]]*\]\(data:image\//.test(textToCheck)) { alert('Seçimin görsel içeriyor. AI makrosu için yalnız yazı bölümünü seçin; fotoğraf analizi Bilge Ağaç sohbetindedir.'); return; }
 
         if (!textToCheck.trim()) return;
+        if (!deneme && hasChanges) taslakYaz(nodeId, title, content);
 
         // Sağlayıcı anahtarı yoksa istek hiç gönderilmez; kullanıcı önce
         // ayarlardan sağlayıcı ve anahtar eklemelidir.
-        if (!providerHazir(readActiveProvider())) {
+        if (!aiHazir()) {
             alert(
                 'Yapay zekâ özelliği için önce bir sağlayıcı ve API anahtarı tanımlamalısınız.\n\n' +
                     'Ayarlar → Yapay zekâ bölümünden ' +
@@ -614,7 +701,15 @@ function EditorPageInner() {
             return;
         }
 
+        if (!aiPaylasimOnayi()) return;
+        const hosted = readAiMode() === 'hosted';
+        if (hosted && textToCheck.length > 12000) {
+            alert('Hazır AI tek işlemde en fazla 12.000 karakter işler. Notunuzdan daha kısa bir bölüm seçin.');
+            return;
+        }
+
         setIsSpellChecking(true);
+        setAiReportText('');
         setActiveMacroId(macro.id);
         setRunningLength(textToCheck.length);
 
@@ -634,13 +729,14 @@ function EditorPageInner() {
 
         /** Tek bir metin parçasını sağlayıcıya gönderir. */
         const sendOnce = async (text: string): Promise<string> => {
+            if (hosted) return (await hostedAiRequest({ kind: 'macro', text, instruction: macro.instruction })).text;
             // Özel sunucu telefonda doğrudan cihazdan çağrılır: HTTP, yerel ağ ve
             // anahtarsız sunucular da çalışır, istek uygulama sunucusuna uğramaz.
             if (provider === 'custom' && Capacitor.isNativePlatform()) {
                 try {
                     return await runCustomProviderDirect({
                         baseUrl: customUrl, apiKey: clientApiKey, model: customModel,
-                        instruction: macro.instruction, text
+                        instruction: AI_SAFETY_INSTRUCTION + '\n' + macro.instruction, text
                     });
                 } catch (directError) {
                     if (directError instanceof CustomProviderError) {
@@ -699,7 +795,7 @@ function EditorPageInner() {
         };
 
         const runLocal = async (text: string): Promise<string> => {
-            const prompt = `${macro.instruction}\n\nİNCELENECEK METİN:\n${text}\n\nYANIT (Yalnızca işlenmiş/düzeltilmiş nihai metni ver, başka açıklama ekleme):`;
+            const prompt = `${AI_SAFETY_INSTRUCTION}\n${macro.instruction}\n\nİNCELENECEK METİN:\n${text}\n\nYANIT (Yalnızca işlenmiş/düzeltilmiş nihai metni ver, başka açıklama ekleme):`;
             const res = await runLocalInference(prompt);
             return typeof res.text === 'string' && res.text.trim() ? res.text.trim() : text;
         };
@@ -707,7 +803,7 @@ function EditorPageInner() {
         try {
             let correctedText: string;
 
-            if (provider === 'local') {
+            if (!hosted && provider === 'local') {
                 correctedText = await runLocal(textToCheck);
             } else {
                 try {
@@ -718,7 +814,7 @@ function EditorPageInner() {
                         (firstError instanceof Error &&
                             /internet|bağlantı|network|load failed|failed to fetch|abort/i.test(firstError.message));
 
-                    if (isNetworkErr && isOfflineFallbackEnabled()) {
+                    if (!hosted && isNetworkErr && isOfflineFallbackEnabled()) {
                         try {
                             correctedText = await runLocal(textToCheck);
                         } catch (localErr) {
@@ -746,6 +842,7 @@ function EditorPageInner() {
 
             // Sonuç girdiyle birebir aynıysa onay ekranı açıp kullanıcıya
             // "bir şey oldu" izlenimi vermek yerine durumu açıkça söyleriz.
+            setAiReportText(correctedText);
             if (correctedText.trim() === textToCheck.trim()) {
                 alert(
                     'Yapay zekâ bu metinde değişiklik yapmadı.\n\n' +
@@ -755,7 +852,7 @@ function EditorPageInner() {
                 return;
             }
 
-            const yeniIcerik = hasSelection
+            const yeniIcerik = richSelection ? richSelection.replace(correctedText) : hasSelection
                 ? content.substring(0, selectionStart) +
                   correctedText +
                   content.substring(selectionEnd)
@@ -834,7 +931,7 @@ function EditorPageInner() {
 
         doc.setFontSize(12);
         doc.setFont('helvetica', 'normal');
-        const lines = doc.splitTextToSize(content, maxWidth);
+        const lines = doc.splitTextToSize(noteTextOnly(content), maxWidth);
         doc.text(lines, margin, 40);
 
         doc.save(`${title || 'not'}.pdf`);
@@ -852,7 +949,7 @@ function EditorPageInner() {
                         text: title || 'Başlıksız Not',
                         heading: HeadingLevel.HEADING_1,
                     }),
-                    ...content.split('\n').map(line =>
+                    ...noteTextOnly(content).split('\n').map(line =>
                         new Paragraph({
                             children: [new TextRun(line)],
                         })
@@ -871,7 +968,7 @@ function EditorPageInner() {
     };
 
     return (
-        <div className={`writing-studio min-h-screen flex flex-col ${focusMode ? 'writing-studio--focused' : ''} ${remoteMode === 'screen' ? 'writing-studio--screen' : ''}`} data-tam-ekran={focusMode ? '' : undefined}>
+        <div className={`writing-studio min-h-screen flex flex-col ${focusMode ? 'writing-studio--focused' : ''} ${remoteMode === 'screen' ? 'writing-studio--screen' : ''} ${remoteMode === 'yazi' ? 'writing-studio--yazi' : ''}`} data-tam-ekran={focusMode ? '' : undefined}>
             {focusMode && (
                 <button type="button" onClick={() => setFocusMode(false)} aria-label="Tam ekrandan çık" title="Tam ekrandan çık"
                     className="studio-fullscreen-exit fixed right-3 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-sand-200 bg-white/90 text-sand-700 shadow-lift backdrop-blur hover:bg-sand-100">
@@ -897,6 +994,7 @@ function EditorPageInner() {
                     </button>
                 </div>
             )}
+            {toolError && <div role="alert" className="flex items-center gap-2 border-b border-berry-200 bg-berry-50 px-4 py-2 text-sm text-berry-800"><span className="min-w-0 flex-1">{toolError}</span><button type="button" aria-label="Araç uyarısını kapat" className="flex h-11 w-11 shrink-0 items-center justify-center" onClick={() => setToolError('')}><X size={16} /></button></div>}
             {/* Header */}
             <header className="studio-header bg-white border-b border-sand-200 pt-[env(safe-area-inset-top,0px)]">
                 <div className="studio-topbar flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3">
@@ -913,7 +1011,8 @@ function EditorPageInner() {
                             {visibleToolTabs.map(({ id, label, Icon, disabled }) => (
                                 <button key={id} id={`studio-tab-${id}`} type="button" role="tab"
                                     aria-label={id === 'computer' && sekmeBaglanti.durum ? label + (sekmeBaglanti.durum.tur === 'ok' ? ' · bağlı' : ' · bağlı değil') : label}
-                                    title={id === 'computer' ? label + ' · basılı tutun: bağlantı ayarları' : label} aria-selected={activeToolTab === id}
+                                    title={(id === 'computer' ? label + ' · basılı tutun: bağlantı ayarları' : label) + (activeToolTab === id ? (seritKapali ? ' · dokun: araçları göster' : ' · dokun: araçları gizle') : '')} aria-selected={activeToolTab === id}
+                                    aria-expanded={activeToolTab === id ? !seritKapali : undefined}
                                     aria-controls={`studio-panel-${id}`} disabled={disabled}
                                     tabIndex={activeToolTab === id ? 0 : -1}
                                     onPointerDown={id === 'computer' ? () => {
@@ -929,7 +1028,8 @@ function EditorPageInner() {
                                     onClick={() => {
                                         // Uzun basıştan sonra gelen tıklama sekmeyi değiştirmesin.
                                         if (id === 'computer' && sekmeBasili.current.uzun) { sekmeBasili.current.uzun = false; return; }
-                                        setToolTab(id); aracSekmesiniKaydet(id); setFocusMode(false);
+                                        if (activeToolTab === id) { const kapali = !seritKapali; setSeritKapali(kapali); aracSeridiniKaydet(kapali); setFocusMode(false); return; }
+                                        setToolTab(id); aracSekmesiniKaydet(id); setSeritKapali(false); aracSeridiniKaydet(false); setFocusMode(false);
                                     }}
                                     onKeyDown={event => {
                                         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -940,7 +1040,7 @@ function EditorPageInner() {
                                         const button = document.getElementById(`studio-tab-${next}`) as HTMLButtonElement | null;
                                         if (button && !button.disabled) { button.click(); button.focus(); }
                                     }}
-                                    className={`studio-tab ${activeToolTab === id ? 'studio-tab--active' : ''}`}
+                                    className={`studio-tab ${activeToolTab === id ? (seritKapali ? 'studio-tab--active studio-tab--collapsed' : 'studio-tab--active') : ''}`}
                                     style={id === 'computer' ? { WebkitTouchCallout: 'none', userSelect: 'none' } : undefined}>
                                     <Icon size={19} aria-hidden="true" className={id === 'computer' ? baglantiRengi : undefined} />
                                 </button>
@@ -1032,7 +1132,7 @@ function EditorPageInner() {
                 {/* AI Toolbar — ayarlardan kapatılabilir. Onay bekleyen bir
                     sonuç varsa bölüm kapalı olsa da gösterilir, yoksa
                     kullanıcı Onayla/Geri Al düğmelerini göremezdi. */}
-                {((yapayZekaAcik && !focusMode && activeToolTab === 'ai') || resultPending) && (
+                {((yapayZekaAcik && !focusMode && !seritKapali && activeToolTab === 'ai') || resultPending) && (
                 <div id="studio-panel-ai" role="tabpanel" aria-labelledby="studio-tab-ai" className="studio-tool-row studio-ai flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
 
                     {aiCakisma ? (
@@ -1154,7 +1254,7 @@ function EditorPageInner() {
                     AI'nın hemen altında ince bir satır olarak durur; simgesi
                     gösterir, adı nadiren yazılır. Kapalı veya silinmiş araçlar
                     burada yer kaplamaz; bölüm ayarlardan tümüyle kapatılabilir. */}
-                {!focusMode && activeToolTab === 'tools' && araclarAcik && (
+                {!focusMode && !seritKapali && activeToolTab === 'tools' && araclarAcik && (
                     <div id="studio-panel-tools" role="tabpanel" aria-labelledby="studio-tab-tools" className="studio-tool-row flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
 
                         <div
@@ -1165,21 +1265,30 @@ function EditorPageInner() {
                         >
                             {araclar.map((tool) => {
                                 const sonucHazir = pendingSpellCheck !== null;
+                                // Açık/kapalı araçlar renkleriyle de belli olur;
+                                // aria-pressed tek başına gözle görünmüyordu.
+                                const acik = tool.kind === 'bicim-cubugu' ? richMode && formatToolbar : tool.kind === 'bicim-gecisi' ? !richMode : tool.kind === 'el-yazisi' ? handwriting : false;
                                 return (
                                     <button
                                         key={tool.id}
                                         type="button"
                                         onClick={() => void runTool(tool)}
-                                        disabled={sonucHazir}
-                                        title={tool.subtitle || tool.title}
-                                        aria-label={tool.title}
+                                        onMouseDown={e => e.preventDefault()}
+                                        aria-pressed={['bicim-cubugu', 'bicim-gecisi', 'el-yazisi'].includes(tool.kind) ? acik : undefined}
+                                        aria-expanded={tool.kind === 'bicim-cubugu' ? acik : undefined}
+                                        aria-controls={tool.kind === 'bicim-cubugu' && acik ? 'studio-format-toolbar' : undefined}
+                                        disabled={sonucHazir || bilgeExporting || imagePreparing || drawing || isSpellChecking}
+                                        title={(tool.subtitle || tool.title) + (tool.kind === 'bicim-gecisi' ? (richMode ? ' · Şu an: biçimli yazı' : ' · Şu an: Markdown kaynak') : tool.kind === 'el-yazisi' ? (handwriting ? ' · Açık' : ' · Kapalı') : '')}
+                                        aria-label={tool.kind === 'bicim-cubugu' ? (acik ? 'Biçim çubuğunu gizle' : 'Biçim çubuğunu aç') : tool.kind === 'bicim-gecisi' ? (richMode ? 'Biçim işaretlerini göster' : 'Normal yazı görünümüne dön') : tool.title}
                                         className={`flex min-w-[44px] flex-shrink-0 items-center justify-center gap-1.5 min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                                             sonucHazir
                                                 ? 'bg-sand-200 text-sand-700 cursor-not-allowed'
-                                                : 'bg-moss-50 text-moss-800 hover:bg-moss-100'
+                                                : acik
+                                                    ? 'bg-moss-600 text-white shadow-sm hover:bg-moss-700'
+                                                    : 'bg-moss-50 text-moss-800 hover:bg-moss-100'
                                         }`}
                                     >
-                                        {tool.kind === 'icerikten-baslik' ? (
+                                        {tool.kind === 'bicim-cubugu' ? <Bold size={16} /> : tool.kind === 'bicim-gecisi' ? <Code2 size={16} /> : tool.kind === 'cizim' ? <Brush size={16} /> : tool.kind === 'el-yazisi' ? <PenLine size={16} /> : tool.kind === 'gorsel-ekle' ? <ImagePlus size={16} /> : tool.kind === 'icerikten-baslik' ? (
                                             <Type size={16} />
                                         ) : tool.kind === 'sirali-ad' ? (
                                             <Hash size={16} />
@@ -1188,7 +1297,7 @@ function EditorPageInner() {
                                         ) : (
                                             <Eraser size={16} />
                                         )}
-                                        <span className="hidden whitespace-nowrap sm:inline">{tool.title}</span>
+                                        <span className={['bicim-cubugu', 'bicim-gecisi'].includes(tool.kind) ? 'whitespace-nowrap' : 'hidden whitespace-nowrap sm:inline'}>{tool.kind === 'bicim-cubugu' ? 'Biçim' : tool.kind === 'bicim-gecisi' ? (richMode ? 'İşaretler' : 'Normal yazı') : tool.title}</span>
                                     </button>
                                 );
                             })}
@@ -1196,13 +1305,13 @@ function EditorPageInner() {
                     </div>
                 )}
                 {bilgisayarAcik && (
-                    <div id="studio-panel-computer" role="tabpanel" aria-labelledby="studio-tab-computer" style={{ display: !focusMode && activeToolTab === 'computer' ? undefined : 'none' }} className="studio-tool-row studio-computer flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
+                    <div id="studio-panel-computer" role="tabpanel" aria-labelledby="studio-tab-computer" style={{ display: !focusMode && !seritKapali && activeToolTab === 'computer' ? undefined : 'none' }} className="studio-tool-row studio-computer flex items-center gap-2 border-t border-sand-200 px-4 py-2 sm:px-6">
                         {remoteMode === 'screen' && <EkranSecici duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onYaziyaDon={() => setRemoteMode('write')} />}
                         {remoteMode === 'shortcuts' && <KisayolSecici profilId={kisayolProfili} onProfilChange={setKisayolProfili} onYaziyaDon={() => setRemoteMode('write')} />}
                         <div className="serit-kaydirma flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Bilgisayar araçları" style={remoteMode === 'screen' || remoteMode === 'shortcuts' ? { display: 'none' } : undefined}>
                             <RemoteEditorTools placement="toolbar" content={content} mode={remoteMode} onModeChange={setRemoteMode} onContentChange={icerikDegistir}
                                 profilId={kisayolProfili} onProfilChange={setKisayolProfili}
-                                aktif={!focusMode && activeToolTab === 'computer'}
+                                aktif={!focusMode && !seritKapali && activeToolTab === 'computer'}
                                 onBaglantiAyarlari={() => { setSettingsBolumu('remote'); setSettingsOpen(true); }} />
                         </div>
                     </div>
@@ -1212,6 +1321,9 @@ function EditorPageInner() {
 
             {/* Çalışma alanı: <main> landmark'ı her modda bulunmalı. */}
             <main className="flex min-h-0 flex-1 flex-col">
+            {aiReportText && <div className="max-h-[40dvh] shrink-0 overflow-y-auto border-b border-sand-200 px-4">
+                <div className="flex items-start gap-2"><div className="min-w-0 flex-1"><AiReportButton key={aiReportText} response={aiReportText} source="macro" /></div><button type="button" aria-label="AI bildirim alanını kapat" className="min-h-11 min-w-11" onClick={() => setAiReportText('')}><X size={16} /></button></div>
+            </div>}
             {remoteMode === 'mouse' && <RemoteEditorTools placement="surface" content={content} mode={remoteMode} onModeChange={setRemoteMode}
                 onContentChange={icerikDegistir} />}
 
@@ -1220,9 +1332,35 @@ function EditorPageInner() {
 
             {remoteMode === 'screen' && <EkranDuzeni onYaziyaDon={() => setRemoteMode('write')} duzenId={ekranDuzeni} onDuzenChange={setEkranDuzeni} onAyarlarAc={() => { setSettingsBolumu('kisayollar'); setSettingsOpen(true); }} />}
 
+            {remoteMode === 'yazi' && <YaziModu content={content} onContentChange={icerikDegistir} kutuRef={textareaRef} aiCalisiyor={isSpellChecking}
+                onAiMakro={id => {
+                    const liste = readAiMacros();
+                    const makro = id === null ? spellcheckMacro(liste) : liste.find(m => m.id === id);
+                    if (!makro) { alert('Bu düğmenin yapay zekâ makrosu bulunamadı; düğmeyi ayarlardan düzenleyin.'); return; }
+                    void runMacro(makro);
+                }}
+                onAyarlarAc={() => { setSettingsBolumu('pcAraclari'); setSettingsOpen(true); }} />}
+
             {/* Editor Area */}
             {(remoteMode === 'write' || remoteMode === 'dictation') && (<div className="studio-workspace flex-1 py-4 sm:py-8">
                 <div className="mx-auto w-full max-w-4xl px-3 sm:px-6">
+                    {deneme === 'bilge' && <div className="studio-bilge-transfer">
+                        <div className="min-w-0 flex-1"><p className="text-sm font-medium">Bilge Ağaç taslağı</p><p className="text-xs text-sand-600">Bir kez aktar, sonra aynı ağacı düzenlemeye devam et.</p></div>
+                        <button type="button" disabled={bilgeExporting || isSpellChecking || resultPending || !content.trim()} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-moss-700 px-3 text-sm font-medium text-white disabled:opacity-50" aria-label="Bilge Ağaç bahçesine ağaç olarak aktar" onClick={async () => {
+                            if (bilgeExportLock.current) return;
+                            bilgeExportLock.current = true; setBilgeExporting(true); setKayitHatasi(null);
+                            const revision = revizyonRef.current;
+                            let transferred = false;
+                            try {
+                                const node = await exportBilgeTree(title, content);
+                                // Keep edits made by asynchronous tools while the transfer was in flight.
+                                if (revision !== revizyonRef.current) taslakYaz(node.id, canliRef.current.title, canliRef.current.content);
+                                transferred = true;
+                                router.replace(`/editor?id=${encodeURIComponent(node.garden_id)}&nodeId=${encodeURIComponent(node.id)}`);
+                            } catch (e) { setKayitHatasi(e instanceof Error ? e.message : 'Aktarılamadı.'); }
+                            finally { if (!transferred) { bilgeExportLock.current = false; setBilgeExporting(false); } }
+                        }}>{bilgeExporting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}{bilgeExporting ? 'Aktarılıyor…' : 'Bahçeye aktar'}</button>
+                    </div>}
                     <div className="studio-paper bg-white">
                         <div className="studio-paper-label"><BookOpen size={15} /><span>Düşüncelerine yer aç</span><span className="ml-auto">{focusMode ? 'Tam ekran' : 'Not defteri'}</span></div>
                         {/* Başlık */}
@@ -1230,6 +1368,7 @@ function EditorPageInner() {
                             <input
                                 type="text"
                                 value={title}
+                                readOnly={bilgeExporting}
                                 onChange={handleTitleChange}
                                 placeholder="Notuna bir başlık ver…"
                                 aria-label="Not başlığı"
@@ -1239,14 +1378,24 @@ function EditorPageInner() {
 
                         {/* İçerik */}
                         <div className="px-5 sm:px-12 py-5 sm:py-7">
+                            <div className={handwriting ? 'studio-handwriting' : ''}>
+                            {richMode ? <RichTextEditor key={nodeId} ref={richRef} value={content} onChange={icerikDegistir} toolbar={formatToolbar && araclar.some(t => t.kind === 'bicim-cubugu')} readOnly={bilgeExporting || resultPending || drawing || imagePreparing} /> : <>
+                            <p className="studio-source-hint">
+                                <Code2 size={13} />
+                                <span>Biçim işaretleri (Markdown) · **kalın** ve # başlık gibi işaretleri düzenlersiniz.{kaynak.gorseller.length > 0 ? ` ${kaynak.gorseller.length} görsel küçük yer tutucularla gösterilir; yer tutucuyu silmek görseli siler.` : ''}</span>
+                                <button type="button" onClick={() => setRichMode(true)} className="shrink-0 rounded-lg bg-moss-50 px-2 py-2 text-moss-800">Normal yazıya dön</button>
+                            </p>
                             <textarea
                                 ref={textareaRef}
-                                value={content}
+                                value={kaynak.metin}
+                                readOnly={bilgeExporting || resultPending}
                                 onChange={handleContentChange}
                                 placeholder="Bir düşünce, bir fikir, bir başlangıç…"
-                                aria-label="Not içeriği"
-                                className="studio-text w-full resize-none overflow-hidden bg-transparent outline-none text-sand-800 text-base placeholder:text-sand-400"
+                                aria-label="Not içeriği (Markdown kaynağı)"
+                                className="studio-text studio-source-text w-full resize-none overflow-hidden bg-transparent outline-none text-sand-800 placeholder:text-sand-400"
                             />
+                            </>}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1277,6 +1426,15 @@ function EditorPageInner() {
                 </div>
             </footer>
 
+            <input ref={noteImageInput} type="file" accept="image/*" aria-label="Nota görsel seç" className="hidden" onChange={async e => {
+                const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
+                const insert = insertImage.current; setImagePreparing(true); setToolError('');
+                try { const src = await prepareBilgeImage(file); if (!insert?.(src)) setToolError(previous => previous || 'Görsel eklenemedi. Notu kontrol edip imleci yeniden yerleştirin.'); }
+                catch (error) { setToolError(error instanceof Error ? error.message : 'Görsel hazırlanamadı.'); }
+                finally { setImagePreparing(false); }
+            }} />
+            {imagePreparing && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full bg-moss-800 px-4 py-2 text-sm text-white">Görsel hazırlanıyor…</p>}
+            {drawing && <DrawingPad onClose={() => setDrawing(false)} onInsert={src => { if (insertImage.current?.(src)) setDrawing(false); else alert('Çizim eklenemedi. Not değişmiş veya görsel sınırına ulaşmış olabilir; çiziminiz hâlâ burada.'); }} />}
             <ConfirmModal
                 isOpen={confirmConfig.isOpen}
                 title={confirmConfig.baslik || 'Kaydedilmemiş değişiklikler'}

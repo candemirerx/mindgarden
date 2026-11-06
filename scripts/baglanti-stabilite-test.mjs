@@ -21,10 +21,12 @@ class Reader {
   readAsDataURL(blob) { blob.arrayBuffer().then(b => { this.result = 'data:application/octet-stream;base64,' + Buffer.from(b).toString('base64'); this.onload(); }); }
 }
 const exports = {};
+const fareExports = {};
+vm.runInNewContext(compile('../lib/fareDuzeni.ts'), { exports: fareExports });
 vm.runInNewContext(compile('../lib/remoteTools.ts'), {
   exports, Error, Blob, FileReader: Reader, setTimeout, clearTimeout, URL,
   localStorage: { getItem: k => storage.get(k) ?? null, setItem: (k,v) => storage.set(k,v) },
-  require: name => name === '@capacitor/core' ? { Capacitor: { isNativePlatform: () => true }, registerPlugin: () => native } : {},
+  require: name => name === './fareDuzeni' ? fareExports : name === '@capacitor/core' ? { Capacitor: { isNativePlatform: () => true }, registerPlugin: () => native } : {},
 });
 await Promise.all([exports.connectCard('CARD'), exports.connectCard('CARD'), exports.connectCard('CARD')]);
 await exports.connectCard('CARD');
@@ -49,7 +51,7 @@ const remote = {
 };
 vm.runInNewContext(compile('../lib/baglantiDurumu.ts'), {
   exports: statusExports, setTimeout, clearTimeout,
-  require: name => name === './remoteTools' ? remote : name === './degisim' ? { bildir: v => notifications.push(v) } : {},
+  require: name => name === './remoteTools' ? remote : name === './degisim' ? { bildir: v => notifications.push(v) } : name === './kilavuzIlerleme' ? { dersTamamla: () => {} } : {},
 });
 const first = statusExports.durumuTazele({ connection: 'wifi', cardUrl: 'http://old' });
 const second = statusExports.durumuTazele({ connection: 'wifi', cardUrl: 'http://new' });

@@ -32,14 +32,14 @@ export function basHarf(ad: string): string {
 const ACIKLAMA: Partial<Record<KartIslevi, string>> = {
     yok: 'Bu konumda düğme gösterme', editor: 'Metin editörünü açar', kopya: 'Not içeriğini panoya kopyalar',
     buda: 'Notu buda ya da geri al', sol: 'Sol yanına yeni not ekler', yan: 'Sağ yanına yeni not ekler',
-    alt: 'Altına yeni not ekler', tasi: 'Ağacı sürükleyerek taşır', ayarlar: 'Ağaç ayarlarını açar',
+    alt: 'Altına yeni not ekler', tasi: 'Ağacı sürükleyerek taşır', ayarlar: 'Ağaç ayarlarını açar', tuvalAyarlari: 'Tuval görünümünü ve kart düğmelerini ayarlar',
     pcYaz: 'Notu bilgisayarda yazar', pcPano: 'Notu bilgisayar panosuna gönderir', pcEnter: 'Bilgisayara Enter tuşu yollar',
     pcDikte: 'Konuşun, söyledikleriniz bu kartın içeriğine yazılsın', pcKopru: 'Konuşun, söyledikleriniz doğrudan bilgisayara yazılsın', pcKlavye: 'Telefon klavyesiyle yazın, bilgisayara gönderin', pcTelPano: 'Telefon panosundaki metin ya da görseli bilgisayara yollar'
 };
 export const SIMGE: Partial<Record<KartIslevi, ReactNode>> = {
     yok: <Ban size={18} />, editor: <Pencil size={18} />, kopya: <Copy size={18} />, buda: <Scissors size={18} />,
     sol: <Plus size={18} />, yan: <Plus size={18} />, alt: <Plus size={18} />, tasi: <Move size={18} />,
-    ayarlar: <SlidersHorizontal size={18} />, pcYaz: <Keyboard size={18} />, pcPano: <ClipboardList size={18} />, pcEnter: <CornerDownLeft size={18} />,
+    ayarlar: <SlidersHorizontal size={18} />, tuvalAyarlari: <SlidersHorizontal size={18} />, pcYaz: <Keyboard size={18} />, pcPano: <ClipboardList size={18} />, pcEnter: <CornerDownLeft size={18} />,
     pcDikte: <Mic size={18} />, pcKopru: <AudioLines size={18} />, pcKlavye: <Smartphone size={18} />, pcTelPano: <ClipboardPaste size={18} />
 };
 
@@ -47,11 +47,12 @@ type Sekme = 'hazir' | 'bilgisayar' | 'makro' | 'ai';
 const SEKMELER: { id: Sekme; ad: string }[] = [
     { id: 'hazir', ad: 'Hazır' }, { id: 'bilgisayar', ad: 'Bilgisayar' }, { id: 'makro', ad: 'Makrolar' }, { id: 'ai', ad: 'Yapay zekâ' }
 ];
-const HAZIR: KartIslevi[] = ['editor', 'kopya', 'buda', 'sol', 'yan', 'alt', 'tasi', 'ayarlar', 'yok'];
+const HAZIR: KartIslevi[] = ['editor', 'kopya', 'buda', 'sol', 'yan', 'alt', 'tasi', 'ayarlar', 'tuvalAyarlari', 'yok'];
 const BILGISAYAR: KartIslevi[] = ['pcDikte', 'pcKopru', 'pcKlavye', 'pcYaz', 'pcPano', 'pcTelPano', 'pcEnter'];
 const BILGISAYAR_GRUP: Partial<Record<KartIslevi, string>> = { pcDikte: 'Dikte', pcKopru: 'Dikte', pcKlavye: 'Bilgisayara yaz', pcYaz: 'Bilgisayara yaz', pcPano: 'Pano', pcTelPano: 'Pano', pcEnter: 'Tuşlar' };
 
-type Oge = { anahtar: string; islev: KartIslevi; kimlik?: string; ad: string; aciklama: string; simge: ReactNode; grup?: string };
+export type KartAracSecimi = { islev: KartIslevi; kimlik?: string };
+type Oge = KartAracSecimi & { anahtar: string; ad: string; aciklama: string; simge: ReactNode; grup?: string };
 
 /** Bir konumun şu anki işlevinin okunur adı (ayarlar satırında gösterilir). */
 export function islevAdi(islev: KartIslevi, kimlik: string | undefined, macros: RemoteMacro[]): { ad: string; harf?: string } {
@@ -60,20 +61,24 @@ export function islevAdi(islev: KartIslevi, kimlik: string | undefined, macros: 
     return { ad: KART_ISLEVLERI[islev] };
 }
 
-export default function KartAracEkle({ yerKey, onKapat }: { yerKey: string; onKapat: () => void }) {
+export default function KartAracEkle({ yerKey, onKapat, bahceId, ozelSecim, onSec, izinli }: {
+    yerKey: string; onKapat: () => void; bahceId?: string;
+    ozelSecim?: KartAracSecimi; onSec?: (secim: KartAracSecimi) => void; izinli?: KartIslevi[];
+}) {
     const prefs = useRemotePrefs();
-    const t0 = tuvalTercihleri();
-    const simdiki = t0.dugmeler[yerKey as keyof typeof t0.dugmeler];
-    const simdikiKimlik = simdiki === 'makro' ? t0.kartMakrolari[yerKey as keyof typeof t0.kartMakrolari] : simdiki === 'aiMakro' ? t0.kartAiMakrolari[yerKey as keyof typeof t0.kartAiMakrolari] : undefined;
+    const t0 = tuvalTercihleri(bahceId);
+    const simdiki = ozelSecim?.islev ?? t0.dugmeler[yerKey as keyof typeof t0.dugmeler];
+    const simdikiKimlik = ozelSecim ? ozelSecim.kimlik : simdiki === 'makro' ? t0.kartMakrolari[yerKey as keyof typeof t0.kartMakrolari] : simdiki === 'aiMakro' ? t0.kartAiMakrolari[yerKey as keyof typeof t0.kartAiMakrolari] : undefined;
     const [sekme, setSekme] = useState<Sekme>(simdiki === 'makro' ? 'makro' : simdiki === 'aiMakro' ? 'ai' : BILGISAYAR.includes(simdiki) ? 'bilgisayar' : 'hazir');
     const [secili, setSecili] = useState<string>(simdiki + ':' + (simdikiKimlik ?? ''));
 
     const hazirOge = (islev: KartIslevi): Oge => ({ anahtar: islev + ':', islev, ad: KART_ISLEVLERI[islev], aciklama: ACIKLAMA[islev] ?? '', simge: SIMGE[islev], grup: sekme === 'bilgisayar' ? BILGISAYAR_GRUP[islev] : undefined });
-    const ogeler: Oge[] = sekme === 'hazir' ? HAZIR.map(hazirOge)
+    const tumOgeler: Oge[] = sekme === 'hazir' ? HAZIR.map(hazirOge)
         : sekme === 'bilgisayar' ? BILGISAYAR.map(hazirOge)
         : sekme === 'makro' ? prefs.macros.filter(makroHazir).map(m => ({ anahtar: 'makro:' + m.id, islev: 'makro' as const, kimlik: m.id, ad: m.name.trim() || 'Adsız makro', aciklama: TUR_ADI[m.type], simge: <span className="text-sm font-bold">{basHarf(m.name)}</span> }))
         : readEnabledMacros().map(m => ({ anahtar: 'aiMakro:' + m.id, islev: 'aiMakro' as const, kimlik: m.id, ad: m.title.trim() || 'Adsız görev', aciklama: m.subtitle?.trim() || 'Yapay zekâ görevi', simge: <span className="text-sm font-bold">{basHarf(m.title)}</span> }));
 
+    const ogeler = izinli ? tumOgeler.filter(o => izinli.includes(o.islev)) : tumOgeler;
     useEffect(() => {
         const esc = (olay: KeyboardEvent) => { if (olay.key === 'Escape') onKapat(); };
         window.addEventListener('keydown', esc);
@@ -95,14 +100,15 @@ export default function KartAracEkle({ yerKey, onKapat }: { yerKey: string; onKa
     }, []);
 
     const sec = (oge: Oge) => {
-        const t = tuvalTercihleri();
+        if (onSec) { onSec({ islev: oge.islev, kimlik: oge.kimlik }); setSecili(oge.anahtar); setTimeout(onKapat, 220); return; }
+        const t = tuvalTercihleri(bahceId);
         const kartMakrolari = { ...t.kartMakrolari };
         const kartAiMakrolari = { ...t.kartAiMakrolari };
         delete kartMakrolari[yerKey as keyof typeof kartMakrolari];
         delete kartAiMakrolari[yerKey as keyof typeof kartAiMakrolari];
         if (oge.islev === 'makro' && oge.kimlik) (kartMakrolari as Record<string, string>)[yerKey] = oge.kimlik;
         if (oge.islev === 'aiMakro' && oge.kimlik) (kartAiMakrolari as Record<string, string>)[yerKey] = oge.kimlik;
-        tuvalTercihleriniKaydet({ ...t, dugmeler: { ...t.dugmeler, [yerKey]: oge.islev }, kartMakrolari, kartAiMakrolari });
+        tuvalTercihleriniKaydet({ ...t, dugmeler: { ...t.dugmeler, [yerKey]: oge.islev }, kartMakrolari, kartAiMakrolari }, bahceId);
         setSecili(oge.anahtar);
         setTimeout(onKapat, 220);
     };

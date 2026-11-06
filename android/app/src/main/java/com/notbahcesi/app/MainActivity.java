@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     @Override public void onCreate(Bundle state) {
         registerPlugin(RemoteBridgePlugin.class);
         registerPlugin(LocalLlmPlugin.class);
+        registerPlugin(BilgeSpeechPlugin.class);
         super.onCreate(state);
     }
 

@@ -14,7 +14,7 @@ import PromptModal from '@/components/ui/PromptModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import AnchoredDropdown from '@/components/ui/AnchoredDropdown';
 import { sonrakiRenk } from '@/lib/branchColors';
-import { siraliAdEtkin, siraliAd } from '@/lib/tools';
+import { bosAdPlani } from '@/lib/bosAd';
 import { BudananlarDugmesi, useBudamaModu } from '@/components/ui/BudananlarDugmesi';
 import { GorunumSecici } from '@/components/bahce/GorunumSecici';
 import { budamaFiltresi } from '@/lib/uiPrefs';
@@ -54,7 +54,7 @@ function ProjectsPageInner() {
     const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'split' | 'grid'>('split');
-    const budamaModu = useBudamaModu();
+    const budamaModu = useBudamaModu(gardenId);
 
     // Modals state
     const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
@@ -172,18 +172,16 @@ function ProjectsPageInner() {
         // Ad her zaman boş bırakılabilir; sıra numarası aracı kapalıysa
         // anlaşılır bir varsayılan ad verilir. Böylece ekleme asla çıkmaza
         // girmez.
-        const adIzinli = siraliAdEtkin();
         const varsayilan = 'Yeni Ağaç';
+        const plan = bosAdPlani('agac', varsayilan);
         setPromptConfig({
             isOpen: true,
             title: 'Yeni Ağaç Ekle',
-            placeholder: adIzinli
-                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
-                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            placeholder: plan.ipucu,
             allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || (adIzinli ? siraliAd(null, nodes) : varsayilan);
+                const ad = title || plan.uret(null, nodes);
                 const created = await addNode(gardenId, ad, null, { x: 0, y: 0 });
                 if (created) {
                     setHata('');
@@ -201,18 +199,23 @@ function ProjectsPageInner() {
 
     const handleAddChild = (parentId: string, hasChildren: boolean) => {
         setActiveMenu(null);
-        const adIzinli = siraliAdEtkin();
         const varsayilan = hasChildren ? 'Yeni Dal' : 'Yeni Yaprak';
+        // Boş ad kuralı notun ait olduğu ağacın kendi ayarından gelir
+        // (Ağaç Yönetimi → Ağaçlar → kalem düğmesi).
+        let kok = nodes.find(n => n.id === parentId);
+        while (kok && kok.parent_id) {
+            const ebeveynId = kok.parent_id;
+            kok = nodes.find(n => n.id === ebeveynId);
+        }
+        const plan = bosAdPlani(hasChildren ? 'dal' : 'yaprak', varsayilan, kok?.id ?? null);
         setPromptConfig({
             isOpen: true,
             title: hasChildren ? 'Yeni Dal Ekle' : 'Yeni Yaprak Ekle',
-            placeholder: adIzinli
-                ? 'Ad girin (boş bırakılırsa sıra numarası verilir)...'
-                : `Ad girin (boş bırakılırsa "${varsayilan}" yazılır)...`,
+            placeholder: plan.ipucu,
             allowEmpty: true,
             onConfirm: async (title) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || (adIzinli ? siraliAd(parentId, nodes) : varsayilan);
+                const ad = title || plan.uret(parentId, nodes);
                 const created = await addNode(gardenId, ad, parentId, { x: 0, y: 0 });
 
                 if (!expandedNodes.has(parentId)) {
@@ -861,7 +864,7 @@ function ProjectsPageInner() {
                                 </button>
                             </div>
 
-                            <BudananlarDugmesi />
+                            <BudananlarDugmesi bahceId={gardenId} />
                             <button
                                 onClick={handleAddRoot}
                                 title="Yeni ağaç ekle"

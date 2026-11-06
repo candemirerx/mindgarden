@@ -3,7 +3,9 @@
 /**
  * Editöre özel mini galeri: tam sayfa açılır.
  *
- * Üstte dört bilgisayar aracı (seçilenleri bilgisayara, seçilenleri PC
+ * Üstte araçlar: önce cihaz araçları (seçilenleri telefon galerisine,
+ * Dosyalar'a / İndirilenler'e kaydet, paylaş: Quick Share ile başka cihaza),
+ * sonra bilgisayar araçları (seçilenleri bilgisayara, seçilenleri PC
  * panosuna, not metnini PC panosuna, telefon panosunu PC panosuna); ortada
  * görseller ve metin kartları. Bir öğeye basılı tutunca seçim başlar, sonra
  * dokunuşlar seçimi değiştirir; "Tümünü seç" hepsini seçer. Altta WhatsApp'taki
@@ -16,8 +18,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Capacitor } from '@capacitor/core';
-import { ArrowLeft, Camera, Check, CheckCheck, Cloud, CloudOff, RefreshCw, ClipboardCopy, ClipboardPaste, Copy, FileText, FilePlus2, Download, ImagePlus, GalleryThumbnails, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
-import { dosyalariBilgisayaraGonder, klavyeGorselleriniDinle, sendToComputerClipboard, telefonPanosunaYaz, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
+import { ArrowLeft, Camera, Check, CheckCheck, Cloud, CloudOff, RefreshCw, ClipboardCopy, ClipboardPaste, Copy, FileText, FilePlus2, Download, FolderDown, ImageDown, ImagePlus, GalleryThumbnails, Share2, Loader2, Monitor, SendHorizontal, Trash2, X } from 'lucide-react';
+import { cihazaKaydet, cihazdanPaylas, dosyalariBilgisayaraGonder, klavyeGorselleriniDinle, sendToComputerClipboard, telefonPanosunaYaz, telefonPanosunuBilgisayaraGonder, telefonPanosunuOku } from '@/lib/remoteTools';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { useBaglantiDurumu, yolAdi } from '@/lib/baglantiDurumu';
 import BaglantiGostergesi from './BaglantiGostergesi';
@@ -139,7 +141,38 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
     const dosyaya = (o: GaleriOgesi) => ({ ad: o.ad, veri: o.veri ?? new Blob([o.metin ?? ''], { type: 'text/plain;charset=utf-8' }), ...(o.tur === 'dosya' ? { tur: 'dosya' as const } : {}) });
     const secimGerekli = () => { bildir({ metin: 'Önce gönderilecekleri seçin: bir öğeye basılı tutun ya da Tümünü seç’e dokunun.', ton: 'error' }); };
 
+    const kaydet = (ogeler: GaleriOgesi[], hedef: 'galeri' | 'dosyalar') => {
+        if (!ogeler.length) return secimGerekli();
+        if (hedef === 'galeri' && !ogeler.some(o => o.tur === 'gorsel')) {
+            bildir({ metin: 'Galeriye yalnız fotoğraflar kaydedilir. Dosya ve metinler için Dosyalara kaydet’i kullanın.', ton: 'error' }); return;
+        }
+        void calistir(ogeler.length + ' öğe telefona kaydediliyor…', async () => {
+            const s = await cihazaKaydet(ogeler.map(dosyaya), hedef, oran => setDurum({ metin: 'Kaydediliyor… %' + Math.round(oran * 100), ton: 'sending' }));
+            if (s.tarayici) return s.sayi + ' öğe indirildi ✓ İndirilenler klasörüne bakın.';
+            return s.sayi + ' öğe kaydedildi ✓ ' + s.klasorler.join(' ve ') + (hedef === 'galeri' && s.klasorler.length > 1 ? ' (fotoğraf olmayanlar İndirilenler’e)' : '');
+        });
+    };
+    const paylas = (ogeler: GaleriOgesi[]) => {
+        if (!ogeler.length) return secimGerekli();
+        void calistir('Paylaşım hazırlanıyor…', async () => {
+            await cihazdanPaylas(ogeler.map(dosyaya));
+            return 'Paylaşım menüsü açıldı.';
+        });
+    };
+
     const araclar = [
+        {
+            id: 'galeri-galerime', Icon: ImageDown, ad: 'Galerime kaydet', aciklama: 'Seçilen fotoğrafları telefon galerisine kaydet (Resimler › Not Bahçesi)',
+            calis: () => kaydet(seciliOgeler, 'galeri')
+        },
+        {
+            id: 'galeri-dosyalara', Icon: FolderDown, ad: 'Dosyalara kaydet', aciklama: 'Seçilenleri telefonun hafızasına kaydet (İndirilenler › Not Bahçesi); bilgisayar tarayıcısında indirir',
+            calis: () => kaydet(seciliOgeler, 'dosyalar')
+        },
+        {
+            id: 'galeri-paylas', Icon: Share2, ad: 'Paylaş / kopyala', aciklama: 'Seçilenleri paylaş: Quick Share ile başka cihaza, Drive’a, WhatsApp’a…',
+            calis: () => paylas(seciliOgeler)
+        },
         {
             id: 'galeri-bilgisayara', Icon: Monitor, ad: 'Bilgisayara', aciklama: 'Seçilenleri bilgisayara gönder',
             calis: () => {
@@ -287,9 +320,9 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                 </button>}
             </div>
             {/* Bilgisayar araçları */}
-            <div className="grid grid-cols-3 gap-1.5 px-2 pb-2.5 sm:gap-2 sm:px-4">
+            <div className="grid grid-cols-4 gap-1.5 px-2 pb-2.5 sm:gap-2 sm:px-4">
                 {araclar.map(({ id, Icon, ad, aciklama, calis }) => {
-                    const seceli = id === 'galeri-bilgisayara' || id === 'galeri-pc-panosu' || id === 'galeri-telefon-panosuna';
+                    const seceli = id !== 'galeri-not-panoya' && id !== 'galeri-telefon-panosu';
                     const pasif = seceli && !secimKipi;
                     return <button key={id} id={id} type="button" disabled={mesgul} onClick={calis} title={aciklama} aria-label={aciklama}
                         className={cx('flex min-w-0 flex-col items-center justify-start gap-1 rounded-2xl border px-1 py-2 text-[11px] font-medium leading-tight transition-colors disabled:opacity-60 sm:text-xs',
@@ -304,7 +337,7 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
 
         {/* Durum bildirimi */}
         {durum && <div id="galeri-durum" role="status" aria-live="polite"
-            className={cx('pointer-events-none absolute left-1/2 top-[calc(env(safe-area-inset-top,0px)+8.5rem)] z-10 flex max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium shadow-lg',
+            className={cx('pointer-events-none absolute left-1/2 top-[calc(env(safe-area-inset-top,0px)+8.5rem)] z-30 flex max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium shadow-lg',
                 durum.ton === 'error' ? 'bg-berry-700 text-berry-50' : 'bg-moss-800 text-moss-50')}>
             {durum.ton === 'sending' ? <Loader2 size={16} className="shrink-0 animate-spin" /> : durum.ton === 'ok' ? <Check size={16} className="shrink-0" /> : <X size={16} className="shrink-0" />}
             <span>{durum.metin}</span>
@@ -394,6 +427,11 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                 <button type="button" onClick={() => setBuyuk(null)} aria-label="Önizlemeyi kapat" className="flex h-12 w-12 items-center justify-center rounded-full text-white hover:bg-white/10"><X size={22} /></button>
                 <div className="flex gap-1">
                     <button type="button" onClick={() => { sec(buyuk.id); setBuyuk(null); }} className="flex h-10 items-center gap-1.5 rounded-full px-3 text-sm text-white hover:bg-white/10"><Check size={17} /> Seç</button>
+                    <button type="button" id="onizleme-kaydet" disabled={mesgul} onClick={() => kaydet([buyuk], buyuk.tur === 'gorsel' ? 'galeri' : 'dosyalar')}
+                        aria-label={buyuk.tur === 'gorsel' ? 'Galerime kaydet' : 'Dosyalara kaydet'} title={buyuk.tur === 'gorsel' ? 'Galerime kaydet' : 'Dosyalara kaydet'}
+                        className="flex h-10 w-10 items-center justify-center rounded-full text-white hover:bg-white/10 disabled:opacity-50">{buyuk.tur === 'gorsel' ? <ImageDown size={18} /> : <FolderDown size={18} />}</button>
+                    <button type="button" id="onizleme-paylas" disabled={mesgul} onClick={() => paylas([buyuk])} aria-label="Paylaş" title="Paylaş / başka cihaza kopyala"
+                        className="flex h-10 w-10 items-center justify-center rounded-full text-white hover:bg-white/10 disabled:opacity-50"><Share2 size={18} /></button>
                     <button type="button" onClick={() => { void galeridenSil(notId, [buyuk.id]); setBuyuk(null); }} aria-label="Sil" className="flex h-10 w-10 items-center justify-center rounded-full text-white hover:bg-white/10"><Trash2 size={18} /></button>
                 </div>
             </div>
@@ -405,8 +443,11 @@ export default function MiniGaleri({ notId, editorMetni, onKapat, onBaglantiAyar
                         <FileText size={40} className="text-moss-600" />
                         <p className="break-all font-semibold">{buyuk.ad}</p>
                         <p className="text-sm text-sand-600">{dosyaBoyutu(buyuk.veri?.size ?? 0)} · Dosya başına en çok 100 MB</p>
-                        <p className="text-xs text-sand-600">Seçip bilgisayara veya PC panosuna gönderebilirsiniz.</p>
-                        <a href={onizleme[buyuk.id]} download={buyuk.ad} className="btn btn-secondary min-h-11 gap-2"><Download size={16} /> Dosyayı indir</a>
+                        <p className="text-xs text-sand-600">Telefona kaydedebilir, paylaşabilir ya da seçip bilgisayara gönderebilirsiniz.</p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                            <button type="button" disabled={mesgul} onClick={() => kaydet([buyuk], 'dosyalar')} className="btn btn-secondary min-h-11 gap-2"><Download size={16} /> Dosyalara kaydet</button>
+                            <button type="button" disabled={mesgul} onClick={() => paylas([buyuk])} className="btn btn-secondary min-h-11 gap-2"><Share2 size={16} /> Paylaş</button>
+                        </div>
                     </div> : <p className="max-h-full max-w-xl overflow-auto whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm text-sand-900" onClick={e => e.stopPropagation()}>{buyuk.metin}</p>}
             </div>
         </div>}

@@ -7,7 +7,7 @@
  * Motor, dil ve süre Uzaktan araçlar ayarlarından gelir. Aynı düğmeye tekrar
  * dokunmak dinlemeyi durdurur.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BULUT_SAGLAYICILAR, SesKaydedici, sesiYaziyaCevir } from '@/lib/bulutDikte';
 import { bridgeDictate, dinleKopruDikte, metinFarkiAktar, stopBridgeDictation } from '@/lib/remoteTools';
 import type { RemotePrefs } from '@/lib/remoteTools';
@@ -18,6 +18,7 @@ export function useKartDikte(prefs: RemotePrefs, icerikAl: () => string, icerikY
     const [durum, setDurum] = useState<DikteDurumu>(null);
     const durdur = useRef<(() => void) | null>(null);
     const prefsRef = useRef(prefs); prefsRef.current = prefs;
+    useEffect(() => () => { durdur.current?.(); }, []);
 
     const notaEkle = async (metin: string) => {
         const m = metin.trim();

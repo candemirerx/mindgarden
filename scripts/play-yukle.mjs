@@ -9,6 +9,7 @@
  * Kullanım: node scripts/play-yukle.mjs [kanal] [--not "sürüm notu"]
  */
 import { createSign } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -19,15 +20,19 @@ const ANAHTAR = process.env.PLAY_API_ANAHTARI || join(homedir(), '.notbahcesi', 
 const b64u = b => Buffer.from(b).toString('base64url');
 
 const argumanlar = process.argv.slice(2);
+const durum = argumanlar.includes('--durum');
+const taslak = argumanlar.includes('--taslak');
 const notSirasi = argumanlar.indexOf('--not');
 const surumNotu = notSirasi >= 0 ? argumanlar[notSirasi + 1] : '';
 const kanal = argumanlar.find((a, i) => !a.startsWith('--') && i !== notSirasi + 1) || 'alpha';
+if (kanal !== 'alpha') throw new Error('Bu yayın akışı yalnızca kapalı test alpha kanalına izin verir.');
+if (!durum) execFileSync(process.execPath, [join(KOK, 'scripts/yayin-dogrula.mjs')], { cwd: KOK, stdio: 'inherit' });
 
 const surum = /APP_VERSION\s*=\s*'([^']+)'/.exec(readFileSync(join(KOK, 'lib/config.ts'), 'utf8'))?.[1];
 const surumKodu = Number(/(?:^|\s)versionCode\s+(\d+)/m.exec(readFileSync(join(KOK, 'android/app/build.gradle'), 'utf8'))?.[1]);
 if (!surum || !surumKodu) { console.error('Sürüm bilgisi okunamadı.'); process.exit(1); }
 const aabYolu = join(KOK, 'play-store-paketi', 'uygulama', 'not-bahcesi-' + surum + '.aab');
-const aab = readFileSync(aabYolu);
+const aab = durum ? null : readFileSync(aabYolu);
 
 let anahtar;
 try { anahtar = JSON.parse(readFileSync(ANAHTAR, 'utf8')); }
@@ -62,16 +67,25 @@ const api = async (yol, yontem = 'GET', govde, ust = '/androidpublisher/v3/appli
     return j;
 };
 
-console.log('Yükleniyor: ' + surum + ' (' + surumKodu + ') → kanal "' + kanal + '", ' + aab.length.toLocaleString('tr-TR') + ' bayt');
+if (!durum) console.log('Yükleniyor: ' + surum + ' (' + surumKodu + ') → kanal "' + kanal + '", ' + aab.length.toLocaleString('tr-TR') + ' bayt');
 const duzenleme = await api('/edits', 'POST', {});
 const ed = '/edits/' + duzenleme.id;
 try {
+    if (durum) {
+        const tracks = await api(ed + '/tracks');
+        const bundles = await api(ed + '/bundles');
+        console.log(JSON.stringify({ tracks: tracks.tracks, bundles: bundles.bundles?.map(b => ({ versionCode: b.versionCode, sha256: b.sha256 })) }, null, 2));
+        await api(ed, 'DELETE');
+        process.exit(0);
+    }
     const paket = await api(ed + '/bundles?uploadType=media', 'POST', aab, '/upload/androidpublisher/v3/applications/');
     if (paket.versionCode !== surumKodu) throw new Error('Yüklenen paketin sürüm kodu ' + paket.versionCode + ', beklenen ' + surumKodu);
     console.log('1) AAB yüklendi (kod ' + paket.versionCode + ', sha256 ' + paket.sha256 + ')');
-    const surumBilgisi = { name: surumKodu + ' (' + surum + ')', versionCodes: [String(surumKodu)], status: 'completed' };
+    const surumBilgisi = { name: surumKodu + ' (' + surum + ')', versionCodes: [String(surumKodu)], status: taslak ? 'draft' : 'completed' };
     if (surumNotu) surumBilgisi.releaseNotes = [{ language: 'tr-TR', text: surumNotu }];
-    await api(ed + '/tracks/' + kanal, 'PUT', { track: kanal, releases: [surumBilgisi] });
+    const mevcut = await api(ed + '/tracks/' + kanal);
+    const korunan = taslak ? (mevcut.releases || []).filter(r => r.status !== 'draft') : [];
+    await api(ed + '/tracks/' + kanal, 'PUT', { track: kanal, releases: [...korunan, surumBilgisi] });
     console.log('2) Kanal "' + kanal + '" güncellendi');
     let sonuc;
     try { sonuc = await api(ed + ':commit', 'POST'); }
@@ -81,6 +95,7 @@ try {
         console.log('   (değişiklikler incelemeye otomatik gönderilmedi; Play Console → Yayın özeti\'nden gönderin)');
     }
     console.log('3) Onaylandı (düzenleme ' + sonuc.id + ')');
+    if (taslak) console.log('TASLAK kaydedildi; mevcut test sürümü korundu. Yeni sürüm henüz testçilere dağıtılmaz.');
 } catch (h) {
     await api(ed, 'DELETE').catch(() => {});
     console.error('HATA: ' + h.message);

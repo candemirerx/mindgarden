@@ -1,0 +1,98 @@
+
+> not-bahcesi@1.0.3 dev
+> next dev
+
+   ▲ Next.js 15.5.25
+   - Local:        http://localhost:3000
+   - Network:      http://100.65.172.25:3000
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+ ✓ Starting...
+
+   We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+   	- include was updated to add '.next-dev/types/**/*.ts'
+
+ ✓ Ready in 3.7s
+ ○ Compiling / ...
+ ✓ Compiled / in 19.9s (2300 modules)
+ GET / 200 in 22336ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1892ms (1253 modules)
+ GET /favicon.ico 200 in 2228ms
+ ○ Compiling /editor ...
+ ✓ Compiled /editor in 2.4s (2388 modules)
+ GET /editor?id=bahce-kitap&nodeId=dugum-altini 200 in 3216ms
+ ○ Compiling /pc ...
+ ✓ Compiled /pc in 1592ms (2437 modules)
+ GET /pc 200 in 2311ms
+ ✓ Compiled in 3.2s (2434 modules)
+ ✓ Compiled in 2.5s (2434 modules)
+ ✓ Compiled in 3.2s (1091 modules)
+ ✓ Compiled in 706ms (1091 modules)
+ ✓ Compiled in 1790ms (1091 modules)
+ ✓ Compiled in 606ms (1091 modules)
+ ✓ Compiled in 5.1s (2434 modules)
+ ✓ Compiled in 627ms (1091 modules)
+ ✓ Compiled in 3.4s (2434 modules)
+ ✓ Compiled in 1850ms (2434 modules)
+ ✓ Compiled in 2.7s (2434 modules)
+ ✓ Compiled in 1816ms (1091 modules)
+ ✓ Compiled in 739ms (1091 modules)
+ ✓ Compiled in 863ms (1091 modules)
+ ✓ Compiled in 749ms (1091 modules)
+ ✓ Compiled in 810ms (1091 modules)
+ ✓ Compiled in 2.8s (2434 modules)
+ ✓ Compiled in 1066ms (1091 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1282ms (2425 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 3.1s (2771 modules)
+ GET / 500 in 11104ms
+ ○ Compiling /bahce_view ...
+ ✓ Compiled /bahce_view in 926ms (1555 modules)
+ ✓ Compiled in 3.3s (1290 modules)
+ GET /favicon.ico 200 in 5162ms
+ GET /bahce_view?id=gesture-test 200 in 6223ms
+ GET /bahce_view 200 in 94ms
+ GET / 200 in 868ms
+ GET /favicon.ico 200 in 25ms
+ GET /bahce_view?id=gesture-test 200 in 110ms
+ GET / 200 in 626ms
+ GET /favicon.ico 200 in 19ms
+ GET /bahce_view?id=gesture-test 200 in 123ms
+ GET /bahce_view?id=gesture-test 200 in 82ms
+ ✓ Compiled in 3.8s (2836 modules)
+ ✓ Compiled in 766ms (1286 modules)
+ ✓ Compiled in 761ms (1286 modules)
+ ○ Compiling /bahce_view ...
+ ✓ Compiled /bahce_view in 1630ms (1582 modules)
+ GET /bahce_view 500 in 2315ms
+ GET /bahce_view 500 in 101ms
+ GET / 500 in 663ms
+ GET / 500 in 182ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 712ms (1599 modules)
+ GET /favicon.ico 200 in 1070ms
+ GET /bahce_view?id=gesture-test 500 in 2995ms
+ GET /bahce_view?id=gesture-test 500 in 186ms
+ ✓ Compiled in 7.1s (2825 modules)
+ ✓ Compiled in 2.2s (2825 modules)
+ ○ Compiling /bahce_view ...
+ ✓ Compiled /bahce_view in 548ms (1584 modules)
+ GET /bahce_view 500 in 1135ms
+ GET /bahce_view 500 in 105ms
+ GET /bahce_view 500 in 480ms
+ GET /bahce_view 500 in 83ms
+ GET / 500 in 620ms
+ GET / 500 in 151ms
+ ✓ Compiled /favicon.ico in 457ms (1601 modules)
+ GET /favicon.ico 200 in 764ms
+ GET /bahce_view?id=gesture-test 500 in 2529ms
+ GET /bahce_view?id=gesture-test 500 in 148ms
+ GET /bahce_view?id=gesture-test 500 in 1298ms
+ GET /bahce_view?id=gesture-test 500 in 96ms
+[?25h

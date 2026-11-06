@@ -2,7 +2,7 @@
 
 /**
  * "Deneme ağacında dene" kartı: bağlantı ya da yapay zekâ kurulduktan sonra
- * ayarlardan tek dokunuşla bellek içi deneme notuna (bahçeye yazılmaz) geçer;
+ * ayarlardan tek dokunuşla bu cihazda korunan deneme notuna (bahçeye yazılmaz) geçer;
  * editör ilgili araç bölümü açık ve seçili açılır. Ayarlar penceresi kapanır.
  */
 import { useState } from 'react';
@@ -12,19 +12,20 @@ import { ayarlaraDonSakla, denemeAgaciAdresi, type DenemeTuru } from '@/lib/dene
 import { cx } from '@/components/ui/settings';
 
 const METIN: Record<DenemeTuru, { baslik: string; aciklama: string; dugme: string }> = {
+    bilge: { baslik: 'Bilge Ağaç notu', aciklama: 'Sohbet yanıtını düzenleyin ve bahçeye aktarın.', dugme: 'Metin işlemcisini aç' },
     hepsi: {
         baslik: 'Tüm araçları bir notta deneyin',
-        aciklama: 'Yerel, bilgisayar ve yapay zekâ araçlarının hepsi açık bir deneme notu açılır. Not hiçbir bahçeye kaydedilmez; çıkınca kaybolur.',
+        aciklama: 'Yerel, bilgisayar ve yapay zekâ araçlarının hepsi açık bir deneme notu açılır. Son bıraktığınız metin bu cihazda korunur. Normal bahçelere eklenmez.',
         dugme: 'Deneme ağacını aç'
     },
     baglanti: {
         baslik: 'Bağlantıyı bir notta deneyin',
-        aciklama: 'Bilgisayar araçları açık bir "Bağlantı deneme" notu editörde açılır. Not hiçbir bahçeye kaydedilmez; çıkınca kaybolur.',
+        aciklama: 'Bilgisayar araçları açık bir "Bağlantı deneme" notu editörde açılır. Son bıraktığınız metin bu cihazda korunur. Normal bahçelere eklenmez.',
         dugme: 'Bağlantı deneme ağacını aç'
     },
     yapayzeka: {
         baslik: 'Yapay zekâyı bir notta deneyin',
-        aciklama: 'Yapay zekâ bölümü açık bir "Yapay zekâ deneme" notu editörde açılır; içinde bilerek yazım hataları olan bir paragraf vardır. Not hiçbir bahçeye kaydedilmez; çıkınca kaybolur.',
+        aciklama: 'Yapay zekâ bölümü açık bir deneme notu açılır. Son bıraktığınız metin bu cihazda korunur. Normal bahçelere eklenmez.',
         dugme: 'Yapay zekâ deneme ağacını aç'
     }
 };

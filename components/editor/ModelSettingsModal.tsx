@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    X, Sparkles, Database, Check, RefreshCw, Key, HardDriveDownload, UploadCloud, Loader2,
+    X, Sparkles, Database, Check, RefreshCw, Key, HardDriveDownload, UploadCloud, Loader2, Code2, Brush, ImagePlus, PenLine, Bold,
     Wand2, RotateCcw, ChevronRight, ArrowLeft, Plus, Trash2, Wrench, Hash, ListOrdered,
     Eraser, Type, MonitorSmartphone, Info, ShieldCheck, Server, Cpu, Cloud, ExternalLink, Mail, Keyboard, TreePine, LayoutGrid, BookOpen, Palette,
     WifiOff, Download, Play, CheckCircle2, FolderOpen, FolderKanban, LayoutDashboard, GalleryThumbnails
@@ -13,6 +13,7 @@ import AccountSettings from './AccountSettings';
 import AiSettings from './AiSettings';
 import UsageGuide from './UsageGuide';
 import SettingsHome, { SETTINGS_SECTIONS, bolumuNormallestir } from './SettingsHome';
+import GenelTuvalAyarlari from '@/components/canvas/GenelTuvalAyarlari';
 import type { SettingsSectionId } from './SettingsHome';
 import { isLocalBackend } from '@/lib/supabaseClient';
 import { useStore } from '@/lib/store/useStore';
@@ -606,7 +607,12 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                                     {toolList.map((tool) => {
                                                         const isOn = tool.enabled !== false;
                                                         const aracIkonu =
-                                                            tool.kind === 'icerikten-baslik' ? Type
+                                                            tool.kind === 'bicim-cubugu' ? Bold
+                                                            : tool.kind === 'bicim-gecisi' ? Code2
+                                                            : tool.kind === 'cizim' ? Brush
+                                                            : tool.kind === 'el-yazisi' ? PenLine
+                                                            : tool.kind === 'gorsel-ekle' ? ImagePlus
+                                                            : tool.kind === 'icerikten-baslik' ? Type
                                                             : tool.kind === 'sirali-ad' ? Hash
                                                             : tool.kind === 'numaralandir' ? ListOrdered
                                                             : Eraser;
@@ -815,6 +821,10 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                 </>
                             )}
 
+                            {activeTab === 'tuval' && <>
+                                <SettingsPageHeader icon={TreePine} title="Tuval görünüm ayarları" description="Tüm bahçelerin varsayılanları ve ana sayfadaki deneme ağacı." />
+                                <GenelTuvalAyarlari />
+                            </>}
                             {activeTab === 'gorunum' && (
                                 <>
                                     <SettingsPageHeader

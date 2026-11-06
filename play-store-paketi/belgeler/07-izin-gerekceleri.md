@@ -31,12 +31,20 @@ telefon 120 saniye görünür olur. Arka planda reklam yapılmaz, konum çıkar�
 **Neden:** Android 11 ve altında BLE taraması için sistem bu izni zorunlu tutar. Uygulama
 konumu okumaz, kaydetmez ve iletmez. Android 12 ve üzerinde bu izin hiç istenmez.
 
-## Şifrelenmemiş yerel bağlantı — `usesCleartextTraffic="true"`
+## Şifrelenmemiş bağlantı — `network_security_config`
 
 **Neden:** Bilgisayar araçları, telefon ile kullanıcının **kendi bilgisayarında** çalışan
 yardımcı program arasında yerel ağ üzerinden çalışır (örn. `http://192.168.1.20:8765`). Bu
-trafik kullanıcının kendi güvenilen ağındaki kendi cihazına gider, internete çıkmaz.
-Uygulamanın internete giden tüm trafiği (hesap, yedekleme, yapay zekâ sağlayıcıları) HTTPS'tir.
+trafik kullanıcının kendi güvenilen ağındaki kendi cihazına gider. Hazır AI, hesap ve
+yedekleme HTTPS kullanır; kullanıcının özel sağlayıcısı veya Ollama adresi HTTP olabilir.
+Bu nedenle tüm AI trafiğinin şifreli olduğu iddia edilmez; HTTP uyarısı gösterilir.
+
+## Kamera — `CAMERA`
+
+**Neden:** Kullanıcının mini galeriden fotoğraf çekmesi. Kamera yalnız kullanıcı
+istediğinde açılır. Bilge Ağaç'a gönderilen seçilmiş görsel, ayrı onayla bulut
+sağlayıcısına analiz için iletilebilir; fotoğraf çekmek tek başına AI paylaşımı değildir.
+Geniş fotoğraf kitaplığı izni istenmez, sistem dosya seçicisi kullanılır.
 
 ## Diğer izinler
 
@@ -49,11 +57,11 @@ Uygulamanın internete giden tüm trafiği (hesap, yedekleme, yapay zekâ sağla
 | Soru | Cevap |
 |---|---|
 | Uygulama hesap gerektiriyor mu? | Hayır. "Yerel Modda Gir" ile hesap açmadan tüm özellikler kullanılabilir. |
-| Ses kaydı sunucuya gidiyor mu? | Hayır; yalnızca cihazdaki Android konuşma tanıma servisine. |
+| Ses kaydı sunucuya gidiyor mu? | Android konuşma tanıma servisi cihazda veya kendi sunucusunda işleyebilir; uygulama ayrı ses kaydı saklamaz. |
 | Arka planda çalışan servis var mı? | Hayır, ön plan servisi veya kalıcı arka plan işi yok. |
 | Reklam var mı? | Hayır. |
 | Uygulama içi satın alma var mı? | Bu sürümde yok. |
 | Kullanıcı verisi satılıyor mu? | Hayır, hiçbir veri satılmaz veya reklam amacıyla kullanılmaz. |
-| Veriler nerede tutuluyor? | Notlar cihazda; yedekleme (açılırsa) kullanıcının kendi Google Drive hesabında. |
+| Veriler nerede tutuluyor? | Notlar cihazda; yedekleme açılırsa kendi Drive hesabında. Bulut AI'ya seçilen metin/görsel iletilir; kota özeti 48 saat, onaylı AI yanıt bildirimleri 30 gün saklanır. |
 | Silme talebi nasıl iletilir? | https://mindgarden-neon.vercel.app/veri-silme sayfasındaki adımlar veya aynı sayfadaki e-posta. |
 

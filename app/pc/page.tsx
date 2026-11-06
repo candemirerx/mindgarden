@@ -26,6 +26,7 @@ export default function PcYardimcisiSayfasi() {
 
                 <div className="space-y-6 rounded-3xl border border-sand-200 bg-white p-8 text-sm leading-relaxed text-sand-700 shadow-card">
                     <PcYardimcisiIndir />
+                    <p className="text-xs text-sand-600">Güncelleme: 30 Ekim 2026 · Ortak USB yardımcısı 2.7.0. Güncellemek için yeni ZIP’i ayrı bir klasöre çıkarın; mevcut eşleşme anahtarlarınızı paylaşmayın.</p>
 
                     <section className="space-y-2">
                         <h2 className="text-lg font-semibold text-sand-900">İlk bağlantı</h2>

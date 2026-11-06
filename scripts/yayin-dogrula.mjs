@@ -108,6 +108,14 @@ const uygulamaDizini = 'play-store-paketi/uygulama';
 const beklenenAab = surum ? `${uygulamaDizini}/not-bahcesi-${surum}.aab` : null;
 const aabVar = beklenenAab ? varMi(beklenenAab) : false;
 const aabBoyut = aabVar ? readFileSync(path.join(kok, beklenenAab)).length : 0;
+if (aabVar) {
+  let manifestOk = false, detay = 'AAB içerik doğrulaması yapılamadı.';
+  try {
+    detay = execFileSync('python', [path.join(kok, 'scripts/aab-kontrol.py'), path.join(kok, beklenenAab)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    manifestOk = true;
+  } catch { /* Eski dosya yalnız yeniden adlandırılarak yayınlanamaz. */ }
+  kontrol('AAB içindeki gerçek manifest sürümü ve ELF64 16 KB hizalaması', manifestOk, detay);
+}
 
 kontrol(
   beklenenAab ? `${beklenenAab} mevcut ve boş değil` : 'Dağıtım paketi (AAB) mevcut',
@@ -163,7 +171,7 @@ kontrol(`${keystoreOzellikleri} mevcut (repoya girmemeli)`, varMi(keystoreOzelli
 kontrol(`${jksYolu} mevcut`, varMi(jksYolu), varMi(jksYolu) ? 'var' : 'yok');
 
 let imzaKontrolu = 'atlandı (keystore.properties ya da keytool yok)';
-let imzaGecti = true;
+let imzaGecti = false;
 if (varMi(keystoreOzellikleri) && varMi(jksYolu)) {
   const ozellikler = oku(keystoreOzellikleri);
   const al = (anahtar) => new RegExp(`^\\s*${anahtar}\\s*=\\s*(.+)\\s*$`, 'm').exec(ozellikler)?.[1]?.trim() ?? null;
@@ -186,9 +194,10 @@ if (varMi(keystoreOzellikleri) && varMi(jksYolu)) {
       imzaGecti = false;
     } else {
       imzaKontrolu = `uyuşuyor: ${bulunan}`;
+      imzaGecti = true;
     }
   } catch (hata) {
-    imzaKontrolu = `keytool çalıştırılamadı: ${hata instanceof Error ? hata.message.split('\n')[0] : String(hata)}`;
+    imzaKontrolu = 'keytool çalıştırılamadı; JAVA_HOME ve imzalama ayarlarını kontrol edin.';
   }
 }
 

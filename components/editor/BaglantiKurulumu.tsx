@@ -5,8 +5,8 @@
  *
  * Dört yolun her biri numaralı adımlarla kurulur; her adım tamamlanınca onay
  * işareti alır, hata olursa ne yapılacağı aynı yerde yazar.
- *  - Doğrudan PC (Wi‑Fi): yardımcı ağda bulunur, pencerede görünen 6 haneli
- *    kodla eşleşilir; uzun erişim anahtarı elle taşınmaz.
+ *  - Doğrudan PC (Wi‑Fi): yardımcı ağda bulunur, bilgisayardan izin verilerek
+ *    eşleşilir; eski yardımcılar için kod gelişmiş seçenektir.
  *  - PC Bluetooth: telefon bilgisayara Bluetooth klavye/fare olarak bağlanır;
  *    bilgisayara program kurulmaz (pano isteğe bağlı olarak yardımcıyla).
  *  - Kart Wi‑Fi: telefon kartın kendi ağındaysa adres kendiliğinden bulunur,
@@ -77,7 +77,7 @@ function KodAlani({ id, deger, onDegis, onGonder, mesgul, dugmeMetni }: { id: st
     return <div className="flex flex-wrap items-stretch gap-2">
         <input id={id} aria-label="6 haneli eşleştirme kodu" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="123 456"
             value={deger} onChange={e => onDegis(e.target.value.replace(/[^\d ]/g, ''))}
-            onKeyDown={e => { if (e.key === 'Enter') onGonder(); }}
+            onKeyDown={e => { if (e.key === 'Enter' && !mesgul && deger.replace(/\D/g, '').length === 6) onGonder(); }}
             className={settingsFieldClass + ' min-h-[44px] w-36 text-center text-lg font-semibold tracking-[0.2em]'} />
         <button type="button" disabled={mesgul || deger.replace(/\D/g, '').length !== 6} onClick={onGonder} className={anaDugme}>
             <Bekliyor goster={mesgul}>{dugmeMetni}</Bekliyor>
@@ -85,8 +85,23 @@ function KodAlani({ id, deger, onDegis, onGonder, mesgul, dugmeMetni }: { id: st
     </div>;
 }
 
+function OnayAlani({ id, kod, onKod, onGonder, mesgul }: {
+    id: string; kod: string; onKod: (v: string) => void; onGonder: (kod?: string) => void; mesgul: boolean;
+}) {
+    return <div className="space-y-2">
+        <Aciklama>İstek gönderince bilgisayarda açılan pencereden <strong>İzin ver</strong> seçin. Kod yazmanız gerekmez.</Aciklama>
+        <button type="button" id={id + '-onay'} disabled={mesgul} className={anaDugme} onClick={() => onGonder()}>
+            <Bekliyor goster={mesgul}>{mesgul ? 'İşlem sürüyor; onay isteği gönderdiyseniz bilgisayarı kontrol edin…' : 'Bağlantı isteği gönder'}</Bekliyor>
+        </button>
+        <details className="rounded-xl border border-sand-200">
+            <summary className="min-h-11 cursor-pointer px-3 py-3 text-xs font-medium text-sand-700">Eski yardımcı: kodla eşleştir</summary>
+            <div className="px-3 pb-3"><KodAlani id={id} deger={kod} onDegis={onKod} mesgul={mesgul} dugmeMetni="Kodla eşleştir" onGonder={() => onGonder(kod)} /></div>
+        </details>
+    </div>;
+}
+
 /**
- * Wi‑Fi üzerinden PC yardımcısıyla eşleştirme (bul + kod). Doğrudan PC yolunda
+ * Wi‑Fi üzerinden PC yardımcısıyla eşleştirme (bul + bilgisayarda onay). Doğrudan PC yolunda
  * ve kart kiplerinde PC panosu için ortak kullanılır.
  */
 export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePrefs; update: Guncelle; yoluSec: boolean }) {
@@ -101,7 +116,7 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
     return <div className="space-y-3">
         <ol className="space-y-4">
             <Adim no={1} baslik="Bilgisayarda yardımcıyı açın" tamam={eslesmis}>
-                <Aciklama>Bilgisayarda <strong>Not Bahçesi PC Yardımcısı</strong>nı açın (<code>pc_yardimcisi_baslat</code>). Pencerede <strong>6 haneli eşleştirme kodu</strong> görünür. Telefon ve bilgisayar aynı Wi‑Fi ağında olmalı.</Aciklama>
+                <Aciklama>Bilgisayarda güncel <strong>CepKöprü veya Not Bahçesi PC Yardımcısı</strong>nı açın. Telefon ve bilgisayar aynı yerel ağda olmalı; bilgisayar Ethernet kablosuyla bağlı olabilir. Telefonda istek gönderip bilgisayarda <strong>İzin ver</strong> seçin; kod gerekmez.</Aciklama>
                 <YardimciIndir kurulu={eslesmis} prefs={prefs} />
             </Adim>
             <Adim no={2} baslik="Bilgisayarı bulun" tamam={!!hedef}>
@@ -111,7 +126,7 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
                         const liste = await bilgisayarlariBul();
                         setBulunan(liste);
                         if (!liste.length) throw new Error('Ağda yardımcı bulunamadı. Yardımcı penceresi açık mı, telefon aynı Wi‑Fi ağında mı? Adresi aşağıya elle de yazabilirsiniz.');
-                        if (liste.length === 1) { setSecili(liste[0]); return liste[0].name + ' bulundu. Şimdi kodu yazın.'; }
+                        if (liste.length === 1) { setSecili(liste[0]); return liste[0].name + ' bulundu. Şimdi bağlantı isteği gönderin.'; }
                         return liste.length + ' bilgisayar bulundu; birini seçin.';
                     })}>
                         <Bekliyor goster={mesgul === 'ara'}><Search size={15} aria-hidden="true" /> {mesgul === 'ara' ? 'Aranıyor (~15 sn)…' : 'Ağda bilgisayar ara'}</Bekliyor>
@@ -119,7 +134,7 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
                 </div>
                 {bulunan && bulunan.map(pc => {
                     const sec = hedef?.url === pc.url;
-                    return <button key={pc.url} type="button" aria-pressed={sec} onClick={() => setSecili(pc)}
+                    return <button key={pc.url} type="button" disabled={!!mesgul} aria-pressed={sec} onClick={() => setSecili(pc)}
                         className={cx(satir, sec ? 'border-moss-400 bg-moss-50' : 'border-sand-200 bg-white hover:border-sand-300')}>
                         <MonitorSmartphone size={18} className="shrink-0 text-moss-700" aria-hidden="true" />
                         <span className="min-w-0 flex-1"><span className="block font-medium text-sand-900">{pc.name}</span><span className="block truncate text-xs text-sand-600">{pc.url.replace('http://', '')}</span></span>
@@ -132,16 +147,16 @@ export function PcWifiEslestirme({ prefs, update, yoluSec }: { prefs: RemotePref
                     <div className="flex flex-wrap gap-2 px-3 pb-3">
                         <input aria-label="Bilgisayar adresi" className={settingsFieldClass + ' min-h-[44px] min-w-0 flex-1'} inputMode="url" placeholder="192.168.1.20" value={elleAdres} onChange={e => setElleAdres(e.target.value)} />
                         <button type="button" disabled={!!mesgul || !elleAdres.trim()} className={ikinciDugme} onClick={() => void calistir('elle', async () => {
-                            const pc = await bilgisayarAdresiniSina(elleAdres); setSecili(pc); return pc.name + ' bulundu. Şimdi kodu yazın.';
+                            const pc = await bilgisayarAdresiniSina(elleAdres); setSecili(pc); return pc.name + ' bulundu. Şimdi bağlantı isteği gönderin.';
                         })}><Bekliyor goster={mesgul === 'elle'}>Bu adresi kullan</Bekliyor></button>
                     </div>
                 </details>
             </Adim>
-            <Adim no={3} baslik="Eşleştirme kodunu yazın" tamam={eslesmis && (!secili || secili.url === prefs.helperUrl)}>
+            <Adim no={3} baslik="Bilgisayardan izin verin" tamam={eslesmis && (!secili || secili.url === prefs.helperUrl)}>
                 {hedef
-                    ? <KodAlani id={'pc-wifi-kod' + (yoluSec ? '' : '-pano')} deger={kod} onDegis={setKod} mesgul={mesgul === 'eslestir'} dugmeMetni="Eşleştir"
-                        onGonder={() => void calistir('eslestir', async () => {
-                            const sonuc = await bilgisayarlaEslestirWifi(hedef.url, kod);
+                    ? <OnayAlani id={'pc-wifi-kod' + (yoluSec ? '' : '-pano')} kod={kod} onKod={setKod} mesgul={!!mesgul}
+                        onGonder={(eskiKod = '') => void calistir('eslestir', async () => {
+                            const sonuc = await bilgisayarlaEslestirWifi(hedef.url, eskiKod);
                             update({ ...prefs, ...sonuc, ...(yoluSec ? { connection: 'pc-wifi' as const } : {}) });
                             setKod(''); setSecili(null); setBulunan(null);
                             return sonuc.helperName + ' ile eşleşildi.';
@@ -358,7 +373,7 @@ function KartWifiKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gunce
     return <div className="space-y-3">
         <ol className="space-y-4">
             <Adim no={1} baslik="Telefonu kartın ağına ya da ev ağına bağlayın" tamam={!!telefonAdresi}>
-                <Aciklama>İki yol var: kart ve telefon <strong>aynı ev Wi‑Fi'ında</strong> olabilir ya da telefonu kartın kendi ağına (<strong>can bellek s3</strong>) bağlayabilirsiniz. Kartın USB kablosu bilgisayara takılı olmalı.</Aciklama>
+                <Aciklama>Kart ve telefon <strong>aynı yerel ağda</strong> olabilir ya da telefonu kartın kendi ağına (<strong>can bellek s3</strong>) bağlayabilirsiniz. Kartın USB kablosu bilgisayara takılı olmalı; bilgisayarın Wi‑Fi yerine Ethernet kablosuyla bağlı olması sorun değildir. Kart yolunda bilgisayarın ağa bağlı olması gerekmez.</Aciklama>
                 {telefonAdresi !== null && <p className={cx('text-xs', telefonAdresi ? 'text-moss-700' : 'text-berry-700')}>
                     {!telefonAdresi ? 'Telefon şu an bir Wi‑Fi ağına bağlı değil.' : apde ? 'Telefon kartın kendi ağında (' + telefonAdresi + '). Kart adresi: 192.168.4.1' : 'Telefon ev ağında (' + telefonAdresi + '). Kart bu ağda aranacak.'}
                 </p>}
@@ -366,7 +381,7 @@ function KartWifiKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gunce
             <Adim no={2} baslik="Kartı bulun" tamam={dogrulandi}>
                 <button type="button" disabled={!!mesgul} className={ikinciDugme} onClick={() => void calistir('bul', async () => {
                     setKartlar(null); setDogrulandi(false);
-                    const { urls, kartAgi } = await kartiWifidaBul();
+                    const { urls, kartAgi } = await kartiWifidaBul(prefs);
                     setKartlar(urls);
                     if (urls.length === 1) {
                         const durum = await testCard({ ...prefs, cardUrl: urls[0] });
@@ -462,7 +477,7 @@ function TailscaleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gunc
                 <button type="button" className={ikinciDugme} onClick={() => void playAc()}><ExternalLink size={15} aria-hidden="true" /> Telefon için Tailscale (Play Store)</button>
             </Adim>
             <Adim no={2} baslik="Bilgisayarda PC Yardımcısını açın" tamam={eslesmis}>
-                <Aciklama>Yardımcının penceresinde <strong>Tailscale adresi: http://100.x.x.x:8765</strong> satırı ve <strong>6 haneli eşleştirme kodu</strong> görünür. Başka şehirde olacaksanız yardımcının ve Tailscale'in bilgisayarda açık kalması gerekir. <strong>Bilgisayarda bir kez</strong> yardımcı klasöründeki <strong>pc_tailscale_izni.cmd</strong> dosyasına çift tıklayın (Windows yönetici izni sorar; güvenlik duvarında yalnız Tailscale ağından yardımcıya izin verir). Yardımcı penceresi izin yoksa bunu sarı bir satırla hatırlatır.</Aciklama>
+                <Aciklama>Güncel <strong>CepKöprü veya Not Bahçesi PC Yardımcısı</strong> açık olsun. Yardımcıdaki <strong>Tailscale adresini (http://100.x.x.x:8765)</strong> kullanın. Kod gerekmez; bağlantı isteğine bilgisayar ekranından <strong>İzin ver</strong> seçilir. Uzaktaysanız ilk eşleşme için bilgisayar başında izin verebilecek biri gerekir. Tailscale erişimi güvenlik duvarında engelliyse yetkili ağ yöneticinizden izin isteyin.</Aciklama>
                 <YardimciIndir kurulu={eslesmis} prefs={prefs} />
             </Adim>
             <Adim no={3} baslik="Bilgisayarın Tailscale adresini yazın" tamam={!!pc || eslesmis}>
@@ -471,16 +486,16 @@ function TailscaleKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Gunc
                     <input id="tailscale-adresi" aria-label="Bilgisayarın Tailscale adresi" className={settingsFieldClass + ' min-h-[44px] min-w-0 flex-1'} inputMode="url" placeholder="100.101.102.103" value={adres} onChange={e => { setAdres(e.target.value); setPc(null); }} />
                     <button type="button" id="tailscale-bul" disabled={!!mesgul || !adres.trim()} className={ikinciDugme} onClick={() => void calistir('bul', async () => {
                         const bulunan = await bilgisayarAdresiniSina(adres); setPc(bulunan);
-                        return bulunan.name + ' bulundu (Tailscale üzerinden). Şimdi kodu yazın.';
+                        return bulunan.name + ' bulundu (Tailscale üzerinden). Şimdi bağlantı isteği gönderin.';
                     })}><Bekliyor goster={mesgul === 'bul'}><Search size={15} aria-hidden="true" /> Bul</Bekliyor></button>
                 </div>
             </Adim>
-            <Adim no={4} baslik="Eşleştirme kodunu yazın" tamam={eslesmis && !pc}>
+            <Adim no={4} baslik="Bilgisayardan izin verin" tamam={eslesmis && !pc}>
                 {pc || eslesmis
-                    ? <KodAlani id="tailscale-kod" deger={kod} onDegis={setKod} mesgul={mesgul === 'eslestir'} dugmeMetni="Eşleştir"
-                        onGonder={() => void calistir('eslestir', async () => {
+                    ? <OnayAlani id="tailscale-kod" kod={kod} onKod={setKod} mesgul={!!mesgul}
+                        onGonder={(eskiKod = '') => void calistir('eslestir', async () => {
                             const hedefUrl = pc?.url || prefs.helperUrl;
-                            const sonuc = await bilgisayarlaEslestirWifi(hedefUrl, kod);
+                            const sonuc = await bilgisayarlaEslestirWifi(hedefUrl, eskiKod);
                             update({ ...prefs, ...sonuc, connection: 'pc-wifi', agTuru: 'tailscale', helperUrlTs: sonuc.helperUrl });
                             setKod(''); setPc(null);
                             return sonuc.helperName + ' ile Tailscale üzerinden eşleşildi; artık başka şehirden de bağlanabilirsiniz.';
@@ -567,7 +582,7 @@ function UsbKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
     return <div className="space-y-3">
-        <Aciklama>Telefonu USB kablosuyla bağlayın. Geliştirici seçeneklerinde USB hata ayıklama açık olmalı; yalnız güvendiğiniz bilgisayarın iznini onaylayın. Bilgisayardaki USB köprüsü arka planda otomatik çalışır. Wi‑Fi, Tailscale ve güvenlik duvarı izni gerekmez. Kablo çıkarsa bu yol durur.</Aciklama>
+        <Aciklama>Bu bağlantı <strong>PC yardımcısı gerektirir</strong>; kart gerekmez. Telefonu veri aktarımını destekleyen USB kablosuyla bağlayın (yalnız şarj kablosu çalışmaz). Geliştirici seçeneklerinde USB hata ayıklama açık olmalı; yalnız güvendiğiniz bilgisayarın iznini onaylayın. USB internet paylaşımını açmanız gerekmez. Wi‑Fi, Tailscale ve güvenlik duvarı izni gerekmez. Kablo çıkarsa bu yol durur.</Aciklama>
         <Aciklama>İlk bilgisayar kurulumu: <a href="https://cep-kopru-indir.upbeat-lamb-7436.chatgpt.site/" target="_blank" rel="noopener noreferrer" className="underline">Ortak Windows yardımcısını (2.2.0 veya üzeri) indirin</a>. ZIP’i çıkarıp Yonetici-Gerektirmeyen → 10-Telefon-USB-Otomatik-Kur dosyasını bir kez açın. İki uygulama aynı arka plan köprüsünü kullanır; ayrı yardımcı açmanız gerekmez.</Aciklama>
         <button type="button" className={anaDugme} disabled={busy} onClick={() => void (async () => {
             setBusy(true); setMessage('Bilgisayarda açılan pencerede İzin ver seçin · 60 saniye');
@@ -585,8 +600,8 @@ function UsbKurulumu({ prefs, update }: { prefs: RemotePrefs; update: Guncelle }
 }
 
 const YOLLAR: YolTanimi[] = [
-    { id: 'usb', label: 'Bilgisayar · USB', detail: 'Kablo; otomatik arka plan köprüsü', Icon: Cable, grup: 'bilgisayar' },
-    { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'Aynı ağ; yardımcı + 6 haneli kod', Icon: Wifi, grup: 'bilgisayar' },
+    { id: 'usb', label: 'Bilgisayar · USB', detail: 'USB kablo; PC yardımcısı gerekir', Icon: Cable, grup: 'bilgisayar' },
+    { id: 'pc-wifi', label: 'Bilgisayar · Wi‑Fi', detail: 'Aynı ağ; bilgisayardan onay', Icon: Wifi, grup: 'bilgisayar' },
     { id: 'tailscale', label: 'Tailscale', detail: 'Başka şehirden de; yardımcı', Icon: Globe, grup: 'bilgisayar' },
     { id: 'pc-bluetooth', label: 'Bilgisayar · Bluetooth', detail: 'Klavye/fare; program gerekmez', Icon: Bluetooth, grup: 'bilgisayar' },
     { id: 'wifi', label: 'Kart · Wi‑Fi', detail: 'Kart ev/iş ağında', Icon: Wifi, grup: 'kart' },

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { DEFAULT_INSTRUCTION } from '@/lib/aiMacro';
+import { AI_SAFETY_INSTRUCTION } from '@/lib/aiSafety';
+import { validBilgeImage } from '@/lib/bilgeMedia';
+import { EN_FAZLA_UYARLAMA, govdeyiUyarla, type Govde } from '@/lib/openAiGovde';
+import { openAiImageContent, geminiImageParts, anthropicImageContent } from '@/lib/bilgeVision';
 
 /**
  * Uzun metinlerde sağlayıcının yanıtı 10 saniyeyi aşabildiği için fonksiyon
@@ -15,7 +19,7 @@ export const runtime = 'nodejs';
 const MAX_TEXT_LENGTH = 20000;
 
 /** İstek gövdesinin üst sınırı; JSON ayrıştırmadan önce uygulanır. */
-const MAX_BODY_BYTES = 64 * 1024;
+const MAX_BODY_BYTES = 800000;
 
 /** İzin verilen sağlayıcılar. */
 const SAGLAYICILAR = new Set(['gemini', 'openai', 'anthropic', 'custom']);
@@ -59,47 +63,6 @@ function hizSiniriAsildi(request: NextRequest): boolean {
     return kayit.sayi > RATE_LIMIT_MAX;
 }
 
-/* ---------------------------------------------------------------- */
-/* Oturum doğrulama                                                  */
-/* ---------------------------------------------------------------- */
-
-const OTURUM_DOGRULAMA_TIMEOUT_MS = 5000;
-
-/**
- * İsteğin doğrulanmış bir Supabase oturumuna ait olup olmadığını söyler.
- *
- * Sunucudaki ücretli sağlayıcı anahtarı yalnızca doğrulanmış oturumlarda
- * kullanılır; aksi hâlde uç nokta üçüncü kişilere açık bir ücretsiz geçit
- * hâline gelir.
- */
-async function hasVerifiedSession(request: NextRequest): Promise<boolean> {
-    const auth = request.headers.get('authorization');
-    if (!auth || !auth.toLowerCase().startsWith('bearer ')) return false;
-
-    const token = auth.slice(7).trim();
-    if (!token) return false;
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !anonKey) return false;
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), OTURUM_DOGRULAMA_TIMEOUT_MS);
-
-    try {
-        const res = await fetch(supabaseUrl.replace(/\/+$/, '') + '/auth/v1/user', {
-            headers: { apikey: anonKey, Authorization: 'Bearer ' + token },
-            redirect: 'manual',
-            signal: controller.signal
-        });
-        return res.ok;
-    } catch {
-        return false;
-    } finally {
-        clearTimeout(timer);
-    }
-}
-
 /**
  * İstek gövdesini boyut sınırıyla okur ve JSON olarak ayrıştırır.
  * Ayrıştırmadan önce sınır uygulanır; böylece çok büyük gövde ayrıştırılmaz.
@@ -112,16 +75,27 @@ async function readJsonBody(
         return { hata: 'İstek gövdesi çok büyük.', status: 413 };
     }
 
-    const raw = await request.text();
-    if (raw.length > MAX_BODY_BYTES) {
-        return { hata: 'İstek gövdesi çok büyük.', status: 413 };
-    }
+    const reader = request.body?.getReader();
+    if (!reader) return { hata: 'İstek gövdesi boş.', status: 400 };
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            bytes += value.byteLength;
+            if (bytes > MAX_BODY_BYTES) { await reader.cancel(); return { hata: 'İstek gövdesi çok büyük.', status: 413 }; }
+            chunks.push(value);
+        }
+    } finally { reader.releaseLock(); }
+    const raw = Buffer.concat(chunks).toString('utf8');
 
     try {
         const veri = JSON.parse(raw);
         if (!veri || typeof veri !== 'object' || Array.isArray(veri)) {
             return { hata: 'İstek gövdesi geçersiz.', status: 400 };
         }
+        if (bytes > 64 * 1024 && veri.image === undefined) return { hata: 'İstek gövdesi çok büyük.', status: 413 };
         return { veri: veri as Record<string, unknown> };
     } catch {
         return { hata: 'İstek gövdesi geçersiz JSON.', status: 400 };
@@ -374,6 +348,9 @@ async function handleSpellcheckRequest(request: NextRequest) {
         const customUrl = typeof girdi.customUrl === 'string' ? girdi.customUrl : '';
         const customModel = typeof girdi.customModel === 'string' ? girdi.customModel : '';
         const macro = typeof girdi.macro === 'string' ? girdi.macro : '';
+        if (girdi.image !== undefined && !validBilgeImage(girdi.image)) return NextResponse.json({ error: 'Geçerli bir JPEG, PNG veya WebP fotoğraf gönderin.' }, { status: 400 });
+        const image = typeof girdi.image === 'string' ? girdi.image : undefined;
+        if (macro.length > 16000) return NextResponse.json({ error: 'Komut çok uzun.' }, { status: 400 });
 
         if (!SAGLAYICILAR.has(provider)) {
             return NextResponse.json({ error: 'Bilinmeyen yapay zekâ sağlayıcısı.' }, { status: 400 });
@@ -404,20 +381,10 @@ async function handleSpellcheckRequest(request: NextRequest) {
             );
         }
 
-        // Sunucudaki ortak anahtar yalnızca doğrulanmış oturumlarda (veya
-        // AI_ALLOW_SERVER_KEY ile açıkça izin verilmişse) kullanılır. Aksi hâlde
-        // kimliği doğrulanmamış istekler ücretli anahtarı tüketir; uç nokta
-        // herkese açık bir geçide dönüşür.
-        const sunucuAnahtariKullanilabilir =
-            process.env.AI_ALLOW_SERVER_KEY === 'true' ||
-            (provider === 'gemini' && (await hasVerifiedSession(request)));
-
-        const apiKey =
-            clientApiKey ||
-            (provider === 'gemini' && sunucuAnahtariKullanilabilir
-                ? process.env.GEMINI_API_KEY
-                : undefined) ||
-            '';
+        // Ortak anahtar yalnız /api/ai üzerinden atomik kotayla kullanılır.
+        // Kişisel sağlayıcı rotası eski GEMINI_API_KEY / AI_ALLOW_SERVER_KEY
+        // değişkenleriyle kotanın arkasından dolaşamaz.
+        const apiKey = clientApiKey;
 
         // Özel sunucular (kendi barındırılan modeller) anahtarsız çalışabilir.
         if (!apiKey && provider !== 'custom') {
@@ -425,8 +392,7 @@ async function handleSpellcheckRequest(request: NextRequest) {
                 {
                     error:
                         'Bu istek için API anahtarı bulunamadı. Ayarlar → Yapay Zekâ bölümünden ' +
-                        'kendi sağlayıcı anahtarınızı ekleyin; uygulamanın ortak anahtarı yalnızca ' +
-                        'oturum açmış kullanıcılara açıktır.'
+                        'kendi sağlayıcı anahtarınızı ekleyin veya Hazır AI seçeneğine geçin.'
                 },
                 { status: 401 }
             );
@@ -434,10 +400,10 @@ async function handleSpellcheckRequest(request: NextRequest) {
 
         // Kullanıcının seçtiği makro varsa o kullanılır; yoksa varsayılan
         // imla düzeltme görevi uygulanır.
-        const instruction =
+        const instruction = AI_SAFETY_INSTRUCTION + '\n' + (
             typeof macro === 'string' && macro.trim().length > 0
                 ? macro.trim()
-                : DEFAULT_INSTRUCTION;
+                : DEFAULT_INSTRUCTION);
 
         const prompt = `${instruction}
 
@@ -453,7 +419,7 @@ ${text}`;
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
+                        contents: [{ parts: geminiImageParts(prompt, image) }],
                         generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
                     })
                 },
@@ -461,6 +427,8 @@ ${text}`;
             );
 
             if (!response.ok) {
+                // Never switch the user's selected vision model or retry a rejected photo as text.
+                if (image) throw new ProviderError(response.status, response.status === 401 || response.status === 403 ? 'Gemini anahtarı kabul edilmedi. Yapay zekâ ayarlarını kontrol edin.' : `Fotoğraflı istek reddedildi. Seçili Gemini modelinin görsel desteğini ve kotasını kontrol edin. ${await providerErrorDetail(response, apiKey)}`.trim());
                 // gemini-2.5-flash fallback if 2.5 is not available yet (just in case)
                 const fallbackResponse = await fetchProvider(
                     `https://generativelanguage.googleapis.com/v1beta/models/${geminiFallback}:generateContent?key=${apiKey}`,
@@ -489,18 +457,30 @@ ${text}`;
             }
 
         } else if (provider === 'openai') {
-            const response = await fetchProvider('https://api.openai.com/v1/chat/completions', {
+            let govde: Govde = {
+                model: secilenModel('gpt-4o-mini'),
+                messages: [{ role: 'user', content: openAiImageContent(prompt, image) }],
+                temperature: 0.1
+            };
+            const gonder = (govde: Govde) => fetchProvider('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`
                 },
-                body: JSON.stringify({
-                    model: secilenModel('gpt-4o-mini'),
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.1
-                })
+                body: JSON.stringify(govde)
             }, 'OpenAI');
+            // Akıl yürüten modeller (gpt-5 / o-serisi) `temperature` kabul
+            // etmiyor; 400 gelirse gerekçedeki alan çıkarılıp tekrar denenir.
+            let response = await gonder(govde);
+            let sadeDenendi = false;
+            for (let deneme = 0; deneme < EN_FAZLA_UYARLAMA && response.status === 400; deneme++) {
+                const sonraki = govdeyiUyarla(govde, await response.clone().text().catch(() => ''), sadeDenendi);
+                if (!sonraki) break;
+                sadeDenendi = sadeDenendi || Object.keys(sonraki).length === 2;
+                govde = sonraki;
+                response = await gonder(govde);
+            }
             if (response.status === 401 || response.status === 403) {
                 throw new ProviderError(
                     401,
@@ -509,7 +489,7 @@ ${text}`;
                         : 'Bu sunucu API anahtarı istiyor. Ayarlar → Yapay zekâ bölümünde anahtarı girin.'
                 );
             }
-            if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
+            if (!response.ok) throw new ProviderError(response.status, image ? `Fotoğraflı istek reddedildi. Seçili OpenAI modelinin görsel desteğini ve kotasını kontrol edin. ${await providerErrorDetail(response, apiKey)}`.trim() : await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = requireProviderText(data.choices?.[0]?.message?.content, data, 'Sağlayıcı');
 
@@ -524,11 +504,11 @@ ${text}`;
                 body: JSON.stringify({
                     model: secilenModel('claude-3-haiku-20240307'),
                     max_tokens: 8192,
-                    messages: [{ role: 'user', content: prompt }],
+                    messages: [{ role: 'user', content: anthropicImageContent(prompt, image) }],
                     temperature: 0.1
                 })
             }, 'Anthropic');
-            if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
+            if (!response.ok) throw new ProviderError(response.status, image ? `Fotoğraflı istek reddedildi. Anthropic anahtarını, seçili modelin görsel desteğini ve kotasını kontrol edin. ${await providerErrorDetail(response, apiKey)}`.trim() : await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = requireProviderText(data.content?.[0]?.text, data, 'Anthropic');
 
@@ -577,64 +557,46 @@ ${text}`;
                 ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
             };
 
-            const temelGovde = {
+            let govde: Govde = {
                 model: secilenModel(''),
-                messages: [{ role: 'user', content: prompt }],
+                messages: [{ role: 'user', content: openAiImageContent(prompt, image) }],
                 temperature: 0.1,
                 // Görev metni baştan yazdırmak olduğu için çıktı sınırı girdiye
                 // göre belirlenir.
-                max_tokens: Math.min(8192, Math.max(2048, text.length * 2))
+                max_tokens: Math.min(8192, Math.max(2048, text.length * 2)),
+                // "Düşünen" modeller yanıtı yazmadan önce uzun bir akıl yürütme
+                // üretiyor; bu yüzden tek sayfalık bir metin bile dakikalarca
+                // sürebiliyor. Düşünmeyi kapatmayı deneriz: destekleyen
+                // sağlayıcılarda yanıt anında gelir.
+                ...(image ? {} : { enable_thinking: false, reasoning_effort: 'none', chat_template_kwargs: { enable_thinking: false } })
             };
 
-            // "Düşünen" modeller yanıtı yazmadan önce uzun bir akıl yürütme
-            // üretiyor; bu yüzden tek sayfalık bir metin bile dakikalarca
-            // sürebiliyor. Düşünmeyi kapatmayı deneriz: destekleyen
-            // sağlayıcılarda yanıt anında gelir. Alanları tanımayan sağlayıcı
-            // 400 döndürürse istek, alanlar olmadan tekrarlanır.
-            let response = await fetchProvider(
-                endpoint,
-                {
-                    method: 'POST',
-                    headers: basliklar,
-                    redirect: 'manual',
-                    body: JSON.stringify({
-                        ...temelGovde,
-                        enable_thinking: false,
-                        reasoning_effort: 'none',
-                        chat_template_kwargs: { enable_thinking: false }
-                    })
-                },
-                'Özel sağlayıcı'
-            );
-
-            if (response.status >= 300 && response.status < 400) {
-                throw new ProviderError(
-                    400,
-                    'Özel sağlayıcı adresi yönlendirme yanıtı verdi; güvenlik nedeniyle izlenmedi.'
-                );
-            }
-
-            if (response.status === 400) {
-                response = await fetchProvider(
+            const gonder = async (govde: Govde) => {
+                const cevap = await fetchProvider(
                     endpoint,
-                    {
-                        method: 'POST',
-                        headers: basliklar,
-                        redirect: 'manual',
-                        body: JSON.stringify(temelGovde)
-                    },
+                    { method: 'POST', headers: basliklar, redirect: 'manual', body: JSON.stringify(govde) },
                     'Özel sağlayıcı'
                 );
-
-                if (response.status >= 300 && response.status < 400) {
-                    throw new ProviderError(
-                        400,
-                        'Özel sağlayıcı adresi yönlendirme yanıtı verdi; güvenlik nedeniyle izlenmedi.'
-                    );
+                if (cevap.status >= 300 && cevap.status < 400) {
+                    throw new ProviderError(400, 'Özel sağlayıcı adresi yönlendirme yanıtı verdi; güvenlik nedeniyle izlenmedi.');
                 }
+                return cevap;
+            };
+
+            // 400 gelirse sağlayıcının gerekçesindeki alan çıkarılıp tekrar
+            // denenir; model, mesajlar ve fotoğraf hiç değişmez.
+            let response = await gonder(govde);
+            let sadeDenendi = false;
+            for (let deneme = 0; deneme < EN_FAZLA_UYARLAMA && response.status === 400; deneme++) {
+                const gerekce = await response.clone().text().catch(() => '');
+                const sonraki = govdeyiUyarla(govde, gerekce, sadeDenendi);
+                if (!sonraki) break;
+                sadeDenendi = sadeDenendi || Object.keys(sonraki).length === 2;
+                govde = sonraki;
+                response = await gonder(govde);
             }
 
-            if (!response.ok) throw new ProviderError(response.status, await providerErrorDetail(response, apiKey));
+            if (!response.ok) throw new ProviderError(response.status, image ? `Fotoğraflı istek reddedildi. Özel API anahtarını, seçili modelin görsel desteğini ve kotasını kontrol edin. Fotoğraf kaldırılarak tekrar gönderilmedi. ${await providerErrorDetail(response, apiKey)}`.trim() : await providerErrorDetail(response, apiKey));
             const data = await response.json();
             correctedText = requireProviderText(data.choices?.[0]?.message?.content, data, 'Sağlayıcı');
         }

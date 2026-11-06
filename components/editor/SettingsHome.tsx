@@ -43,6 +43,7 @@ export type SettingsSectionId =
     | 'models'
     | 'macros'
     | 'gorunum'
+    | 'tuval'
     /** Eski bağlantılar için: bilgisayar araçlarına yönlenir. */
     | 'tools'
     | 'yerel'
@@ -67,9 +68,10 @@ interface SettingsSectionDefinition {
 }
 
 export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
+    { id: 'tuval', title: 'Tuval görünüm ayarları', description: 'Genel varsayılanlar ve deneme ağacı', icon: TreePine, group: 'Uygulama', ton: 'moss', keywords: ['tuval', 'bahçe', 'kart', 'deneme', 'ağaç', 'görünüm', 'varsayılan', 'sol araç', 'kopyala'] },
     { id: 'macros', title: 'AI makroları', description: 'Yazılarınıza hazır yapay zekâ komutları', icon: Wand2, group: 'Araçlar', ton: 'clay', keywords: ['yapay zekâ', 'makro', 'komut', 'prompt', 'özet', 'çeviri', 'imla'] },
     { id: 'yerel', title: 'Yerel araçlar', description: 'İnternetsiz metin araçları', icon: Wrench, group: 'Araçlar', ton: 'moss', keywords: ['editör', 'araç', 'numaralandır', 'başlık', 'temizle', 'sıra'] },
-    { id: 'pcAraclari', title: 'Bilgisayar araçları', description: 'Fare, dikte, yazma, pano, görsel', icon: MonitorSmartphone, group: 'Araçlar', ton: 'bark', keywords: ['fare', 'dikte', 'köprü', 'yaz', 'pano', 'enter', 'görsel', 'araç'] },
+    { id: 'pcAraclari', title: 'Bilgisayar araçları', description: 'Yazı modu, fare, dikte, pano, görsel', icon: MonitorSmartphone, group: 'Araçlar', ton: 'bark', keywords: ['yazı modu', 'klavye üstü', 'düğme', 'fare', 'dikte', 'köprü', 'yaz', 'pano', 'enter', 'görsel', 'araç'] },
     { id: 'kisayollar', title: 'Kısayollar ve ekranlar', description: 'Makrolar, profiller, ekran düzenleri', icon: Keyboard, group: 'Araçlar', ton: 'berry', keywords: ['kısayol', 'makro', 'profil', 'ekran', 'numpad', 'konum', 'düzen'] },
     { id: 'remote', title: 'Bilgisayar bağlantısı', description: 'Kart, Wi‑Fi, Bluetooth, PC yardımcısı', icon: Monitor, group: 'Bağlantılar', ton: 'bark', keywords: ['uzak', 'remote', 'bluetooth', 'kablosuz', 'kart', 'yardımcı', 'eşleştir', 'dikte motoru'] },
     { id: 'models', title: 'Yapay zekâ', description: 'Bulut anahtarı ya da yerel model', icon: Sparkles, group: 'Bağlantılar', ton: 'clay', keywords: ['ai', 'model', 'chatgpt', 'openai', 'gemini', 'claude', 'api', 'anahtar', 'yerel', 'çevrimdışı', 'gemma', 'ollama'] },
@@ -130,7 +132,7 @@ function DenemeDugmesi() {
             <span className="relative min-w-0 flex-1">
                 <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-clay-700">Deneme ağacı</span>
                 <span className="mt-0.5 block truncate font-display text-lg leading-snug tracking-tight text-sand-900">Tüm araçları deneyin.</span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-sand-600">Kaydedilmeyen bir not; çıkınca kaybolur.</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-sand-600">Son bıraktığınız metinle devam edin.</span>
             </span>
             <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-clay-700 ring-1 ring-clay-200 transition-colors group-hover:bg-white">
                 <ChevronRight size={17} aria-hidden="true" />
