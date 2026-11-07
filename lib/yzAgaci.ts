@@ -28,7 +28,7 @@ export type YzAyar = {
     simge?: string;
     renk?: YzRenk;
 };
-export type YzRenk = 'gece' | 'orman' | 'toprak' | 'gul';
+export type YzRenk = 'gece' | 'orman' | 'toprak' | 'ceviz' | 'gul';
 export type YzMesaj = { rol: 'kullanici' | 'asistan'; metin: string; zaman: number; kaynaklar?: string[] };
 
 const AYAR_ANAHTARI = 'nb-yz-agaclari-v1';

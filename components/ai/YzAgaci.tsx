@@ -249,7 +249,7 @@ function YzAyarlari({ id, ad, derinlik, icerik, onKapat, onSohbet }: { id: strin
                         })}
                     </div>
                     <p className="mt-4 text-sm font-medium text-sand-900">Renk</p>
-                    <div role="radiogroup" aria-label="Profil rengi" className="mt-2 grid grid-cols-4 gap-2">
+                    <div role="radiogroup" aria-label="Profil rengi" className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                         {RENKLER.map(rk => {
                             const secili = (ayar?.renk ?? 'gece') === rk.id;
                             return <button key={rk.id} type="button" role="radio" aria-checked={secili} onClick={() => yzAyarKaydet(id, { renk: rk.id })}

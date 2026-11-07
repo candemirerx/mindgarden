@@ -4,14 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { KART_BASILI_TUT_KAYMA_ESIGI, kartMenusunuAyarla } from '@/lib/canvasGesture';
 
-/**
- * Tek dokunuş menüyü sabit açar; sonraki uzun basış taşır. İlk uzun basış seçim yapar.
- * `kisaDokunus` verilirse (YZ ağacı) menü kapalıyken kısa dokunuş onu çalıştırır;
- * menü uzun basışla ya da kartın kendi düğmesiyle açılır.
- */
-export function useKartHareketi(disMenu?: () => void, kisaDokunus?: () => void) {
-    const kisaRef = useRef(kisaDokunus);
-    kisaRef.current = kisaDokunus;
+/** Tek dokunuş menüyü sabit açar; sonraki uzun basış taşır. İlk uzun basış seçim yapar. */
+export function useKartHareketi(disMenu?: () => void) {
     const [acik, setAcik] = useState(false);
     const [hedef, setHedef] = useState<string | null>(null);
     const kap = useRef<HTMLDivElement>(null);
@@ -124,10 +118,7 @@ export function useKartHareketi(disMenu?: () => void, kisaDokunus?: () => void) 
                     e.stopPropagation();
                     // Düğme kaldırılmadan işlevi çalıştır; React tıklaması menüyü kapatır.
                     if (!hariciMenu) { secim?.click(); kapat(); }
-                } else if (!b.kaydi) {
-                    e.stopPropagation();
-                    if (kisaRef.current && !b.ikinci) kisaRef.current(); else ac(true);
-                }
+                } else if (!b.kaydi) { e.stopPropagation(); ac(true); }
                 if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
             },
             onPointerCancel() { tikYut.current = true; kapat(); },
@@ -139,7 +130,7 @@ export function useKartHareketi(disMenu?: () => void, kisaDokunus?: () => void) 
             onClick(e: React.MouseEvent) {
                 e.stopPropagation();
                 if (tikYut.current) { tikYut.current = false; return; }
-                if (kisaRef.current && !sabit.current) kisaRef.current(); else ac(true);
+                ac(true);
             }
         }
     };

@@ -15,7 +15,7 @@
  * İlk uzun basış seçenekleri açar; kaydırıp bırakınca seçilen işlem uygulanır.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Check, ChevronDown, ClipboardList, AudioLines, ClipboardPaste, Copy, MessageCircle, Mic, MoreHorizontal, Smartphone, CornerDownLeft, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, Trash2, TreePine, Wand2 } from 'lucide-react';
+import { ArrowRight, BookOpen, Check, ChevronDown, ClipboardList, AudioLines, ClipboardPaste, Copy, MessageCircle, Mic, Smartphone, CornerDownLeft, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, Trash2, TreePine, Wand2 } from 'lucide-react';
 import { useYzAgaclari, yzAc } from '@/lib/yzAgaci';
 import { yzIkon, yzTema } from '@/components/ai/yzProfil';
 import { copeTasi } from '@/lib/copKutusu';
@@ -218,9 +218,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const icerikRef = useRef(node.content); icerikRef.current = node.content;
     const dikte = useKartDikte(prefs, () => icerikRef.current, metin => useStore.getState().updateNode(node.id, metin), mesaj => alert(mesaj));
     const disMenu = eylem === 'panel';
-    // YZ ağacı: kısa dokunuş sohbeti açar; düğmeler uzun basış ya da ⋯ ile gelir.
+    // YZ ağacı da dokununca düğmelerini açar; sohbet kartın içindeki Sohbet düğmesiyle açılır.
     const yz = useYzAgaclari()[node.id];
-    const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined, yz ? () => yzAc(node.id) : undefined);
+    const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined);
     const dugmeler: KartDugmeleri = yz
         ? { ...dugmeAyari, ustSol: 'yzAyar', ustOrta: 'yzSohbet', ustSag: 'buda', sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok' }
         : dugmeAyari;
@@ -337,22 +337,28 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         const tema = yzTema(yz.renk);
         const zemin = 'bg-[linear-gradient(150deg,rgb(var(--yz-1))_0%,rgb(var(--yz-2))_55%,rgb(var(--yz-3))_100%)] text-[rgb(var(--yz-yazi))] ring-1 ring-[color:var(--kart-kenar)] shadow-[0_1px_0_rgba(255,255,255,.14)_inset,0_20px_38px_-20px_rgb(var(--yz-2)/.95)]';
         govde = kart === 'hap' ? (
-            <div style={tema} className={`flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-10 ${zemin} ${budandi ? 'opacity-60' : ''}`}>
+            <div style={tema} className={`flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-1.5 ${zemin} ${budandi ? 'opacity-60' : ''}`}>
                 <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/15 text-[rgb(var(--yz-isik))]"><YzIkon size={14} /></span>
                 <span className={`min-w-0 flex-1 truncate text-[13px] font-semibold ${budandi ? 'line-through' : ''}`}>{node.title}</span>
+                <button type="button" aria-label={node.title + ' ile sohbet'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); yzAc(node.id); }} className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[rgb(var(--yz-isik))] text-[rgb(var(--yz-3))] touch-manipulation active:scale-95"><MessageCircle size={14} /></button>
             </div>
         ) : (
             <div style={tema} className={`relative overflow-hidden ${tur === 'kok' ? 'rounded-[24px] px-4 pb-3.5 pt-3.5' : 'rounded-[20px] px-3.5 pb-3 pt-3'} ${zemin} ${budandi ? 'opacity-60' : ''}`}>
                 <span aria-hidden="true" className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-[rgb(var(--yz-isik)/.28)] blur-2xl" />
+                {/* Ateş böceği ışıkları: alacakaranlıkta yanıp sönen küçük noktalar */}
+                <svg aria-hidden="true" viewBox="0 0 100 60" preserveAspectRatio="xMaxYMin slice" className="pointer-events-none absolute inset-0 h-full w-full text-[rgb(var(--yz-soluk))]">
+                    <g fill="currentColor"><circle cx="70" cy="12" r=".9" opacity=".7" /><circle cx="82" cy="24" r=".6" opacity=".5" /><circle cx="93" cy="10" r=".7" opacity=".6" /><circle cx="64" cy="30" r=".5" opacity=".4" /><circle cx="95" cy="38" r=".8" opacity=".55" /><circle cx="78" cy="46" r=".55" opacity=".35" /></g>
+                </svg>
                 <YzIkon aria-hidden="true" size={tur === 'kok' ? 88 : 64} strokeWidth={1.1} className="pointer-events-none absolute -bottom-4 -right-3 text-white/[.07]" />
                 <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/[.13] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.09em] text-[rgb(var(--yz-isik))]">
                     {budandi ? <Scissors size={10} /> : <Sparkles size={10} />}{budandi ? 'Budandı' : 'YZ ağacı'}
                 </span>
-                <p className={`relative mt-1.5 pr-6 font-semibold leading-tight tracking-tight ${tur === 'kok' ? 'font-serif text-[20px]' : 'text-[15px]'} ${budandi ? 'line-through' : ''}`} style={{ ...satir, WebkitLineClamp: 2 }}>{node.title}</p>
+                <p className={`relative mt-1.5 font-semibold leading-tight tracking-tight ${tur === 'kok' ? 'font-serif text-[20px]' : 'text-[15px]'} ${budandi ? 'line-through' : ''}`} style={{ ...satir, WebkitLineClamp: 2 }}>{node.title}</p>
                 <div className="relative mt-2.5 flex items-center gap-1.5 text-[10.5px] font-semibold">
                     <span className="inline-flex items-center gap-1 rounded-full bg-white/[.12] px-2 py-0.5 text-[rgb(var(--yz-soluk))]"><BookOpen size={10} />{belgeSayisi ? belgeSayisi + ' belge' : 'Eğitilmedi'}</span>
                     {cocukSayisi > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-white/[.12] px-2 py-0.5 text-[rgb(var(--yz-soluk))]"><GitBranch size={10} />{cocukSayisi}</span>}
-                    <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-[rgb(var(--yz-isik))] px-2.5 py-1 text-[11px] text-[rgb(var(--yz-3))] shadow-[0_4px_12px_-4px_rgb(var(--yz-isik)/.8)]">Sohbet<ArrowRight size={11} /></span>
+                    <button type="button" data-yz-sohbet="" aria-label={node.title + ' ile sohbet'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); yzAc(node.id); }}
+                        className="ml-auto inline-flex min-h-8 items-center gap-1 rounded-full bg-[rgb(var(--yz-isik))] px-3 text-[11.5px] text-[rgb(var(--yz-3))] shadow-[0_4px_12px_-4px_rgb(var(--yz-isik)/.8)] touch-manipulation active:scale-95">Sohbet<ArrowRight size={11} /></button>
                 </div>
             </div>
         );
@@ -500,9 +506,6 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
                 style={{ borderRadius: yaricap, touchAction: 'none' }}>
                 {govde}
             </div>
-            {yz && !araclar && <button type="button" aria-label={node.title + ' seçenekleri'} title="Seçenekler: ayarlar, dal ekle, buda"
-                onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); hareket.klavyeAc(); }}
-                className="absolute right-1.5 top-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full text-[rgb(var(--yz-soluk))] touch-manipulation hover:bg-white/10 active:scale-95"><MoreHorizontal size={18} /></button>}
             {dikte.durum && !araclar && <button type="button" data-dikte-rozet="" disabled={dikte.durum === 'bitiyor'} aria-label="Dikteyi durdur" title="Dinlemeyi durdur"
                 onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); dikte.degistir(dikte.durum === 'kopru' ? 'kopru' : 'dikte'); }}
                 className="absolute -top-3 left-1 z-40 flex min-h-8 items-center gap-1.5 rounded-full bg-berry-600 px-3 text-[11px] font-semibold text-white shadow-soft touch-manipulation active:scale-95"><Mic size={13} className="animate-pulse" />{dikte.durum === 'bitiyor' ? 'Bitiriyor…' : 'Yazıyor · durdur'}</button>}

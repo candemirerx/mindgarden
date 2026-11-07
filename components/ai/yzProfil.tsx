@@ -36,7 +36,7 @@ export const SIMGELER: { id: string; ad: string; Ikon: LucideIcon }[] = [
 ];
 
 export const RENKLER: { id: YzRenk; ad: string }[] = [
-    { id: 'gece', ad: 'Gece' }, { id: 'orman', ad: 'Orman' }, { id: 'toprak', ad: 'Toprak' }, { id: 'gul', ad: 'Gül' }
+    { id: 'gece', ad: 'Alacakaranlık' }, { id: 'orman', ad: 'Orman' }, { id: 'ceviz', ad: 'Ceviz' }, { id: 'toprak', ad: 'Toprak' }
 ];
 
 /** Seçilen rengin --yz-* değişkenleri; altındaki her şey bu tonla boyanır. */

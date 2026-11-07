@@ -427,7 +427,7 @@ function ProjectsPageInner() {
                 {isRoot ? (
                     <div className="w-full">
                         <div
-                            onClick={() => { setSelectedNodeId(item.id); if (yz) yzAc(item.id); }}
+                            onClick={() => setSelectedNodeId(item.id)}
                             data-kilavuz-secili={isSelected ? '' : undefined}
                             className={`relative rounded-2xl border bg-white p-3 shadow-card transition-all duration-200 cursor-pointer ${
                                 isSelected
@@ -580,7 +580,6 @@ function ProjectsPageInner() {
                         onClick={(e) => {
                             e.stopPropagation();
                             setSelectedNodeId(item.id);
-                            if (yz) yzAc(item.id);
                         }}
                         data-kilavuz-secili={isSelected ? '' : undefined}
                         className={`group relative flex items-center gap-1.5 rounded-xl py-1.5 pl-2.5 pr-1 transition-all duration-200 cursor-pointer ${
