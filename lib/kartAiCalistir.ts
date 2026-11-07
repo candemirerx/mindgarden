@@ -10,7 +10,7 @@ import { AI_SAFETY_INSTRUCTION } from './aiSafety';
 import { validBilgeImage } from './bilgeMedia';
 
 /** Sonuç çağırana döner; gerçek bir nota kendiliğinden yazmaz. */
-export async function kartAiCalistir(metin: string, instruction: string, paylasimOnayiAl = true, signal?: AbortSignal, image?: string): Promise<string> {
+export async function kartAiCalistir(metin: string, instruction: string, paylasimOnayiAl = true, signal?: AbortSignal, image?: string, tekIstek = false): Promise<string> {
     if (image !== undefined && !validBilgeImage(image)) throw new Error('Fotoğraf biçimi geçersiz.');
     if (!metin.trim()) throw new Error('Not içeriği boş.');
     if (paylasimOnayiAl && !aiPaylasimOnayi()) throw new Error('Metin paylaşımı iptal edildi; notunuz değiştirilmedi.');
@@ -42,6 +42,8 @@ export async function kartAiCalistir(metin: string, instruction: string, paylasi
         if (metin.length > 20000) throw new Error('Fotoğraflı sohbet metni çok uzun. Yeni sohbet başlatın.');
         return calistir(metin);
     }
+    // Sohbet bağlamı bölünürse her parça ayrı yanıtlanır; tek istekte gönderilir.
+    if (tekIstek) return (await calistir(metin)).trim();
     for (const parca of splitIntoChunks(metin)) sonuc += (await calistir(parca.text)).trim() + parca.after;
     return sonuc.trimEnd();
 }

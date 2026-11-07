@@ -29,6 +29,7 @@ import { bolumAcik, bolumAcikliginiAyarla } from '@/lib/uiPrefs';
 import type { Bolum } from '@/lib/uiPrefs';
 import { GIZLILIK_ADRESI, VERI_SILME_ADRESI, disAdresMi, yasalAdresiAc } from '@/lib/yasalBaglantilar';
 import DataSection from './DataSection';
+import CopKutusu from './CopKutusu';
 import RemoteSettings from './RemoteSettings';
 import RemoteMacroTools from './RemoteMacroTools';
 import RemoteProfileTools from './RemoteProfileTools';
@@ -821,6 +822,10 @@ export default function ModelSettingsModal({ isOpen, onClose, initialSection = '
                                 </>
                             )}
 
+                            {activeTab === 'cop' && <>
+                                <SettingsPageHeader icon={Trash2} tone="clay" title="Geri dönüşüm kutusu" description="Çöpe attığınız notlar burada durur; geri alabilir ya da kalıcı silebilirsiniz." />
+                                <CopKutusu />
+                            </>}
                             {activeTab === 'tuval' && <>
                                 <SettingsPageHeader icon={TreePine} title="Tuval görünüm ayarları" description="Tüm bahçelerin varsayılanları ve ana sayfadaki deneme ağacı." />
                                 <GenelTuvalAyarlari />

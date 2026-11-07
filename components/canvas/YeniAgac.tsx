@@ -15,7 +15,10 @@
  * İlk uzun basış seçenekleri açar; kaydırıp bırakınca seçilen işlem uygulanır.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, ClipboardList, AudioLines, ClipboardPaste, Copy, Mic, Smartphone, CornerDownLeft, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, TreePine, Wand2 } from 'lucide-react';
+import { ArrowRight, BookOpen, Check, ChevronDown, ClipboardList, AudioLines, ClipboardPaste, Copy, MessageCircle, Mic, MoreHorizontal, Smartphone, CornerDownLeft, GitBranch, Keyboard, Leaf, Pencil, Plus, Scissors, Move, SlidersHorizontal, Sparkles, Sprout, Trash2, TreePine, Wand2 } from 'lucide-react';
+import { useYzAgaclari, yzAc } from '@/lib/yzAgaci';
+import { yzIkon, yzTema } from '@/components/ai/yzProfil';
+import { copeTasi } from '@/lib/copKutusu';
 import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
@@ -202,7 +205,7 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler = VARSAYILAN_KART_DUGMELERI, kartMakrolari, kartAiMakrolari, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler: dugmeAyari = VARSAYILAN_KART_DUGMELERI, kartMakrolari, kartAiMakrolari, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
@@ -215,7 +218,12 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const icerikRef = useRef(node.content); icerikRef.current = node.content;
     const dikte = useKartDikte(prefs, () => icerikRef.current, metin => useStore.getState().updateNode(node.id, metin), mesaj => alert(mesaj));
     const disMenu = eylem === 'panel';
-    const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined);
+    // YZ ağacı: kısa dokunuş sohbeti açar; düğmeler uzun basış ya da ⋯ ile gelir.
+    const yz = useYzAgaclari()[node.id];
+    const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined, yz ? () => yzAc(node.id) : undefined);
+    const dugmeler: KartDugmeleri = yz
+        ? { ...dugmeAyari, ustSol: 'yzAyar', ustOrta: 'yzSohbet', ustSag: 'buda', sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok' }
+        : dugmeAyari;
     const secili = selectedNodeId === node.id;
     const budandi = node.isPruned ?? false;
     const cocukSayisi = node.children.length;
@@ -323,6 +331,33 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         );
     }
 
+    if (yz) {
+        const belgeSayisi = yz.belgeler.length;
+        const YzIkon = yzIkon(yz.simge, derinlik);
+        const tema = yzTema(yz.renk);
+        const zemin = 'bg-[linear-gradient(150deg,rgb(var(--yz-1))_0%,rgb(var(--yz-2))_55%,rgb(var(--yz-3))_100%)] text-[rgb(var(--yz-yazi))] ring-1 ring-[color:var(--kart-kenar)] shadow-[0_1px_0_rgba(255,255,255,.14)_inset,0_20px_38px_-20px_rgb(var(--yz-2)/.95)]';
+        govde = kart === 'hap' ? (
+            <div style={tema} className={`flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-10 ${zemin} ${budandi ? 'opacity-60' : ''}`}>
+                <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/15 text-[rgb(var(--yz-isik))]"><YzIkon size={14} /></span>
+                <span className={`min-w-0 flex-1 truncate text-[13px] font-semibold ${budandi ? 'line-through' : ''}`}>{node.title}</span>
+            </div>
+        ) : (
+            <div style={tema} className={`relative overflow-hidden ${tur === 'kok' ? 'rounded-[24px] px-4 pb-3.5 pt-3.5' : 'rounded-[20px] px-3.5 pb-3 pt-3'} ${zemin} ${budandi ? 'opacity-60' : ''}`}>
+                <span aria-hidden="true" className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-[rgb(var(--yz-isik)/.28)] blur-2xl" />
+                <YzIkon aria-hidden="true" size={tur === 'kok' ? 88 : 64} strokeWidth={1.1} className="pointer-events-none absolute -bottom-4 -right-3 text-white/[.07]" />
+                <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/[.13] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.09em] text-[rgb(var(--yz-isik))]">
+                    {budandi ? <Scissors size={10} /> : <Sparkles size={10} />}{budandi ? 'Budandı' : 'YZ ağacı'}
+                </span>
+                <p className={`relative mt-1.5 pr-6 font-semibold leading-tight tracking-tight ${tur === 'kok' ? 'font-serif text-[20px]' : 'text-[15px]'} ${budandi ? 'line-through' : ''}`} style={{ ...satir, WebkitLineClamp: 2 }}>{node.title}</p>
+                <div className="relative mt-2.5 flex items-center gap-1.5 text-[10.5px] font-semibold">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/[.12] px-2 py-0.5 text-[rgb(var(--yz-soluk))]"><BookOpen size={10} />{belgeSayisi ? belgeSayisi + ' belge' : 'Eğitilmedi'}</span>
+                    {cocukSayisi > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-white/[.12] px-2 py-0.5 text-[rgb(var(--yz-soluk))]"><GitBranch size={10} />{cocukSayisi}</span>}
+                    <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-[rgb(var(--yz-isik))] px-2.5 py-1 text-[11px] text-[rgb(var(--yz-3))] shadow-[0_4px_12px_-4px_rgb(var(--yz-isik)/.8)]">Sohbet<ArrowRight size={11} /></span>
+                </div>
+            </div>
+        );
+    }
+
     const ekleAdi = tur === 'kok' ? 'Altına dal ekle' : 'Altına yaprak ekle';
     const yanAdi = tur === 'kok' ? 'Yanına ağaç ekle' : derinlik === 1 ? 'Yanına dal ekle' : 'Yanına yaprak ekle';
     const yaricap = kart === 'hap' ? 9999 : kart === 'sade' ? 12 : kart === 'renkli' ? 16 : tur === 'kok' ? 24 : tur === 'branch' ? 18 : 16;
@@ -330,6 +365,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     const tasi = () => hareket.kap.current?.dispatchEvent(new CustomEvent('nb-agac-tasi', { bubbles: true }));
     const etiketler: Record<string, string> = { editor: 'Düzenle', kopya: 'İçeriği kopyala', buda: budandi ? 'Budamayı geri al' : 'Buda', tasi: 'Ağacı taşı', sol: 'Sol ' + yanAdi.toLocaleLowerCase('tr'), yan: yanAdi, alt: ekleAdi, ayarlar: 'Ağaç ayarları', makro: 'Makro seçilmedi', pcYaz: 'Bilgisayara yaz', pcPano: 'Bilgisayar panosuna gönder', pcEnter: 'Bilgisayarda Enter', pcDikte: 'Dikte', pcKopru: 'Köprü dikte', pcKlavye: 'Telefon klavyesiyle yaz', pcTelPano: 'Telefon panosunu gönder' };
     etiketler.tuvalAyarlari = 'Tuval ayarlarını aç';
+    etiketler.cop = 'Çöp kutusuna taşı';
+    etiketler.yzSohbet = 'Yapay zekâ ile sohbet';
+    etiketler.yzAyar = 'YZ ayarları: talimat ve belgeler';
     const makrolar = prefs.macros.filter(makroHazir);
     const makro = (yer: keyof KartDugmeleri) => dugmeler[yer] === 'makro' ? makrolar.find(m => m.id === (kartMakrolari ?? {})[yer]) ?? null : null;
     const makroBilgisi = (yer: keyof KartDugmeleri) => {
@@ -371,8 +409,11 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     };
     const uygula = (id: KartIslevi) => {
         if (id === 'editor') onEdit(node);
+        else if (id === 'yzSohbet') yzAc(node.id);
+        else if (id === 'yzAyar') yzAc(node.id, 'ayarlar');
         else if (id === 'kopya') void kopyala();
         else if (id === 'buda') void setNodePruned(node.id, !budandi);
+        else if (id === 'cop') void copeTasi(node.id);
         else if (id === 'tasi') tasi();
         else if (id === 'ayarlar' || id === 'tuvalAyarlari') onSettings?.();
         else if (id === 'alt') onAddChild(node.id, 'right');
@@ -392,8 +433,11 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     };
     const simge = (id: KartIslevi) => {
         if (id === 'editor') return <Pencil size={18} />;
+        if (id === 'yzSohbet') return <MessageCircle size={18} />;
+        if (id === 'yzAyar') return <SlidersHorizontal size={16} />;
         if (id === 'kopya') return kopyalandi ? <Check size={17} /> : <Copy size={17} />;
         if (id === 'buda') return <Scissors size={17} />;
+        if (id === 'cop') return <Trash2 size={17} />;
         if (id === 'tasi') return <Move size={17} />;
         if (id === 'ayarlar' || id === 'tuvalAyarlari') return <SlidersHorizontal size={16} />;
         if (id === 'pcYaz') return <Keyboard size={17} />;
@@ -413,7 +457,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
         const ust = yer.startsWith('ust');
         const bilgi = makroBilgisi(yer);
         const aiBilgi = aiGorevBilgisi(yer);
-        const yazi = id === 'tuvalAyarlari' ? 'Tuval' : id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'pcEnter' ? 'Enter' : id === 'pcDikte' ? 'Dikte' : id === 'pcKopru' ? 'Köprü' : id === 'pcKlavye' ? 'PC klavye' : id === 'pcTelPano' ? 'Telefon pano' : id === 'aiMakro' ? 'Yapay zekâ' : 'Düzenle';
+        const yazi = id === 'tuvalAyarlari' ? 'Tuval' : id === 'sol' || id === 'yan' ? 'Yanına' : id === 'alt' ? 'Altına' : id === 'kopya' ? 'Kopyala' : id === 'buda' ? 'Buda' : id === 'cop' ? 'Çöpe at' : id === 'tasi' ? 'Taşı' : id === 'ayarlar' ? 'Ayarlar' : id === 'makro' ? 'Makro' : id === 'pcYaz' ? 'PC yaz' : id === 'pcPano' ? 'PC pano' : id === 'pcEnter' ? 'Enter' : id === 'pcDikte' ? 'Dikte' : id === 'pcKopru' ? 'Köprü' : id === 'pcKlavye' ? 'PC klavye' : id === 'pcTelPano' ? 'Telefon pano' : id === 'aiMakro' ? 'Yapay zekâ' : id === 'yzSohbet' ? 'Sohbet' : id === 'yzAyar' ? 'YZ ayarı' : 'Düzenle';
         return <button key={yer} data-kart-yer={yer} data-kart-eylem={id} type="button"
             onClick={e => {
                 e.stopPropagation();
@@ -456,6 +500,9 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
                 style={{ borderRadius: yaricap, touchAction: 'none' }}>
                 {govde}
             </div>
+            {yz && !araclar && <button type="button" aria-label={node.title + ' seçenekleri'} title="Seçenekler: ayarlar, dal ekle, buda"
+                onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); hareket.klavyeAc(); }}
+                className="absolute right-1.5 top-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full text-[rgb(var(--yz-soluk))] touch-manipulation hover:bg-white/10 active:scale-95"><MoreHorizontal size={18} /></button>}
             {dikte.durum && !araclar && <button type="button" data-dikte-rozet="" disabled={dikte.durum === 'bitiyor'} aria-label="Dikteyi durdur" title="Dinlemeyi durdur"
                 onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); dikte.degistir(dikte.durum === 'kopru' ? 'kopru' : 'dikte'); }}
                 className="absolute -top-3 left-1 z-40 flex min-h-8 items-center gap-1.5 rounded-full bg-berry-600 px-3 text-[11px] font-semibold text-white shadow-soft touch-manipulation active:scale-95"><Mic size={13} className="animate-pulse" />{dikte.durum === 'bitiyor' ? 'Bitiriyor…' : 'Yazıyor · durdur'}</button>}

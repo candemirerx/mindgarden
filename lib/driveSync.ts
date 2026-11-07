@@ -13,6 +13,7 @@
  */
 
 import { Capacitor } from '@capacitor/core';
+import { YZ_DEGISTI_OLAYI, yzBirlestir, yzYedegi, type YzYedek } from './yzAgaci';
 import { supabase, isLocalBackend } from './supabaseClient';
 import type { useStore } from './store/useStore';
 import { dersTamamla } from './kilavuzIlerleme';
@@ -282,6 +283,8 @@ export interface BackupPayload {
     ownerId?: string;
     gardens: SyncRow[];
     nodes: SyncRow[];
+    /** YZ ağaçlarının talimatı ve eğitim belgeleri (eski yedeklerde yoktur). */
+    yz?: YzYedek;
 }
 
 async function activeSessionUserId(): Promise<string> {
@@ -712,6 +715,7 @@ export async function uploadBackup(token: string): Promise<{ exportedAt: string;
         ...base,
         gardens: base.gardens.map(tombstoneSadelestir),
         nodes: base.nodes.map(tombstoneSadelestir),
+        yz: await yzYedegi(),
         exportedAt: new Date().toISOString(),
         device: Capacitor.isNativePlatform() ? 'android' : 'web',
     };
@@ -751,6 +755,7 @@ async function writePayloadToLocal(
         try {
             await checkedUpsert('gardens', gardens.rows);
             await checkedUpsert('nodes', nodes.rows);
+            await yzBirlestir(payload.yz);
             temelYaz({ gardens: gardens.rows, nodes: nodes.rows });
             await refreshVisibleStore();
         } finally {
@@ -803,6 +808,7 @@ export async function mergeSync(token: string): Promise<{ gardens: number; nodes
         try {
             await checkedUpsert('gardens', gardens.rows);
             await checkedUpsert('nodes', nodes.rows);
+            const yz = await yzBirlestir(downloaded.yz);
 
             const payload: BackupPayload = {
                 app: 'notbahcesi',
@@ -810,6 +816,7 @@ export async function mergeSync(token: string): Promise<{ gardens: number; nodes
                 ownerId,
                 gardens: gardens.rows.map(tombstoneSadelestir),
                 nodes: nodes.rows.map(tombstoneSadelestir),
+                yz,
                 exportedAt: new Date().toISOString(),
                 device: Capacitor.isNativePlatform() ? 'android' : 'web',
             };
@@ -858,6 +865,21 @@ const AUTOSYNC_DEBOUNCE = 5000;
  * Store değişikliklerini izler; Google oturumu + otomatik senkron açıksa
  * son değişiklikten 5 sn sonra Drive'a yazar. Sayfa başına bir kez çağrılır.
  */
+/** Son değişiklikten 5 sn sonra Drive ile birleştirir (otomatik senkron açıksa). */
+function zamanla(): void {
+    if (uygulamaAsamasi) return;
+    if (!isAutoSyncEnabled() || !isSignedInWithGoogle()) return;
+    if (uploadTimer) clearTimeout(uploadTimer);
+    uploadTimer = setTimeout(async () => {
+        try {
+            const token = await getDriveToken(false);
+            await mergeSync(token);
+        } catch {
+            // Sessiz geç: token süresi/çevrimdışı; bir sonraki değişiklikte tekrar denenir.
+        }
+    }, AUTOSYNC_DEBOUNCE);
+}
+
 export function initDriveAutoSync(store: typeof useStore): void {
     if (autoSyncInitialized || typeof window === 'undefined') return;
     autoSyncInitialized = true;
@@ -869,19 +891,10 @@ export function initDriveAutoSync(store: typeof useStore): void {
         if (prevState && (prevState.gardens !== state.gardens || prevState.nodes !== state.nodes)) {
             veriDegisti();
         }
-        if (uygulamaAsamasi) return;
-        if (!isAutoSyncEnabled() || !isSignedInWithGoogle()) return;
-
-        if (uploadTimer) clearTimeout(uploadTimer);
-        uploadTimer = setTimeout(async () => {
-            try {
-                const token = await getDriveToken(false);
-                await mergeSync(token);
-            } catch {
-                // Sessiz geç: token süresi/çevrimdışı; bir sonraki değişiklikte tekrar denenir.
-            }
-        }, AUTOSYNC_DEBOUNCE);
+        zamanla();
     });
+    // YZ talimatı ve belgeleri store dışında tutulur; değişince aynı kuyruğa girer.
+    window.addEventListener(YZ_DEGISTI_OLAYI, () => { veriDegisti(); zamanla(); });
 
     // Açılışta: redirect akışından dönen token'ı yakala, sonra uzaktaki
     // yedekle birleştir (çapraz cihaz).

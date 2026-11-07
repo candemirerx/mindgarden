@@ -91,6 +91,40 @@
     --kok-yazi: 255 255 255;
     --kok-soluk: 214 236 220;
     --kart-kenar: rgba(255, 255, 255, 0);
+    /* YZ ağacı: gece mavisi-mor geçiş, kehribar ışık. Tema zemininden bağımsızdır. */
+    --yz-1: 52 64 120;
+    --yz-2: 38 36 86;
+    --yz-3: 20 22 48;
+    --yz-isik: 242 190 96;
+    --yz-yazi: 248 247 255;
+    --yz-soluk: 196 198 238;
+    --yz-acik: 238 238 252;
+    --yz-koyu: 54 52 120;
+    /* YZ profil renkleri: orman, toprak, gül (geçiş tonları temadan bağımsız). */
+    --yzp-gece-soluk: 196 198 238;
+    --yzp-orman-soluk: 198 230 208;
+    --yzp-toprak-soluk: 248 222 188;
+    --yzp-gul-soluk: 248 208 216;
+    --yzp-gece-1: 52 64 120;
+    --yzp-gece-2: 38 36 86;
+    --yzp-gece-3: 20 22 48;
+    --yzp-gece-acik: 238 238 252;
+    --yzp-gece-koyu: 54 52 120;
+    --yzp-orman-1: 59 122 82;
+    --yzp-orman-2: 34 73 47;
+    --yzp-orman-3: 18 42 28;
+    --yzp-orman-acik: 228 242 232;
+    --yzp-orman-koyu: 34 92 56;
+    --yzp-toprak-1: 196 128 52;
+    --yzp-toprak-2: 140 82 30;
+    --yzp-toprak-3: 70 40 16;
+    --yzp-toprak-acik: 250 238 222;
+    --yzp-toprak-koyu: 126 70 22;
+    --yzp-gul-1: 196 82 96;
+    --yzp-gul-2: 128 42 66;
+    --yzp-gul-3: 62 20 36;
+    --yzp-gul-acik: 250 232 236;
+    --yzp-gul-koyu: 130 36 62;
     color-scheme: light;
   }
 
@@ -168,6 +202,34 @@
     --kok-yazi: 240 247 242;
     --kok-soluk: 178 216 190;
     --kart-kenar: rgba(255, 255, 255, .07);
+    --yz-1: 66 78 146;
+    --yz-2: 46 44 104;
+    --yz-3: 24 26 58;
+    --yz-isik: 246 198 110;
+    --yz-yazi: 244 244 255;
+    --yz-soluk: 186 190 236;
+    --yz-acik: 40 40 78;
+    --yz-koyu: 206 206 250;
+    --yzp-gece-1: 66 78 146;
+    --yzp-gece-2: 46 44 104;
+    --yzp-gece-3: 24 26 58;
+    --yzp-gece-acik: 40 40 78;
+    --yzp-gece-koyu: 206 206 250;
+    --yzp-orman-1: 66 136 92;
+    --yzp-orman-2: 38 82 54;
+    --yzp-orman-3: 20 46 30;
+    --yzp-orman-acik: 32 56 40;
+    --yzp-orman-koyu: 176 226 192;
+    --yzp-toprak-1: 206 140 64;
+    --yzp-toprak-2: 150 90 36;
+    --yzp-toprak-3: 76 44 18;
+    --yzp-toprak-acik: 64 44 24;
+    --yzp-toprak-koyu: 244 204 156;
+    --yzp-gul-1: 206 92 108;
+    --yzp-gul-2: 138 48 74;
+    --yzp-gul-3: 66 22 40;
+    --yzp-gul-acik: 66 30 42;
+    --yzp-gul-koyu: 246 190 202;
     color-scheme: dark;
   }
 

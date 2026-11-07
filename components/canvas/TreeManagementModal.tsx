@@ -226,10 +226,10 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
                                                     <Pencil size={18} />
                                                 </button>
                                                 <button
-                                                    onClick={() => setPendingDelete({ id: tree.id, name: tree.title, dugumMu: false })}
+                                                    onClick={() => onDeleteTree(tree.id)}
                                                     className="flex h-10 w-10 items-center justify-center rounded-xl text-berry-600 transition-colors hover:bg-berry-50"
-                                                    title="Ağacı sil"
-                                                    aria-label="Ağacı sil"
+                                                    title="Ağacı çöpe at"
+                                                    aria-label="Ağacı çöpe at"
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
@@ -357,12 +357,12 @@ export const TreeManagementModal: React.FC<TreeManagementModalProps> = ({
 
                                                                 {/* Sil */}
                                                                 <button
-                                                                    onClick={() => setPendingDelete({ id: dugum.id, name: dugum.baslik, dugumMu: true })}
+                                                                    onClick={() => onDeleteNode(dugum.id)}
                                                                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-berry-600 transition-colors hover:bg-berry-50"
-                                                                    title="Dalı sil"
-                                                                    aria-label="Dalı sil"
+                                                                    title="Dalı çöpe at"
+                                                                    aria-label="Dalı çöpe at"
                                                                 >
-                                                                    <X size={17} />
+                                                                    <Trash2 size={17} />
                                                                 </button>
                                                                 </div>
                                                             </div>

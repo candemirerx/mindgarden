@@ -24,6 +24,11 @@ import { hapticTick } from '@/components/mobile/MobileShell';
 import { agacSuruklemesiBasladi, agacSuruklemesiBitti } from '@/lib/canvasGesture';
 import { sonrakiRenk } from '@/lib/branchColors';
 import { bosAdPlani } from '@/lib/bosAd';
+import YzAgaciKatmani from '@/components/ai/YzAgaci';
+import { yzAc, yzAgaciOlustur } from '@/lib/yzAgaci';
+import { copeTasi } from '@/lib/copKutusu';
+import { CopBildirimi } from '@/components/editor/CopKutusu';
+import type { EklemeTuru } from '@/components/ui/PromptModal';
 import { MindNode } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -237,7 +242,7 @@ function GardenPageInner() {
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, deleteNode: deleteNodeFromStore, toggleNodeType, setNodePruned, setNodeColor, setSelectedNode, selectedNodeId } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, setCurrentGarden, addNode, updateNode, updateNodePosition, toggleNodeType, setNodePruned, setNodeColor, setSelectedNode, selectedNodeId } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [mindRoots, setMindRoots] = useState<MindNode[]>([]); // Birden fazla ağaç için array
     const [ortalanacak, setOrtalanacak] = useState<{ id: string; sayac: number } | null>(null);
@@ -263,7 +268,7 @@ function GardenPageInner() {
 
 
     // Modals state
-    const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
+    const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, turSecimi?: boolean, onConfirm: (val: string, tur: EklemeTuru) => void}>({isOpen: false, title: '', onConfirm: () => {}});
     const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, title: string, description: string, isDanger?: boolean, onConfirm: () => void}>({isOpen: false, title: '', description: '', onConfirm: () => {}});
 
     const currentGarden = gardens.find((g: any) => g.id === gardenId);
@@ -326,6 +331,11 @@ function GardenPageInner() {
         }
     }, [nodes, convertToMindTrees]);
 
+    /** Silme çöp kutusuna taşır; Ayarlar → Geri dönüşüm kutusundan geri alınır. */
+    const deleteNodeFromStore = async (id: string) => { await copeTasi(id); };
+    /** Yeni notu YZ ağacına çevirir ve eğitmek için ayarlarını açar. */
+    const yzOlustur = (id: string) => { yzAgaciOlustur(id); setTimeout(() => yzAc(id), 350); };
+
     // Yeni root node (ağaç) oluştur
     const handleCreateRoot = () => {
         // Ad her zaman boş bırakılabilir; sıra numarası aracı kapalıysa
@@ -337,11 +347,13 @@ function GardenPageInner() {
             title: 'Yeni Ağaç Ekle',
             placeholder: plan.ipucu,
             allowEmpty: true,
-            onConfirm: async (title) => {
+            turSecimi: true,
+            onConfirm: async (title, tur) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || plan.uret(null, nodes);
+                const ad = title || (tur === 'yz' ? 'YZ Ağacı' : plan.uret(null, nodes));
                 const yeni = await addNode(gardenId, ad, null, { x: 0, y: 0 });
                 if (yeni) setOrtalanacak(o => ({ id: yeni.id, sayac: (o?.sayac ?? 0) + 1 }));
+                if (yeni && tur === 'yz') yzOlustur(yeni.id);
             }
         });
     };
@@ -405,9 +417,10 @@ function GardenPageInner() {
             title: 'Ağaç Ekle',
             placeholder: plan.ipucu,
             allowEmpty: true,
-            onConfirm: async (title) => {
+            turSecimi: true,
+            onConfirm: async (title, tur) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || plan.uret(null, nodes);
+                const ad = title || (tur === 'yz' ? 'YZ Ağacı' : plan.uret(null, nodes));
                 // Ağaçlar oluşturulma sırasıyla yan yana dizilir: yeni ağaç, bu ağaçla
                 // sonraki ağacın arasına düşecek bir oluşturma zamanı alır.
                 const kokler = nodes.filter(n => n.parent_id === null)
@@ -424,6 +437,7 @@ function GardenPageInner() {
                 }
                 const yeni = await addNode(gardenId, ad, null, { x: 0, y: 0 }, createdAt);
                 if (yeni) {
+                    if (tur === 'yz') yzOlustur(yeni.id);
                     setSelectedNode(yeni.id);
                     setOrtalanacak(o => ({ id: yeni.id, sayac: (o?.sayac ?? 0) + 1 }));
                 }
@@ -459,13 +473,14 @@ function GardenPageInner() {
         const plan = bosAdPlani(yaprak ? 'yaprak' : 'dal', varsayilan, agacId);
         setPromptConfig({
             isOpen: true,
-            title: yaprak ? 'Yaprak Ekle' : 'Dal Ekle',
+            title: sonrasina ? (yaprak ? 'Yanına Ekle' : 'Yanına Dal Ekle') : (yaprak ? 'Altına Ekle' : 'Altına Dal Ekle'),
             placeholder: plan.ipucu,
             allowEmpty: true,
-            onConfirm: async (title) => {
+            turSecimi: true,
+            onConfirm: async (title, tur) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
                 // Boş ad: Tuval ayarlarındaki kural, Sıralı Ad aracı ya da varsayılan ad.
-                const ad = title || plan.uret(parentId, nodes);
+                const ad = title || (tur === 'yz' ? 'YZ Ağacı' : plan.uret(parentId, nodes));
                 // Yan not: bu kardeşle sonraki kardeşin arasına düşecek oluşturma zamanı
                 let createdAt: string | undefined;
                 if (sonrasina) {
@@ -485,6 +500,7 @@ function GardenPageInner() {
                 const newNode = await addNode(gardenId, ad, parentId, { x: 0, y: 0 }, createdAt);
 
                 if (newNode) {
+                    if (tur === 'yz') yzOlustur(newNode.id);
                     const newMindNode: MindNode = {
                         id: newNode.id,
                         title: newNode.content,
@@ -529,9 +545,8 @@ function GardenPageInner() {
         if (rootIndex !== -1) {
             setConfirmConfig({
                 isOpen: true,
-                title: 'Ağacı Sil',
-                description: 'Bütün ağacı ve altındaki tüm düşünceleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
-                isDanger: true,
+                title: 'Ağacı çöpe at',
+                description: 'Ağaç ve altındaki tüm notlar geri dönüşüm kutusuna taşınır. Ayarlar → Geri dönüşüm kutusundan geri alabilirsiniz.',
                 onConfirm: async () => {
                     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
                     await deleteNodeFromStore(nodeId);
@@ -547,9 +562,8 @@ function GardenPageInner() {
         if (result) {
             setConfirmConfig({
                 isOpen: true,
-                title: 'Dalı Sil',
-                description: 'Bu dalı ve altındaki tüm düşünceleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
-                isDanger: true,
+                title: 'Dalı çöpe at',
+                description: 'Dal ve altındaki tüm notlar geri dönüşüm kutusuna taşınır. Ayarlar → Geri dönüşüm kutusundan geri alabilirsiniz.',
                 onConfirm: async () => {
                     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
                     const { tree, treeIndex } = result;
@@ -855,9 +869,12 @@ function GardenPageInner() {
                 title={promptConfig.title}
                 placeholder={promptConfig.placeholder}
                 allowEmpty={promptConfig.allowEmpty}
+                turSecimi={promptConfig.turSecimi}
                 onConfirm={promptConfig.onConfirm}
                 onCancel={() => setPromptConfig(prev => ({ ...prev, isOpen: false }))}
             />
+            <YzAgaciKatmani />
+            <CopBildirimi />
             <ConfirmModal
                 isOpen={confirmConfig.isOpen}
                 title={confirmConfig.title}

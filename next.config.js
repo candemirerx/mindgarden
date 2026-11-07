@@ -22,6 +22,8 @@ const nextConfig = {
   },
   // Bundle analizi için
   webpack: (config, { isServer }) => {
+    // pdfjs-dist isteğe bağlı 'canvas' modülünü arar; tarayıcıda gerekmez.
+    config.resolve.alias = { ...config.resolve.alias, canvas: false };
     // Tree shaking için
     config.optimization = {
       ...config.optimization,

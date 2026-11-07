@@ -7,8 +7,15 @@ import {
     Plus, Trash2, Pencil, Layout, Search,
     MoreHorizontal, X, TreePine, FileText, Copy, Check, Leaf, ArrowLeft,
     Sprout, ChevronRight, ChevronsUpDown, Columns, LayoutGrid, ExternalLink,
-    Calendar, Hash, AlignLeft, Sparkles, BookOpen, RotateCcw, Scissors
+    Calendar, Hash, AlignLeft, Sparkles, BookOpen, RotateCcw, Scissors,
+    MessageCircle, SlidersHorizontal, ListPlus
 } from 'lucide-react';
+import YzAgaciKatmani, { YzRozet } from '@/components/ai/YzAgaci';
+import { yzTema } from '@/components/ai/yzProfil';
+import { useYzAgaclari, yzAc, yzAgaciMi, yzAgaciOlustur } from '@/lib/yzAgaci';
+import { copeTasi } from '@/lib/copKutusu';
+import { CopBildirimi } from '@/components/editor/CopKutusu';
+import type { EklemeTuru } from '@/components/ui/PromptModal';
 
 import PromptModal from '@/components/ui/PromptModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -42,7 +49,7 @@ function ProjectsPageInner() {
     const router = useRouter();
     const gardenId = searchParams.get('id') || '';
 
-    const { gardens, nodes, fetchGardens, fetchNodes, addNode, updateNode, deleteNode, toggleNodeExpansion, setNodeColor, setNodePruned } = useStore();
+    const { gardens, nodes, fetchGardens, fetchNodes, addNode, updateNode, toggleNodeExpansion, setNodeColor, setNodePruned } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [trees, setTrees] = useState<TreeItem[]>([]);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -57,7 +64,8 @@ function ProjectsPageInner() {
     const budamaModu = useBudamaModu(gardenId);
 
     // Modals state
-    const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, onConfirm: (val: string) => void}>({isOpen: false, title: '', onConfirm: () => {}});
+    const [promptConfig, setPromptConfig] = useState<{isOpen: boolean, title: string, placeholder?: string, allowEmpty?: boolean, turSecimi?: boolean, onConfirm: (val: string, tur: EklemeTuru) => void}>({isOpen: false, title: '', onConfirm: () => {}});
+    const yzler = useYzAgaclari();
     const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, title: string, description: string, isDanger?: boolean, onConfirm: () => void}>({isOpen: false, title: '', description: '', onConfirm: () => {}});
     /** Ekleme başarısız olduğunda kullanıcıyı sessiz bırakmamak için. */
     const [hata, setHata] = useState('');
@@ -168,7 +176,29 @@ function ProjectsPageInner() {
         setExpandedNodes(new Set());
     };
 
-    const handleAddRoot = () => {
+    /** Yanına ekleme: yeni not bu kardeşle bir sonraki kardeşin arasına düşecek oluşturma zamanı alır. */
+    const siraZamani = (parentId: string | null, sonrasina?: string): string | undefined => {
+        if (!sonrasina) return undefined;
+        const kardesler = nodes.filter(n => n.parent_id === parentId && !n.deleted_at)
+            .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')));
+        const sira = kardesler.findIndex(n => n.id === sonrasina);
+        if (sira < 0 || sira >= kardesler.length - 1) return undefined;
+        const t0 = Date.parse(kardesler[sira].created_at), t1 = Date.parse(kardesler[sira + 1].created_at);
+        return Number.isFinite(t0) && Number.isFinite(t1) ? new Date(t0 + Math.max(1, Math.floor((t1 - t0) / 2))).toISOString() : undefined;
+    };
+    /** Yeni notu YZ ağacına çevirir ve eğitmek için ayarlarını açar. */
+    const yzOlustur = (id: string) => { yzAgaciOlustur(id); setTimeout(() => yzAc(id), 350); };
+    /** Notun yanına (aynı seviyeye) not ya da YZ ağacı ekler; kökte yanına ağaç. */
+    const handleAddSibling = (nodeId: string) => {
+        setActiveMenu(null);
+        const kardes = nodes.find(n => n.id === nodeId);
+        if (!kardes) return;
+        if (!kardes.parent_id) { handleAddRoot(nodeId); return; }
+        const ustunde = nodes.some(n => n.parent_id === kardes.parent_id && n.id !== nodeId && nodes.some(c => c.parent_id === n.id));
+        handleAddChild(kardes.parent_id, ustunde || nodes.some(c => c.parent_id === nodeId), nodeId);
+    };
+
+    const handleAddRoot = (sonrasina?: string) => {
         // Ad her zaman boş bırakılabilir; sıra numarası aracı kapalıysa
         // anlaşılır bir varsayılan ad verilir. Böylece ekleme asla çıkmaza
         // girmez.
@@ -176,14 +206,16 @@ function ProjectsPageInner() {
         const plan = bosAdPlani('agac', varsayilan);
         setPromptConfig({
             isOpen: true,
-            title: 'Yeni Ağaç Ekle',
+            title: sonrasina ? 'Yanına Ağaç Ekle' : 'Yeni Ağaç Ekle',
             placeholder: plan.ipucu,
             allowEmpty: true,
-            onConfirm: async (title) => {
+            turSecimi: true,
+            onConfirm: async (title, tur) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || plan.uret(null, nodes);
-                const created = await addNode(gardenId, ad, null, { x: 0, y: 0 });
+                const ad = title || (tur === 'yz' ? 'YZ Ağacı' : plan.uret(null, nodes));
+                const created = await addNode(gardenId, ad, null, { x: 0, y: 0 }, siraZamani(null, sonrasina));
                 if (created) {
+                    if (tur === 'yz') yzOlustur(created.id);
                     setHata('');
                     setSelectedNodeId(created.id);
                 } else {
@@ -197,7 +229,7 @@ function ProjectsPageInner() {
         });
     };
 
-    const handleAddChild = (parentId: string, hasChildren: boolean) => {
+    const handleAddChild = (parentId: string, hasChildren: boolean, sonrasina?: string) => {
         setActiveMenu(null);
         const varsayilan = hasChildren ? 'Yeni Dal' : 'Yeni Yaprak';
         // Boş ad kuralı notun ait olduğu ağacın kendi ayarından gelir
@@ -210,13 +242,15 @@ function ProjectsPageInner() {
         const plan = bosAdPlani(hasChildren ? 'dal' : 'yaprak', varsayilan, kok?.id ?? null);
         setPromptConfig({
             isOpen: true,
-            title: hasChildren ? 'Yeni Dal Ekle' : 'Yeni Yaprak Ekle',
+            title: sonrasina ? 'Yanına Ekle' : hasChildren ? 'Altına Dal Ekle' : 'Altına Yaprak Ekle',
             placeholder: plan.ipucu,
             allowEmpty: true,
-            onConfirm: async (title) => {
+            turSecimi: true,
+            onConfirm: async (title, tur) => {
                 setPromptConfig(prev => ({ ...prev, isOpen: false }));
-                const ad = title || plan.uret(parentId, nodes);
-                const created = await addNode(gardenId, ad, parentId, { x: 0, y: 0 });
+                const ad = title || (tur === 'yz' ? 'YZ Ağacı' : plan.uret(parentId, nodes));
+                const created = await addNode(gardenId, ad, parentId, { x: 0, y: 0 }, siraZamani(parentId, sonrasina));
+                if (created && tur === 'yz') yzOlustur(created.id);
 
                 if (!expandedNodes.has(parentId)) {
                     const newExpanded = new Set(expandedNodes);
@@ -234,24 +268,17 @@ function ProjectsPageInner() {
         });
     };
 
-    const handleDelete = (nodeId: string) => {
+    /** Not ve alt dalları çöp kutusuna gider; alttaki bildirimden hemen geri alınabilir. */
+    const handleDelete = async (nodeId: string) => {
         setActiveMenu(null);
-        setConfirmConfig({
-            isOpen: true,
-            title: 'Notu Sil',
-            description: 'Bu notu ve alt dallarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
-            isDanger: true,
-            onConfirm: async () => {
-                setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-                await deleteNode(nodeId);
-                if (selectedNodeId === nodeId) {
-                    setSelectedNodeId(null);
-                }
-            }
-        });
+        const kayit = await copeTasi(nodeId).catch(() => null);
+        if (!kayit) { setHata('Not çöp kutusuna taşınamadı. Yeniden deneyin.'); return; }
+        if (selectedNodeId && kayit.satirlar.some(n => n.id === selectedNodeId)) setSelectedNodeId(null);
     };
 
     const handleEdit = (nodeId: string) => {
+        // YZ ağacının metin editörü yoktur; sohbeti açılır.
+        if (yzAgaciMi(nodeId)) { yzAc(nodeId); return; }
         router.push(`/editor?id=${gardenId}&nodeId=${nodeId}`);
     };
 
@@ -384,6 +411,13 @@ function ProjectsPageInner() {
         const isExpanded = searchQuery ? true : expandedNodes.has(item.id);
         const isRoot = depth === 0;
         const isSelected = selectedNodeId === item.id;
+        // YZ ağacı: satıra dokununca sohbet açılır; kopya/editör yerine sohbet ve ayarlar.
+        const yz = yzler[item.id];
+        const yzRozeti = yz && (
+            <span style={yzTema(yz.renk)} className="flex flex-shrink-0 items-center gap-1 rounded-full bg-[rgb(var(--yz-acik))] px-1.5 py-0.5 text-[10px] font-semibold text-[rgb(var(--yz-koyu))]" title="YZ ağacı">
+                <Sparkles size={10} />{yz.belgeler.length ? yz.belgeler.length + ' belge' : 'YZ'}
+            </span>
+        );
         // Renk artık düğümün kendi kaydından gelir; geçici katman yok.
         const etkinRenk = item.color ?? null;
         const levelColor = etkinRenk || getDepthColor(depth - 1);
@@ -393,7 +427,7 @@ function ProjectsPageInner() {
                 {isRoot ? (
                     <div className="w-full">
                         <div
-                            onClick={() => setSelectedNodeId(item.id)}
+                            onClick={() => { setSelectedNodeId(item.id); if (yz) yzAc(item.id); }}
                             data-kilavuz-secili={isSelected ? '' : undefined}
                             className={`relative rounded-2xl border bg-white p-3 shadow-card transition-all duration-200 cursor-pointer ${
                                 isSelected
@@ -410,7 +444,7 @@ function ProjectsPageInner() {
                                     className={`flex-shrink-0 rounded-xl transition-transform duration-200 hover:scale-105 ${item.isPruned ? 'opacity-50' : ''}`}
                                     title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                                 >
-                                    {getNodeIcon(item, true, isExpanded)}
+                                    {yz ? <YzRozet ayar={yz} derinlik={depth} boyut={36} /> : getNodeIcon(item, true, isExpanded)}
                                 </button>
 
                                 {hasChildren && (
@@ -457,6 +491,7 @@ function ProjectsPageInner() {
                                             >
                                                 {item.title}
                                             </span>
+                                            {yzRozeti}
                                             {item.isPruned && (
                                                 <span
                                                     className="flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-semibold text-sand-600"
@@ -476,6 +511,26 @@ function ProjectsPageInner() {
                                 </div>
 
                                 <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                                    {yz ? (<>
+                                        <button
+                                            onClick={() => yzAc(item.id)}
+ style={yzTema(yz?.renk)}
+                                            className="flex h-7 items-center gap-1 rounded-lg bg-[linear-gradient(135deg,rgb(var(--yz-1)),rgb(var(--yz-2)))] px-2 text-[11.5px] font-semibold text-[rgb(var(--yz-yazi))] shadow-[0_4px_10px_-6px_rgb(var(--yz-2))] transition-transform active:scale-95"
+                                            title="Yapay zekâ ile sohbet"
+                                            aria-label={item.title + ' ile sohbet'}
+                                        >
+                                            <MessageCircle size={13} /><span className="hidden sm:inline">Sohbet</span>
+                                        </button>
+                                        <button
+                                            onClick={() => yzAc(item.id, 'ayarlar')}
+ style={yzTema(yz?.renk)}
+                                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[rgb(var(--yz-acik))] text-[rgb(var(--yz-koyu))] transition-all duration-200 hover:brightness-95"
+                                            title="YZ ayarları: talimat ve belgeler"
+                                            aria-label={item.title + ' YZ ayarları'}
+                                        >
+                                            <SlidersHorizontal size={13} />
+                                        </button>
+                                    </>) : (<>
                                     <button
                                         onClick={() => {
                                             const c = item.content.split('\n').slice(1).join('\n').trim();
@@ -495,6 +550,7 @@ function ProjectsPageInner() {
                                     >
                                         <Pencil size={13} />
                                     </button>
+                                    </>)}
 
                                     <div className="relative">
                                         <button
@@ -524,6 +580,7 @@ function ProjectsPageInner() {
                         onClick={(e) => {
                             e.stopPropagation();
                             setSelectedNodeId(item.id);
+                            if (yz) yzAc(item.id);
                         }}
                         data-kilavuz-secili={isSelected ? '' : undefined}
                         className={`group relative flex items-center gap-1.5 rounded-xl py-1.5 pl-2.5 pr-1 transition-all duration-200 cursor-pointer ${
@@ -551,7 +608,7 @@ function ProjectsPageInner() {
                             className={`flex-shrink-0 rounded-lg transition-transform duration-200 hover:scale-105 ${item.isPruned ? 'opacity-50' : ''}`}
                             title={hasChildren ? (isExpanded ? 'Dalları kapat' : 'Dalları aç') : 'Düzenle'}
                         >
-                            {getNodeIcon(item, false, isExpanded)}
+                            {yz ? <YzRozet ayar={yz} derinlik={depth} boyut={28} /> : getNodeIcon(item, false, isExpanded)}
                         </button>
 
                         {hasChildren && (
@@ -601,6 +658,7 @@ function ProjectsPageInner() {
                                 </span>
                             )}
                         </div>
+                        {yzRozeti}
 
                         {item.isPruned && (
                             <span
@@ -613,6 +671,26 @@ function ProjectsPageInner() {
                         )}
 
                         <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {yz ? (<>
+                                <button
+                                    onClick={() => yzAc(item.id)}
+ style={yzTema(yz?.renk)}
+                                    className="flex h-7 items-center gap-1 rounded-lg bg-[linear-gradient(135deg,rgb(var(--yz-1)),rgb(var(--yz-2)))] px-2 text-[11.5px] font-semibold text-[rgb(var(--yz-yazi))] shadow-[0_4px_10px_-6px_rgb(var(--yz-2))] transition-transform active:scale-95"
+                                    title="Yapay zekâ ile sohbet"
+                                    aria-label={item.title + ' ile sohbet'}
+                                >
+                                    <MessageCircle size={13} /><span className="hidden sm:inline">Sohbet</span>
+                                </button>
+                                <button
+                                    onClick={() => yzAc(item.id, 'ayarlar')}
+ style={yzTema(yz?.renk)}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-[rgb(var(--yz-acik))] text-[rgb(var(--yz-koyu))] transition-all duration-200 hover:brightness-95"
+                                    title="YZ ayarları: talimat ve belgeler"
+                                    aria-label={item.title + ' YZ ayarları'}
+                                >
+                                    <SlidersHorizontal size={13} />
+                                </button>
+                            </>) : (<>
                             <button
                                 onClick={() => {
                                     const c = item.content.split('\n').slice(1).join('\n').trim();
@@ -632,6 +710,7 @@ function ProjectsPageInner() {
                             >
                                 <Pencil size={13} />
                             </button>
+                            </>)}
 
                             <div className="relative">
                                 <button
@@ -685,14 +764,32 @@ function ProjectsPageInner() {
             >
                 {hasChildren ? (
                     <>
-                        <Sprout size={15} className="text-clay-600" /> Yeni dal ekle
+                        <Sprout size={15} className="text-clay-600" /> Altına dal ekle
                     </>
                 ) : (
                     <>
-                        <Leaf size={15} className="text-moss-600" /> Yeni yaprak ekle
+                        <Leaf size={15} className="text-moss-600" /> Altına yaprak ekle
                     </>
                 )}
             </button>
+            <button
+                type="button"
+                role="menuitem"
+                onClick={() => handleAddSibling(item.id)}
+                className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+            >
+                <ListPlus size={15} className="text-clay-600" /> Yanına ekle
+            </button>
+            {yzler[item.id] && (
+                <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setActiveMenu(null); yzAc(item.id, 'ayarlar'); }}
+                    className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-sand-700 transition-colors duration-150 hover:bg-sand-100"
+                >
+                    <SlidersHorizontal size={15} className="text-[rgb(var(--yz-1))]" /> YZ ayarları
+                </button>
+            )}
             <div className="my-1 h-px bg-sand-200" />
 
             {/* Başlığı kopyala */}
@@ -744,10 +841,10 @@ function ProjectsPageInner() {
             <button
                 type="button"
                 role="menuitem"
-                onClick={() => handleDelete(item.id)}
+                onClick={() => void handleDelete(item.id)}
                 className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-berry-600 transition-colors duration-150 hover:bg-berry-50"
             >
-                <Trash2 size={15} /> Sil
+                <Trash2 size={15} /> Çöpe at
             </button>
         </AnchoredDropdown>
     );
@@ -770,11 +867,14 @@ function ProjectsPageInner() {
 
     return (
         <div className="min-h-screen bg-paper flex flex-col">
+            <YzAgaciKatmani />
+            <CopBildirimi />
             <PromptModal
                 isOpen={promptConfig.isOpen}
                 title={promptConfig.title}
                 placeholder={promptConfig.placeholder}
                 allowEmpty={promptConfig.allowEmpty}
+                turSecimi={promptConfig.turSecimi}
                 onConfirm={promptConfig.onConfirm}
                 onCancel={() => setPromptConfig(prev => ({ ...prev, isOpen: false }))}
             />
@@ -866,7 +966,7 @@ function ProjectsPageInner() {
 
                             <BudananlarDugmesi bahceId={gardenId} />
                             <button
-                                onClick={handleAddRoot}
+                                onClick={() => handleAddRoot()}
                                 title="Yeni ağaç ekle"
                                 aria-label="Yeni ağaç ekle"
                                 className="btn btn-primary h-11 px-4 text-sm"
@@ -907,7 +1007,7 @@ function ProjectsPageInner() {
                             İlk ağacınızı dikerek düşüncelerinizi dallandırıp notlarınızı organize etmeye başlayın.
                         </p>
                         <button
-                            onClick={handleAddRoot}
+                            onClick={() => handleAddRoot()}
                             className="btn btn-primary mt-7 px-6 py-3"
                         >
                             <Plus size={19} />
@@ -1031,8 +1131,8 @@ function ProjectsPageInner() {
                                             onClick={() => handleEdit(selectedNode.id)}
                                             className="btn btn-primary flex-shrink-0 px-4 py-2.5 text-sm"
                                         >
-                                            <Pencil size={15} />
-                                            <span>Tam Editör</span>
+                                            {yzler[selectedNode.id] ? <MessageCircle size={15} /> : <Pencil size={15} />}
+                                            <span>{yzler[selectedNode.id] ? 'Sohbeti aç' : 'Tam Editör'}</span>
                                         </button>
                                     </div>
 

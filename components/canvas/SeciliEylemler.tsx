@@ -8,7 +8,9 @@
  * (kökte: yanına ağaç), altına not ekle, buda.
  */
 import { useState } from 'react';
-import { Check, Copy, CornerDownRight, ListPlus, Pencil, Scissors, Sprout, X } from 'lucide-react';
+import { Check, Copy, CornerDownRight, ListPlus, MessageCircle, Pencil, Scissors, SlidersHorizontal, Sparkles, Sprout, Trash2, X } from 'lucide-react';
+import { copeTasi } from '@/lib/copKutusu';
+import { useYzAgaclari, yzAc } from '@/lib/yzAgaci';
 import type { MindNode } from '@/lib/types';
 import type { TuvalEylem } from '@/lib/tuvalTercihleri';
 
@@ -36,11 +38,13 @@ export function SeciliEylemler({ kip, kokler, seciliId, onKapat, onEdit, onYanin
     onBuda: (id: string, budandi: boolean) => void;
 }) {
     const [kopyalandi, setKopyalandi] = useState(false);
+    const yzler = useYzAgaclari();
     const secili = seciliId ? bul(kokler, seciliId) : null;
     if (kip !== 'panel' || !secili) return null;
     const { node, derinlik } = secili;
     const budandi = node.isPruned ?? false;
-    const tur = derinlik === 0 ? 'ağaç' : derinlik === 1 ? 'dal' : 'yaprak';
+    const yz = !!yzler[node.id];
+    const tur = yz ? 'YZ ağacı' : derinlik === 0 ? 'ağaç' : derinlik === 1 ? 'dal' : 'yaprak';
     const yanAdi = derinlik === 0 ? 'Yanına ağaç' : derinlik === 1 ? 'Yanına dal' : 'Yanına yaprak';
     const altAdi = derinlik === 0 ? 'Altına dal' : 'Altına yaprak';
     const kopyala = () => {
@@ -48,12 +52,21 @@ export function SeciliEylemler({ kip, kokler, seciliId, onKapat, onEdit, onYanin
         void navigator.clipboard.writeText(govde || node.title);
         setKopyalandi(true); setTimeout(() => setKopyalandi(false), 1500);
     };
-    const eylemler = [
+    // YZ ağacında metin editörü ve kopyalama yerine sohbet ve YZ ayarları gelir.
+    const eylemler = yz ? [
+        { id: 'yz-sohbet', ad: 'Sohbeti aç', Icon: MessageCircle, ana: true, tam: true, calis: () => yzAc(node.id) },
+        { id: 'yan', ad: yanAdi, Icon: derinlik === 0 ? Sprout : ListPlus, ana: true, calis: () => derinlik === 0 ? onAgacEkle(node.id) : onYanina(node.id) },
+        { id: 'alt', ad: altAdi, Icon: CornerDownRight, ana: true, calis: () => onAltina(node.id) },
+        { id: 'yz-ayar', ad: 'YZ ayarları', Icon: SlidersHorizontal, calis: () => yzAc(node.id, 'ayarlar') },
+        { id: 'buda', ad: budandi ? 'Budamayı geri al' : 'Buda', Icon: Scissors, calis: () => onBuda(node.id, budandi) },
+        { id: 'cop', ad: 'Çöpe at', Icon: Trash2, tam: true, calis: () => { onKapat(); void copeTasi(node.id); } }
+    ] : [
         { id: 'editor', ad: 'Metin editöründe aç', Icon: Pencil, ana: true, tam: true, calis: () => onEdit(node) },
         { id: 'yan', ad: yanAdi, Icon: derinlik === 0 ? Sprout : ListPlus, ana: true, calis: () => derinlik === 0 ? onAgacEkle(node.id) : onYanina(node.id) },
         { id: 'alt', ad: altAdi, Icon: CornerDownRight, ana: true, calis: () => onAltina(node.id) },
         { id: 'kopya', ad: kopyalandi ? 'Kopyalandı' : 'İçeriği kopyala', Icon: kopyalandi ? Check : Copy, calis: kopyala },
-        { id: 'buda', ad: budandi ? 'Budamayı geri al' : 'Buda', Icon: Scissors, calis: () => onBuda(node.id, budandi) }
+        { id: 'buda', ad: budandi ? 'Budamayı geri al' : 'Buda', Icon: Scissors, calis: () => onBuda(node.id, budandi) },
+        { id: 'cop', ad: 'Çöpe at', Icon: Trash2, tam: true, calis: () => { onKapat(); void copeTasi(node.id); } }
     ];
     // Panel tuvale dokunuşları yutmasın diye olaylar burada durdurulur.
     const yut = { onMouseDown: (e: React.SyntheticEvent) => e.stopPropagation(), onTouchStart: (e: React.SyntheticEvent) => e.stopPropagation() };
@@ -63,6 +76,7 @@ export function SeciliEylemler({ kip, kokler, seciliId, onKapat, onEdit, onYanin
                 className="absolute inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-sand-200 bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-2.5 shadow-[0_-18px_40px_-20px_rgba(30,24,19,.45)]">
                 <div className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-sand-300" aria-hidden="true" />
                 <div className="flex items-center gap-2">
+                    {yz && <Sparkles size={17} className="shrink-0 text-[rgb(var(--yz-1))]" aria-hidden="true" />}
                     <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-sand-900">{node.title}<span className="ml-2 text-xs font-medium text-sand-500">· {tur}</span></p>
                     <button type="button" onClick={onKapat} aria-label="Kapat" className="flex h-10 w-10 items-center justify-center rounded-full text-sand-600 hover:bg-sand-100"><X size={18} /></button>
                 </div>

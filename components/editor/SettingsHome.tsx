@@ -12,6 +12,7 @@
 import { useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+    Trash2,
     BookOpen,
     ChevronRight,
     Cloud,
@@ -52,6 +53,7 @@ export type SettingsSectionId =
     | 'remote'
     | 'sync'
     | 'data'
+    | 'cop'
     | 'about'
     | 'usage';
 
@@ -79,6 +81,7 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     { id: 'sync', title: 'Yedekleme', description: 'Google Drive ile eşitleme', icon: Cloud, group: 'Bağlantılar', ton: 'moss', keywords: ['yedek', 'bulut', 'google', 'drive', 'eşitle', 'senkron', 'sync'] },
     { id: 'gorunum', title: 'Görünüm', description: 'Açık, koyu ya da sistem teması', icon: Palette, group: 'Uygulama', ton: 'moss', keywords: ['tema', 'koyu', 'açık', 'gece', 'görünüm', 'renk', 'dark'] },
     { id: 'data', title: 'Veri yönetimi', description: 'Dışa aktar, geri yükle', icon: Database, group: 'Uygulama', ton: 'moss', keywords: ['yedek', 'dosya', 'json', 'indir', 'yükle', 'sil', 'depolama', 'pdf', 'docx'] },
+    { id: 'cop', title: 'Geri dönüşüm kutusu', description: 'Silinen notlar ve otomatik temizleme', icon: Trash2, group: 'Uygulama', ton: 'clay', keywords: ['çöp', 'çöp kutusu', 'geri dönüşüm', 'silinen', 'geri al', 'kurtar', 'sil', 'temizle', 'süre'] },
     { id: 'about', title: 'Uygulama hakkında', description: 'Sürüm ve gizlilik', icon: Info, group: 'Uygulama', ton: 'moss', keywords: ['not bahçesi', 'sürüm', 'versiyon', 'gizlilik', 'güvenlik', 'hakkında'] },
     { id: 'usage', title: 'Kullanım kılavuzu', description: 'Teorik dersler ve uygulamalı görevler', icon: BookOpen, group: 'Yardım', ton: 'clay', keywords: ['kullanım', 'kılavuz', 'yardım', 'nasıl', 'başlangıç', 'rehber', 'sss', 'görev', 'uygulamalı', 'teorik'] },
 ];
