@@ -44,8 +44,8 @@ export const KART_ISLEVLERI = {
     sol: 'Sol yanına ekle', yan: 'Sağ yanına ekle', alt: 'Altına ekle',
     tasi: 'Ağacı taşı', ayarlar: 'Ağaç ayarları', tuvalAyarlari: 'Tuval ayarlarını aç', makro: 'Makro çalıştır',
     pcYaz: 'Bilgisayara yaz', pcEnter: 'Bilgisayarda Enter', pcPano: 'Bilgisayar panosu', pcDikte: 'Dikte', pcKopru: 'Köprü dikte', pcKlavye: 'Telefon klavyesiyle yaz', pcTelPano: 'Telefon panosunu gönder', aiMakro: 'Yapay zekâ makrosu',
-    // Yalnız YZ ağacı kartlarında kullanılır; düğme ayarlarında seçilemez.
-    yzSohbet: 'Sohbet', yzAyar: 'YZ ayarları'
+    // Yalnız YZ ağacı kartlarında kullanılır (YZ kart menüsü).
+    yzSohbet: 'Sohbeti aç', yzAyar: 'YZ ayarları'
 } as const;
 export type KartIslevi = keyof typeof KART_ISLEVLERI;
 export const KART_YERLERI = {
@@ -62,21 +62,28 @@ export const VARSAYILAN_KART_DUGMELERI: KartDugmeleri = {
     ustSol: 'kopya', ustOrta: 'editor', ustSag: 'buda',
     sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok'
 };
+/** YZ ağacı kartlarının ayrı menüsü: editör ve makrolar yerine sohbet ve YZ ayarları. */
+export const VARSAYILAN_YZ_KART_DUGMELERI: KartDugmeleri = {
+    ustSol: 'yzAyar', ustOrta: 'yzSohbet', ustSag: 'buda',
+    sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok'
+};
+/** YZ kart menüsünde seçilebilen işlevler. */
+export const YZ_KART_ISLEVLERI: KartIslevi[] = ['yzSohbet', 'yzAyar', 'kopya', 'buda', 'cop', 'sol', 'yan', 'alt', 'tasi', 'ayarlar', 'tuvalAyarlari', 'pcYaz', 'pcPano', 'pcEnter', 'pcTelPano', 'yok'];
 /**
  * Boş ad kuralı lib/agacAyarlari.ts'e taşındı: ad vermeden eklenen notların
  * adı artık ağaca özel belirlenir (Ağaç Yönetimi → Ağaçlar → kalem düğmesi).
  */
-export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri; kartMakrolari: KartMakrolari; kartAiMakrolari: KartAiMakrolari; boyut: DugmeBoyutlari };
+export type TuvalTercihleri = { gosterim: TuvalGosterim; gezinme: TuvalGezinme; onizleme: TuvalOnizleme; eylem: TuvalEylem; kart: TuvalKart; kartKoyu: TuvalKart; dugmeler: KartDugmeleri; yzDugmeler: KartDugmeleri; kartMakrolari: KartMakrolari; kartAiMakrolari: KartAiMakrolari; boyut: DugmeBoyutlari };
 
 const ANAHTAR = 'nb-tuval-v1';
-export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI, kartMakrolari: {}, kartAiMakrolari: {}, boyut: {} };
+export const VARSAYILAN_TUVAL: TuvalTercihleri = { gosterim: 'klasik', gezinme: 'sekme', onizleme: 2, eylem: 'hap', kart: 'bahce', kartKoyu: 'bahce', dugmeler: VARSAYILAN_KART_DUGMELERI, yzDugmeler: VARSAYILAN_YZ_KART_DUGMELERI, kartMakrolari: {}, kartAiMakrolari: {}, boyut: {} };
 
-function dugmeleriOku(v: unknown): KartDugmeleri {
+function dugmeleriOku(v: unknown, varsayilan = VARSAYILAN_KART_DUGMELERI, izinli?: KartIslevi[]): KartDugmeleri {
     const k = v && typeof v === 'object' ? v as Partial<KartDugmeleri> : {};
     return Object.fromEntries(Object.keys(KART_YERLERI).map(yer => {
         const deger = k[yer as keyof KartDugmeleri];
-        return [yer, typeof deger === 'string' && Object.hasOwn(KART_ISLEVLERI, deger)
-            ? deger : VARSAYILAN_KART_DUGMELERI[yer as keyof KartDugmeleri]];
+        return [yer, typeof deger === 'string' && Object.hasOwn(KART_ISLEVLERI, deger) && (!izinli || izinli.includes(deger as KartIslevi))
+            ? deger : varsayilan[yer as keyof KartDugmeleri]];
     })) as KartDugmeleri;
 }
 
@@ -108,7 +115,7 @@ function tercihiDogrula(k: Partial<TuvalTercihleri>): TuvalTercihleri {
         onizleme: k.onizleme === 0 || k.onizleme === 3 ? k.onizleme : 2,
         eylem: k.eylem === 'panel' || k.eylem === 'yumusak' ? k.eylem : 'hap',
         kart: kartOku(k.kart), kartKoyu: kartOku(k.kartKoyu),
-        dugmeler: dugmeleriOku(k.dugmeler), kartMakrolari: makrolariOku(k.kartMakrolari),
+        dugmeler: dugmeleriOku(k.dugmeler), yzDugmeler: dugmeleriOku(k.yzDugmeler, VARSAYILAN_YZ_KART_DUGMELERI, YZ_KART_ISLEVLERI), kartMakrolari: makrolariOku(k.kartMakrolari),
         kartAiMakrolari: kartAiMakrolariOku(k.kartAiMakrolari), boyut: boyutOku(k.boyut)
     };
 }

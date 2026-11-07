@@ -35,11 +35,11 @@ Aynı gün       → Kapalı teste yükle, 12 test kullanıcısını davet et
 
 | Gereken | Dosya / durum |
 |---|---|
-| Yayın paketi (AAB) | `uygulama/not-bahcesi-1.0.13.aab` — sürüm kodu **98**, sürüm adı **1.0.13**, yükleme anahtarıyla imzalı |
+| Yayın paketi (AAB) | `uygulama/not-bahcesi-1.0.13.aab` — sürüm kodu **99**, sürüm adı **1.0.13**, yükleme anahtarıyla imzalı |
 | Kendi telefonun için APK | `uygulama/not-bahcesi-1.0.13.apk` (Play'e yüklenmez) |
 | Uygulama ikonu 512×512 | `gorseller/uygulama-ikonu-512.png` |
 | Öne çıkan görsel 1024×500 | `gorseller/one-cikan-gorsel-1024x500.png` |
-| Telefon ekran görüntüleri (7 adet, 1080×2160) | `gorseller/ekran-1 … ekran-7` |
+| Telefon ekran görüntüleri (8 adet, 1080×2160) | `gorseller/ekran-1 … ekran-8` |
 | Mağaza metinleri (ad, kısa/tam açıklama, sürüm notu) | `belgeler/03-magaza-metinleri.md` |
 | Veri güvenliği formu cevapları | `belgeler/04-veri-guvenligi.md` |
 | İzin gerekçeleri (Bluetooth, mikrofon…) | `belgeler/07-izin-gerekceleri.md` |
@@ -152,7 +152,7 @@ Sol menü **Büyüme → Mağaza varlığı → Ana mağaza girişi**.
 | Tam açıklama (4000) | `03-magaza-metinleri.md` → "Tam açıklama" (3992 karakter, sığar) |
 | Uygulama simgesi | `gorseller/uygulama-ikonu-512.png` |
 | Öne çıkan grafik | `gorseller/one-cikan-gorsel-1024x500.png` |
-| Telefon ekran görüntüleri | `gorseller/ekran-1` → `ekran-7` sırasıyla (en az 2, en çok 8) |
+| Telefon ekran görüntüleri | `gorseller/ekran-1` → `ekran-8` sırasıyla (en az 2, en çok 8) |
 
 Tablet ekran görüntüsü zorunlu değil; boş bırak. **Kaydet**.
 

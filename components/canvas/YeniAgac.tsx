@@ -22,7 +22,7 @@ import { copeTasi } from '@/lib/copKutusu';
 import { useKartHareketi } from './useKartHareketi';
 import { MindNode } from '@/lib/types';
 import { useStore } from '@/lib/store/useStore';
-import { VARSAYILAN_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
+import { VARSAYILAN_KART_DUGMELERI, VARSAYILAN_YZ_KART_DUGMELERI } from '@/lib/tuvalTercihleri';
 import { makroHazir, sendKey, sendToComputerClipboard, telefonPanosunuBilgisayaraGonder, typeOnComputer } from '@/lib/remoteTools';
 import PcHizliYaz from './PcHizliYaz';
 import { useKartDikte } from './useKartDikte';
@@ -47,6 +47,8 @@ type Ortak = {
     onAddTree?: (rootId: string, direction?: 'left' | 'right') => void;
     onAddSiblingBefore?: (siblingId: string) => void;
     dugmeler?: KartDugmeleri;
+    /** YZ ağacı kartlarının düğmeleri (YZ kart menüsü). */
+    yzDugmeler?: KartDugmeleri;
     /** "Makro çalıştır" işlevine bağlanan makro kimlikleri (yer -> makro). */
     kartMakrolari?: KartMakrolari;
     /** "Yapay zekâ makrosu" işlevine bağlanan görev kimlikleri (yer -> görev). */
@@ -205,7 +207,7 @@ function Alt({ node, derinlik, ebeveynId, ...ortak }: { node: MindNode; derinlik
     );
 }
 
-function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler: dugmeAyari = VARSAYILAN_KART_DUGMELERI, kartMakrolari, kartAiMakrolari, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
+function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart = 'bahce', eylem = 'hap', dugmeler: dugmeAyari = VARSAYILAN_KART_DUGMELERI, yzDugmeler = VARSAYILAN_YZ_KART_DUGMELERI, kartMakrolari, kartAiMakrolari, onSettings, onAddChild, onAddTree, onAddSiblingAfter, onAddSiblingBefore, onEdit }: {
     node: MindNode; derinlik: number; ebeveynId: string; acik: boolean; setAcik: (a: boolean) => void;
 } & Ortak) {
     const { selectedNodeId, setSelectedNode, toggleNodeExpansion, setNodePruned } = useStore();
@@ -221,9 +223,7 @@ function Kart({ node, derinlik, ebeveynId, acik, setAcik, duzen, onizleme, kart 
     // YZ ağacı da dokununca düğmelerini açar; sohbet kartın içindeki Sohbet düğmesiyle açılır.
     const yz = useYzAgaclari()[node.id];
     const hareket = useKartHareketi(disMenu ? () => setSelectedNode(node.id) : undefined);
-    const dugmeler: KartDugmeleri = yz
-        ? { ...dugmeAyari, ustSol: 'yzAyar', ustOrta: 'yzSohbet', ustSag: 'buda', sol: 'sol', sag: 'yan', alt: 'alt', altSol: 'yok', altSag: 'yok' }
-        : dugmeAyari;
+    const dugmeler: KartDugmeleri = yz ? yzDugmeler : dugmeAyari;
     const secili = selectedNodeId === node.id;
     const budandi = node.isPruned ?? false;
     const cocukSayisi = node.children.length;

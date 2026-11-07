@@ -51,9 +51,13 @@ başlattığı aktarım istisnaları Google'ın tanımlarına göre değerlendir
 | **Kişisel bilgiler → Ad** | Evet | Hayır | Hayır (isteğe bağlı) | Uygulama işlevselliği | Google profili ile gelir |
 | **Uygulama etkinliği → Diğer kullanıcı içeriği** | Evet | Sağlayıcı istisnasını doğrulayın | Hayır (isteğe bağlı) | Uygulama işlevselliği, güvenlik | AI girdileri/sohbet; onaylanan yanıt bildirimi 30 gün saklanır, geçici işleme değildir |
 | **Mesajlar → Diğer uygulama içi mesajlar** | Evet (ihtiyatlı beyan) | Sağlayıcı istisnasını doğrulayın | Hayır (isteğe bağlı) | Uygulama işlevselliği | Bilge Ağaç'a gönderilen mesaj ve gerekli sohbet geçmişi; kullanıcı içeriklerine ek olarak Console tanımını doğrulayın |
-| **Ses → Ses kayıtları** | Evet | Evet | Hayır (isteğe bağlı) | Uygulama işlevselliği | Yalnızca Dikte kullanıldığında. Tanımayı Android'in konuşma tanıma servisi yapar; uygulama ayrıca ses kaydı saklamaz |
+| **Ses → Ses kayıtları** | Evet | Evet | Hayır (isteğe bağlı) | Uygulama işlevselliği | Yalnızca Dikte kullanıldığında. Varsayılan tanımayı Android'in konuşma tanıma servisi yapar. Kullanıcı bulut dikteyi (OpenAI, Gemini, Groq, Deepgram veya özel API, kendi anahtarıyla) seçerse konuşma bölümleri doğrudan o servise gönderilir; uygulama ses kaydı saklamaz |
 | **Fotoğraflar ve videolar → Fotoğraflar** | Evet | Evet (sağlayıcı istisnası doğrulanana kadar ihtiyatlı beyan) | Hayır (isteğe bağlı) | Uygulama işlevselliği | Kullanıcının AI analizi için seçtiği görsel sağlayıcıya gönderilir; kısa süreli işleme iddiası yoktur. Not içindeki yerel görseller kendiliğinden AI'ya gönderilmez |
+| **Dosyalar ve dokümanlar → Dosyalar ve dokümanlar** | Evet (ihtiyatlı beyan) | Sağlayıcı istisnasını doğrulayın | Hayır (isteğe bağlı) | Uygulama işlevselliği | 1.0.13 (99): YZ ağacına yüklenen PDF/Word/metin belgelerinin metni cihazda çıkarılır ve saklanır; kullanıcı soru sorduğunda yalnız ilgili bölümler seçili AI sağlayıcısına gönderilir. Google ile girişte talimat ve belge metinleri kullanıcının kendi Drive uygulama klasörüne yedeklenir. Dosyanın kendisi gönderilmez |
 | **Cihaz veya diğer kimlikler** | Evet (ihtiyatlı beyan) | Hizmet sağlayıcı istisnasını doğrulayın | AI kullanılırsa | Güvenlik, sahtekârlık önleme | IP'den HMAC ağ özeti, kota sayaçları 48 saat; reklam/cihaz kimliği yok |
+
+**1.0.13 (99) notu:** YZ ağacı belgeleri için **Dosyalar ve dokümanlar** satırı
+Console'da da işaretlenmelidir; bu satır üretime başvurmadan önce beyana eklenmeli.
 
 Diğer kategoriler (konum, kişiler, takvim, sağlık,
 ödeme bilgileri, uygulama içi arama geçmişi) için: **Hayır**.

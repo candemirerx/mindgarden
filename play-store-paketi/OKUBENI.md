@@ -3,7 +3,7 @@
 Bu klasör, Not Bahçesi'ni Google Play Store'a **ilk kez** yükleyip yayınlamak için
 gereken her şeyi içerir.
 
-**Sürüm:** 1.0.13 (sürüm kodu 98) · **Paket adı:** com.notbahcesi.app · **Hedef API:** 36 (Android 16)
+**Sürüm:** 1.0.13 (sürüm kodu 99) · **Paket adı:** com.notbahcesi.app · **Hedef API:** 36 (Android 16)
 
 ---
 
@@ -40,12 +40,13 @@ Not Bahcesi Play Store/
 │   ├── uygulama-ikonu-512.png            ← mağaza simgesi (512×512)
 │   ├── one-cikan-gorsel-1024x500.png     ← öne çıkan grafik
 │   ├── ekran-1-ana-sayfa.png             ← telefon ekran görüntüleri (1080×2160)
-│   ├── ekran-2-projeler.png
-│   ├── ekran-3-editor.png
-│   ├── ekran-4-ayarlar.png
-│   ├── ekran-5-ekran-duzeni.png
-│   ├── ekran-6-kisayollar.png
-│   └── ekran-7-kilavuz.png
+│   ├── ekran-2-tuval-yz.png
+│   ├── ekran-3-yz-sohbet.png
+│   ├── ekran-4-liste.png
+│   ├── ekran-5-editor.png
+│   ├── ekran-6-ekran-duzeni.png
+│   ├── ekran-7-kisayollar.png
+│   └── ekran-8-cop-kutusu.png
 ├── uygulama/
 │   ├── not-bahcesi-1.0.13.aab    ← ★ Play Console'a YÜKLENECEK dosya
 │   └── not-bahcesi-1.0.13.apk    ← yalnız kendi telefonuna elle kurmak için (Play'e yüklenmez)

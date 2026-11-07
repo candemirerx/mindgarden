@@ -80,8 +80,8 @@ export function FareAyarlari({ prefs }: { prefs: RemotePrefs }) {
     </section>;
 }
 
-export default function FareAraci({ prefs, onHata }: { prefs: RemotePrefs; onHata: (mesaj: string) => void }) {
-    const [ayarlar, setAyarlar] = useState(false);
+/** Canlı fare: dokunmatik yüzey, köşe düğmeleri ve alt sıra; düğmeler Fare ayarlarından gelir. */
+export function FareCanli({ prefs, onHata, yuzeySinifi, children }: { prefs: RemotePrefs; onHata: (mesaj: string) => void; yuzeySinifi?: string; children?: React.ReactNode }) {
     const [mesgul, setMesgul] = useState(false);
     const yolda = useRef(false);
     const dugmeler = fareDugmeleriniDuzelt(prefs.fareDugmeleri);
@@ -104,14 +104,21 @@ export default function FareAraci({ prefs, onHata }: { prefs: RemotePrefs; onHat
             ? <MakroDugmesi key={d.id} makro={makro} prefs={prefs} onSonuc={onHata} disabled={mesgul} className={dugmeSinifi + ' max-w-full truncate'}>{d.ad}</MakroDugmesi>
             : <button key={d.id} type="button" disabled={mesgul} className={dugmeSinifi + ' max-w-full truncate'} onClick={() => void calistir(d)}>{d.ad}</button>;
     };
+    const alt = dugmeler.filter(d => d.konum === 'alt');
+    const koseVar = dugmeler.some(d => d.konum !== 'alt');
+    return <>
+        <div style={koseVar ? { minHeight: yuzeyYuksekligi(dugmeler) } : undefined} className="relative flex min-h-0 flex-1">
+            <FareYuzeyi prefs={prefs} onHata={onHata} className={yuzeySinifi ?? 'flex min-h-[46dvh] w-full flex-1 touch-none select-none items-center justify-center rounded-2xl border border-moss-200 bg-gradient-to-br from-moss-50 to-sand-50 p-16 text-center text-xs leading-relaxed text-sand-500'}>{children ?? <>Sürükle: imleci hareket ettir<br />Bir kez dokun: sol tık</>}</FareYuzeyi>
+            <FareDuzeni dugmeler={dugmeler} mesgul={mesgul} calistir={d => void calistir(d)} render={canliDugme} />
+        </div>
+        {alt.length > 0 && <div data-fare-konum="alt" className={'grid shrink-0 gap-2 ' + (alt.length >= 4 ? 'grid-cols-4' : alt.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>{alt.map(canliDugme)}</div>}
+    </>;
+}
+
+export default function FareAraci({ prefs, onHata }: { prefs: RemotePrefs; onHata: (mesaj: string) => void }) {
+    const [ayarlar, setAyarlar] = useState(false);
     return <div className="flex min-h-0 flex-1 flex-col gap-2">
         <div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-sand-600">Fare <span className="ml-1 rounded-full bg-moss-50 px-2 py-1 text-moss-800">{prefs.mouseSensitivity}×</span></span><button type="button" aria-expanded={ayarlar} aria-controls="fare-ayarlari" onClick={() => setAyarlar(!ayarlar)} className="btn btn-secondary min-h-11 gap-2 px-3 text-xs"><Settings2 size={16} /> {ayarlar ? 'Ayarları kapat' : 'Fare ayarları'}</button></div>
-        {ayarlar ? <div id="fare-ayarlari"><FareAyarlari prefs={prefs} /></div> : <>
-            <div style={{ minHeight: `max(46dvh, ${yuzeyYuksekligi(dugmeler)}px)` }} className="relative flex flex-1">
-                <FareYuzeyi prefs={prefs} onHata={onHata} className="flex min-h-[46dvh] w-full flex-1 touch-none select-none items-center justify-center rounded-2xl border border-moss-200 bg-gradient-to-br from-moss-50 to-sand-50 p-16 text-center text-xs leading-relaxed text-sand-500">Sürükle: imleci hareket ettir<br />Bir kez dokun: sol tık</FareYuzeyi>
-                <FareDuzeni dugmeler={dugmeler} mesgul={mesgul} calistir={d => void calistir(d)} render={canliDugme} />
-            </div>
-            <div data-fare-konum="alt" className="grid shrink-0 grid-cols-3 gap-2">{dugmeler.filter(d => d.konum === 'alt').map(canliDugme)}</div>
-        </>}
+        {ayarlar ? <div id="fare-ayarlari"><FareAyarlari prefs={prefs} /></div> : <FareCanli prefs={prefs} onHata={onHata} />}
     </div>;
 }

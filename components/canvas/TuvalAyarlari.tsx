@@ -7,13 +7,13 @@
  * Tercihler cihazda tutulur.
  */
 import { useState } from 'react';
-import { GitFork, MousePointerClick, Palette, SlidersHorizontal, Wand2 } from 'lucide-react';
+import { GitFork, MousePointerClick, Palette, SlidersHorizontal, Sparkles, Wand2 } from 'lucide-react';
 import { BudananlarDugmesi } from '@/components/ui/BudananlarDugmesi';
 import { SettingsSection, cx } from '@/components/ui/settings';
 import KartAracEkle, { SIMGE, islevAdi } from '@/components/canvas/KartAracEkle';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { ChevronRight, Plus } from 'lucide-react';
-import { DUGME_BOYUTLARI, KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, bahceTuvaliOzelMi, bahceTuvaliniSifirla, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
+import { DUGME_BOYUTLARI, KART_ISLEVLERI, KART_YERLERI, VARSAYILAN_KART_DUGMELERI, VARSAYILAN_YZ_KART_DUGMELERI, bahceTuvaliOzelMi, bahceTuvaliniSifirla, tuvalTercihleriniKaydet, useKoyuTema, useTuvalTercihleri } from '@/lib/tuvalTercihleri';
 import type { DugmeBoyutlari, KartDugmeleri, KartIslevi } from '@/lib/tuvalTercihleri';
 import type { TuvalEylem, TuvalGezinme, TuvalGosterim, TuvalKart, TuvalOnizleme } from '@/lib/tuvalTercihleri';
 
@@ -134,14 +134,14 @@ function AyrintiSatiri({ baslik, aciklama, children }: { baslik: string; aciklam
 }
 
 /** Kart menüsü haritası: düğmeler gerçek konumlarında, karta bitişik gösterilir; dokununca işlev sayfası açılır. */
-function KartMenuHaritasi({ t, macros, sec }: { t: ReturnType<typeof useTuvalTercihleri>; macros: Parameters<typeof islevAdi>[2]; sec: (yer: string) => void }) {
+function KartMenuHaritasi({ t, macros, sec, yz = false }: { t: ReturnType<typeof useTuvalTercihleri>; macros: Parameters<typeof islevAdi>[2]; sec: (yer: string) => void; yz?: boolean }) {
     const yuva = (yer: keyof KartDugmeleri, cls: string, yuvarlak?: boolean) => {
-        const islev = t.dugmeler[yer];
-        const kimlik = islev === 'makro' ? t.kartMakrolari[yer] : islev === 'aiMakro' ? t.kartAiMakrolari[yer] : undefined;
+        const islev = (yz ? t.yzDugmeler : t.dugmeler)[yer];
+        const kimlik = yz ? undefined : islev === 'makro' ? t.kartMakrolari[yer] : islev === 'aiMakro' ? t.kartAiMakrolari[yer] : undefined;
         const bilgi = islevAdi(islev, kimlik, macros);
         const bos = islev === 'yok';
         const simge = bilgi.harf ? <span className="text-sm font-bold leading-none">{bilgi.harf}</span> : (SIMGE[islev] ?? <Wand2 size={18} />);
-        return <button key={yer} type="button" id={'kart-arac-ekle-' + yer} onClick={() => sec(yer)}
+        return <button key={yer} type="button" id={(yz ? 'yz-kart-arac-ekle-' : 'kart-arac-ekle-') + yer} onClick={() => sec(yer)}
             aria-label={KART_YERLERI[yer] + ' düğmesi: ' + bilgi.ad + '. Araç ekle ya da değiştir'}
             className={cx('flex flex-col items-center justify-center gap-0.5 overflow-hidden border px-1 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss-500/50 active:scale-[.98]',
                 bos ? 'border-dashed border-sand-300 bg-sand-50 text-sand-400 hover:border-moss-400 hover:text-moss-600'
@@ -158,11 +158,16 @@ function KartMenuHaritasi({ t, macros, sec }: { t: ReturnType<typeof useTuvalTer
                 {yuva('ustSag', 'h-12 rounded-tr-2xl')}
             </div>
             <div className="col-start-1 row-start-2">{yuva('sol', 'h-28 w-full rounded-l-2xl border-r-0')}</div>
-            <div className="col-start-2 row-start-2 flex h-28 flex-col justify-center gap-2 border-y border-moss-200 bg-[rgb(var(--surface))] px-3" aria-hidden="true">
+            {yz ? <div className="relative col-start-2 row-start-2 flex h-28 flex-col justify-center gap-2 overflow-hidden border-y border-[rgb(var(--yz-2))] bg-[linear-gradient(145deg,rgb(var(--yz-1)),rgb(var(--yz-2))_60%,rgb(var(--yz-3)))] px-3" aria-hidden="true">
+                <Sparkles size={14} className="absolute right-2.5 top-2.5 text-[rgb(var(--yz-isik))]" />
+                <span className="h-2 w-1/3 rounded-full bg-[rgb(var(--yz-isik)/.7)]" />
+                <span className="h-3 w-4/5 rounded-full bg-white/30" />
+                <span className="h-5 w-16 rounded-full bg-[rgb(var(--yz-isik)/.85)]" />
+            </div> : <div className="col-start-2 row-start-2 flex h-28 flex-col justify-center gap-2 border-y border-moss-200 bg-[rgb(var(--surface))] px-3" aria-hidden="true">
                 <span className="h-2 w-1/3 rounded-full bg-moss-300" />
                 <span className="h-3 w-4/5 rounded-full bg-sand-300" />
                 <span className="h-2 w-3/5 rounded-full bg-sand-200" />
-            </div>
+            </div>}
             <div className="col-start-3 row-start-2">{yuva('sag', 'h-28 w-full rounded-r-2xl border-l-0')}</div>
             <div className="col-start-2 row-start-3">{yuva('alt', 'h-12 w-full rounded-b-2xl border-t-0')}</div>
             <div className="col-start-1 row-start-3 flex justify-end pr-1 pt-2">{yuva('altSol', 'h-14 w-14', true)}</div>
@@ -211,6 +216,7 @@ export function TuvalAyarlari({ bahceId }: { bahceId?: string }) {
     const koyu = useKoyuTema();
     const uzakTercihler = useRemotePrefs();
     const [aracYeri, setAracYeri] = useState<string | null>(null);
+    const [yzAracYeri, setYzAracYeri] = useState<string | null>(null);
     return (
         <div id="tuval-ayarlari" className="space-y-4">
             <div className="rounded-2xl border border-moss-200 bg-moss-50 px-4 py-3 text-sm text-moss-900">
@@ -265,6 +271,14 @@ export function TuvalAyarlari({ bahceId }: { bahceId?: string }) {
                     onClick={() => kaydet({ ...t, dugmeler: { ...VARSAYILAN_KART_DUGMELERI }, kartMakrolari: {}, kartAiMakrolari: {} })}>Düğmeleri varsayılana döndür</button>
             </SettingsSection>}
             {aracYeri && <KartAracEkle yerKey={aracYeri} bahceId={bahceId} onKapat={() => setAracYeri(null)} />}
+
+            {t.eylem !== 'panel' && <SettingsSection icon={Sparkles} title="YZ kart menüsü"
+                description="Yapay zekâ ağacı kartlarına dokununca açılan düğmeler. Normal kartlardan ayrıdır; sohbet ve YZ ayarlarını istediğiniz yere koyun.">
+                <KartMenuHaritasi t={t} macros={uzakTercihler.macros} sec={setYzAracYeri} yz />
+                <button type="button" className="mt-3 min-h-[44px] rounded-xl px-3 text-sm font-medium text-moss-700 hover:bg-moss-50"
+                    onClick={() => kaydet({ ...t, yzDugmeler: { ...VARSAYILAN_YZ_KART_DUGMELERI } })}>YZ düğmelerini varsayılana döndür</button>
+            </SettingsSection>}
+            {yzAracYeri && <KartAracEkle yz yerKey={yzAracYeri} bahceId={bahceId} onKapat={() => setYzAracYeri(null)} />}
 
             <SettingsSection icon={SlidersHorizontal} tone="moss" title="Ayrıntılar" flush>
                 <div className="divide-y divide-sand-100">

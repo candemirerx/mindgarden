@@ -9,13 +9,13 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { createPortal } from 'react-dom';
-import { AudioLines, Ban, Check, ClipboardList, ClipboardPaste, Copy, Mic, Smartphone, CornerDownLeft, Keyboard, Move, Pencil, Plus, Scissors, SlidersHorizontal, Sparkles, Trash2, Wand2, X } from 'lucide-react';
+import { AudioLines, Ban, Check, ClipboardList, ClipboardPaste, Copy, MessageCircle, Mic, Smartphone, CornerDownLeft, Keyboard, Move, Pencil, Plus, Scissors, SlidersHorizontal, Sparkles, Trash2, Wand2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cx } from '@/components/ui/settings';
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { makroHazir } from '@/lib/remoteTools';
 import { readEnabledMacros } from '@/lib/aiMacro';
-import { KART_ISLEVLERI, KART_YERLERI, tuvalTercihleri, tuvalTercihleriniKaydet } from '@/lib/tuvalTercihleri';
+import { KART_ISLEVLERI, KART_YERLERI, YZ_KART_ISLEVLERI, tuvalTercihleri, tuvalTercihleriniKaydet } from '@/lib/tuvalTercihleri';
 import type { KartIslevi } from '@/lib/tuvalTercihleri';
 import type { RemoteMacro } from '@/lib/remoteTools';
 
@@ -30,14 +30,14 @@ export function basHarf(ad: string): string {
 }
 
 const ACIKLAMA: Partial<Record<KartIslevi, string>> = {
-    yok: 'Bu konumda düğme gösterme', editor: 'Metin editörünü açar', kopya: 'Not içeriğini panoya kopyalar',
+    yok: 'Bu konumda düğme gösterme', yzSohbet: 'Yapay zekâ sohbetini açar', yzAyar: 'Talimat, belgeler ve profil', editor: 'Metin editörünü açar', kopya: 'Not içeriğini panoya kopyalar',
     buda: 'Notu buda ya da geri al', cop: 'Notu ve alt dallarını geri dönüşüm kutusuna taşır', sol: 'Sol yanına yeni not ekler', yan: 'Sağ yanına yeni not ekler',
     alt: 'Altına yeni not ekler', tasi: 'Ağacı sürükleyerek taşır', ayarlar: 'Ağaç ayarlarını açar', tuvalAyarlari: 'Tuval görünümünü ve kart düğmelerini ayarlar',
     pcYaz: 'Notu bilgisayarda yazar', pcPano: 'Notu bilgisayar panosuna gönderir', pcEnter: 'Bilgisayara Enter tuşu yollar',
     pcDikte: 'Konuşun, söyledikleriniz bu kartın içeriğine yazılsın', pcKopru: 'Konuşun, söyledikleriniz doğrudan bilgisayara yazılsın', pcKlavye: 'Telefon klavyesiyle yazın, bilgisayara gönderin', pcTelPano: 'Telefon panosundaki metin ya da görseli bilgisayara yollar'
 };
 export const SIMGE: Partial<Record<KartIslevi, ReactNode>> = {
-    yok: <Ban size={18} />, editor: <Pencil size={18} />, kopya: <Copy size={18} />, buda: <Scissors size={18} />, cop: <Trash2 size={18} />,
+    yok: <Ban size={18} />, yzSohbet: <MessageCircle size={18} />, yzAyar: <SlidersHorizontal size={18} />, editor: <Pencil size={18} />, kopya: <Copy size={18} />, buda: <Scissors size={18} />, cop: <Trash2 size={18} />,
     sol: <Plus size={18} />, yan: <Plus size={18} />, alt: <Plus size={18} />, tasi: <Move size={18} />,
     ayarlar: <SlidersHorizontal size={18} />, tuvalAyarlari: <SlidersHorizontal size={18} />, pcYaz: <Keyboard size={18} />, pcPano: <ClipboardList size={18} />, pcEnter: <CornerDownLeft size={18} />,
     pcDikte: <Mic size={18} />, pcKopru: <AudioLines size={18} />, pcKlavye: <Smartphone size={18} />, pcTelPano: <ClipboardPaste size={18} />
@@ -61,19 +61,22 @@ export function islevAdi(islev: KartIslevi, kimlik: string | undefined, macros: 
     return { ad: KART_ISLEVLERI[islev] };
 }
 
-export default function KartAracEkle({ yerKey, onKapat, bahceId, ozelSecim, onSec, izinli }: {
+export default function KartAracEkle({ yerKey, onKapat, bahceId, ozelSecim, onSec, izinli: izinliProp, yz = false }: {
     yerKey: string; onKapat: () => void; bahceId?: string;
     ozelSecim?: KartAracSecimi; onSec?: (secim: KartAracSecimi) => void; izinli?: KartIslevi[];
+    /** YZ kart menüsü: sohbet ve YZ ayarları eklenir, makrolar ve editör çıkar. */
+    yz?: boolean;
 }) {
     const prefs = useRemotePrefs();
     const t0 = tuvalTercihleri(bahceId);
-    const simdiki = ozelSecim?.islev ?? t0.dugmeler[yerKey as keyof typeof t0.dugmeler];
+    const izinli = yz ? YZ_KART_ISLEVLERI : izinliProp;
+    const simdiki = ozelSecim?.islev ?? (yz ? t0.yzDugmeler : t0.dugmeler)[yerKey as keyof typeof t0.dugmeler];
     const simdikiKimlik = ozelSecim ? ozelSecim.kimlik : simdiki === 'makro' ? t0.kartMakrolari[yerKey as keyof typeof t0.kartMakrolari] : simdiki === 'aiMakro' ? t0.kartAiMakrolari[yerKey as keyof typeof t0.kartAiMakrolari] : undefined;
     const [sekme, setSekme] = useState<Sekme>(simdiki === 'makro' ? 'makro' : simdiki === 'aiMakro' ? 'ai' : BILGISAYAR.includes(simdiki) ? 'bilgisayar' : 'hazir');
     const [secili, setSecili] = useState<string>(simdiki + ':' + (simdikiKimlik ?? ''));
 
     const hazirOge = (islev: KartIslevi): Oge => ({ anahtar: islev + ':', islev, ad: KART_ISLEVLERI[islev], aciklama: ACIKLAMA[islev] ?? '', simge: SIMGE[islev], grup: sekme === 'bilgisayar' ? BILGISAYAR_GRUP[islev] : undefined });
-    const tumOgeler: Oge[] = sekme === 'hazir' ? HAZIR.map(hazirOge)
+    const tumOgeler: Oge[] = sekme === 'hazir' ? (yz ? (['yzSohbet', 'yzAyar'] as KartIslevi[]).concat(HAZIR) : HAZIR).map(hazirOge)
         : sekme === 'bilgisayar' ? BILGISAYAR.map(hazirOge)
         : sekme === 'makro' ? prefs.macros.filter(makroHazir).map(m => ({ anahtar: 'makro:' + m.id, islev: 'makro' as const, kimlik: m.id, ad: m.name.trim() || 'Adsız makro', aciklama: TUR_ADI[m.type], simge: <span className="text-sm font-bold">{basHarf(m.name)}</span> }))
         : readEnabledMacros().map(m => ({ anahtar: 'aiMakro:' + m.id, islev: 'aiMakro' as const, kimlik: m.id, ad: m.title.trim() || 'Adsız görev', aciklama: m.subtitle?.trim() || 'Yapay zekâ görevi', simge: <span className="text-sm font-bold">{basHarf(m.title)}</span> }));
@@ -102,6 +105,7 @@ export default function KartAracEkle({ yerKey, onKapat, bahceId, ozelSecim, onSe
     const sec = (oge: Oge) => {
         if (onSec) { onSec({ islev: oge.islev, kimlik: oge.kimlik }); setSecili(oge.anahtar); setTimeout(onKapat, 220); return; }
         const t = tuvalTercihleri(bahceId);
+        if (yz) { tuvalTercihleriniKaydet({ ...t, yzDugmeler: { ...t.yzDugmeler, [yerKey]: oge.islev } }, bahceId); setSecili(oge.anahtar); setTimeout(onKapat, 220); return; }
         const kartMakrolari = { ...t.kartMakrolari };
         const kartAiMakrolari = { ...t.kartAiMakrolari };
         delete kartMakrolari[yerKey as keyof typeof kartMakrolari];
@@ -121,12 +125,12 @@ export default function KartAracEkle({ yerKey, onKapat, bahceId, ozelSecim, onSe
                 <div className="flex h-14 items-center gap-1 px-2">
                     <button type="button" onClick={onKapat} aria-label="Sayfayı kapat" className="flex h-11 w-11 items-center justify-center rounded-full text-sand-700 hover:bg-sand-100"><X size={20} /></button>
                     <div className="min-w-0 flex-1">
-                        <p className="truncate text-base font-semibold text-sand-900">Araç ekle</p>
+                        <p className="truncate text-base font-semibold text-sand-900">{yz ? 'YZ kartına araç ekle' : 'Araç ekle'}</p>
                         <p className="text-[11px] text-sand-500">{yer} düğmesi · dokununca onaylanır</p>
                     </div>
                 </div>
                 <div role="tablist" aria-label="Araç türleri" className="flex gap-1.5 overflow-x-auto px-3 pb-2.5">
-                    {SEKMELER.map(s => <button key={s.id} type="button" role="tab" id={'kart-arac-sekme-' + s.id} aria-selected={sekme === s.id} onClick={() => setSekme(s.id)}
+                    {SEKMELER.filter(s => !yz || s.id === 'hazir' || s.id === 'bilgisayar').map(s => <button key={s.id} type="button" role="tab" id={'kart-arac-sekme-' + s.id} aria-selected={sekme === s.id} onClick={() => setSekme(s.id)}
                         className={cx('min-h-9 shrink-0 rounded-full px-3.5 text-[13px] font-semibold transition-colors', sekme === s.id ? 'bg-moss-600 text-white' : 'bg-sand-100 text-sand-700 hover:bg-sand-200')}>{s.ad}</button>)}
                 </div>
             </header>

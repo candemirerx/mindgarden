@@ -10,7 +10,8 @@
  *   1) Uygulama çalışıyor olmalı:  npm run dev
  *   2) node scripts/play-gorsel-cek.mjs
  *
- * Çıktı: store/ ve play-store-paketi/gorseller/ klasörlerine aynı üç kare.
+ * Çıktı: store/ ve play-store-paketi/gorseller/ klasörlerine aynı sekiz kare
+ * (Play telefon için en çok 8 kare kabul eder).
  * Veriler tarayıcının localStorage'ına ekilir; gerçek verilerinize dokunulmaz.
  */
 import { spawn } from 'node:child_process';
@@ -112,9 +113,40 @@ const ORNEK_VERI = {
             240,
             300,
             '2026-09-20T07:58:00.000Z'
-        ]
+        ],
+        // Tuval ve YZ ağacı kareleri için: lansman planı ve içinde bir yapay zekâ ağacı.
+        ['dugum-lansman', 'bahce-proje', null, 'Uygulama Lansmanı\n\nMağaza sayfası, kampanya ve destek hazırlığı.', 0, 0, '2026-09-20T06:10:00.000Z'],
+        ['dugum-kitle', 'bahce-proje', 'dugum-lansman', 'Hedef kitle\n\nÖğrenciler, yazarlar ve proje yöneticileri.', 0, 0, '2026-09-20T06:12:00.000Z'],
+        ['dugum-asistan', 'bahce-proje', 'dugum-lansman', 'Lansman Asistanı', 0, 0, '2026-09-20T06:14:00.000Z'],
+        ['dugum-takvim', 'bahce-proje', 'dugum-lansman', 'Kampanya takvimi\n\n1. hafta duyuru, 2. hafta tanıtım videosu.', 0, 0, '2026-09-20T06:16:00.000Z']
     ]
 };
+
+/** YZ ağacı: talimat, belgeler ve örnek bir sohbet. */
+const YZ_AGACLARI = {
+    'dugum-asistan': {
+        talimat: 'Lansman planına yardım eden bir pazarlama danışmanısın. Kısa, uygulanabilir öneriler ver.',
+        yalnizBelge: false, uzunluk: 'orta', olusturma: 1789900000000, guncelleme: 1789900000000, simge: 'ampul',
+        belgeler: [
+            { id: 'b1', ad: 'Lansman planı.pdf', karakter: 18420, eklenme: 1789900000000 },
+            { id: 'b2', ad: 'Rakip analizi.docx', karakter: 9310, eklenme: 1789900000000 }
+        ]
+    }
+};
+const YZ_SOHBET = [
+    { rol: 'kullanici', metin: 'İlk hafta için üç duyuru fikri verir misin?', zaman: 1789900100000 },
+    { rol: 'asistan', metin: '1. Kısa bir tanıtım videosu: notların ağaç gibi büyümesini 15 saniyede gösterin.\n2. "Bahçeni kur" meydan okuması: kullanıcılar ilk ağaçlarını paylaşsın.\n3. Öğrencilere özel ders notu şablonları.', zaman: 1789900105000, kaynaklar: ['Lansman planı.pdf'] },
+    { rol: 'kullanici', metin: 'Videoyu hangi gün yayınlayalım?', zaman: 1789900200000 },
+    { rol: 'asistan', metin: 'Plana göre salı sabahı en uygunu; ilgi hafta başında yüksek. Aynı gün mağaza sayfasını da güncelleyin.', zaman: 1789900206000, kaynaklar: ['Lansman planı.pdf', 'Rakip analizi.docx'] }
+];
+/** Geri dönüşüm kutusu karesi: çöpe atılmış iki kayıt. */
+const satir = (id, garden_id, parent_id, content) => ({ id, garden_id, parent_id, content, position_x: 0, position_y: 0, created_at: '2026-09-18T08:00:00.000Z', updated_at: '2026-09-18T08:00:00.000Z', deleted_at: null, is_expanded: true, is_pruned: false, color: null });
+const COP_KAYITLARI = [
+    { id: 'cop-toplanti', bahceId: 'bahce-gunluk', bahceAdi: 'Günlük', baslik: 'Eski toplantı notları', silinme: Date.now() - 2 * 3600_000, yzSayisi: 0,
+        satirlar: [satir('cop-toplanti', 'bahce-gunluk', null, 'Eski toplantı notları\n\nBütçe ve takvim konuşuldu.'), satir('cop-t1', 'bahce-gunluk', 'cop-toplanti', 'Bütçe'), satir('cop-t2', 'bahce-gunluk', 'cop-toplanti', 'Takvim')] },
+    { id: 'cop-taslak', bahceId: 'bahce-proje', bahceAdi: 'Proje Fikirleri', baslik: 'Taslak slogan', silinme: Date.now() - 4 * 86400_000, yzSayisi: 0,
+        satirlar: [satir('cop-taslak', 'bahce-proje', null, 'Taslak slogan\n\nFikirlerin kök salsın.')] }
+];
 
 /** Bilgisayar araçları: makrolar, iki profil ve iki sütunlu bir ekran düzeni. */
 const makro = (id, name, type, value, ek = {}) => ({ id, name, type, value, enabled: true, ...ek });
@@ -186,7 +218,10 @@ function ekmeBetigi() {
         // Bilgisayar araçları kareleri için örnek makrolar, profiller ve ekran düzeni.
         'localStorage.setItem("nb-computer-section", "1");',
         'localStorage.setItem("nb-remote-prefs-v1", ' + JSON.stringify(JSON.stringify(ORNEK_BILGISAYAR)) + ');',
-        '"ekildi"'
+        'localStorage.setItem("nb-yz-agaclari-v1", ' + JSON.stringify(JSON.stringify(YZ_AGACLARI)) + ');',
+        'localStorage.setItem("nb-yz-sohbet-v1:dugum-asistan", ' + JSON.stringify(JSON.stringify(YZ_SOHBET)) + ');',
+        // Geri dönüşüm kutusu kayıtları IndexedDB'de durur.
+        'new Promise(c=>{const r=indexedDB.open("nb-cop",1);r.onupgradeneeded=()=>r.result.createObjectStore("kayitlar",{keyPath:"id"});r.onsuccess=()=>{const t=r.result.transaction("kayitlar","readwrite");for(const k of ' + JSON.stringify(COP_KAYITLARI) + ')t.objectStore("kayitlar").put(k);t.oncomplete=()=>{r.result.close();c("ekildi")}}})'
     ].join('\n');
 }
 
@@ -267,39 +302,43 @@ async function main() {
         await git('/', 6000);
 
         console.log('Örnek veri ekiliyor');
-        await cdp.gonder('Runtime.evaluate', { expression: ekmeBetigi(), returnByValue: true });
+        await cdp.gonder('Runtime.evaluate', { expression: ekmeBetigi(), returnByValue: true, awaitPromise: true });
 
         // Dev sunucusu sayfaları ilk istekte derler; önce ısıtıp sonra çekiyoruz.
         console.log('Sayfalar ısıtılıyor');
         await git('/projeler?id=bahce-kitap', 7000);
+        await git('/bahce_view?id=bahce-proje', 7000);
         await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 8000);
+        const calistir = (ifade) => cdp.gonder('Runtime.evaluate', { expression: ifade, returnByValue: true, awaitPromise: true });
+        const tikla = (secici) => calistir('(()=>{const e=' + secici + ';if(e)e.click();return Boolean(e)})()');
+        // Eski kare adları (ayarlar, kılavuz) yeni sıralamada yok; karışmasın diye silinir.
+        for (const ad of ['4-ayarlar', '7-kilavuz', '2-projeler', '3-editor', '5-ekran-duzeni', '6-kisayollar']) {
+            rmSync(join(KOK, 'store', 'screenshot-' + ad + '.png'), { force: true });
+            rmSync(join(KOK, 'play-store-paketi', 'gorseller', 'ekran-' + ad + '.png'), { force: true });
+        }
 
         console.log('Ekran görüntüleri alınıyor');
         await git('/', 5000);
         await cek(['store/screenshot-1-ana-sayfa.png', 'play-store-paketi/gorseller/ekran-1-ana-sayfa.png']);
-        await git('/projeler?id=bahce-kitap', 5000);
-        await cek(['store/screenshot-2-projeler.png', 'play-store-paketi/gorseller/ekran-2-projeler.png']);
-        await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 6000);
-        await cek(['store/screenshot-3-editor.png', 'play-store-paketi/gorseller/ekran-3-editor.png']);
-
-        // Ayarlar penceresi: yenilenen sekme düzenini gösterir.
-        await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 5000);
-        await cek(['store/screenshot-4-ayarlar.png', 'play-store-paketi/gorseller/ekran-4-ayarlar.png'], async () => {
-            await cdp.gonder('Runtime.evaluate', {
-                expression:
-                    '(()=>{const dugme=[...document.querySelectorAll("button")]' +
-                    '.find((b)=>b.getAttribute("title")==="Ayarlar");if(dugme)dugme.click();return Boolean(dugme)})()',
-                returnByValue: true
-            });
-            await bekle(1600);
+        // Tuval: ağaç ve içindeki yapay zekâ ağacı.
+        await git('/bahce_view?id=bahce-proje', 6000);
+        await cek(['store/screenshot-2-tuval-yz.png', 'play-store-paketi/gorseller/ekran-2-tuval-yz.png'], async () => {
+            await tikla('document.querySelector(\'[aria-label="Tüm notları ekrana sığdır"]\')');
+            await bekle(900);
         });
-
-        const calistir = (ifade) => cdp.gonder('Runtime.evaluate', { expression: ifade, returnByValue: true, awaitPromise: true });
-        const tikla = (secici) => calistir('(()=>{const e=' + secici + ';if(e)e.click();return Boolean(e)})()');
+        // YZ ağacı sohbeti: belgelere dayanan yanıtlar.
+        await cek(['store/screenshot-3-yz-sohbet.png', 'play-store-paketi/gorseller/ekran-3-yz-sohbet.png'], async () => {
+            await calistir('window.dispatchEvent(new CustomEvent("nb-yz-ac",{detail:{id:"dugum-asistan",ekran:"sohbet"}}))');
+            await bekle(1500);
+        });
+        await git('/projeler?id=bahce-proje', 5000);
+        await cek(['store/screenshot-4-liste.png', 'play-store-paketi/gorseller/ekran-4-liste.png']);
+        await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 6000);
+        await cek(['store/screenshot-5-editor.png', 'play-store-paketi/gorseller/ekran-5-editor.png']);
 
         // Bilgisayar araçları: bölmeli ekran düzeni.
         await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 5000);
-        await cek(['store/screenshot-5-ekran-duzeni.png', 'play-store-paketi/gorseller/ekran-5-ekran-duzeni.png'], async () => {
+        await cek(['store/screenshot-6-ekran-duzeni.png', 'play-store-paketi/gorseller/ekran-6-ekran-duzeni.png'], async () => {
             await tikla('document.getElementById("studio-tab-computer")');
             await bekle(600);
             await tikla('document.getElementById("studio-ekran")');
@@ -308,7 +347,7 @@ async function main() {
 
         // Kısayol panosu: Ofis profili.
         await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 5000);
-        await cek(['store/screenshot-6-kisayollar.png', 'play-store-paketi/gorseller/ekran-6-kisayollar.png'], async () => {
+        await cek(['store/screenshot-7-kisayollar.png', 'play-store-paketi/gorseller/ekran-7-kisayollar.png'], async () => {
             await tikla('document.getElementById("studio-tab-computer")');
             await bekle(600);
             await tikla('document.getElementById("studio-kisayollar")');
@@ -317,17 +356,13 @@ async function main() {
             await bekle(800);
         });
 
-        // Seviyeli kullanım kılavuzu: İleri seviye, bir ders açık.
+        // Geri dönüşüm kutusu: silinen notlar ve otomatik temizleme süresi.
         await git('/editor?id=bahce-kitap&nodeId=dugum-altini', 5000);
-        await cek(['store/screenshot-7-kilavuz.png', 'play-store-paketi/gorseller/ekran-7-kilavuz.png'], async () => {
+        await cek(['store/screenshot-8-cop-kutusu.png', 'play-store-paketi/gorseller/ekran-8-cop-kutusu.png'], async () => {
             await tikla('[...document.querySelectorAll("button")].find((b)=>b.getAttribute("title")==="Ayarlar")');
             await bekle(1500);
-            await tikla('[...document.querySelectorAll("button")].find((b)=>b.innerText.trim().startsWith("Kullanım kılavuzu"))');
-            await bekle(1200);
-            await tikla('document.getElementById("kilavuz-seviye-ileri")');
-            await bekle(500);
-            await tikla('[...document.querySelectorAll("[aria-expanded]")].find((b)=>b.innerText.includes("Size uygun bağlantıyı"))');
-            await bekle(800);
+            await tikla('[...document.querySelectorAll("button")].find((b)=>b.innerText.includes("Geri dönüşüm kutusu"))');
+            await bekle(1500);
         });
 
         console.log('Bitti.');

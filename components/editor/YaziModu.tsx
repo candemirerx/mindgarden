@@ -24,7 +24,7 @@ import { makroCalismasi, makroCalisiyor, makroyuBaslat, makroyuDurdur } from '@/
 import { useRemotePrefs } from '@/lib/useRemotePrefs';
 import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { cx } from '@/components/ui/settings';
-import FareYuzeyi from './FareYuzeyi';
+import { FareCanli } from './FareAraci';
 import MakroDugmesi from './MakroDugmesi';
 
 const ARAC_SIMGESI: Record<YaziAraci, typeof Send> = {
@@ -269,15 +269,10 @@ export default function YaziModu({ content, onContentChange, kutuRef, onAiMakro,
                     className={cx('min-h-0 w-full flex-1 resize-none rounded-2xl border bg-white px-4 py-3 text-base leading-relaxed text-sand-800 outline-none placeholder:text-sand-400 focus:border-moss-400',
                         canli ? 'border-moss-400' : 'border-sand-200')} />}
                 {panel === 'fare' && <div className="flex min-h-0 flex-1 flex-col gap-2">
-                    <FareYuzeyi prefs={prefs} onHata={m => bildir({ metin: m, ton: 'error' })} className="flex min-h-[30dvh] flex-1 touch-none select-none items-center justify-center rounded-2xl border border-moss-200 bg-gradient-to-br from-moss-50 to-sand-50 p-6 text-center text-sm text-sand-600">
+                    <FareCanli prefs={prefs} onHata={m => bildir({ metin: m, ton: /gönderildi|hızı/.test(m) ? 'ok' : 'error' })}
+                        yuzeySinifi="flex min-h-[30dvh] w-full flex-1 touch-none select-none items-center justify-center rounded-2xl border border-moss-200 bg-gradient-to-br from-moss-50 to-sand-50 p-6 text-center text-sm text-sand-600">
                         Sürükle: imleci hareket ettir · Bir kez dokun: sol tık
-                    </FareYuzeyi>
-                    <div className="grid shrink-0 grid-cols-4 gap-1.5">
-                        <button type="button" className="btn btn-secondary min-h-11 px-1 text-xs" onClick={() => void calistir('fare-sol', () => sendCommand('mc:1', prefs), 'Gönderiliyor…', 'Sol tık gönderildi.')}>Sol tık</button>
-                        <button type="button" className="btn btn-secondary min-h-11 px-1 text-xs" onClick={() => void calistir('fare-yukari', () => sendCommand('ms:3', prefs), 'Gönderiliyor…', 'Yukarı kaydırıldı.')}>↑ Kaydır</button>
-                        <button type="button" className="btn btn-secondary min-h-11 px-1 text-xs" onClick={() => void calistir('fare-asagi', () => sendCommand('ms:-3', prefs), 'Gönderiliyor…', 'Aşağı kaydırıldı.')}>↓ Kaydır</button>
-                        <button type="button" className="btn btn-secondary min-h-11 px-1 text-xs" onClick={() => void calistir('fare-sag', () => sendCommand('mc:2', prefs), 'Gönderiliyor…', 'Sağ tık gönderildi.')}>Sağ tık</button>
-                    </div>
+                    </FareCanli>
                 </div>}
                 {panel === 'makro' && <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-sand-200 bg-white p-2">
                     {makrolar.length === 0
@@ -295,7 +290,8 @@ export default function YaziModu({ content, onContentChange, kutuRef, onAiMakro,
                 </div>}
             </div>
         </div>
-        <div className="shrink-0 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.375rem)] pt-1.5 sm:px-6">
+        {/* Altta editör araç çubuğu var; güvenli alan boşluğunu o verir, burada tekrar eklenmez. */}
+        <div className="shrink-0 px-2 pb-1 pt-1.5 sm:px-6">
             <div className="mx-auto w-full max-w-4xl">
                 {bildirim && <p id="yazi-modu-bildirim" role="status" aria-live="polite"
                     className={cx('mb-1.5 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium',

@@ -162,12 +162,20 @@ function wavYap(parcalar: Float32Array[], kaynakHizi: number): Blob {
     const uzunluk = Math.floor(toplam / oran);
     const tum = new Float32Array(toplam);
     let o = 0; for (const p of parcalar) { tum.set(p, o); o += p.length; }
-    const pcm = new Int16Array(uzunluk);
+    const ornek = new Float32Array(uzunluk);
+    let tepe = 0;
     for (let i = 0; i < uzunluk; i++) {
         // Basit ortalama ile örnek seyreltme (konuşma için yeterli).
         const bas = Math.floor(i * oran), son = Math.min(toplam, Math.floor((i + 1) * oran));
         let t = 0; for (let j = bas; j < son; j++) t += tum[j];
-        const v = Math.max(-1, Math.min(1, t / Math.max(1, son - bas)));
+        ornek[i] = t / Math.max(1, son - bas);
+        tepe = Math.max(tepe, Math.abs(ornek[i]));
+    }
+    // Kısık mikrofon: konuşmayı tepe değeri ~0,9 olacak kadar yükselt (en çok 12 kat).
+    const kazanc = tepe > 0 ? Math.min(12, Math.max(1, 0.9 / tepe)) : 1;
+    const pcm = new Int16Array(uzunluk);
+    for (let i = 0; i < uzunluk; i++) {
+        const v = Math.max(-1, Math.min(1, ornek[i] * kazanc));
         pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
     }
     const tampon = new ArrayBuffer(44 + pcm.byteLength);
@@ -215,7 +223,8 @@ export class SesKaydedici {
             const ms = (veri.length / hiz) * 1000;
             let kare = 0; for (let i = 0; i < veri.length; i++) kare += veri[i] * veri[i];
             const rms = Math.sqrt(kare / veri.length);
-            const esik = Math.max(0.012, this.gurultu * 3);
+            // Kısık mikrofonlarda da konuşma yakalansın: sabit taban düşük, ortam gürültüsüne göre uyarlanır.
+            const esik = Math.max(0.0045, this.gurultu * 2.5);
             const konusuyor = rms > esik;
             if (!konusuyor) this.gurultu = this.gurultu * 0.95 + rms * 0.05; // ortam gürültüsünü izle
             this.ayar.onSeviye?.(konusuyor);
