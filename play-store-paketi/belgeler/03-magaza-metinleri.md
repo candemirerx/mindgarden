@@ -2,6 +2,23 @@
 
 Play Console'a kopyala-yapıştır yapılacak metinler.
 
+## Üretim — 1.0.13 (100) ilk genel sürüm notu
+
+Play Console'da **Sürüm notları** alanına (en fazla 500 karakter, şu an 417):
+
+```
+Not Bahçesi artık herkese açık!
+
+• Notlarınızı bahçe, ağaç, dal ve yaprak olarak düzenleyin; Tuval ve Liste görünümü
+• YZ ağacı: kendi talimatı ve PDF/Word belgeleriyle çalışan yapay zekâ asistanları
+• Geri dönüşüm kutusu: silinen notları geri alın
+• Mini galeride hızlı açılan kamera ve yakınlaştırma
+• Google Drive ile cihazlar arası otomatik yedek
+• Telefonu bilgisayarın klavyesi, faresi ve panosu olarak kullanın
+```
+
+---
+
 ## Kapalı test — 1.0.13 (99) sürüm notları
 
 YZ ağacı: bahçenize kendi talimatı ve eğitim belgeleri (PDF, Word, metin) olan yapay zekâ asistanları ekleyin; YZ kartlarının menüsü ayrıca ayarlanır. Geri dönüşüm kutusu: silinen notlar süre dolana kadar saklanır, geri almadan açılıp okunabilir. YZ ayarları ve belgeler Drive ile eşitlenir. Yazı modunda fare düğmeleri ayarlardan gelir; kısık mikrofonlarda dikte iyileştirildi.

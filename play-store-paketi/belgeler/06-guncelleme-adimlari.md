@@ -42,13 +42,22 @@ artırmak zorundasın**. Aynı sürüm kodunu ikinci kez yükleyemezsin.
 `android/app/build.gradle` dosyasını aç:
 
 ```gradle
-versionCode 99         // önceki yükleme 78; her yeni pakette artır
+versionCode 100         // önceki yükleme 78; her yeni pakette artır
 versionName "1.0.13"    // kullanıcının gördüğü sürüm
 ```
 
-Şu anki sürüm `99` / `1.0.13` (hedef API 36). Bir sonraki yükleme en az 100 olmalıdır.
-İlk genel yayın için görünen ad `1.0.8` olarak hazırlandı. Testte kullanılan
+Şu anki sürüm `100` / `1.0.13` (hedef API 36). Bir sonraki yükleme en az 101 olmalıdır.
+İlk genel (üretim) yayını `1.0.13` / `100` ile yapıldı. Testte kullanılan
 kodlar sıfırlanmadı; Play Store güncellemeleri teknik sürüm koduyla sıralar.
+
+**Komut satırından yükleme (Play API):**
+
+```
+node scripts/play-yukle.mjs alpha --not "…"                     # kapalı test
+node scripts/play-yukle.mjs production --onay --not "…"         # üretim, tam kullanıma sunma
+node scripts/play-yukle.mjs production --onay --kademe 0.2 …     # üretim, kullanıcıların %20'si
+node scripts/play-kontrol.mjs                                    # kanalların durumu (salt okunur)
+```
 
 **2. Yeni paketi üret**
 

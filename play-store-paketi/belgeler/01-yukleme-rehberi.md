@@ -35,7 +35,7 @@ Aynı gün       → Kapalı teste yükle, 12 test kullanıcısını davet et
 
 | Gereken | Dosya / durum |
 |---|---|
-| Yayın paketi (AAB) | `uygulama/not-bahcesi-1.0.13.aab` — sürüm kodu **99**, sürüm adı **1.0.13**, yükleme anahtarıyla imzalı |
+| Yayın paketi (AAB) | `uygulama/not-bahcesi-1.0.13.aab` — sürüm kodu **100**, sürüm adı **1.0.13**, yükleme anahtarıyla imzalı |
 | Kendi telefonun için APK | `uygulama/not-bahcesi-1.0.13.apk` (Play'e yüklenmez) |
 | Uygulama ikonu 512×512 | `gorseller/uygulama-ikonu-512.png` |
 | Öne çıkan görsel 1024×500 | `gorseller/one-cikan-gorsel-1024x500.png` |

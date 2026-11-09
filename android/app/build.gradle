@@ -34,7 +34,7 @@ android {
         manifestPlaceholders = [uygulamaAdi: ikizUygulama ? "Not Bahçesi 2" : "Not Bahçesi"]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 99
+        versionCode 100
         versionName "1.0.13"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

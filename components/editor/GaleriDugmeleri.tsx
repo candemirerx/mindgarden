@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, ImagePlus, GalleryThumbnails, FilePlus2 } from 'lucide-react';
 import { belgeleriGaleriyeEkle, dosyalariGaleriyeEkle, useMiniGaleri } from '@/lib/miniGaleri';
 import MiniGaleri from './MiniGaleri';
-import Kamera from './Kamera';
+import Kamera, { kameraHazirla } from './Kamera';
 
 const SIMGE = 'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sand-600 transition-colors hover:bg-sand-100 hover:text-sand-800 active:scale-95 disabled:opacity-40';
 
@@ -20,6 +20,8 @@ export default function GaleriDugmeleri({ notId, editorMetni, uyari, onBaglantiA
     const [ileti, setIleti] = useState('');
     const zamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
     const kameraRef = useRef<HTMLInputElement>(null);
+    // Kamera düğmesine basılınca beklemesin diye medya katmanı önceden ısıtılır (kamera açılmaz).
+    useEffect(() => { const z = setTimeout(kameraHazirla, 1500); return () => clearTimeout(z); }, []);
     const galeriRef = useRef<HTMLInputElement>(null);
     const dosyaRef = useRef<HTMLInputElement>(null);
     useEffect(() => () => { if (zamanlayici.current) clearTimeout(zamanlayici.current); }, []);

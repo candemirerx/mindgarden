@@ -3,7 +3,7 @@
 Bu klasör, Not Bahçesi'ni Google Play Store'a **ilk kez** yükleyip yayınlamak için
 gereken her şeyi içerir.
 
-**Sürüm:** 1.0.13 (sürüm kodu 99) · **Paket adı:** com.notbahcesi.app · **Hedef API:** 36 (Android 16)
+**Sürüm:** 1.0.13 (sürüm kodu 100) · **Paket adı:** com.notbahcesi.app · **Hedef API:** 36 (Android 16)
 
 ---
 

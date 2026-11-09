@@ -7,6 +7,8 @@
  *
  * Anahtar: %USERPROFILE%\.notbahcesi\play-api.json (git'e girmez, içeriği yazdırılmaz)
  * Kullanım: node scripts/play-yukle.mjs [kanal] [--not "sürüm notu"]
+ *   Üretim: node scripts/play-yukle.mjs production --onay [--kademe 0.2] --not "..."
+ *   (--onay olmadan üretime yükleme yapılmaz; --kademe verilirse kullanıcıların o oranına açılır)
  */
 import { createSign } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -24,8 +26,14 @@ const durum = argumanlar.includes('--durum');
 const taslak = argumanlar.includes('--taslak');
 const notSirasi = argumanlar.indexOf('--not');
 const surumNotu = notSirasi >= 0 ? argumanlar[notSirasi + 1] : '';
-const kanal = argumanlar.find((a, i) => !a.startsWith('--') && i !== notSirasi + 1) || 'alpha';
-if (kanal !== 'alpha') throw new Error('Bu yayın akışı yalnızca kapalı test alpha kanalına izin verir.');
+const kademeSirasi = argumanlar.indexOf('--kademe');
+const kademe = kademeSirasi >= 0 ? Number(argumanlar[kademeSirasi + 1]) : null;
+// Değer alan bayrakların (--not, --kademe) değerleri kanal adı sayılmaz.
+const degerSiralari = [notSirasi, kademeSirasi].filter(i => i >= 0).map(i => i + 1);
+const kanal = argumanlar.find((a, i) => !a.startsWith('--') && !degerSiralari.includes(i)) || 'alpha';
+if (kanal !== 'alpha' && kanal !== 'production') throw new Error('Yalnız alpha (kapalı test) ve production kanalları desteklenir.');
+if (kanal === 'production' && !argumanlar.includes('--onay')) throw new Error('Üretime yükleme için --onay gerekir (gerçek kullanıcılara yayınlanır).');
+if (kademe !== null && !(kademe > 0 && kademe < 1)) throw new Error('--kademe 0 ile 1 arasında olmalı (ör. 0.2).');
 if (!durum) execFileSync(process.execPath, [join(KOK, 'scripts/yayin-dogrula.mjs')], { cwd: KOK, stdio: 'inherit' });
 
 const surum = /APP_VERSION\s*=\s*'([^']+)'/.exec(readFileSync(join(KOK, 'lib/config.ts'), 'utf8'))?.[1];
@@ -78,10 +86,16 @@ try {
         await api(ed, 'DELETE');
         process.exit(0);
     }
-    const paket = await api(ed + '/bundles?uploadType=media', 'POST', aab, '/upload/androidpublisher/v3/applications/');
-    if (paket.versionCode !== surumKodu) throw new Error('Yüklenen paketin sürüm kodu ' + paket.versionCode + ', beklenen ' + surumKodu);
-    console.log('1) AAB yüklendi (kod ' + paket.versionCode + ', sha256 ' + paket.sha256 + ')');
-    const surumBilgisi = { name: surumKodu + ' (' + surum + ')', versionCodes: [String(surumKodu)], status: taslak ? 'draft' : 'completed' };
+    // Aynı kod daha önce (ör. alpha'ya) yüklendiyse yeniden yüklenmez; kanala yalnız atanır.
+    const onceki = (await api(ed + '/bundles')).bundles?.find(b => b.versionCode === surumKodu);
+    if (onceki) console.log('1) AAB zaten yüklü (kod ' + surumKodu + ', sha256 ' + onceki.sha256 + ')');
+    else {
+        const paket = await api(ed + '/bundles?uploadType=media', 'POST', aab, '/upload/androidpublisher/v3/applications/');
+        if (paket.versionCode !== surumKodu) throw new Error('Yüklenen paketin sürüm kodu ' + paket.versionCode + ', beklenen ' + surumKodu);
+        console.log('1) AAB yüklendi (kod ' + paket.versionCode + ', sha256 ' + paket.sha256 + ')');
+    }
+    const surumBilgisi = { name: surumKodu + ' (' + surum + ')', versionCodes: [String(surumKodu)], status: taslak ? 'draft' : kademe ? 'inProgress' : 'completed' };
+    if (kademe && !taslak) surumBilgisi.userFraction = kademe;
     if (surumNotu) surumBilgisi.releaseNotes = [{ language: 'tr-TR', text: surumNotu }];
     const mevcut = await api(ed + '/tracks/' + kanal);
     const korunan = taslak ? (mevcut.releases || []).filter(r => r.status !== 'draft') : [];
