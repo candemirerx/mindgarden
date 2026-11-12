@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 public static class RemoteInput
 {
+    [DllImport("user32.dll")] public static extern uint GetClipboardSequenceNumber();
     [StructLayout(LayoutKind.Sequential)] private struct INPUT { public uint type; public UNION data; }
     [StructLayout(LayoutKind.Explicit)] private struct UNION {
         [FieldOffset(0)] public MOUSEINPUT mouse;
@@ -24,6 +25,8 @@ public static class RemoteInput
     [DllImport("user32.dll")] private static extern bool ShowWindowAsync(IntPtr hwnd, int cmd);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool PostMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
+    [DllImport("winmm.dll")] private static extern uint timeBeginPeriod(uint ms);
+    [DllImport("winmm.dll")] private static extern uint timeEndPeriod(uint ms);
     [DllImport("user32.dll")] private static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
     private static int PhysicalScreenMetric(int index) {
         IntPtr previous=IntPtr.Zero;
@@ -63,7 +66,9 @@ public static class RemoteInput
     private static void Key(ushort vk, ushort scan, uint flags) {
         Send(new INPUT { type = 1, data = new UNION { key = new KEYBDINPUT { vk = vk, scan = scan, flags = flags } } });
     }
-    public static void Move(int dx, int dy) { Mouse(0x0001, Math.Max(-127, Math.Min(127, dx)), Math.Max(-127, Math.Min(127, dy))); }
+    // SendInput goreli hareketi tam tamsayi olarak alir; eski +-127 siniri BLE HID
+    // rapor bicimindendi. Sinir kalkinca telefon tek istekte tam hareketi gonderir.
+    public static void Move(int dx, int dy) { Mouse(0x0001, Math.Max(-16384, Math.Min(16384, dx)), Math.Max(-16384, Math.Min(16384, dy))); }
     public static void Absolute(int x, int y, bool click) {
         if (x < 0 || x > 32767 || y < 0 || y > 32767) throw new ArgumentOutOfRangeException("position");
         Mouse(0x8000 | 0x4000 | 0x0001, (int)Math.Round(x * 65535.0 / 32767), (int)Math.Round(y * 65535.0 / 32767));
@@ -76,8 +81,21 @@ public static class RemoteInput
         Mouse(down); Mouse(up);
     }
     public static void Scroll(int steps) { Mouse(0x0800, 0, 0, unchecked((uint)(steps * 120))); }
+    // Yatay tekerlek: telefonda capa parmagi saga/sola kaydirinca kullanilir.
+    public static void ScrollSide(int steps) { Mouse(0x01000, 0, 0, unchecked((uint)(steps * 120))); }
+    // Tik kilidi: dugme bas/birak ayri ayri. Surukleme ve metin secimi icin.
+    public static void Button(int button, bool down) {
+        uint flag = button == 1 ? (down ? 0x0002u : 0x0004u)
+                  : button == 2 ? (down ? 0x0008u : 0x0010u)
+                  : button == 4 ? (down ? 0x0020u : 0x0040u) : 0u;
+        if (flag == 0) throw new ArgumentException("Only left, right and middle buttons are supported.");
+        Mouse(flag);
+    }
     public static void TypeText(string text) {
         if (text == null || text.Length > 32000) throw new ArgumentException("Invalid text length.");
+        // Windows varsayilan olarak Sleep(3) icin ~16 ms bekler; 1 ms cozunurluk yazmayi ~5 kat hizlandirir.
+        timeBeginPeriod(1);
+        try {
         foreach (char ch in text) {
             if (ch == '\r') continue;
             if (ch == '\n') { Key(0x0D, 0, 0); Key(0x0D, 0, 0x0002); }
@@ -86,6 +104,7 @@ public static class RemoteInput
             // onlari son gelen karakterle cevirir ("abc 123" -> "abc 333"). Kisa ara sart.
             System.Threading.Thread.Sleep(3);
         }
+        } finally { timeEndPeriod(1); }
     }
     private static ushort Code(string name) {
         name = name.Trim().ToUpperInvariant();

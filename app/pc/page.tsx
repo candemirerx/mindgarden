@@ -26,14 +26,15 @@ export default function PcYardimcisiSayfasi() {
 
                 <div className="space-y-6 rounded-3xl border border-sand-200 bg-white p-8 text-sm leading-relaxed text-sand-700 shadow-card">
                     <PcYardimcisiIndir />
-                    <p className="text-xs text-sand-600">Güncelleme: 30 Ekim 2026 · Ortak USB yardımcısı 2.7.0. Güncellemek için yeni ZIP’i ayrı bir klasöre çıkarın; mevcut eşleşme anahtarlarınızı paylaşmayın.</p>
+                    <p className="text-xs text-sand-600">Güncelleme: 10 Kasım 2026 · Ortak yardımcı 2.7.4. Not Bahçesi ve Cep Köprü aynı yardımcıyı kullanabilir; iki program açmanız gerekmez. Güncellemeden önce eski yardımcıyı kapatın. Mevcut eşleşme anahtarları korunur.</p>
 
                     <section className="space-y-2">
                         <h2 className="text-lg font-semibold text-sand-900">İlk bağlantı</h2>
                         <ol className="list-decimal space-y-1.5 pl-5">
                             <li><strong>BASLAT.cmd</strong> açıkken telefonda <strong>Ayarlar → Bilgisayar bağlantısı</strong> bölümünü açın.</li>
                             <li>Bluetooth kullanıyorsanız Windows ve telefonu bir kez eşleştirin. Yardımcının pano/dosya alıcısını seçin; uygulama kod sorarsa penceredeki <strong>6 haneli kodu</strong> girin.</li>
-                            <li>Doğrudan PC Wi-Fi kullanıyorsanız bunun yerine <strong>WIFI.cmd</strong> açın; aynı güvenilen ağda bilgisayarı bulun ve kodla eşleştirin. Güvenlik duvarı engelliyorsa admin olmadan izin eklenemez.</li>
+                            <li>Doğrudan PC Wi-Fi kullanıyorsanız bunun yerine <strong>WIFI.cmd</strong> açın; aynı güvenilen ağda bilgisayarı bulun, bağlantı isteği gönderin ve bilgisayarda <strong>İzin ver</strong> seçin. Eski uygulamalar için kodla eşleştirme de desteklenir.</li>
+                            <li>Telefonu USB kablosuyla bağlamak için <strong>TELEFON-USB-OTOMATIK-KUR.cmd</strong> dosyasını bir kez açın. Telefonda USB hata ayıklamayı açın ve bilgisayarı onaylayın; uygulamada <strong>Bilgisayar · USB</strong> seçin.</li>
                         </ol>
                         <p>Eşleşme bilgisi telefonda saklanır. Sonraki kullanımda yalnız yardımcıyı açmanız yeterlidir. Güncel kartın USB pano yolunda ayrı telefon-PC eşleşmesi gerekmez.</p>
                     </section>

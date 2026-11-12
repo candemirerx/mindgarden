@@ -86,3 +86,16 @@ scripts/.adb-kablosuz-adresler
 
 .env*
 !.env.bilge.example
+
+# Yerel ajan/araç çalışma klasörleri (beceriler skills-lock.json'dan geri yüklenir)
+/.agents/
+/.agentsroom/
+/.codex/
+/.aab-kontrol/
+/android/.gradle-usb-bridge/
+/android/build-helper-pairing/
+*.bak-*
+
+# Ortak USB paketinden (kablosuzbellek) her zip derlemesinde kopyalanan ikili dosyalar
+scripts/vendor/gnirehtet/
+scripts/vendor/sumatra/

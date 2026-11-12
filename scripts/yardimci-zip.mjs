@@ -8,7 +8,7 @@
  *   node scripts/yardimci-zip.mjs
  */
 import { execFileSync } from 'node:child_process';
-import { copyFile, cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 
@@ -16,8 +16,21 @@ const KOK = resolve(import.meta.dirname, '..');
 const HEDEF_KLASOR = join(KOK, 'public', 'indir');
 const HEDEF = join(HEDEF_KLASOR, 'not-bahcesi-pc-yardimcisi.zip');
 // Both apps use the same reviewed USB bridge; do not fork its protocol or tokens.
-const ORTAK_SURUM = '2.7.0';
-const ORTAK_KOK = resolve(KOK, '..', 'kablosuzbellek', 'tools', 'cep-kopru-paket-' + ORTAK_SURUM, 'CepKopru-Yardimcisi', 'Ortak');
+const ORTAK_PROJE = resolve(KOK, '..', 'kablosuzbellek');
+const ORTAK_SURUM = JSON.parse(await readFile(join(ORTAK_PROJE, 'tools', 'helper-version.json'), 'utf8')).version;
+const ORTAK_KOK = join(ORTAK_PROJE, 'tools', 'cep-kopru-paket-' + ORTAK_SURUM, 'CepKopru-Yardimcisi', 'Ortak');
+const ORTAK_DOSYALAR = ['HttpIngress.cs', 'RemoteInput.cs', 'PhoneDrive.cs', 'UsbInternetRelay.cs',
+    'PairApproval.cs', 'PcKeyboard.cs', 'MousePositionCapture.cs', 'PcAudio.cs', 'PcMic.cs',
+    'usb_baglanti.ps1', 'yazdir.ps1'];
+// Generate both branded receivers from one engine; preserve Not Bahcesi's local
+// token filename and default port, including when scripts are run from source.
+let helper = await readFile(join(ORTAK_KOK, 'pc_clipboard_helper.ps1'), 'utf8');
+if (!helper.includes("$script:helperVersion = '" + ORTAK_SURUM + "'")) throw new Error('Once guncel ortak yardimci paketini derleyin.');
+helper = helper.replace('[int]$Port = 8775', '[int]$Port = 8765')
+    .replace("$script:helperApp = 'cep-kopru-pc'", "$script:helperApp = 'not-bahcesi-clipboard'");
+await writeFile(join(KOK, 'scripts', 'pc_clipboard_helper.ps1'), helper, 'utf8');
+for (const file of ORTAK_DOSYALAR) await copyFile(join(ORTAK_KOK, file), join(KOK, 'scripts', file));
+await cp(join(ORTAK_KOK, 'vendor'), join(KOK, 'scripts', 'vendor'), { recursive: true });
 const DOSYALAR = [
     'pc_yardimcisi_baslat.cmd',
     'pc_yardimcisi_baslat.ps1',
@@ -26,15 +39,14 @@ const DOSYALAR = [
     'pc_tailscale_izni.cmd',
     'pc_tailscale_izin.ps1',
     'pc_clipboard_helper.ps1',
-    'RemoteInput.cs',
-    'PhoneDrive.cs',
-    'UsbInternetRelay.cs',
-    'vendor/InTheHand.Net.Personal.dll',
-    'vendor/32feet-LICENSE.txt',
-    'vendor/README.md'
+    ...ORTAK_DOSYALAR
 ];
 const OKUBENI = [
     'NOT BAHCESI - PC YARDIMCISI',
+    'Surum ' + ORTAK_SURUM + ' - Cep Kopru ile ayni guncel motor.',
+    'Iki uygulama icin tek yardimci yeterlidir; 8765 ve 8775 ayni programdadir.',
+    'Ilk baglantida her uygulamadan istek gonderin ve bilgisayardan onaylayin.',
+    'Guncellerken eski yardimci penceresini kapatin; mevcut anahtarlar korunur.',
     '',
     'TELEFON USB BAGLANTISI - ORTAK YARDIMCI ' + ORTAK_SURUM,
     '  1) ZIP\'in tamamini cikarin. TELEFON-USB-OTOMATIK-KUR.cmd acin.',
@@ -106,6 +118,10 @@ for (const dosya of DOSYALAR) {
     const hedef = dosya === 'pc_guvenlik_duvari.ps1' ? 'ileri' : 'scripts';
     await copyFile(join(KOK, 'scripts', dosya), join(stage, hedef, dosya));
 }
+await cp(join(ORTAK_KOK, 'vendor'), join(stage, 'scripts', 'vendor'), {
+    recursive: true,
+    filter: source => !basename(source).startsWith('.') && !/^(logs|tip-onbellek)$/i.test(basename(source)),
+});
 for (const dosya of ['BASLAT.cmd', 'WIFI.cmd']) await copyFile(join(KOK, 'scripts', 'yardimci-paket', dosya), join(stage, dosya));
 await copyFile(join(KOK, 'scripts', 'yardimci-paket', 'TELEFON-USB-OTOMATIK-KUR.cmd'), join(stage, 'TELEFON-USB-OTOMATIK-KUR.cmd'));
 await cp(ORTAK_KOK, join(stage, 'Ortak-USB'), {

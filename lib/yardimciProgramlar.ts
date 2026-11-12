@@ -24,6 +24,7 @@ export const YARDIMCI_KLASORLERI: YardimciKlasor[] = [
         baslik: 'Sizin açacağınız dosyalar',
         aciklama: 'İkisi de aynı programı açar; aynı anda çalıştırmayın. Bluetooth veya kart için yalnız BASLAT.cmd yeterli. Başlatıcılar admin istemez; kurumun betik ve cihaz izinleri yine geçerlidir.',
         dosyalar: [
+            { ad: 'Telefonu USB kablosuyla bağla', dosya: 'TELEFON-USB-OTOMATIK-KUR.cmd', aciklama: 'Bir kez açın; ortak USB köprüsünü Windows oturumunuzla başlatır. Cep Köprü ve Not Bahçesi aynı köprüyü kullanır. Telefonda USB hata ayıklama ve bilgisayar onayı gerekir; yönetici izni istemez.' },
             { ad: 'Önerilen: Bluetooth / kart', dosya: 'BASLAT.cmd', aciklama: 'Çift tıklayın, pencereyi açık bırakın. Pano, dosya ve destekleyen kartla USB internet bileşenlerini başlatır. Tailscale zaten kurulu ve izinliyse onu da kullanabilir; yeni kurulum yapmaz.' },
             { ad: 'Alternatif: aynı ağda PC Wi‑Fi', dosya: 'WIFI.cmd', aciklama: 'Yalnız doğrudan PC Wi-Fi kullanacaksanız açın. Mevcut güvenlik duvarı izni gerekir; iş yerinde engelleniyorsa Bluetooth/kart yolunu kullanın.' }
         ]
@@ -33,7 +34,8 @@ export const YARDIMCI_KLASORLERI: YardimciKlasor[] = [
         baslik: 'Otomatik çalışan bileşenler — elle açmayın',
         aciklama: 'scripts klasörü ve içindeki vendor birlikte kalsın. Bunlar ayrı kurulumlar değildir; BASLAT.cmd gerekli parçaları yükler. Python veya Node kurulumu gerekmez.',
         dosyalar: [
-            { ad: 'Başlatıcı ve PC alıcısı', dosya: 'scripts/pc_clipboard_helper.ps1', aciklama: 'scripts içindeki pc_yardimcisi_baslat.ps1 ve .cmd dosyaları alıcıyı açar. Bu dosyaları tek tek çalıştırmayın.' },
+            { ad: 'Başlatıcı ve ortak PC alıcısı', dosya: 'scripts/pc_clipboard_helper.ps1', aciklama: 'Cep Köprü ile aynı güncel motoru kullanır. Tek yardımcı iki uygulamaya da hizmet verir; bağlantı isteğini bilgisayardaki pencereden onaylayın. Teknik dosyaları tek tek açmayın.' },
+            { ad: 'Bağlantı onayı ve ortak USB motoru', dosya: 'Ortak-USB/', aciklama: 'USB köprüsü, bağlantı onayı ve otomatik başlangıç bileşenleri. scripts içindeki alıcıyla aynı sürümdür; klasörü birlikte tutun.' },
             { ad: 'Klavye ve fare', dosya: 'scripts/RemoteInput.cs', aciklama: 'PC Wi-Fi yolunda yazma, fare ve kısayol isteklerini Windows’a uygular.' },
             { ad: 'Telefon belleği', dosya: 'scripts/PhoneDrive.cs', aciklama: 'Telefon dosyalarını açar. Sürücü harfi için WebClient hizmeti gerekir; engelliyse bağlı paylaşımın tarayıcı erişimini kullanın.' },
             { ad: 'Kart USB internet köprüsü', dosya: 'scripts/UsbInternetRelay.cs', aciklama: 'Destekleyen kartın USB seri portundan gelen internet isteklerini taşır. Kurumun USB ve ağ izinleri geçerlidir.' },

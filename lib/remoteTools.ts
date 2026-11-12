@@ -524,6 +524,8 @@ export async function discoverCards(): Promise<string[]> {
 }
 /** PC yardımcısının Wi‑Fi portu. */
 export const YARDIMCI_PORTU = 8765;
+const YARDIMCI_PORTLARI = [YARDIMCI_PORTU, 8775];
+const uyumluYardimci = (app: unknown) => app === 'not-bahcesi-clipboard' || app === 'cep-kopru-pc';
 export type BulunanBilgisayar = { url: string; name: string };
 
 /** Telefonun Wi‑Fi IPv4 adresi; "" = Wi‑Fi ağına bağlı değil, null = bilinemiyor (tarayıcı). */
@@ -545,23 +547,42 @@ export async function bluetoothAyarlariniAc(): Promise<void> {
  */
 export async function bilgisayarlariBul(): Promise<BulunanBilgisayar[]> {
     if (!isNative()) throw new Error('Ağda bilgisayar arama Android uygulamasında çalışır; adresi elle girebilirsiniz.');
-    const sonuc = await native.discover({ port: YARDIMCI_PORTU, path: '/hello', marker: 'not-bahcesi-clipboard' });
-    return sonuc.cards.map((url, i) => {
+    const sonuclar = await Promise.all(YARDIMCI_PORTLARI.map(port => native.discover({ port, path: '/hello' })));
+    return sonuclar.flatMap(sonuc => sonuc.cards.map((url, i) => {
         let name = 'Bilgisayar';
         try { name = String(JSON.parse(sonuc.bodies?.[i] ?? '{}').name || name); } catch { /* ad yoksa varsayılan */ }
         return { url, name };
-    });
+    }));
 }
-/** Elle yazılan adresi doğrular: bu adreste Not Bahçesi yardımcısı var mı? */
-export async function bilgisayarAdresiniSina(adres: string): Promise<BulunanBilgisayar> {
+/** Açıkça yazılan port korunur; portsuz adreste iki yardımcı portu da denenir. */
+function yardimciAdresAdaylari(adres: string): string[] {
     const tam = adres.includes('://') ? adres.trim() : 'http://' + adres.trim();
     const adresUrl = new URL(tam);
-    const url = adresUrl.port ? adresUrl.origin : adresUrl.origin + ':' + YARDIMCI_PORTU;
-    let govde: { app?: string; name?: string };
-    try { govde = JSON.parse(await request(endpoint(url, '/hello'))); }
-    catch { throw new Error(url + ' adresinde yardımcıya ulaşılamadı. Yardımcı açık mı? Yerel bağlantıda cihazlar aynı ağda olmalı; Tailscale bağlantısında iki cihazda da Tailscale açık ve aynı hesapta olmalı. Güvenlik duvarı erişimi engelliyor olabilir.'); }
-    if (govde.app !== 'not-bahcesi-clipboard' && govde.app !== 'cep-kopru-pc') throw new Error('Bu adreste uyumlu bir PC yardımcısı yok.');
-    return { url, name: govde.name || 'Bilgisayar' };
+    if (adresUrl.protocol !== 'http:' && adresUrl.protocol !== 'https:') throw new Error('HTTP(S) adresi girin.');
+    if (/^https?:\/\/(?:\[[^\]]+\]|[^/?#:]+):\d+(?:[/?#]|$)/i.test(tam)) return [adresUrl.origin];
+    return YARDIMCI_PORTLARI.map(port => {
+        const aday = new URL(adresUrl.origin);
+        aday.port = String(port);
+        return aday.origin;
+    });
+}
+async function yardimciAdresiniCoz(adres: string): Promise<{ url: string; hello: { app?: string; name?: string; pairApproval?: boolean } }> {
+    const adaylar = yardimciAdresAdaylari(adres);
+    let uyumsuz = false;
+    for (const url of adaylar) {
+        try {
+            const hello = JSON.parse(await request(endpoint(url, '/hello')));
+            if (uyumluYardimci(hello?.app)) return { url, hello };
+            uyumsuz = true;
+        } catch { /* Diğer yardımcı portunu da dene. */ }
+    }
+    if (uyumsuz) throw new Error('Bu adreste uyumlu bir PC yardımcısı yok.');
+    throw new Error(adaylar.join(', ') + ' adresinde yardımcıya ulaşılamadı. Yardımcı açık mı? Yerel bağlantıda cihazlar aynı ağda olmalı; Tailscale bağlantısında iki cihazda da Tailscale açık ve aynı hesapta olmalı. Güvenlik duvarı erişimi engelliyor olabilir.');
+}
+/** Elle yazılan adreste iki uygulamanın yardımcılarını da doğrular. */
+export async function bilgisayarAdresiniSina(adres: string): Promise<BulunanBilgisayar> {
+    const { url, hello } = await yardimciAdresiniCoz(adres);
+    return { url, name: hello.name || 'Bilgisayar' };
 }
 /** Hata gövdesindeki {"error": ...} iletisini okunur hâle getirir. */
 function yardimciHatasi(hata: unknown, yedek: string): Error {
@@ -571,14 +592,15 @@ function yardimciHatasi(hata: unknown, yedek: string): Error {
 }
 /** Wi‑Fi/Tailscale: varsayılan bilgisayardan onay, yalnız açıkça kod verilirse eski yöntem. */
 export async function bilgisayarlaEslestirWifi(url: string, kod = ''): Promise<{ helperUrl: string; helperToken: string; helperName: string }> {
+    const pin = kod.replace(/\D/g, '');
+    if (kod.trim() && pin.length !== 6) throw new Error('Bilgisayardaki 6 haneli eşleştirme kodunu yazın.');
+    const bulunan = await yardimciAdresiniCoz(url);
+    url = bulunan.url;
     if (!kod.trim()) {
-        const hello = JSON.parse(await request(endpoint(url, '/hello')));
-        if (hello.app !== 'not-bahcesi-clipboard' && hello.app !== 'cep-kopru-pc') throw new Error('Bu adreste uyumlu bir PC yardımcısı yok.');
+        const hello = bulunan.hello;
         if (!hello.pairApproval) throw new Error('Bu yardımcı bilgisayardan onayı desteklemiyor. Güncel CepKöprü yardımcısını açın veya gelişmiş bölümde kodla eşleştirin.');
         return bilgisayarOnayiylaEslestir(url, 'Not Bahçesi · Wi-Fi / Tailscale');
     }
-    const pin = kod.replace(/\D/g, '');
-    if (pin.length !== 6) throw new Error('Bilgisayardaki 6 haneli eşleştirme kodunu yazın.');
     let govde: { ok?: boolean; token?: string; name?: string; error?: string };
     try { govde = JSON.parse(await request(endpoint(url, '/pair'), 'POST', JSON.stringify({ pin }))); }
     catch (hata) { throw yardimciHatasi(hata, 'Eşleştirilemedi.'); }
@@ -894,7 +916,7 @@ export async function testHelper(prefs: RemotePrefs) {
     }
     if (!prefs.helperUrl || !prefs.helperToken) throw new Error('Yardımcı program adresi ve anahtarı gerekli.');
     const result = JSON.parse(await request(endpoint(prefs.helperUrl, '/health'), 'GET', '', prefs.helperToken));
-    if (result.app !== 'not-bahcesi-clipboard' && result.app !== 'cep-kopru-pc') throw new Error('Bu adreste pano yardımcı programı bulunamadı.');
+    if (!uyumluYardimci(result.app)) throw new Error('Bu adreste pano yardımcı programı bulunamadı.');
     try { await pcInput({ action: 'ping' }, prefs); }
     catch (error) {
         if (error instanceof Error && /HTTP 404/.test(error.message)) throw new Error('Bu yardımcı yalnız panoyu destekliyor. Güncel Not Bahçesi PC Yardımcısı’nı açın.');
@@ -1071,7 +1093,7 @@ async function yardimciyiYenidenBul(prefs: RemotePrefs): Promise<string | null> 
                 if (pc.url === prefs.helperUrl) continue;
                 try {
                     const saglik = JSON.parse(await request(endpoint(pc.url, '/health'), 'GET', '', prefs.helperToken));
-                    if (saglik.app !== 'not-bahcesi-clipboard') continue;
+                    if (!uyumluYardimci(saglik.app)) continue;
                     const guncel = remotePrefs();
                     saveRemotePrefs({ ...guncel, helperUrl: pc.url, helperName: pc.name || guncel.helperName });
                     prefs.helperUrl = pc.url;

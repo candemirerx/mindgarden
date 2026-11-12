@@ -17,7 +17,8 @@ try {
     }
     # Indirilen paket hem uygulama kaynaklarini hem ortak USB surumunu aynen tasimali.
     $sourceRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-    $sharedRoot = Join-Path $sourceRoot '..\kablosuzbellek\tools\cep-kopru-paket-2.7.0\CepKopru-Yardimcisi\Ortak'
+    $version = (Get-Content -LiteralPath (Join-Path $sourceRoot '..\kablosuzbellek\tools\helper-version.json') -Raw | ConvertFrom-Json).version
+    $sharedRoot = Join-Path $sourceRoot "..\kablosuzbellek\tools\cep-kopru-paket-$version\CepKopru-Yardimcisi\Ortak"
     $verified = 0
     foreach ($entry in $archive.Entries | Where-Object { $_.Length -gt 0 }) {
         $name = $entry.FullName.Replace('\', '/')
@@ -47,8 +48,8 @@ try {
     $helper = $archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq 'Ortak-USB/pc_clipboard_helper.ps1' }
     $reader = [IO.StreamReader]::new($helper.Open())
     try { $source = $reader.ReadToEnd() } finally { $reader.Dispose() }
-    if ($source -notmatch "helperVersion = '2\.7\.0'" -or $source -notmatch '\[switch\]\$NoCard' -or $source -notmatch '\[switch\]\$NoBluetooth') {
+    if (-not $source.Contains("helperVersion = '$version'") -or $source -notmatch '\[switch\]\$NoCard' -or $source -notmatch '\[switch\]\$NoBluetooth') {
         throw 'Ortak USB yardimcisi surumu veya baslatma parametreleri uyumsuz.'
     }
-    Write-Output "PASS: USB kurulumu, ortak yardimci 2.7.0, ADB, eski baslaticilar, kisisel veri filtresi ve $scriptCount PowerShell sozdizimi kontrolu. Kurulum calistirilmadi."
+    Write-Output "PASS: USB kurulumu, ortak yardimci $version, ADB, eski baslaticilar, kisisel veri filtresi ve $scriptCount PowerShell sozdizimi kontrolu. Kurulum calistirilmadi."
 } finally { $archive.Dispose() }
